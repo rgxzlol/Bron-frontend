@@ -34,13 +34,13 @@ export default function Header() {
 
         <button
           type="button"
-          className="bg-white p-[16px]"
+          className="bg-white p-[16px] rounded-full"
           aria-label="Уведомления"
         >
           <Image src={assets.header.notification} alt="" />
         </button>
 
-        <Link href={routes.profile} className="bg-white p-[16px]" aria-label="Профиль">
+        <Link href={routes.profile} className="bg-white p-[16px] rounded-full" aria-label="Профиль">
           <Image src={assets.header.profileIcon} alt="" />
         </Link>
       </div>

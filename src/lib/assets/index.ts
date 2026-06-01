@@ -24,6 +24,14 @@ import starRating from "@/assets/images/starRating.svg";
 import timeIcon from "@/assets/images/timeIcon.svg";
 import blueMore from "@/assets/images/blueMoreIcon.svg";
 import homePng from "@/assets/images/homePng.png";
+import mockPhoto1 from "@/assets/images/mockPhoto1.jpg";
+import mockPhoto2 from "@/assets/images/mockPhoto2.jpg";
+import freeSeat from "@/assets/images/piplSvg.svg";
+import geoMark from "@/assets/images/geoMark.svg";
+import phoneIcon from "@/assets/images/phoneIcon.svg";
+import strenght from "@/assets/images/strenghtIcon.svg";
+import quitIcon from "@/assets/images/quitIcon.svg";
+import security from "@/assets/images/security.svg";
 
 export const assets = {
   nav: {
@@ -64,4 +72,14 @@ export const assets = {
   marketing: {
     homePng,
   },
+  map: {
+    photo1: mockPhoto1,
+    photo2: mockPhoto2,
+    freeSeat,
+    geoMark,
+    phoneIcon,
+    strenght,
+    quitIcon,
+    security
+  }
 } as const;

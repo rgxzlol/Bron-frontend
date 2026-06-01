@@ -1,9 +1,6 @@
 import { popularPlaces } from "@/data/popular";
 import { assets } from "@/lib/assets";
-import {
-  formatDurationMinutes,
-  pluralizeReviews,
-} from "@/lib/pluralize";
+import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
@@ -12,14 +9,17 @@ import Link from "next/link";
 export default function Popular() {
   return (
     <section>
-      <h2 className="mb-[20px] text-[24px] font-semibold">Популярные</h2>
+      <h2 className="mb-[20px] text-[24px] font-semibold">
+        Популярные
+      </h2>
 
-      <div className="flex flex-wrap gap-[20px]">
+      {/* GRID вместо flex — это главное исправление */}
+      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] gap-[20px]">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={routes.home}
-            className="flex w-full max-w-[274px] flex-col overflow-hidden rounded-[18px] bg-white"
+            className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image
               className="h-[180px] w-full object-cover"
@@ -29,14 +29,19 @@ export default function Popular() {
 
             <div className="flex flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
               <div className="flex flex-col gap-[8px]">
-                <span className="text-[20px] font-semibold">{place.title}</span>
+                <span className="text-[20px] font-semibold">
+                  {place.title}
+                </span>
 
                 <div className="flex items-center gap-[15px]">
                   <div className="flex items-center gap-[6px]">
                     <Image src={assets.popular.starRating} alt="Рейтинг" />
-                    <p className="text-[15px] font-semibold">{place.rating}</p>
+                    <p className="text-[15px] font-semibold">
+                      {place.rating}
+                    </p>
                     <p className="text-[15px] font-semibold opacity-75">
-                      ({place.reviews} {pluralizeReviews(place.reviews)})
+                      ({place.reviews}{" "}
+                      {pluralizeReviews(place.reviews)})
                     </p>
                   </div>
 
@@ -58,12 +63,15 @@ export default function Popular() {
           </Link>
         ))}
 
+        {/* КНОПКА "СМОТРЕТЬ ВСЕ" */}
         <Link
-          className="ml-[20px] flex flex-col items-center justify-center"
           href={routes.home}
+          className="flex flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
         >
           <Image src={assets.popular.blueMore} alt="" />
-          <span className="text-[20px] text-[#0a6af7]">Смотреть все</span>
+          <span className="text-[20px] text-[#0a6af7]">
+            Смотреть все
+          </span>
         </Link>
       </div>
     </section>

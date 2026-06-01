@@ -78,3 +78,25 @@
 .title:hover {
     color: #0a6af7;
 }
+
+.active {
+    color: #0a6af7;
+    background: #e4e8ff;
+}
+
+.active .icon {
+    background-color: #0a6af7;
+}
+
+.active::after {
+    content: "";
+    position: absolute;
+    right: 0px;
+    top: 0;
+    opacity: 1;
+    width: 9px;
+    height: 100%;
+
+    background: #0a6af7;
+    border-radius: 9px;
+}

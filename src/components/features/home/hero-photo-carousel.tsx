@@ -1,13 +1,13 @@
 "use client";
 
-import icons from "@/utils/images";
+import { assets } from "@/lib/assets";
 import Image, { StaticImageData } from "next/image";
 import { useEffect, useState } from "react";
 
 const photos: StaticImageData[] = [
-  icons.mainPhoto1,
-  icons.mainPhoto2,
-  icons.mainPhoto3,
+  assets.hero.photo1,
+  assets.hero.photo2,
+  assets.hero.photo3,
 ];
 
 type Slot = "left" | "center" | "right";
@@ -22,11 +22,13 @@ const slotConfig: Record<
 };
 
 function getSlot(imageIndex: number, centerIndex: number): Slot {
-  const diff = (imageIndex - centerIndex + 3) % 3;
+  const diff = (imageIndex - centerIndex + photos.length) % photos.length;
   if (diff === 0) return "center";
   if (diff === 1) return "right";
   return "left";
 }
+
+const AUTO_PLAY_MS = 5000;
 
 export default function HeroPhotoCarousel() {
   const [centerIndex, setCenterIndex] = useState(1);
@@ -34,7 +36,7 @@ export default function HeroPhotoCarousel() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCenterIndex((prev) => (prev + 1) % photos.length);
-    }, 5000);
+    }, AUTO_PLAY_MS);
     return () => clearInterval(timer);
   }, []);
 
@@ -46,7 +48,7 @@ export default function HeroPhotoCarousel() {
 
         return (
           <div
-            key={index}
+            key={src.src}
             className="absolute left-1/2 top-1/2 origin-center transition-all duration-700 ease-in-out"
             style={{
               zIndex,
@@ -55,7 +57,7 @@ export default function HeroPhotoCarousel() {
           >
             <Image
               src={src}
-              alt=""
+              alt={`Пример сервиса ${index + 1}`}
               width={280}
               height={380}
               priority={slot === "center"}

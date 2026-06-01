@@ -1,0 +1,67 @@
+import home from "@/assets/images/home.svg";
+import map from "@/assets/images/map.svg";
+import business from "@/assets/images/buisnes.svg";
+import booking from "@/assets/images/myBooking.svg";
+import support from "@/assets/images/support.svg";
+import profileIcon from "@/assets/images/ProfileIcon.svg";
+import filter from "@/assets/images/filter.svg";
+import notification from "@/assets/images/notification.svg";
+import ruLang from "@/assets/images/ruLang.svg";
+import search from "@/assets/images/search.svg";
+import mainPhoto1 from "@/assets/images/mainPhoto1.png";
+import mainPhoto2 from "@/assets/images/mainPhoto2.png";
+import mainPhoto3 from "@/assets/images/mainPhoto3.png";
+import categoryHairCare from "@/assets/images/hairCare.svg";
+import categoryHealth from "@/assets/images/health.svg";
+import categoryGym from "@/assets/images/gym.svg";
+import categoryEducation from "@/assets/images/education.svg";
+import categoryFood from "@/assets/images/food.svg";
+import categoryMore from "@/assets/images/moreIcon.svg";
+import popularPhoto1 from "@/assets/images/popularPhoto1.jpg";
+import popularPhoto2 from "@/assets/images/popularPhoto2.jpg";
+import popularPhoto3 from "@/assets/images/popularPhoto3.jpg";
+import starRating from "@/assets/images/starRating.svg";
+import timeIcon from "@/assets/images/timeIcon.svg";
+import blueMore from "@/assets/images/blueMoreIcon.svg";
+import homePng from "@/assets/images/homePng.png";
+
+export const assets = {
+  nav: {
+    home,
+    map,
+    business,
+    booking,
+    support,
+  },
+  header: {
+    search,
+    filter,
+    notification,
+    ruLang,
+    profileIcon,
+  },
+  hero: {
+    photo1: mainPhoto1,
+    photo2: mainPhoto2,
+    photo3: mainPhoto3,
+  },
+  categories: {
+    hairCare: categoryHairCare,
+    health: categoryHealth,
+    gym: categoryGym,
+    education: categoryEducation,
+    food: categoryFood,
+    more: categoryMore,
+  },
+  popular: {
+    photo1: popularPhoto1,
+    photo2: popularPhoto2,
+    photo3: popularPhoto3,
+    starRating,
+    timeIcon,
+    blueMore,
+  },
+  marketing: {
+    homePng,
+  },
+} as const;

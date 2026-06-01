@@ -1,47 +1,40 @@
-import icons from "@/utils/images";
+import { assets } from "@/lib/assets";
+import type { Category } from "@/types/category";
 
-export interface Category {
-  id: number
-  title: string
-  icon: string
-  color?: string
-  count: number
-}
-
-export const categories = [
+export const categories: Category[] = [
   {
     id: 1,
     title: "Салон красоты",
-    icon: icons.сategory1,
+    icon: assets.categories.hairCare,
     color: "#ffd7d8",
-    count: 150
+    count: 150,
   },
   {
     id: 2,
     title: "Здоровье",
-    icon: icons.сategory2,
+    icon: assets.categories.health,
     color: "#e1c0ff",
-    count: 98
+    count: 98,
   },
   {
     id: 3,
     title: "Фитнес зал",
-    icon: icons.сategory3,
+    icon: assets.categories.gym,
     color: "#bac5ff",
-    count: 102
+    count: 102,
   },
   {
     id: 4,
     title: "Учебные заведения",
-    icon: icons.сategory4,
+    icon: assets.categories.education,
     color: "#bac5ff",
-    count: 102
+    count: 102,
   },
   {
     id: 5,
     title: "Рестораны",
-    icon: icons.сategory5,
+    icon: assets.categories.food,
     color: "#b5ffb8",
-    count: 102
+    count: 102,
   },
-]
+];

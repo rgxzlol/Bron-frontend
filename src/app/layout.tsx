@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
+
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
@@ -16,17 +17,33 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="ru" className={manrope.variable}>
-      <body className={`${manrope.className} container min-h-screen antialiased font-sans`}>
+      <body
+        className={`${manrope.className} min-h-screen antialiased font-sans`}
+      >
         <div className="flex min-h-screen">
+          
+          {/* Sidebar */}
           <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
+
+          {/* Content */}
+          <div className="flex flex-1 flex-col min-w-0">
+            
+            {/* Header */}
+            <div className="container">
+              <Header />
+            </div>
+
+            {/* Main */}
+            <main className="flex-1">
+              <div className="container">
+                {children}
+              </div>
+            </main>
           </div>
         </div>
       </body>

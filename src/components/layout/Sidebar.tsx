@@ -12,12 +12,12 @@ const menu = [
 
 const Sidebar = () => {
   return (
-    <div className="flex w-[350px] shrink-0 flex-col pt-[37px]">
-      <Link href='/' className={`${s.title}mb-7 text-[60px] font-semibold self-start `}>Bron</Link>
+    <div className={`${s.sidebar} flex w-[320px] shrink-0 flex-col pt-[37px] pl-[30px]`}>
+      <Link href='/' className={`${s.title} text-[60px] font-semibold self-start `}>Bron</Link>
 
-      <ul className={s.menu}>
+      <ul className={`${s.menu} mt-[25px]`}>
         {menu.map((item) => (
-          <li key={item.title}>
+          <li className={s.title} key={item.title}>
             <Link href="/" className={s.link}>
               <span
                 className={s.icon}
@@ -29,7 +29,7 @@ const Sidebar = () => {
                 }}
                 aria-hidden
               />
-              <span className="text-2xl">{item.title}</span>
+              <span className="text-xl">{item.title}</span>
             </Link>
           </li>
         ))}

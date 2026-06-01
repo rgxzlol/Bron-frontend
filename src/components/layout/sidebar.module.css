@@ -1,3 +1,10 @@
+.sidebar {
+    position: sticky;
+    top: 0;
+
+    height: 100vh;
+}
+
 .menu {
     list-style: none;
     width: 100%;
@@ -8,7 +15,7 @@
     display: flex;
     align-items: center;
     gap: 17px;
-    padding: 20px 5px;
+    padding: 15px 5px;
     position: relative;
     transition: background 0.5s;
 }
@@ -17,7 +24,6 @@
     background: #e4e8ff;
 }
 
-
 .link::after {
     content: "";
     position: absolute;
@@ -25,7 +31,7 @@
     top: 0;
 
     width: 9px;
-    height: 75px;
+    height: 100%;
 
     background: #0a6af7;
     border-radius: 9px;
@@ -41,7 +47,6 @@
     right: 0;
     opacity: 1;
 }
-
 
 .icon {
     width: 24px;
@@ -64,4 +69,12 @@
 
 .link:hover .icon {
     background-color: #0a6af7;
+}
+
+.title {
+    transition: 0.5s;
+}
+
+.title:hover {
+    color: #0a6af7;
 }

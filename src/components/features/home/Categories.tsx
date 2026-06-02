@@ -13,12 +13,12 @@ export default function Categories() {
         Категории
       </h2>
 
-      <div className="grid grid-cols-[repeat(auto-fill,_minmax(130px,_1fr))] gap-[50px]">
+      <div className="flex flex-wrap gap-[50px]">
         {categories.map((category) => (
           <Link
             key={category.id}
             href={routes.home}
-            className={`${s.links} flex w-full flex-col items-center gap-2 py-[15px] text-center`}
+            className={`${s.links} flex min-w-[130px] flex-1 flex-col items-center gap-2 py-[15px] text-center`}
           >
             <div
               style={{ backgroundColor: category.color }}
@@ -44,7 +44,7 @@ export default function Categories() {
 
         <Link
           href={routes.home}
-          className={`${s.links} flex w-full flex-col items-center gap-2 py-[15px] text-center`}
+          className={`${s.links} flex min-w-[130px] flex-1 flex-col items-center gap-2 py-[15px] text-center`}
         >
           <div className="flex h-[75px] w-[75px] items-center justify-center rounded-full bg-[#ffebd3]">
             <Image

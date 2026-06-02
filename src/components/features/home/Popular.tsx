@@ -13,12 +13,12 @@ export default function Popular() {
         Популярные
       </h2>
 
-      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] gap-[20px]">
+      <div className="flex flex-wrap gap-[20px]">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={routes.home}
-            className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white"
+            className="flex w-full min-w-[274px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image
               className="h-[180px] w-full object-cover"
@@ -75,7 +75,7 @@ export default function Popular() {
 
         <Link
           href={routes.home}
-          className="flex flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
+          className="flex min-h-[380px] min-w-[274px] flex-1 flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
         >
           <Image
             src={assets.popular.blueMore}

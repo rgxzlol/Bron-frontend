@@ -13,7 +13,7 @@ export default function Popular() {
         Популярные
       </h2>
 
-      <div className="flex flex-wrap gap-[20px]">
+      <div className="flex flex-nowrap gap-[20px]">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}

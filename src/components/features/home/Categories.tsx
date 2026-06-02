@@ -13,7 +13,7 @@ export default function Categories() {
         Категории
       </h2>
 
-      <div className="flex flex-wrap gap-[50px]">
+      <div className="flex flex-nowrap gap-[50px]">
         {categories.map((category) => (
           <Link
             key={category.id}

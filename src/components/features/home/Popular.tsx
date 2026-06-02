@@ -13,23 +13,23 @@ export default function Popular() {
         Популярные
       </h2>
 
-      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] items-start gap-[20px]">
+      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] gap-[20px]">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={routes.home}
-            className="flex h-full w-full flex-col overflow-hidden rounded-[18px] bg-white"
+            className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image
-              className="h-[180px] w-full shrink-0 object-cover"
+              className="h-[180px] w-full object-cover"
               src={place.img}
               alt={place.title}
               width={400}
               height={180}
             />
 
-            <div className="flex flex-1 flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
-              <div className="flex flex-1 flex-col gap-[8px]">
+            <div className="flex flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
+              <div className="flex flex-col gap-[8px]">
                 <span className="line-clamp-2 min-h-[56px] text-[20px] font-semibold leading-[28px]">
                   {place.title}
                 </span>
@@ -75,7 +75,7 @@ export default function Popular() {
 
         <Link
           href={routes.home}
-          className="flex h-full min-h-[380px] flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
+          className="flex flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
         >
           <Image
             src={assets.popular.blueMore}

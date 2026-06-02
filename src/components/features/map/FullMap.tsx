@@ -1,132 +1,252 @@
-"use client"
-
-import mapboxgl from "mapbox-gl"
-import { useEffect, useRef, useState } from "react"
-import { ShopsPlace } from "@/data/shops"
-import { ShopsType } from "@/types/shops.types"
-import ShopDetailPanel from "./ShopDetailPanel"
-import HospitalServicesModal from "./HospitalServicesModal"
-import { assets } from "@/lib/assets"
-
-import "mapbox-gl/dist/mapbox-gl.css"
-
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
-
-type FullMapProps = {
-  onStartBooking: (shop: ShopsType, serviceIds?: string[]) => void
-}
-
-export default function FullMap({ onStartBooking }: FullMapProps) {
-  const mapContainer = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<mapboxgl.Map | null>(null)
-
-  const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
-  const [selectedHospital, setSelectedHospital] = useState<ShopsType | null>(null)
-
-  useEffect(() => {
-    if (!mapContainer.current) return
-
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/rgxzlol/cmpvg516h000o01r1279x7aje",
-      center: [69.2797, 41.3111],
-      zoom: 12,
-    })
-
-    map.setProjection("mercator")
-
-    map.on("load", () => {
-      ShopsPlace.forEach((shop) => {
-        const el = document.createElement("div")
-
-        const isHospital = shop.type === "Больница"
-
-        el.className = `
-          bg-white
-          px-4
-          py-2
-          rounded-full
-          shadow-lg
-          cursor-pointer
-          whitespace-nowrap
-          transition
-          border
-          border-gray-200`
-
-        const iconSrc = isHospital ? assets.categories.health.src : ""
-        el.innerHTML = `
-          <div class="flex items-center gap-2">
-            ${isHospital ? `<img src="${iconSrc}" width="16" height="16" alt="" />` : ""}
-            <span class="font-semibold text-[14px]">${shop.title}</span>
-          </div>
-        `
-
-        const marker = new mapboxgl.Marker(el)
-          .setLngLat([shop.lng, shop.lat])
-          .addTo(map)
-
-        marker.getElement().addEventListener("click", () => {
-          if (shop.type === "Больница") {
-            setSelectedShop(null)
-            setSelectedHospital(shop)
-          } else {
-            setSelectedHospital(null)
-            setSelectedShop(shop)
-          }
-
-          map.flyTo({
-            center: [shop.lng, shop.lat],
-            zoom: 15,
-            speed: 1.2,
-          })
-        })
-      })
-    })
-
-    mapRef.current = map
-
-    return () => map.remove()
-  }, [])
-
-  function handleHospitalContinue(serviceIds: string[]) {
-    if (!selectedHospital) return
-    setSelectedHospital(null)
-    onStartBooking(selectedHospital, serviceIds)
-  }
-
-  function handleShopBook() {
-    if (!selectedShop) return
-    setSelectedShop(null)
-    onStartBooking(selectedShop)
-  }
-
-  return (
-    <div className="relative">
-      <div
-        ref={mapContainer}
-        style={{
-          width: "100%",
-          height: "80dvh",
-          borderRadius: "26px",
-        }}
-      />
-
-      {selectedHospital && (
-        <HospitalServicesModal
-          hospital={selectedHospital}
-          onClose={() => setSelectedHospital(null)}
-          onContinue={handleHospitalContinue}
-        />
-      )}
-
-      {selectedShop && (
-        <ShopDetailPanel
-          shop={selectedShop}
-          onClose={() => setSelectedShop(null)}
-          onBook={handleShopBook}
-        />
-      )}
-    </div>
-  )
-}
-
+"use client"
+
+import mapboxgl from "mapbox-gl"
+import { useEffect, useRef, useState } from "react"
+import { ShopsPlace } from "@/data/shops"
+import { ShopsType } from "@/types/shops.types"
+import ShopDetailPanel from "./ShopDetailPanel"
+import HospitalServicesModal from "./HospitalServicesModal"
+import { assets } from "@/lib/assets"
+import "mapbox-gl/dist/mapbox-gl.css"
+
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+
+type FullMapProps = {
+  onStartBooking: (shop: ShopsType, serviceIds?: string[]) => void
+}
+
+const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
+
+export default function FullMap({ onStartBooking }: FullMapProps) {
+  const mapContainer = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const markersRef = useRef<mapboxgl.Marker[]>([])
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null)
+
+  const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
+  const [selectedHospital, setSelectedHospital] =
+    useState<ShopsType | null>(null)
+
+  const [activeFilter, setActiveFilter] = useState("Все")
+
+  useEffect(() => {
+    if (!mapContainer.current) return
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/rgxzlol/cmpvg516h000o01r1279x7aje",
+      center: [69.2797, 41.3111],
+      zoom: 12,
+    })
+
+    map.setProjection("mercator")
+
+    mapRef.current = map
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lng = position.coords.longitude
+          const lat = position.coords.latitude
+
+          const el = document.createElement("div")
+
+          el.className = `
+            w-5 h-5 rounded-full bg-blue-500
+            border-4 border-white shadow-lg
+          `
+
+          userMarkerRef.current = new mapboxgl.Marker(el)
+            .setLngLat([lng, lat])
+            .addTo(map)
+
+          map.flyTo({
+            center: [lng, lat],
+            zoom: 14,
+            speed: 1.2,
+          })
+        },
+        (error) => {
+          console.error(error)
+        },
+        {
+          enableHighAccuracy: true,
+        }
+      )
+    }
+
+    return () => map.remove()
+  }, [])
+
+  function goToMyLocation() {
+    const map = mapRef.current
+    if (!map || !navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lng = position.coords.longitude
+        const lat = position.coords.latitude
+
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLngLat([lng, lat])
+        } else {
+          const el = document.createElement("div")
+
+          el.className = `
+            w-5 h-5 rounded-full bg-blue-500
+            border-4 border-white shadow-lg
+          `
+
+          userMarkerRef.current = new mapboxgl.Marker(el)
+            .setLngLat([lng, lat])
+            .addTo(map)
+        }
+
+        map.flyTo({
+          center: [lng, lat],
+          zoom: 15,
+          speed: 1.2,
+        })
+      },
+      (err) => console.error(err),
+      { enableHighAccuracy: true }
+    )
+  }
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    markersRef.current.forEach((marker) => marker.remove())
+    markersRef.current = []
+
+    const filteredShops =
+      activeFilter === "Все"
+        ? ShopsPlace
+        : ShopsPlace.filter((shop) => {
+            if (
+              activeFilter === "Спортзал" &&
+              shop.title.toLowerCase().includes("bronfitness")
+            ) {
+              return true
+            }
+            return shop.type === activeFilter
+          })
+
+    filteredShops.forEach((shop) => {
+      const el = document.createElement("div")
+
+      const isHospital = shop.type === "Больница"
+
+      el.className = `
+        bg-white px-4 py-2 rounded-full shadow-lg
+        cursor-pointer whitespace-nowrap transition
+        border border-gray-200
+      `
+
+      const iconSrc = isHospital ? assets.categories.health.src : ""
+
+      el.innerHTML = `
+        <div class="flex items-center gap-2">
+          ${
+            isHospital
+              ? `<img src="${iconSrc}" width="16" height="16" />`
+              : ""
+          }
+          <span class="font-semibold text-[14px]">
+            ${shop.title}
+          </span>
+        </div>
+      `
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([shop.lng, shop.lat])
+        .addTo(map)
+
+      marker.getElement().addEventListener("click", () => {
+        if (shop.type === "Больница") {
+          setSelectedShop(null)
+          setSelectedHospital(shop)
+        } else {
+          setSelectedHospital(null)
+          setSelectedShop(shop)
+        }
+
+        map.flyTo({
+          center: [shop.lng, shop.lat],
+          zoom: 15,
+          speed: 1.2,
+        })
+      })
+
+      markersRef.current.push(marker)
+    })
+  }, [activeFilter])
+
+  function handleHospitalContinue(serviceIds: string[]) {
+    if (!selectedHospital) return
+    setSelectedHospital(null)
+    onStartBooking(selectedHospital, serviceIds)
+  }
+
+  function handleShopBook() {
+    if (!selectedShop) return
+    setSelectedShop(null)
+    onStartBooking(selectedShop)
+  }
+
+  return (
+    <div className="relative">
+      <div className="absolute top-4 left-4 z-10 flex gap-2 overflow-x-auto max-w-[90%]">
+        {filters.map((filter) => (
+          <button
+            key={filter}
+            onClick={() => setActiveFilter(filter)}
+            className={`
+              px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
+              ${
+                activeFilter === filter
+                  ? "bg-black text-white border-black"
+                  : "bg-white text-black border-[#0a6af7]"
+              }
+            `}
+          >
+            {filter}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={goToMyLocation}
+        className="absolute bottom-4 right-4 z-10 bg-white px-4 py-3 rounded-full shadow-lg border border-[#0a6af7] font-semibold"
+      >
+      📍
+      </button>
+
+      <div
+        ref={mapContainer}
+        style={{
+          width: "100%",
+          height: "80dvh",
+          borderRadius: "26px",
+        }}
+      />
+
+      {selectedHospital && (
+        <HospitalServicesModal
+          hospital={selectedHospital}
+          onClose={() => setSelectedHospital(null)}
+          onContinue={handleHospitalContinue}
+        />
+      )}
+
+      {selectedShop && (
+        <ShopDetailPanel
+          shop={selectedShop}
+          onClose={() => setSelectedShop(null)}
+          onBook={handleShopBook}
+        />
+      )}
+    </div>
+  )
+}

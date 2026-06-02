@@ -72,7 +72,7 @@ export default function HospitalServicesModal({
                     </div>
                     <button
                       type="button"
-                      className={s.pickBtn}
+                      className={isSelected ? s.pickBtnPress : s.pickBtn }
                       onClick={() => toggleService(service.id)}
                       aria-pressed={isSelected}
                     >

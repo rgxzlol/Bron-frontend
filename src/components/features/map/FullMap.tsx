@@ -52,7 +52,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           const el = document.createElement("div")
 
           el.className = `
-            w-5 h-5 rounded-full bg-blue-500
+            w-5 h-5 rounded-full bg-[#0a6af7]
             border-4 border-white shadow-lg
           `
 
@@ -93,7 +93,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           const el = document.createElement("div")
 
           el.className = `
-            w-5 h-5 rounded-full bg-blue-500
+            w-5 h-5 rounded-full bg-[#0a6af7]
             border-4 border-white shadow-lg
           `
 

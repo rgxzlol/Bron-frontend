@@ -8,6 +8,19 @@
   padding: 16px;
 }
 
+.pickBtnPress {
+  color: #0a6af7;
+  background: #e8f0ff;
+  border: 1px solid #0a6af7;
+  border-radius: 10px;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+
 .modal {
   width: min(980px, 100%);
   max-height: min(720px, calc(100vh - 32px));
@@ -171,4 +184,3 @@
     min-width: 180px;
   }
 }
-

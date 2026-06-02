@@ -700,6 +700,9 @@
   font-weight: 600;
   font-size: 14px;
   background: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .primaryLink {

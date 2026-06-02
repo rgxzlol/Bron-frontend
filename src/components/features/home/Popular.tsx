@@ -75,7 +75,7 @@ export default function Popular() {
 
         <Link
           href={routes.home}
-          className="flex min-h-[380px] max-w-[274px] flex-1 flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
+          className="flex min-h-[380px] flex-1 flex-col items-center justify-center rounded-[18px] bg-white p-[20px] max-w-[274px]"
         >
           <Image
             src={assets.popular.blueMore}

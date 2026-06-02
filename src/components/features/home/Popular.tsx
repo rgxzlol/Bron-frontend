@@ -18,7 +18,7 @@ export default function Popular() {
           <Link
             key={place.id}
             href={routes.home}
-            className="flex w-full min-w-[274px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white"
+            className="flex w-full min-w-[250px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image
               className="h-[180px] w-full object-cover"
@@ -30,7 +30,7 @@ export default function Popular() {
 
             <div className="flex flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
               <div className="flex flex-col gap-[8px]">
-                <span className="line-clamp-2 min-h-[56px] text-[20px] font-semibold leading-[28px]">
+                <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
                   {place.title}
                 </span>
 
@@ -75,7 +75,7 @@ export default function Popular() {
 
         <Link
           href={routes.home}
-          className="flex min-h-[380px] min-w-[274px] flex-1 flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
+          className="flex min-h-[380px] max-w-[274px] flex-1 flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
         >
           <Image
             src={assets.popular.blueMore}

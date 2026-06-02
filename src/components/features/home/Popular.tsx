@@ -13,32 +13,38 @@ export default function Popular() {
         Популярные
       </h2>
 
-      {/* GRID вместо flex — это главное исправление */}
-      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] gap-[20px]">
+      <div className="grid grid-cols-[repeat(auto-fill,_minmax(274px,_1fr))] items-start gap-[20px]">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={routes.home}
-            className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white"
+            className="flex h-full w-full flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image
-              className="h-[180px] w-full object-cover"
+              className="h-[180px] w-full shrink-0 object-cover"
               src={place.img}
               alt={place.title}
+              width={400}
+              height={180}
             />
 
-            <div className="flex flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
-              <div className="flex flex-col gap-[8px]">
-                <span className="text-[20px] font-semibold">
+            <div className="flex flex-1 flex-col gap-[12px] px-[16px] pb-[13px] pt-[12px]">
+              <div className="flex flex-1 flex-col gap-[8px]">
+                <span className="line-clamp-2 min-h-[56px] text-[20px] font-semibold leading-[28px]">
                   {place.title}
                 </span>
 
-                <div className="flex items-center gap-[15px]">
+                <div className="flex flex-wrap items-center gap-[15px]">
                   <div className="flex items-center gap-[6px]">
-                    <Image src={assets.popular.starRating} alt="Рейтинг" />
+                    <Image
+                      src={assets.popular.starRating}
+                      alt="Рейтинг"
+                    />
+
                     <p className="text-[15px] font-semibold">
                       {place.rating}
                     </p>
+
                     <p className="text-[15px] font-semibold opacity-75">
                       ({place.reviews}{" "}
                       {pluralizeReviews(place.reviews)})
@@ -46,14 +52,18 @@ export default function Popular() {
                   </div>
 
                   <div className="flex items-center gap-[6px]">
-                    <Image src={assets.popular.timeIcon} alt="Время" />
+                    <Image
+                      src={assets.popular.timeIcon}
+                      alt="Время"
+                    />
+
                     <p className="text-[15px] font-semibold">
                       {formatDurationMinutes(place.time)}
                     </p>
                   </div>
                 </div>
 
-                <p className="max-w-[210px] text-[15px] leading-none opacity-75">
+                <p className="line-clamp-3 min-h-[54px] text-[15px] leading-[18px] opacity-75">
                   {place.desc}
                 </p>
               </div>
@@ -63,12 +73,15 @@ export default function Popular() {
           </Link>
         ))}
 
-        {/* КНОПКА "СМОТРЕТЬ ВСЕ" */}
         <Link
           href={routes.home}
-          className="flex flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
+          className="flex h-full min-h-[380px] flex-col items-center justify-center rounded-[18px] bg-white p-[20px]"
         >
-          <Image src={assets.popular.blueMore} alt="" />
+          <Image
+            src={assets.popular.blueMore}
+            alt="Смотреть все"
+          />
+
           <span className="text-[20px] text-[#0a6af7]">
             Смотреть все
           </span>

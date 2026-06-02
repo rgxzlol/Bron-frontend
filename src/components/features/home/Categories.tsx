@@ -12,21 +12,27 @@ export default function Categories() {
       <h2 className="mb-[60px] text-[24px] font-semibold">
         Категории
       </h2>
-      <div className="grid grid-cols-[repeat(auto-fill,_minmax(130px,_1fr))] gap-[50px]">
+
+      <div className="grid grid-cols-[repeat(auto-fill,_minmax(130px,_1fr))] items-start gap-[50px]">
         {categories.map((category) => (
           <Link
             key={category.id}
             href={routes.home}
-            className={`${s.links} flex w-full flex-col items-center gap-1 py-[15px] text-center`}
+            className={`${s.links} flex h-full w-full flex-col items-center gap-2 py-[15px] text-center`}
           >
             <div
               style={{ backgroundColor: category.color }}
-              className="max-w-[75px] rounded-full p-[22px]"
+              className="flex h-[75px] w-[75px] items-center justify-center rounded-full"
             >
-              <Image src={category.icon} alt={category.title} />
+              <Image
+                src={category.icon}
+                alt={category.title}
+                width={32}
+                height={32}
+              />
             </div>
 
-            <span className="min-h-[64px] font-semibold">
+            <span className="line-clamp-2 min-h-[48px] font-semibold">
               {category.title}
             </span>
 
@@ -35,15 +41,21 @@ export default function Categories() {
             </span>
           </Link>
         ))}
+
         <Link
           href={routes.home}
-          className={`${s.links} flex w-full flex-col items-center gap-1 py-[15px] text-center`}
+          className={`${s.links} flex h-full w-full flex-col items-center gap-2 py-[15px] text-center`}
         >
-          <div className="max-w-[75px] rounded-full bg-[#ffebd3] p-[22px]">
-            <Image src={assets.categories.more} alt="Все категории" />
+          <div className="flex h-[75px] w-[75px] items-center justify-center rounded-full bg-[#ffebd3]">
+            <Image
+              src={assets.categories.more}
+              alt="Все категории"
+              width={32}
+              height={32}
+            />
           </div>
 
-          <span className="min-h-[64px] font-semibold">
+          <span className="min-h-[48px] font-semibold">
             Больше
           </span>
 

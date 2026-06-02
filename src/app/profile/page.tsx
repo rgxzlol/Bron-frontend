@@ -1,7 +1,9 @@
-const Profile = () => {
-  return (
-    <div>page</div>
-  )
-}
+import type { Metadata } from "next";
 
-export default Profile
+export const metadata: Metadata = {
+  title: "Профиль",
+};
+
+export default function ProfilePage() {
+  return <div>Профиль</div>;
+}

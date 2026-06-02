@@ -34,7 +34,7 @@ export default function WhyUs() {
         {steps.map(({ step, title, description }) => (
           <div
             key={step}
-            className="flex items-center gap-[13px] bg-white px-[15px] py-[15px]"
+            className="flex items-center gap-[13px] bg-white px-[15px] py-[15px] rounded-[24px]"
           >
             <p className="max-w-[80px] rounded-full bg-[#f9f9fd] px-[32px] py-[18px] text-center text-[32px] font-semibold text-[#0a6af7]">
               {step}
@@ -49,7 +49,7 @@ export default function WhyUs() {
         ))}
       </div>
 
-      <div className="relative mt-[70px] flex">
+      <div className="relative mt-[70px] flex bg-white py-[27px] px-[32px] rounded-[24px]">
         <div>
           <div className="mb-[70px] flex flex-col gap-[9px]">
             <p className="max-w-[400px] text-[32px] font-semibold">

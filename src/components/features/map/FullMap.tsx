@@ -43,7 +43,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
     mapRef.current = map
 
-    if (navigator.geolocation) {
+    map.on("load", () => {
+      if (!navigator.geolocation) return
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lng = position.coords.longitude
@@ -73,13 +75,18 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           enableHighAccuracy: true,
         }
       )
-    }
+    })
 
-    return () => map.remove()
+    return () => {
+      markersRef.current.forEach((marker) => marker.remove())
+      userMarkerRef.current?.remove()
+      map.remove()
+    }
   }, [])
 
   function goToMyLocation() {
     const map = mapRef.current
+
     if (!map || !navigator.geolocation) return
 
     navigator.geolocation.getCurrentPosition(
@@ -109,12 +116,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         })
       },
       (err) => console.error(err),
-      { enableHighAccuracy: true }
+      {
+        enableHighAccuracy: true,
+      }
     )
   }
 
   useEffect(() => {
     const map = mapRef.current
+
     if (!map) return
 
     markersRef.current.forEach((marker) => marker.remove())
@@ -130,6 +140,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
             ) {
               return true
             }
+
             return shop.type === activeFilter
           })
 
@@ -185,13 +196,17 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   function handleHospitalContinue(serviceIds: string[]) {
     if (!selectedHospital) return
+
     setSelectedHospital(null)
+
     onStartBooking(selectedHospital, serviceIds)
   }
 
   function handleShopBook() {
     if (!selectedShop) return
+
     setSelectedShop(null)
+
     onStartBooking(selectedShop)
   }
 
@@ -220,7 +235,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         onClick={goToMyLocation}
         className="absolute bottom-4 right-4 z-10 bg-white px-4 py-3 rounded-full shadow-lg border border-[#0a6af7] font-semibold"
       >
-      📍
+        📍
       </button>
 
       <div

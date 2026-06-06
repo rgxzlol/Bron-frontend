@@ -14,6 +14,7 @@ const Business = () => {
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
+  const loadForEdit = useBusinessStore((s) => s.loadForEdit);
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
@@ -29,6 +30,16 @@ const Business = () => {
     setModalOpen(true);
   }
 
+  function openEditModal(id: string) {
+    loadForEdit(id);
+    setModalOpen(true);
+  }
+
+  function handleCloseModal() {
+    resetDraft();
+    setModalOpen(false);
+  }
+
   function handleSaved() {
     setModalOpen(false);
     setShowMyBusiness(true);
@@ -36,20 +47,17 @@ const Business = () => {
 
   if (showList) {
     return (
-      <div className="relative min-h-110dvh]">
-        <MyBusiness onAddBusiness={openModal} />
+      <>
+        <MyBusiness onAddBusiness={openModal} onEditBusiness={openEditModal} />
         {modalOpen && (
-          <BusinessModal
-            onClose={() => setModalOpen(false)}
-            onSaved={handleSaved}
-          />
+          <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
         )}
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="relative min-h-[calc(100dvh-13rem)]">
+    <>
       <div className="flex justify-between rounded-[34px] bg-white px-[23px] py-[26px]">
         <div className="flex flex-col gap-[8px]">
           <h3 className="max-w-[450px] text-[36px] font-semibold">
@@ -75,12 +83,9 @@ const Business = () => {
       </div>
 
       {modalOpen && (
-        <BusinessModal
-          onClose={() => setModalOpen(false)}
-          onSaved={handleSaved}
-        />
+        <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
       )}
-    </div>
+    </>
   );
 };
 

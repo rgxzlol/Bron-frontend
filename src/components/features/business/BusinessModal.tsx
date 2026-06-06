@@ -13,7 +13,9 @@ import {
   useBusinessStore,
 } from "@/store/business.store";
 import Image from "next/image";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import s from "./businessModal.module.css";
 
 const MAX_DESCRIPTION_WORDS = 180;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -162,6 +164,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
   const profileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const wordCount = countWords(draft.description);
   const weeklyHours = useMemo(
@@ -263,9 +270,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     );
   }
 
-  return (
-    <div className="absolute inset-0 z-50 flex items-start justify-center overflow-hidden bg-[#fafaff]/80 p-[20px]">
-      <div className="mx-auto flex h-[90dvh] max-h-full w-full max-w-[1100px] flex-col gap-[20px] overflow-y-auto rounded-[24px] bg-[#fafaff] px-[16px] py-[20px]">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className={s.backdrop}>
+      <div className={s.panel}>
         <SectionCard
           title="Профиль фото"
           subtitle="Это фото будет презентовать ваш бизнес на платформе"
@@ -575,6 +584,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

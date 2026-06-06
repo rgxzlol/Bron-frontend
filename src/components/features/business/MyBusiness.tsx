@@ -4,14 +4,18 @@ import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { useBusinessStore } from "@/store/business.store";
 import Image from "next/image";
+import { useState } from "react";
+import BusinessCardMenu from "./BusinessCardMenu";
 
 type Props = {
   onAddBusiness: () => void;
+  onEditBusiness: (id: string) => void;
 };
 
-export default function MyBusiness({ onAddBusiness }: Props) {
+export default function MyBusiness({ onAddBusiness, onEditBusiness }: Props) {
   const businesses = useBusinessStore((s) => s.businesses);
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   return (
     <div className="rounded-[34px] bg-white px-[23px] py-[26px]">
@@ -35,6 +39,7 @@ export default function MyBusiness({ onAddBusiness }: Props) {
             assets.map.photo1;
           const galleryCount = galleryImages.length || 1;
           const isDataUrl = typeof previewImage === "string";
+          const isMenuOpen = openMenuId === business.id;
 
           return (
             <article
@@ -86,18 +91,32 @@ export default function MyBusiness({ onAddBusiness }: Props) {
                       <span className="h-[8px] w-[8px] rounded-full bg-[#1a9b4a]" />
                       Подтверждено
                     </span>
-                    <button
-                      type="button"
-                      className="rounded-[10px] px-[8px] py-[4px] text-[22px] leading-none opacity-50 hover:opacity-100"
-                      aria-label="Меню"
-                      onClick={() => {
-                        if (confirm("Удалить этот бизнес?")) {
-                          removeBusiness(business.id);
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className={`flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[#f4f4f8] text-[22px] leading-none transition hover:bg-[#ececf2] ${
+                          isMenuOpen ? "ring-2 ring-[#0a6af7]/20" : ""
+                        }`}
+                        aria-label="Меню"
+                        aria-expanded={isMenuOpen}
+                        onClick={() =>
+                          setOpenMenuId(isMenuOpen ? null : business.id)
                         }
-                      }}
-                    >
-                      ⋮
-                    </button>
+                      >
+                        ⋮
+                      </button>
+                      {isMenuOpen && (
+                        <BusinessCardMenu
+                          onEdit={() => onEditBusiness(business.id)}
+                          onDelete={() => {
+                            if (confirm("Удалить этот бизнес?")) {
+                              removeBusiness(business.id);
+                            }
+                          }}
+                          onClose={() => setOpenMenuId(null)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -6,9 +6,5 @@ export const metadata: Metadata = {
 }
 
 export default function BusinessPage() {
-  return (
-    <div className="relative min-h-[calc(100dvh-13rem)]">
-      <Business />
-    </div>
-  )
+  return <Business />;
 }

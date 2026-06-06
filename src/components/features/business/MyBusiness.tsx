@@ -10,9 +10,14 @@ import BusinessCardMenu from "./BusinessCardMenu";
 type Props = {
   onAddBusiness: () => void;
   onEditBusiness: (id: string) => void;
+  onOpenStatistics: (id: string) => void;
 };
 
-export default function MyBusiness({ onAddBusiness, onEditBusiness }: Props) {
+export default function MyBusiness({
+  onAddBusiness,
+  onEditBusiness,
+  onOpenStatistics,
+}: Props) {
   const businesses = useBusinessStore((s) => s.businesses);
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -137,7 +142,7 @@ export default function MyBusiness({ onAddBusiness, onEditBusiness }: Props) {
                   <Button
                     text="Статистика"
                     className="text-[18px] !px-[40px] py-[14px]"
-                    onClick={() => alert("Статистика скоро будет доступна")}
+                    onClick={() => onOpenStatistics(business.id)}
                   />
                 </div>
               </div>

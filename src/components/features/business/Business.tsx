@@ -6,10 +6,12 @@ import { useBusinessStore } from "@/store/business.store";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import BusinessModal from "./BusinessModal";
+import BusinessDashboard from "./BusinessDashboard";
 import MyBusiness from "./MyBusiness";
 
 const Business = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [dashboardId, setDashboardId] = useState<string | null>(null);
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
@@ -45,12 +47,37 @@ const Business = () => {
     setShowMyBusiness(true);
   }
 
+  function openDashboard(id: string) {
+    setDashboardId(id);
+  }
+
+  function closeDashboard() {
+    setDashboardId(null);
+  }
+
+  function handleEditFromDashboard() {
+    if (!dashboardId) return;
+    closeDashboard();
+    openEditModal(dashboardId);
+  }
+
   if (showList) {
     return (
       <>
-        <MyBusiness onAddBusiness={openModal} onEditBusiness={openEditModal} />
+        <MyBusiness
+          onAddBusiness={openModal}
+          onEditBusiness={openEditModal}
+          onOpenStatistics={openDashboard}
+        />
         {modalOpen && (
           <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
+        )}
+        {dashboardId && (
+          <BusinessDashboard
+            businessId={dashboardId}
+            onClose={closeDashboard}
+            onEditProfile={handleEditFromDashboard}
+          />
         )}
       </>
     );

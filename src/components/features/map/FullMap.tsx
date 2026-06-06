@@ -4,8 +4,13 @@ import mapboxgl from "mapbox-gl"
 import { useEffect, useRef, useState } from "react"
 import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
+import { businessMatchesMapFilter } from "@/lib/business/coordinates"
+import { businessToShop } from "@/lib/business/toShop"
+import { useBusinessStore } from "@/store/business.store"
+import type { SavedBusiness } from "@/store/business.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
+import UserBusinessPanel from "./UserBusinessPanel"
 import { assets } from "@/lib/assets"
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -26,8 +31,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
   const [selectedHospital, setSelectedHospital] =
     useState<ShopsType | null>(null)
+  const [selectedUserBusiness, setSelectedUserBusiness] =
+    useState<SavedBusiness | null>(null)
 
   const [activeFilter, setActiveFilter] = useState("Все")
+  const businesses = useBusinessStore((s) => s.businesses)
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -144,6 +152,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
             return shop.type === activeFilter
           })
 
+    const filteredUserBusinesses = businesses.filter((business) =>
+      businessMatchesMapFilter(business.category, activeFilter),
+    )
+
     filteredShops.forEach((shop) => {
       const el = document.createElement("div")
 
@@ -175,6 +187,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         .addTo(map)
 
       marker.getElement().addEventListener("click", () => {
+        setSelectedUserBusiness(null)
+
         if (shop.type === "Больница") {
           setSelectedShop(null)
           setSelectedHospital(shop)
@@ -192,7 +206,43 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markersRef.current.push(marker)
     })
-  }, [activeFilter])
+
+    filteredUserBusinesses.forEach((business) => {
+      const el = document.createElement("div")
+
+      el.className = `
+        bg-[#ede8ff] px-4 py-2 rounded-full shadow-lg
+        cursor-pointer whitespace-nowrap transition
+        border-2 border-[#6b4ee6]
+      `
+
+      el.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-[14px] text-[#6b4ee6]">
+            ${business.name || "Мой бизнес"}
+          </span>
+        </div>
+      `
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([business.lng, business.lat])
+        .addTo(map)
+
+      marker.getElement().addEventListener("click", () => {
+        setSelectedShop(null)
+        setSelectedHospital(null)
+        setSelectedUserBusiness(business)
+
+        map.flyTo({
+          center: [business.lng, business.lat],
+          zoom: 15,
+          speed: 1.2,
+        })
+      })
+
+      markersRef.current.push(marker)
+    })
+  }, [activeFilter, businesses])
 
   function handleHospitalContinue(serviceIds: string[]) {
     if (!selectedHospital) return
@@ -208,6 +258,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     setSelectedShop(null)
 
     onStartBooking(selectedShop)
+  }
+
+  function handleUserBusinessBook() {
+    if (!selectedUserBusiness) return
+
+    const shop = businessToShop(selectedUserBusiness)
+    setSelectedUserBusiness(null)
+    onStartBooking(shop)
   }
 
   return (
@@ -260,6 +318,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           shop={selectedShop}
           onClose={() => setSelectedShop(null)}
           onBook={handleShopBook}
+        />
+      )}
+
+      {selectedUserBusiness && (
+        <UserBusinessPanel
+          business={selectedUserBusiness}
+          onClose={() => setSelectedUserBusiness(null)}
+          onBook={handleUserBusinessBook}
         />
       )}
     </div>

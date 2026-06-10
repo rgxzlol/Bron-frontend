@@ -12,7 +12,9 @@ export default function HeroSection() {
           Салон красоты, здоровье, спа, фитнес клуб, образование и многое другое
           в твоем распоряжении
         </p>
-        <Button text="Найти местечко" />
+        <a href="#categories">
+          <Button text="Найти местечко" />
+        </a>
       </div>
       <HeroPhotoCarousel />
     </section>

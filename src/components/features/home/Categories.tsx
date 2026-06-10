@@ -8,7 +8,7 @@ import s from "./categories.module.css";
 
 export default function Categories() {
   return (
-    <section className="my-[35px]">
+    <section className="my-[35px]" id="categories">
       <h2 className="mb-[60px] text-[24px] font-semibold">
         Категории
       </h2>

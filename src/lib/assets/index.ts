@@ -39,6 +39,11 @@ import calendar from "@/assets/images/calendar.svg"
 import card from "@/assets/images/card.svg"
 import discount from "@/assets/images/discount.svg"
 import trash from "@/assets/images/trash.svg"
+import kebabIcon from "@/assets/images/kebabIcon.svg"
+import gpsIcon from "@/assets/images/gpsIcon.svg"
+import guestsIcon from "@/assets/images/guestsIcon.svg"
+import bagIcon from "@/assets/images/bagIcon.svg"
+import arrowDown from "@/assets/images/arrowDown.svg"
 
 export const assets = {
   nav: {
@@ -97,5 +102,12 @@ export const assets = {
     strenght,
     quitIcon,
     security
+  },
+  booking: {
+    kebabIcon,
+    gpsIcon,
+    guestsIcon,
+    bagIcon,
+    arrowDown,
   }
 } as const;

@@ -61,6 +61,16 @@ const Business = () => {
     openEditModal(dashboardId);
   }
 
+  if (dashboardId) {
+    return (
+      <BusinessDashboard
+        businessId={dashboardId}
+        onClose={closeDashboard}
+        onEditProfile={handleEditFromDashboard}
+      />
+    );
+  }
+
   if (showList) {
     return (
       <>
@@ -71,13 +81,6 @@ const Business = () => {
         />
         {modalOpen && (
           <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
-        )}
-        {dashboardId && (
-          <BusinessDashboard
-            businessId={dashboardId}
-            onClose={closeDashboard}
-            onEditProfile={handleEditFromDashboard}
-          />
         )}
       </>
     );

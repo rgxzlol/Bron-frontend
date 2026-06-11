@@ -2,18 +2,19 @@
 
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
-import { formatPrice } from "@/lib/formatPrice";
 import {
-  BUSINESS_CATEGORIES,
+  formatPrice,
+  formatPriceInput,
+  formatPriceInputOnChange,
+  parsePrice,
+} from "@/lib/formatPrice";
+import {
   SERVICE_CATEGORIES,
   type BusinessService,
-  type SavedBusiness,
   useBusinessStore,
 } from "@/store/business.store";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import s from "./businessModal.module.css";
 
 type Props = {
   businessId: string;
@@ -27,6 +28,66 @@ const inputClass =
   "w-full rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] outline-none focus:ring-2 focus:ring-[#0a6af7]/30";
 
 const MAX_DESC = 120;
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+const SERVICE_TIME_SLOTS = [
+  "17:00",
+  "17:30",
+  "18:20",
+  "18:50",
+  "19:20",
+  "19:50",
+  "20:20",
+  "20:50",
+  "21:20",
+  "21:50",
+  "22:00",
+  "22:30",
+] as const;
+
+const BUSY_TIME_SLOTS = new Set<string>([
+  "18:20",
+  "19:20",
+  "19:50",
+  "22:00",
+  "22:30",
+]);
+
+function getMonthLabel(date: Date) {
+  return date.toLocaleDateString("ru-RU", { month: "long" });
+}
+
+function buildCalendarDays(viewMonth: Date) {
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const days: { date: Date; inMonth: boolean }[] = [];
+
+  for (let i = startOffset - 1; i >= 0; i--) {
+    days.push({ date: new Date(year, month, -i), inMonth: false });
+  }
+
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    days.push({ date: new Date(year, month, d), inMonth: true });
+  }
+
+  while (days.length % 7 !== 0) {
+    const next = days.length - startOffset - lastDay.getDate() + 1;
+    days.push({ date: new Date(year, month + 1, next), inMonth: false });
+  }
+
+  return days;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
 
 function Toggle({
   checked,
@@ -185,56 +246,162 @@ function DeleteServiceModal({
   );
 }
 
-function ServiceFormModal({
-  title,
-  subtitle,
+function PriceField({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-[8px]">
+      <span className="text-[15px] font-semibold">{label}</span>
+      <div className="flex gap-[10px]">
+        <input
+          type="text"
+          className={`${inputClass} min-w-0 flex-1 text-black`}
+          placeholder={placeholder}
+          inputMode="numeric"
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(formatPriceInputOnChange(e.target.value))}
+        />
+        <select className={`${inputClass} w-[100px] shrink-0`} defaultValue="sum">
+          <option value="sum">Сум</option>
+        </select>
+      </div>
+    </label>
+  );
+}
+
+function PhotoUploadField({
+  label,
+  photo,
+  onPhotoChange,
+}: {
+  label: string;
+  photo: string | null;
+  onPhotoChange: (photo: string | null) => void;
+}) {
+  const photoRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex flex-col gap-[8px]">
+      <span className="text-[15px] font-semibold">{label}</span>
+      <input
+        ref={photoRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const url = await readImageFile(file);
+          if (url) onPhotoChange(url);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => photoRef.current?.click()}
+        className="flex h-[160px] flex-col items-center justify-center gap-[10px] overflow-hidden rounded-[16px] bg-[#f4f4f8]"
+      >
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <>
+            <PhotoIcon />
+            <span className="text-[15px] font-semibold text-[#0a6af7]">
+              Загрузить фото
+            </span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function FormModalFooter({
   saveLabel,
   onClose,
   onSave,
 }: {
-  title: string;
-  subtitle: string;
   saveLabel: string;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="mt-[28px] flex gap-[12px]">
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex-1 rounded-[14px] bg-[#f4f4f8] py-[14px] text-[16px] font-semibold"
+      >
+        Назад
+      </button>
+      <Button
+        text={saveLabel}
+        onClick={onSave}
+        className="flex-1 !w-full text-center !px-[20px]"
+      />
+    </div>
+  );
+}
+
+function validateForm(form: ServiceFormData): boolean {
+  if (!form.name.trim()) {
+    alert("Укажите название");
+    return false;
+  }
+  if (parsePrice(form.price) <= 0) {
+    alert("Укажите цену");
+    return false;
+  }
+  return true;
+}
+
+function ProductFormModal({
+  onClose,
+  onSave,
+}: {
   onClose: () => void;
   onSave: (data: ServiceFormData) => void;
 }) {
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
-  const photoRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
       <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
-        <h3 className="text-[28px] font-semibold">{title}</h3>
-        <p className="mt-[6px] text-[15px] opacity-60">{subtitle}</p>
+        <h3 className="text-[28px] font-semibold">Добавить товар</h3>
+        <p className="mt-[6px] text-[15px] opacity-60">
+          Заполните информацией о вашем товаре
+        </p>
 
         <div className="mt-[28px] grid grid-cols-1 gap-[24px] md:grid-cols-2">
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название</span>
+              <span className="text-[15px] font-semibold">Название товара</span>
               <input
                 className={inputClass}
                 placeholder="Введите название"
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
               />
             </label>
 
-            <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Цена</span>
-              <div className="flex gap-[10px]">
-                <input
-                  className={`${inputClass} flex-1`}
-                  placeholder="Введите цену"
-                  value={form.price}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, price: e.target.value }))
-                  }
-                />
-                <select className={`${inputClass} w-[100px]`}>
-                  <option>Сум</option>
-                </select>
-              </div>
-            </label>
+            <PriceField
+              label="Цена"
+              placeholder="Введите цену"
+              value={form.price}
+              onChange={(price) => setForm((f) => ({ ...f, price }))}
+            />
 
             <label className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-semibold">Категория</span>
@@ -272,111 +439,272 @@ function ServiceFormModal({
               </span>
             </label>
 
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">
-                Фото услуги или товара
-              </span>
-              <input
-                ref={photoRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const url = await readImageFile(file);
-                  if (url) setForm((f) => ({ ...f, photo: url }));
-                  e.target.value = "";
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => photoRef.current?.click()}
-                className="flex h-[160px] flex-col items-center justify-center gap-[10px] rounded-[16px] bg-[#f4f4f8]"
-              >
-                {form.photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.photo}
-                    alt=""
-                    className="h-full w-full rounded-[16px] object-cover"
-                  />
-                ) : (
-                  <>
-                    <PhotoIcon />
-                    <span className="text-[15px] font-semibold text-[#0a6af7]">
-                      Загрузить фото
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
+            <PhotoUploadField
+              label="Фото услуги или товара"
+              photo={form.photo}
+              onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
+            />
           </div>
         </div>
 
-        <div className="mt-[28px] flex gap-[12px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-[14px] border border-[#e0e0e8] py-[14px] text-[16px] font-semibold"
-          >
-            Назад
-          </button>
-          <Button
-            text={saveLabel}
-            onClick={() => {
-              if (!form.name.trim()) {
-                alert("Укажите название");
-                return;
-              }
-              const price = Number(form.price.replace(/\s/g, ""));
-              if (!price || price <= 0) {
-                alert("Укажите цену");
-                return;
-              }
-              onSave(form);
-            }}
-            className="flex-1 !w-full text-center !px-[20px]"
-          />
-        </div>
+        <FormModalFooter
+          saveLabel="Сохранить услуги или товар"
+          onClose={onClose}
+          onSave={() => {
+            if (!validateForm(form)) return;
+            onSave({ ...form, price: String(parsePrice(form.price)) });
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function ServiceRowMenu({
-  onDelete,
-  onClose,
+function ServiceCalendar({
+  viewMonth,
+  selectedDate,
+  onViewMonthChange,
+  onSelectDate,
 }: {
-  onDelete: () => void;
-  onClose: () => void;
+  viewMonth: Date;
+  selectedDate: Date;
+  onViewMonthChange: (date: Date) => void;
+  onSelectDate: (date: Date) => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
+  const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
 
   return (
-    <div
-      ref={ref}
-      className="absolute right-0 top-full z-10 mt-[6px] min-w-[180px] rounded-[14px] bg-white p-[8px] shadow-lg"
-    >
-      <button
-        type="button"
-        onClick={() => {
-          onDelete();
-          onClose();
-        }}
-        className="flex w-full items-center gap-[10px] rounded-[10px] px-[12px] py-[10px] text-[14px] font-semibold text-[#e53935] hover:bg-[#fde8e8]"
-      >
-        <TrashIcon />
-        Удалить
-      </button>
+    <div>
+      <div className="mb-[12px] flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() =>
+            onViewMonthChange(
+              new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1),
+            )
+          }
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
+          aria-label="Предыдущий месяц"
+        >
+          ‹
+        </button>
+        <span className="text-[15px] font-semibold capitalize">
+          {getMonthLabel(viewMonth)}
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            onViewMonthChange(
+              new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1),
+            )
+          }
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
+          aria-label="Следующий месяц"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="mb-[8px] grid grid-cols-7 gap-[4px] text-center text-[12px] font-semibold opacity-50">
+        {WEEKDAYS.map((day) => (
+          <span key={day}>{day}</span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-[4px]">
+        {calendarDays.map(({ date, inMonth }) => {
+          const selected = isSameDay(date, selectedDate);
+          return (
+            <button
+              key={date.toISOString()}
+              type="button"
+              disabled={!inMonth}
+              onClick={() => inMonth && onSelectDate(date)}
+              className={`flex aspect-square max-h-[36px] items-center justify-center rounded-full text-[13px] font-semibold ${
+                !inMonth
+                  ? "text-[#d0d0d8]"
+                  : selected
+                    ? "bg-[#0a6af7] text-white"
+                    : "text-[#374151] hover:bg-[#ececf2]"
+              }`}
+            >
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddServiceFormModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: (data: ServiceFormData) => void;
+}) {
+  const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
+  const [showOnlyFree, setShowOnlyFree] = useState(true);
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+  const [viewMonth, setViewMonth] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const visibleSlots = SERVICE_TIME_SLOTS.filter(
+    (slot) => !showOnlyFree || !BUSY_TIME_SLOTS.has(slot),
+  );
+
+  function toggleSlot(slot: string) {
+    if (BUSY_TIME_SLOTS.has(slot)) return;
+    setSelectedSlots((current) => {
+      const next = new Set(current);
+      if (next.has(slot)) next.delete(slot);
+      else next.add(slot);
+      return next;
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
+      <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
+        <h3 className="text-[28px] font-semibold">Добавить услугу</h3>
+        <p className="mt-[6px] text-[15px] opacity-60">
+          Добавьте услугу для брони
+        </p>
+
+        <div className="mt-[28px] grid grid-cols-1 gap-[24px] md:grid-cols-2">
+          <div className="flex flex-col gap-[18px]">
+            <label className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-semibold">Название услуги</span>
+              <input
+                className={inputClass}
+                placeholder="Обязательно"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+              />
+            </label>
+
+            <PriceField
+              label="Цена услуги"
+              placeholder="Введите цену"
+              value={form.price}
+              onChange={(price) => setForm((f) => ({ ...f, price }))}
+            />
+
+            <label className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-semibold">Категория</span>
+              <select
+                className={inputClass}
+                value={form.category}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, category: e.target.value }))
+                }
+              >
+                <option value="">Выберите категорию</option>
+                {SERVICE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
+              <div className="mb-[14px] flex items-center justify-between gap-[12px]">
+                <span className="text-[15px] font-semibold">Свободное время</span>
+                <div className="flex items-center gap-[10px]">
+                  <span className="text-[13px] opacity-60">
+                    Показать только свободное
+                  </span>
+                  <Toggle checked={showOnlyFree} onChange={setShowOnlyFree} />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-[8px]">
+                {visibleSlots.map((slot) => {
+                  const busy = BUSY_TIME_SLOTS.has(slot);
+                  const selected = selectedSlots.has(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => toggleSlot(slot)}
+                      className={`min-w-[64px] rounded-[10px] px-[12px] py-[8px] text-[13px] font-semibold transition ${
+                        busy
+                          ? "cursor-not-allowed bg-[#0a6af7] text-white"
+                          : selected
+                            ? "bg-white text-black ring-2 ring-[#0a6af7]"
+                            : "bg-white text-black hover:ring-2 hover:ring-[#0a6af7]/30"
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-[14px] flex items-center gap-[16px] text-[13px]">
+                <span className="flex items-center gap-[6px]">
+                  <span className="h-[8px] w-[8px] rounded-full bg-white ring-1 ring-[#d0d0d8]" />
+                  Свободно
+                </span>
+                <span className="flex items-center gap-[6px]">
+                  <span className="h-[8px] w-[8px] rounded-full bg-[#0a6af7]" />
+                  Занято
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[18px]">
+            <label className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-semibold">Описание услуги</span>
+              <textarea
+                className={`${inputClass} min-h-[100px] resize-y`}
+                placeholder="Опишите услуги"
+                maxLength={MAX_DESC}
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+              />
+              <span className="text-[14px] opacity-60">
+                {form.description.length}/{MAX_DESC}
+              </span>
+            </label>
+
+            <PhotoUploadField
+              label="Фото"
+              photo={form.photo}
+              onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
+            />
+
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[15px] font-semibold">Дата</span>
+              <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
+                <ServiceCalendar
+                  viewMonth={viewMonth}
+                  selectedDate={selectedDate}
+                  onViewMonthChange={setViewMonth}
+                  onSelectDate={setSelectedDate}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <FormModalFooter
+          saveLabel="Сохранить услуги"
+          onClose={onClose}
+          onSave={() => {
+            if (!validateForm(form)) return;
+            onSave({ ...form, price: String(parsePrice(form.price)) });
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -386,18 +714,24 @@ export default function BusinessDashboard({
   onClose,
   onEditProfile,
 }: Props) {
-  const getBusiness = useBusinessStore((s) => s.getBusiness);
   const addService = useBusinessStore((s) => s.addService);
   const addProduct = useBusinessStore((s) => s.addProduct);
   const removeService = useBusinessStore((s) => s.removeService);
+  const updateService = useBusinessStore((s) => s.updateService);
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
   const businesses = useBusinessStore((s) => s.businesses);
 
-  const business = useMemo(
-    () => getBusiness(businessId),
-    [businessId, getBusiness, businesses],
-  );
+  const business = useMemo(() => {
+    const item = businesses.find((entry) => entry.id === businessId);
+    if (!item) return undefined;
+
+    return {
+      ...item,
+      services: item.services ?? [],
+      bookingRequests: item.bookingRequests ?? [],
+    };
+  }, [businessId, businesses]);
 
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<Tab>("services");
@@ -406,7 +740,7 @@ export default function BusinessDashboard({
   const [deleteTarget, setDeleteTarget] = useState<BusinessService | null>(
     null,
   );
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setMounted(true);
@@ -420,11 +754,59 @@ export default function BusinessDashboard({
     assets.map.photo1;
   const isDataUrl = typeof profileImage === "string";
 
+  function commitPriceEdit(serviceId: string, fallbackPrice: number) {
+    const raw = priceEdits[serviceId];
+    if (raw === undefined) return;
+
+    const price = parsePrice(raw);
+    if (price > 0) {
+      updateService(businessId, serviceId, { price });
+    }
+
+    setPriceEdits((current) => {
+      const next = { ...current };
+      delete next[serviceId];
+      return next;
+    });
+  }
+
+  function commitAllPriceEdits() {
+    if (!business) return;
+
+    for (const service of business.services) {
+      const raw = priceEdits[service.id];
+      if (raw === undefined) continue;
+
+      const price = parsePrice(raw);
+      if (price > 0) {
+        updateService(businessId, service.id, { price });
+      }
+    }
+
+    setPriceEdits({});
+  }
+
+  function handleSaveChanges() {
+    commitAllPriceEdits();
+    onClose();
+  }
+
+  function handlePriceBlur(serviceId: string, fallbackPrice: number) {
+    commitPriceEdit(serviceId, fallbackPrice);
+  }
+
+  function handlePriceFocus(serviceId: string, currentPrice: number) {
+    setPriceEdits((current) => ({
+      ...current,
+      [serviceId]: current[serviceId] ?? formatPriceInput(currentPrice),
+    }));
+  }
+
   function handleAddService(data: ServiceFormData) {
     addService(businessId, {
       name: data.name,
       category: data.category || "Другое",
-      price: Number(data.price.replace(/\s/g, "")),
+      price: parsePrice(data.price),
       description: data.description,
       photo: data.photo,
       type: "service",
@@ -436,17 +818,16 @@ export default function BusinessDashboard({
     addProduct(businessId, {
       name: data.name,
       category: data.category || "Другое",
-      price: Number(data.price.replace(/\s/g, "")),
+      price: parsePrice(data.price),
       description: data.description,
       photo: data.photo,
     });
     setShowAddProduct(false);
   }
 
-  return createPortal(
+  return (
     <>
-      <div className={s.backdrop}>
-        <div className={s.panel}>
+      <div className="flex min-w-0 w-full flex-col gap-[20px] pb-[20px]">
           <div className="mb-[8px]">
             <h2 className="text-[32px] font-semibold">Бизнес страница</h2>
             <div className="mt-[16px] flex gap-[32px] border-b border-[#ececf2]">
@@ -555,8 +936,8 @@ export default function BusinessDashboard({
                   />
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[800px] text-left text-[14px]">
+                <div className="min-w-0 overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-left text-[14px]">
                     <thead>
                       <tr className="border-b border-[#ececf2] text-[13px] opacity-60">
                         <th className="pb-[12px] pr-[12px] font-semibold">
@@ -581,6 +962,16 @@ export default function BusinessDashboard({
                       </tr>
                     </thead>
                     <tbody>
+                      {business.services.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="py-[24px] text-center text-[15px] opacity-60"
+                          >
+                            Услуг пока нет. Добавьте первую услугу.
+                          </td>
+                        </tr>
+                      )}
                       {business.services.map((service) => (
                         <tr
                           key={service.id}
@@ -593,7 +984,36 @@ export default function BusinessDashboard({
                             {service.category}
                           </td>
                           <td className="py-[14px] pr-[12px]">
-                            {formatPrice(service.price)}
+                            <input
+                              type="text"
+                              className="w-[130px] rounded-[10px] bg-[#f4f4f8] px-[10px] py-[8px] text-[14px] text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
+                              inputMode="numeric"
+                              autoComplete="off"
+                              aria-label={`Цена услуги ${service.name}`}
+                              value={
+                                priceEdits[service.id] ??
+                                formatPriceInput(service.price)
+                              }
+                              onFocus={() =>
+                                handlePriceFocus(service.id, service.price)
+                              }
+                              onChange={(e) =>
+                                setPriceEdits((current) => ({
+                                  ...current,
+                                  [service.id]: formatPriceInputOnChange(
+                                    e.target.value,
+                                  ),
+                                }))
+                              }
+                              onBlur={() =>
+                                handlePriceBlur(service.id, service.price)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                            />
                           </td>
                           <td className="max-w-[200px] truncate py-[14px] pr-[12px] opacity-75">
                             {service.description}
@@ -626,24 +1046,15 @@ export default function BusinessDashboard({
                               }
                             />
                           </td>
-                          <td className="relative py-[14px]">
+                          <td className="py-[14px]">
                             <button
                               type="button"
-                              className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-[#f4f4f8] text-[18px]"
-                              onClick={() =>
-                                setOpenMenuId(
-                                  openMenuId === service.id ? null : service.id,
-                                )
-                              }
+                              aria-label={`Удалить услугу ${service.name}`}
+                              className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-[#fde8e8] transition hover:bg-[#f9d4d4]"
+                              onClick={() => setDeleteTarget(service)}
                             >
-                              ⋮
+                              <TrashIcon />
                             </button>
-                            {openMenuId === service.id && (
-                              <ServiceRowMenu
-                                onDelete={() => setDeleteTarget(service)}
-                                onClose={() => setOpenMenuId(null)}
-                              />
-                            )}
                           </td>
                         </tr>
                       ))}
@@ -660,7 +1071,7 @@ export default function BusinessDashboard({
                 />
                 <Button
                   text="Сохранить изменение"
-                  onClick={onClose}
+                  onClick={handleSaveChanges}
                   className="flex-1 !w-full text-center !px-[20px] text-[17px]"
                 />
               </div>
@@ -750,24 +1161,17 @@ export default function BusinessDashboard({
               </div>
             </section>
           )}
-        </div>
       </div>
 
       {showAddService && (
-        <ServiceFormModal
-          title="Добавить услугу"
-          subtitle="Добавьте услугу для брони"
-          saveLabel="Сохранить услуги"
+        <AddServiceFormModal
           onClose={() => setShowAddService(false)}
           onSave={handleAddService}
         />
       )}
 
       {showAddProduct && (
-        <ServiceFormModal
-          title="Добавить товар"
-          subtitle="Заполните информацией о вашем товаре"
-          saveLabel="Сохранить услуги или товар"
+        <ProductFormModal
           onClose={() => setShowAddProduct(false)}
           onSave={handleAddProduct}
         />
@@ -783,7 +1187,6 @@ export default function BusinessDashboard({
           }}
         />
       )}
-    </>,
-    document.body,
+    </>
   );
 }

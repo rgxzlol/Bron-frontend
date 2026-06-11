@@ -132,7 +132,7 @@ function createDefaultBookingRequests(): BusinessBookingRequest[] {
   ];
 }
 
-function ensureBusinessDefaults(business: SavedBusiness): SavedBusiness {
+function normalizeBusiness(business: SavedBusiness): SavedBusiness {
   const coords =
     business.lat != null && business.lng != null
       ? { lat: business.lat, lng: business.lng }
@@ -142,13 +142,25 @@ function ensureBusinessDefaults(business: SavedBusiness): SavedBusiness {
     ...business,
     lat: coords.lat,
     lng: coords.lng,
+    services: Array.isArray(business.services) ? business.services : [],
+    bookingRequests: Array.isArray(business.bookingRequests)
+      ? business.bookingRequests
+      : [],
+  };
+}
+
+function ensureNewBusinessDefaults(business: SavedBusiness): SavedBusiness {
+  const normalized = normalizeBusiness(business);
+
+  return {
+    ...normalized,
     services:
-      business.services?.length > 0
-        ? business.services
+      normalized.services.length > 0
+        ? normalized.services
         : createDefaultServices(),
     bookingRequests:
-      business.bookingRequests?.length > 0
-        ? business.bookingRequests
+      normalized.bookingRequests.length > 0
+        ? normalized.bookingRequests
         : createDefaultBookingRequests(),
   };
 }
@@ -175,6 +187,11 @@ type BusinessStore = {
     product: Omit<BusinessService, "id" | "active" | "type">,
   ) => void;
   removeService: (businessId: string, serviceId: string) => void;
+  updateService: (
+    businessId: string,
+    serviceId: string,
+    partial: Partial<Pick<BusinessService, "name" | "category" | "price" | "description" | "photo">>,
+  ) => void;
   toggleService: (
     businessId: string,
     serviceId: string,
@@ -235,7 +252,7 @@ export const useBusinessStore = create<BusinessStore>()(
 
       getBusiness: (id) => {
         const business = get().businesses.find((b) => b.id === id);
-        return business ? ensureBusinessDefaults(business) : undefined;
+        return business ? normalizeBusiness(business) : undefined;
       },
 
       saveDraft: () => {
@@ -245,7 +262,7 @@ export const useBusinessStore = create<BusinessStore>()(
           let saved: SavedBusiness | null = null;
           const next = businesses.map((business) => {
             if (business.id !== editingId) return business;
-            saved = ensureBusinessDefaults({ ...business, ...draft });
+            saved = normalizeBusiness({ ...business, ...draft });
             return saved;
           });
           if (!saved) throw new Error("Business not found");
@@ -259,7 +276,7 @@ export const useBusinessStore = create<BusinessStore>()(
         }
 
         const coords = randomTashkentCoords();
-        const saved: SavedBusiness = ensureBusinessDefaults({
+        const saved: SavedBusiness = ensureNewBusinessDefaults({
           ...draft,
           id: crypto.randomUUID(),
           status: "confirmed",
@@ -267,8 +284,8 @@ export const useBusinessStore = create<BusinessStore>()(
           views: 0,
           lat: coords.lat,
           lng: coords.lng,
-          services: createDefaultServices(),
-          bookingRequests: createDefaultBookingRequests(),
+          services: [],
+          bookingRequests: [],
         });
         set({
           businesses: [...businesses, saved],
@@ -330,6 +347,16 @@ export const useBusinessStore = create<BusinessStore>()(
           })),
         })),
 
+      updateService: (businessId, serviceId, partial) =>
+        set((state) => ({
+          businesses: updateBusiness(state.businesses, businessId, (b) => ({
+            ...b,
+            services: b.services.map((s) =>
+              s.id === serviceId ? { ...s, ...partial } : s,
+            ),
+          })),
+        })),
+
       toggleService: (businessId, serviceId, active) =>
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
@@ -354,17 +381,22 @@ export const useBusinessStore = create<BusinessStore>()(
     }),
     {
       name: "business-storage",
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
         const state = persisted as { businesses?: SavedBusiness[] };
         if (!state?.businesses) return persisted;
+
         return {
           ...state,
           businesses: state.businesses.map((b) =>
-            ensureBusinessDefaults(b as SavedBusiness),
+            normalizeBusiness(b as SavedBusiness),
           ),
         };
       },
+      partialize: (state) => ({
+        businesses: state.businesses,
+        showMyBusiness: state.showMyBusiness,
+      }),
     },
   ),
 );

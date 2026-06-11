@@ -279,7 +279,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
               ${
                 activeFilter === filter
-                  ? "bg-black text-white border-black"
+                  ? "bg-[#bu0A6AF7] text-white border-black"
                   : "bg-white text-black border-[#0a6af7]"
               }
             `}

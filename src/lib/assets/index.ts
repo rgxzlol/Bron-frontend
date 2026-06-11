@@ -33,6 +33,9 @@ import strenght from "@/assets/images/strenghtIcon.svg";
 import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
 import bussinesPhoto from "@/assets/images/businessPhoto.png";
+import callPhone from "@/assets/images/call.svg";
+import tg from "@/assets/images/tg.svg";
+import email from "@/assets/images/email.svg";
 
 export const assets = {
   nav: {
@@ -85,5 +88,10 @@ export const assets = {
   },
   bussines: {
     photo1: bussinesPhoto,
+  },
+  support: {
+    phone: callPhone,
+    tg,
+    email
   }
 } as const;

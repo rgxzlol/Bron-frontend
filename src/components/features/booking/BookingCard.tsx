@@ -1,12 +1,18 @@
 "use client";
+import { useState } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
+import { BookingDropdown } from './BookingDropdown';
+import { BookingCancelModal } from './BookingCancelModal';
+import { BookingEditModal } from './BookingEditModal';
 
 interface BookingCardProps {
     status?: 'upcoming' | 'finished';
 }
 
 export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const UpcomingCardContent = () => (
         <article className="flex flex-col max-w-[1525px] w-full rounded-[18px] bg-white overflow-hidden pr-[18px] pb-[18px]">
             <div className="flex flex-row mb-[18px]">
@@ -31,12 +37,7 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                             <span className="rounded-[18px] py-[7px] px-[22px] font-semibold text-[16px] text-[#00bd08] bg-[#e7f8ef] whitespace-nowrap">
                                 • Подтверждено
                             </span>
-                            <button
-                                className="rounded-full w-[40px] h-[40px] bg-transparent grid place-items-center shrink-0 transition-colors duration-200 hover:bg-gray-100 active:scale-90"
-                                aria-label="Меню"
-                            >
-                                <Image src={assets.booking.kebabIcon} alt='kebab' />
-                            </button>
+                            <BookingDropdown onCancelClick={() => setIsCancelModalOpen(true)} onEditClick={() => setIsEditModalOpen(true)} />
                         </div>
                     </div>
 
@@ -76,7 +77,10 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                                 <span className="font-semibold text-[20px] text-black opacity-60">Итог</span>
                                 <strong className="font-bold text-[36px] text-black whitespace-nowrap">98 000 сум</strong>
                             </div>
-                            <button className="rounded-[12px] bg-[#FAFAFF] font-semibold text-[20px] text-black py-[16px] px-[28px] whitespace-nowrap mt-[38px] transition-all duration-200 hover:bg-gray-200 hover:shadow-sm active:scale-95">
+                            <button
+                                onClick={() => setIsCancelModalOpen(true)}
+                                className="rounded-[12px] bg-[#FAFAFF] font-semibold text-[20px] text-black py-[16px] px-[28px] whitespace-nowrap mt-[38px] transition-all duration-200 hover:bg-gray-200 hover:shadow-sm active:scale-95"
+                            >
                                 Отменить бронь
                             </button>
                         </div>
@@ -166,5 +170,11 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
         </article>
     );
 
-    return status === 'finished' ? <FinishedCardContent /> : <UpcomingCardContent />;
+    return (
+        <>
+            {status === 'finished' ? <FinishedCardContent /> : <UpcomingCardContent />}
+            <BookingCancelModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} />
+            <BookingEditModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
+        </>
+    );
 };

@@ -44,6 +44,8 @@ import gpsIcon from "@/assets/images/gpsIcon.svg"
 import guestsIcon from "@/assets/images/guestsIcon.svg"
 import bagIcon from "@/assets/images/bagIcon.svg"
 import arrowDown from "@/assets/images/arrowDown.svg"
+import editIcon from "@/assets/images/editIcon.svg"
+import deleteIcon from "@/assets/images/deleteIcon.svg"
 
 export const assets = {
   nav: {
@@ -109,5 +111,7 @@ export const assets = {
     guestsIcon,
     bagIcon,
     arrowDown,
+    editIcon,
+    deleteIcon,
   }
 } as const;

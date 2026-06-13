@@ -2,8 +2,8 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import Image from "next/image";
 import Link from "next/link";
-import LanguageSelector from "@/components/shared/LanguageSelector";
-import NotificationDropdown from "@/components/shared/NotificationDropdown";
+import LanguageSelector from "@/components/layout/Header/LanguageSelector";
+import NotificationDropdown from "@/components/layout/Header/NotificationDropdown";
 
 export default function Header() {
   return (

@@ -246,35 +246,61 @@ function DeleteServiceModal({
   );
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+      <path
+        d="M1 1.5L6 6.5L11 1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function PriceField({
   label,
   placeholder,
   value,
   onChange,
+  error,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  error?: boolean;
 }) {
   return (
-    <label className="flex flex-col gap-[8px]">
-      <span className="text-[15px] font-semibold">{label}</span>
-      <div className="flex gap-[10px]">
+    <div className="flex flex-col gap-[8px]">
+      <span className="text-[15px] font-semibold text-black">{label}</span>
+      <div className="flex items-stretch gap-[8px]">
         <input
           type="text"
-          className={`${inputClass} min-w-0 flex-1 text-black`}
+          className="min-w-0 flex-1 rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] text-black outline-none placeholder:text-[#9ca3af] focus:ring-2 focus:ring-[#0a6af7]/30"
           placeholder={placeholder}
           inputMode="numeric"
           autoComplete="off"
           value={value}
           onChange={(e) => onChange(formatPriceInputOnChange(e.target.value))}
         />
-        <select className={`${inputClass} w-[100px] shrink-0`} defaultValue="sum">
-          <option value="sum">Сум</option>
-        </select>
+        <div className="relative w-[108px] shrink-0">
+          <select
+            className="h-full w-full appearance-none rounded-[14px] bg-[#f4f4f8] py-[14px] pl-[18px] pr-[34px] text-[16px] font-semibold text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
+            defaultValue="sum"
+            aria-label="Валюта"
+          >
+            <option value="sum">Сум</option>
+          </select>
+          <span className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 text-[#6b7280]">
+            <ChevronDownIcon />
+          </span>
+        </div>
       </div>
-    </label>
+      <FieldError show={error} />
+    </div>
   );
 }
 
@@ -330,10 +356,12 @@ function FormModalFooter({
   saveLabel,
   onClose,
   onSave,
+  saveDisabled,
 }: {
   saveLabel: string;
   onClose: () => void;
   onSave: () => void;
+  saveDisabled?: boolean;
 }) {
   return (
     <div className="mt-[28px] flex gap-[12px]">
@@ -347,22 +375,53 @@ function FormModalFooter({
       <Button
         text={saveLabel}
         onClick={onSave}
-        className="flex-1 !w-full text-center !px-[20px]"
+        disabled={saveDisabled}
+        className="flex-1 !w-full text-center !px-[20px] disabled:cursor-not-allowed disabled:opacity-50"
       />
     </div>
   );
 }
 
-function validateForm(form: ServiceFormData): boolean {
-  if (!form.name.trim()) {
-    alert("Укажите название");
-    return false;
+type FormFieldErrors = {
+  name?: boolean;
+  price?: boolean;
+};
+
+function getFormFieldErrors(form: ServiceFormData): FormFieldErrors {
+  return {
+    name: !form.name.trim(),
+    price: parsePrice(form.price) <= 0,
+  };
+}
+
+function hasFormFieldErrors(errors: FormFieldErrors): boolean {
+  return Boolean(errors.name || errors.price);
+}
+
+function FieldError({ show }: { show?: boolean }) {
+  if (!show) return null;
+  return <span className="text-[13px] text-[#e53935]">Обязательное поле</span>;
+}
+
+function useRequiredFormSubmit(form: ServiceFormData) {
+  const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
+
+  function validate(): boolean {
+    const errors = getFormFieldErrors(form);
+    setFieldErrors(errors);
+    return !hasFormFieldErrors(errors);
   }
-  if (parsePrice(form.price) <= 0) {
-    alert("Укажите цену");
-    return false;
+
+  function clearFieldError(field: keyof FormFieldErrors) {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   }
-  return true;
+
+  return { fieldErrors, validate, clearFieldError };
 }
 
 function ProductFormModal({
@@ -373,6 +432,7 @@ function ProductFormModal({
   onSave: (data: ServiceFormData) => void;
 }) {
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
+  const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
@@ -390,17 +450,24 @@ function ProductFormModal({
                 className={inputClass}
                 placeholder="Введите название"
                 value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setForm((f) => ({ ...f, name }));
+                  if (name.trim()) clearFieldError("name");
+                }}
               />
+              <FieldError show={fieldErrors.name} />
             </label>
 
             <PriceField
               label="Цена"
               placeholder="Введите цену"
               value={form.price}
-              onChange={(price) => setForm((f) => ({ ...f, price }))}
+              error={fieldErrors.price}
+              onChange={(price) => {
+                setForm((f) => ({ ...f, price }));
+                if (parsePrice(price) > 0) clearFieldError("price");
+              }}
             />
 
             <label className="flex flex-col gap-[8px]">
@@ -450,8 +517,9 @@ function ProductFormModal({
         <FormModalFooter
           saveLabel="Сохранить услуги или товар"
           onClose={onClose}
+          saveDisabled={hasFormFieldErrors(fieldErrors)}
           onSave={() => {
-            if (!validateForm(form)) return;
+            if (!validate()) return;
             onSave({ ...form, price: String(parsePrice(form.price)) });
           }}
         />
@@ -545,6 +613,7 @@ function AddServiceFormModal({
   onSave: (data: ServiceFormData) => void;
 }) {
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
+  const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
   const [showOnlyFree, setShowOnlyFree] = useState(true);
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [viewMonth, setViewMonth] = useState(() => new Date());
@@ -580,17 +649,24 @@ function AddServiceFormModal({
                 className={inputClass}
                 placeholder="Обязательно"
                 value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setForm((f) => ({ ...f, name }));
+                  if (name.trim()) clearFieldError("name");
+                }}
               />
+              <FieldError show={fieldErrors.name} />
             </label>
 
             <PriceField
               label="Цена услуги"
               placeholder="Введите цену"
               value={form.price}
-              onChange={(price) => setForm((f) => ({ ...f, price }))}
+              error={fieldErrors.price}
+              onChange={(price) => {
+                setForm((f) => ({ ...f, price }));
+                if (parsePrice(price) > 0) clearFieldError("price");
+              }}
             />
 
             <label className="flex flex-col gap-[8px]">
@@ -699,8 +775,9 @@ function AddServiceFormModal({
         <FormModalFooter
           saveLabel="Сохранить услуги"
           onClose={onClose}
+          saveDisabled={hasFormFieldErrors(fieldErrors)}
           onSave={() => {
-            if (!validateForm(form)) return;
+            if (!validate()) return;
             onSave({ ...form, price: String(parsePrice(form.price)) });
           }}
         />

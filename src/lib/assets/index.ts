@@ -46,6 +46,7 @@ import bagIcon from "@/assets/images/bagIcon.svg"
 import arrowDown from "@/assets/images/arrowDown.svg"
 import editIcon from "@/assets/images/editIcon.svg"
 import deleteIcon from "@/assets/images/deleteIcon.svg"
+import emptyNotification from "@/assets/images/emptyNotification.jpg"
 
 export const assets = {
   nav: {
@@ -69,7 +70,8 @@ export const assets = {
     calendar,
     card,
     discount,
-    trash
+    trash,
+    emptyNotification,
   },
   hero: {
     photo1: mainPhoto1,

@@ -544,9 +544,15 @@ export default function BookingPage({
           </p>
 
           <div className={s.whatsNext}>
-            <h3 className={`${s.whatsNextTitle} flex gap-[9px]`}><Image src={assets.header.notification} alt="" />Что дальше?</h3>
+            <h3 className={`${s.whatsNextTitle} flex gap-[9px]`}>
+              <Image src={assets.header.notification} alt="" className={s.whatsNextNotificationIcon} />
+              Что дальше?
+            </h3>
             <ul className={s.whatsNextList}>
-              <li className="flex gap-[5px]"><Image src={assets.popular.timeIcon} alt="" /> Приходите за 10–15 минут до начала бронирования.</li>
+              <li className="flex gap-[5px]">
+                <Image src={assets.popular.timeIcon} alt="" className={s.whatsNextTimeIcon} />
+                Приходите за 10–15 минут до начала бронирования.
+              </li>
               <li className="ml-[26px]">Отмена возможна не позднее чем за 2 часа до визита.</li>
             </ul>
             <Button className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]" text="Оставить отзыв"></Button>

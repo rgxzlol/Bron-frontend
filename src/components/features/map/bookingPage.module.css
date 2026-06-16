@@ -686,11 +686,19 @@
   padding-left: 18px;
 }
 
+.whatsNextNotificationIcon {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(89%) saturate(2476%) hue-rotate(203deg)
+    brightness(96%) contrast(96%);
+}
+
+.whatsNextTimeIcon {
+  filter: brightness(0);
+}
+
 .confirmActions {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
-  justify-content: center;
+  width: 100%;
 }
 
 .secondaryBtn {
@@ -703,14 +711,16 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 1;
 }
 
 .primaryLink {
-  display: inline-flex;
+  display: flex;
+  flex: 1;
 }
 
 .primaryLinkBtn {
-  min-width: 180px;
+  width: 100% !important;
   justify-content: center;
 }
 

@@ -2,6 +2,8 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import Image from "next/image";
 import Link from "next/link";
+import LanguageSelector from "@/components/layout/Header/LanguageSelector";
+import NotificationDropdown from "@/components/layout/Header/NotificationDropdown";
 
 export default function Header() {
   return (
@@ -28,22 +30,9 @@ export default function Header() {
         </div>
 
         <div className="flex gap-[10px]">
-          <button
-            type="button"
-            className="flex items-center gap-[18px] rounded-[27px] bg-white p-[7px]"
-            aria-label="Язык: русский"
-          >
-            <Image src={assets.header.ruLang} alt="" />
-            <span className="pr-[27px] text-[22px] font-semibold">RU</span>
-          </button>
+          <LanguageSelector />
 
-          <button
-            type="button"
-            className="rounded-full bg-white p-[16px]"
-            aria-label="Уведомления"
-          >
-            <Image src={assets.header.notification} alt="" />
-          </button>
+          <NotificationDropdown />
 
           <Link
             href={routes.profile}

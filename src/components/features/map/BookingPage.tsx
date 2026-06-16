@@ -10,6 +10,9 @@ import { bookingExtras } from "@/data/bookingExtras";
 import { routes } from "@/config/routes";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
+import DatePicker from "@/components/shared/DatePicker";
+import TimePicker from "@/components/shared/TimePicker";
+import { formatDateRu } from "@/lib/formatDate";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import s from "./bookingPage.module.css";
 
@@ -21,64 +24,7 @@ type BookingPageProps = {
 
 type BookingStep = 1 | 2 | 3;
 
-const TIME_GROUPS = [
-  { label: "Утро", slots: ["09:00", "10:00", "11:00", "12:00"] },
-  { label: "День", slots: ["13:00", "14:00", "15:00", "16:00"] },
-  { label: "Вечер", slots: ["17:00", "18:00", "19:00", "20:00"] },
-] as const;
 
-const BUSY_SLOTS = new Set(["10:00", "15:00"]);
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
-function formatDateRu(date: Date) {
-  return date.toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function getMonthLabel(date: Date) {
-  return date.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
-}
-
-function buildCalendarDays(viewMonth: Date) {
-  const year = viewMonth.getFullYear();
-  const month = viewMonth.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const days: { date: Date; inMonth: boolean }[] = [];
-
-  for (let i = startOffset - 1; i >= 0; i--) {
-    days.push({
-      date: new Date(year, month, -i),
-      inMonth: false,
-    });
-  }
-
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    days.push({ date: new Date(year, month, d), inMonth: true });
-  }
-
-  while (days.length % 7 !== 0) {
-    const next = days.length - startOffset - lastDay.getDate() + 1;
-    days.push({
-      date: new Date(year, month + 1, next),
-      inMonth: false,
-    });
-  }
-
-  return days;
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
 
 export default function BookingPage({
   shop,
@@ -158,7 +104,7 @@ export default function BookingPage({
 
   const total = allLineItems.reduce((sum, item) => sum + item.price, 0);
 
-  const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
+
 
   const priceLabel = `от ${formatPrice(shop.price)} сум`;
   const priceSubLabel = shop.type === "Больница" ? "за приём" : "за час";
@@ -291,86 +237,17 @@ export default function BookingPage({
     return (
       <>
         <section className={s.timeCard}>
-          <h2 className={s.timeSectionTitle}>Выбрать день</h2>
-          <div className={s.calendarHeader}>
-            <button
-              type="button"
-              className={s.calendarNav}
-              onClick={() =>
-                setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-              }
-              aria-label="Предыдущий месяц"
-            >
-              ‹
-            </button>
-            <span className={s.calendarMonth}>{getMonthLabel(viewMonth)}</span>
-            <button
-              type="button"
-              className={s.calendarNav}
-              onClick={() =>
-                setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
-              }
-              aria-label="Следующий месяц"
-            >
-              ›
-            </button>
-          </div>
-
-          <div className={s.calendarWeekdays}>
-            {WEEKDAYS.map((day) => (
-              <span key={day} className={s.weekday}>
-                {day}
-              </span>
-            ))}
-          </div>
-
-          <div className={s.calendarGrid}>
-            {calendarDays.map(({ date, inMonth }) => {
-              const selected = isSameDay(date, selectedDate);
-              const isToday = isSameDay(date, today);
-              return (
-                <button
-                  key={date.toISOString()}
-                  type="button"
-                  className={`${s.dayCell} ${!inMonth ? s.dayOutside : ""} ${
-                    selected ? s.daySelected : ""
-                  } ${isToday ? s.dayToday : ""}`}
-                  onClick={() => inMonth && setSelectedDate(date)}
-                  disabled={!inMonth}
-                >
-                  {date.getDate()}
-                </button>
-              );
-            })}
-          </div>
-
-          <h2 className={s.timeSectionTitle}>Выбрать время</h2>
-          <div className={s.timeGroups}>
-            {TIME_GROUPS.map((group) => (
-              <div key={group.label}>
-                <h3 className={s.timeGroupTitle}>{group.label}</h3>
-                <div className={s.timeSlots}>
-                  {group.slots.map((slot) => {
-                    const busy = BUSY_SLOTS.has(slot);
-                    const selected = selectedTime === slot;
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={busy}
-                        className={`${s.timeSlot} ${selected ? s.timeSlotSelected : ""} ${
-                          busy ? s.timeSlotBusy : ""
-                        }`}
-                        onClick={() => setSelectedTime(slot)}
-                      >
-                        {slot}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+          <DatePicker
+            viewMonth={viewMonth}
+            onViewMonthChange={setViewMonth}
+            selectedDate={selectedDate}
+            onSelectedDateChange={setSelectedDate}
+            today={today}
+          />
+          <TimePicker
+            selectedTime={selectedTime}
+            onSelectedTimeChange={setSelectedTime}
+          />
         </section>
 
         <div className={s.stepFooter}>
@@ -428,9 +305,8 @@ export default function BookingPage({
             ].map((method) => (
               <label
                 key={method.id}
-                className={`${s.payOption} ${
-                  paymentMethod === method.id ? s.payOptionSelected : ""
-                }`}
+                className={`${s.payOption} ${paymentMethod === method.id ? s.payOptionSelected : ""
+                  }`}
               >
                 <input
                   type="radio"
@@ -590,7 +466,7 @@ export default function BookingPage({
 
       {step < 3 && (
         <div className={s.security}>
-            <Image src={assets.map.security} alt="" />
+          <Image src={assets.map.security} alt="" />
           <div>
             <p className={s.securityTitle}>Ваши данные защищены</p>
             <p className={s.securityText}>

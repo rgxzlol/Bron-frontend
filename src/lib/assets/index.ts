@@ -6,7 +6,9 @@ import support from "@/assets/images/support.svg";
 import profileIcon from "@/assets/images/ProfileIcon.svg";
 import filter from "@/assets/images/filter.svg";
 import notification from "@/assets/images/notification.svg";
-import ruLang from "@/assets/images/ruLang.svg";
+import ruLang from "@/assets/images/languages/ruLang.png";
+import uzLang from "@/assets/images/languages/uzLang.png";
+import enLang from "@/assets/images/languages/enLang.png";
 import search from "@/assets/images/search.svg";
 import mainPhoto1 from "@/assets/images/mainPhoto1.png";
 import mainPhoto2 from "@/assets/images/mainPhoto2.png";
@@ -32,10 +34,24 @@ import phoneIcon from "@/assets/images/phoneIcon.svg";
 import strenght from "@/assets/images/strenghtIcon.svg";
 import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
+
 import bussinesPhoto from "@/assets/images/businessPhoto.png";
 import callPhone from "@/assets/images/call.svg";
 import tg from "@/assets/images/tg.svg";
 import email from "@/assets/images/email.svg";
+
+import close from "@/assets/images/close.svg"
+import calendar from "@/assets/images/calendar.svg"
+import card from "@/assets/images/card.svg"
+import discount from "@/assets/images/discount.svg"
+import trash from "@/assets/images/trash.svg"
+import kebabIcon from "@/assets/images/kebabIcon.svg"
+import gpsIcon from "@/assets/images/gpsIcon.svg"
+import guestsIcon from "@/assets/images/guestsIcon.svg"
+import bagIcon from "@/assets/images/bagIcon.svg"
+import arrowDown from "@/assets/images/arrowDown.svg"
+import editIcon from "@/assets/images/editIcon.svg"
+import deleteIcon from "@/assets/images/deleteIcon.svg"
 
 export const assets = {
   nav: {
@@ -50,7 +66,16 @@ export const assets = {
     filter,
     notification,
     ruLang,
+    uzLang,
+    enLang,
     profileIcon,
+    close,
+  },
+  notification: {
+    calendar,
+    card,
+    discount,
+    trash
   },
   hero: {
     photo1: mainPhoto1,
@@ -86,6 +111,7 @@ export const assets = {
     quitIcon,
     security
   },
+
   bussines: {
     photo1: bussinesPhoto,
   },
@@ -93,5 +119,14 @@ export const assets = {
     phone: callPhone,
     tg,
     email
+  },
+  booking: {
+    kebabIcon,
+    gpsIcon,
+    guestsIcon,
+    bagIcon,
+    arrowDown,
+    editIcon,
+    deleteIcon,
   }
 } as const;

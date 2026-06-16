@@ -34,6 +34,12 @@ import phoneIcon from "@/assets/images/phoneIcon.svg";
 import strenght from "@/assets/images/strenghtIcon.svg";
 import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
+
+import bussinesPhoto from "@/assets/images/businessPhoto.png";
+import callPhone from "@/assets/images/call.svg";
+import tg from "@/assets/images/tg.svg";
+import email from "@/assets/images/email.svg";
+
 import close from "@/assets/images/close.svg"
 import calendar from "@/assets/images/calendar.svg"
 import card from "@/assets/images/card.svg"
@@ -104,6 +110,15 @@ export const assets = {
     strenght,
     quitIcon,
     security
+  },
+
+  bussines: {
+    photo1: bussinesPhoto,
+  },
+  support: {
+    phone: callPhone,
+    tg,
+    email
   },
   booking: {
     kebabIcon,

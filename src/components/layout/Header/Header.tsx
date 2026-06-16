@@ -1,9 +1,8 @@
 import { assets } from "@/lib/assets";
-import { routes } from "@/config/routes";
 import Image from "next/image";
-import Link from "next/link";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import NotificationDropdown from "@/components/layout/Header/NotificationDropdown";
+import ProfileButton from "@/components/features/profile/ProfileButton";
 
 export default function Header() {
   return (
@@ -34,13 +33,7 @@ export default function Header() {
 
           <NotificationDropdown />
 
-          <Link
-            href={routes.profile}
-            className="rounded-full bg-white p-[16px]"
-            aria-label="Профиль"
-          >
-            <Image src={assets.header.profileIcon} alt="" />
-          </Link>
+          <ProfileButton />
         </div>
       </div>
     </header>

@@ -234,6 +234,9 @@
   justify-content: center;
 }
 
+
+
+
 @media (max-width: 640px) {
   .summaryRow {
     grid-template-columns: 1fr;

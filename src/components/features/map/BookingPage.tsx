@@ -415,20 +415,23 @@ export default function BookingPage({
           </div>
           <h2 className={s.confirmTitle}>Бронирование подтверждено!</h2>
           <p className={s.confirmSub}>
-            Мы отправили подтверждение на вашу почту{" "}
+            Мы отправили подтверждение на вашу почту{" "} <br />
             <span className={s.confirmEmail}>{displayEmail}</span>
           </p>
 
           <div className={s.whatsNext}>
-            <h3 className={s.whatsNextTitle}>Что дальше?</h3>
+            <h3 className={`${s.whatsNextTitle} flex gap-[9px]`}>
+              <Image src={assets.header.notification} alt="" className={s.whatsNextNotificationIcon} />
+              Что дальше?
+            </h3>
             <ul className={s.whatsNextList}>
-              <li>Приходите за 10–15 минут до начала бронирования.</li>
-              <li>
-                Выбранное время: {formatDateRu(selectedDate)}, {selectedTime} (
-                {durationLabel}).
+              <li className="flex gap-[5px]">
+                <Image src={assets.popular.timeIcon} alt="" className={s.whatsNextTimeIcon} />
+                Приходите за 10–15 минут до начала бронирования.
               </li>
-              <li>Отмена возможна не позднее чем за 2 часа до визита.</li>
+              <li className="ml-[26px]">Отмена возможна не позднее чем за 2 часа до визита.</li>
             </ul>
+            <Button className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]" text="Оставить отзыв"></Button>
           </div>
 
           <div className={s.confirmActions}>

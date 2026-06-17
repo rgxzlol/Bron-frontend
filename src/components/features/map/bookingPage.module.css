@@ -294,6 +294,29 @@
   gap: 12px;
 }
 
+.inputError {
+  border-color: #e53935;
+  outline-color: #e53935;
+}
+
+.required {
+  color: #e53935;
+}
+
+.fieldError {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e53935;
+}
+
+.guestsHint {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
 .counterBtn {
   width: 40px;
   height: 40px;

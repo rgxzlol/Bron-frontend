@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets } from "@/lib/assets";
@@ -14,6 +14,7 @@ import DatePicker from "@/components/shared/DatePicker";
 import TimePicker from "@/components/shared/TimePicker";
 import { formatDateRu } from "@/lib/formatDate";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
+import ReviewModal from "@/components/features/review/ReviewModal";
 import s from "./bookingPage.module.css";
 
 type BookingPageProps = {
@@ -33,12 +34,14 @@ export default function BookingPage({
 }: BookingPageProps) {
   const [step, setStep] = useState<BookingStep>(1);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => new Date(2026, 5, 1));
   const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 5, 12));
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [guests, setGuests] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
+  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string }>({});
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -73,28 +76,44 @@ export default function BookingPage({
     return shop.type === "Больница" ? `${shop.time} мин` : "1 час";
   }, [selectedServices, shop]);
 
+  const maxGuests = shop.freeSeats;
+
+  useEffect(() => {
+    setGuests((current) => Math.min(current, maxGuests));
+  }, [maxGuests]);
+
+  const bookingPrice = useMemo(() => basePrice * guests, [basePrice, guests]);
+
   const baseLineItems = useMemo<OrderLineItem[]>(
     () => [
       {
         id: "booking-base",
-        name: baseBookingName,
-        price: basePrice,
+        name:
+          guests > 1 ? `${baseBookingName} (${guests} гост.)` : baseBookingName,
+        price: bookingPrice,
       },
     ],
-    [baseBookingName, basePrice],
+    [baseBookingName, bookingPrice, guests],
   );
 
   const extraLineItems = useMemo(
     () =>
-      bookingExtras
-        .filter((e) => selectedExtraIds.includes(e.id))
-        .map((e) => ({
-          id: e.id,
-          name: e.name,
-          price: e.price,
-          removable: true,
-        })),
-    [selectedExtraIds],
+      Object.entries(extraQuantities).flatMap(([id, quantity]) => {
+        if (quantity <= 0) return [];
+        const extra = bookingExtras.find((item) => item.id === id);
+        if (!extra) return [];
+
+        return [
+          {
+            id: `extra-${id}`,
+            name: quantity > 1 ? `${extra.name} × ${quantity}` : extra.name,
+            price: extra.price * quantity,
+            removable: true,
+            sourceId: id,
+          },
+        ];
+      }),
+    [extraQuantities],
   );
 
   const allLineItems = useMemo(
@@ -110,17 +129,50 @@ export default function BookingPage({
   const priceSubLabel = shop.type === "Больница" ? "за приём" : "за час";
   const displayEmail = form.email.trim() || "Ivan.Petrov@gmail.com";
 
-  function toggleExtra(id: string) {
-    setSelectedExtraIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  const isFormValid = useMemo(() => {
+    const name = form.name.trim();
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    return name.length >= 2 && phoneDigits.length >= 9;
+  }, [form.name, form.phone]);
+
+  function addExtra(id: string) {
+    setExtraQuantities((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
   }
 
   function removeExtra(id: string) {
-    setSelectedExtraIds((prev) => prev.filter((x) => x !== id));
+    setExtraQuantities((prev) => {
+      const next = { ...prev };
+      if (!next[id]) return prev;
+      if (next[id] <= 1) {
+        delete next[id];
+      } else {
+        next[id] -= 1;
+      }
+      return next;
+    });
+  }
+
+  function validateForm() {
+    const errors: { name?: string; phone?: string } = {};
+    const name = form.name.trim();
+    const phoneDigits = form.phone.replace(/\D/g, "");
+
+    if (name.length < 2) {
+      errors.name = "Введите имя и фамилию";
+    }
+    if (phoneDigits.length < 9) {
+      errors.phone = "Введите корректный номер телефона";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   }
 
   function handlePay() {
+    if (!validateForm()) return;
     setShowExtrasModal(true);
   }
 
@@ -259,7 +311,7 @@ export default function BookingPage({
           </div>
           <div className={s.stepFooterActions}>
             <span className={s.stepFooterPrice}>
-              Итог за {durationLabel} {formatPrice(basePrice)} сум
+              Итог за {durationLabel} {formatPrice(bookingPrice)} сум
             </span>
             <Button
               text="Продолжить"
@@ -279,6 +331,7 @@ export default function BookingPage({
     payButtonText: string,
     onPay?: () => void,
     paid = false,
+    payDisabled = false,
   ) {
     return (
       <aside className={s.payCard}>
@@ -328,7 +381,7 @@ export default function BookingPage({
           text={payButtonText}
           className={paid ? s.paidBtn : s.payBtn}
           onClick={onPay}
-          disabled={paid}
+          disabled={paid || payDisabled}
         />
       </aside>
     );
@@ -342,25 +395,39 @@ export default function BookingPage({
           <p className={s.formSubtitle}>Заполните информацию для бронирования</p>
 
           <label className={s.field}>
-            <span className={s.label}>Имя и фамилия</span>
+            <span className={s.label}>
+              Имя и фамилия <span className={s.required}>*</span>
+            </span>
             <input
-              className={s.input}
+              className={`${s.input} ${formErrors.name ? s.inputError : ""}`}
               type="text"
               value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, name: e.target.value }));
+                if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: undefined }));
+              }}
               placeholder="Иван Иванов"
+              required
             />
+            {formErrors.name && <span className={s.fieldError}>{formErrors.name}</span>}
           </label>
 
           <label className={s.field}>
-            <span className={s.label}>Номер телефона</span>
+            <span className={s.label}>
+              Номер телефона <span className={s.required}>*</span>
+            </span>
             <input
-              className={s.input}
+              className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
               type="tel"
               value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, phone: e.target.value }));
+                if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }));
+              }}
               placeholder="+998 90 000 00 00"
+              required
             />
+            {formErrors.phone && <span className={s.fieldError}>{formErrors.phone}</span>}
           </label>
 
           <label className={s.field}>
@@ -376,7 +443,12 @@ export default function BookingPage({
 
           <div className={s.guests}>
             <div className={s.guestsRow}>
-              <span className={s.label}>Количество гостей</span>
+              <div>
+                <span className={s.label}>Количество гостей</span>
+                <p className={s.guestsHint}>
+                  Свободных мест: {maxGuests}
+                </p>
+              </div>
               <div className={s.counter}>
                 <button
                   type="button"
@@ -391,17 +463,21 @@ export default function BookingPage({
                 <button
                   type="button"
                   className={s.counterBtn}
-                  onClick={() => setGuests((n) => n + 1)}
+                  onClick={() => setGuests((n) => Math.min(maxGuests, n + 1))}
+                  disabled={guests >= maxGuests}
                   aria-label="Увеличить"
                 >
                   +
                 </button>
               </div>
             </div>
+            {guests >= maxGuests && (
+              <p className={s.fieldError}>Нельзя забронировать больше свободных мест</p>
+            )}
           </div>
         </section>
 
-        {renderPaymentSummary(baseLineItems, basePrice, "Оплатить", handlePay)}
+        {renderPaymentSummary(baseLineItems, bookingPrice, "Оплатить", handlePay, false, !isFormValid)}
       </div>
     );
   }
@@ -431,7 +507,11 @@ export default function BookingPage({
               </li>
               <li className="ml-[26px]">Отмена возможна не позднее чем за 2 часа до визита.</li>
             </ul>
-            <Button className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]" text="Оставить отзыв"></Button>
+            <Button
+              className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]"
+              text="Оставить отзыв"
+              onClick={() => setShowReviewModal(true)}
+            />
           </div>
 
           <div className={s.confirmActions}>
@@ -479,14 +559,21 @@ export default function BookingPage({
       {showExtrasModal && (
         <BookingExtrasModal
           baseItems={baseLineItems}
-          selectedExtraIds={selectedExtraIds}
-          onToggleExtra={toggleExtra}
+          extraQuantities={extraQuantities}
+          onAddExtra={addExtra}
           onRemoveExtra={removeExtra}
           onSkip={finishExtras}
           onContinue={finishExtras}
           onClose={() => setShowExtrasModal(false)}
         />
       )}
+
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        shopId={String(shop.id)}
+        shopName={shop.title}
+      />
     </div>
   );
 }

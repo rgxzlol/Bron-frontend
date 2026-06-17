@@ -1,0 +1,148 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal {
+  width: min(420px, 100%);
+  max-height: min(92vh, 720px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000;
+}
+
+.closeBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fafaff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  line-height: 1;
+  color: #585858;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 10px;
+}
+
+.locationList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.locationBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fafaff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+  border: 1.5px solid transparent;
+}
+
+.locationActive {
+  border-color: #0a6af7;
+  background: #e8f1ff;
+}
+
+.select,
+.priceInput,
+.currencySelect {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: #fafaff;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+}
+
+.select {
+  height: 52px;
+  padding: 0 16px;
+  appearance: none;
+}
+
+.selectError {
+  box-shadow: inset 0 0 0 1.5px #e53935;
+}
+
+.priceRow {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 8px;
+}
+
+.priceInput {
+  height: 52px;
+  padding: 0 16px;
+}
+
+.currencySelect {
+  height: 52px;
+  padding: 0 12px;
+}
+
+.errorText {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e53935;
+}
+
+.applyBtn {
+  width: 100%;
+  height: 52px;
+  margin-top: 8px;
+  border-radius: 12px;
+  background: #0a6af7;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.applyBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

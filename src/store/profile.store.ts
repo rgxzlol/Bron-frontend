@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
+export type CardBrand = "visa" | "mastercard";
 
 export type NotificationSettings = {
   push: boolean;
@@ -13,7 +14,7 @@ export type NotificationSettings = {
 
 export type PaymentCard = {
   id: string;
-  holder: string;
+  brand: CardBrand;
   numberMasked: string;
   expiresAt: string;
 };
@@ -21,6 +22,7 @@ export type PaymentCard = {
 export type PaymentHistoryItem = {
   id: string;
   title: string;
+  reference: string;
   amount: number;
   date: string;
 };
@@ -29,6 +31,7 @@ type ProfileState = {
   fullName: string;
   phone: string;
   email: string;
+  avatarUrl: string | null;
   language: ProfileLanguage;
   theme: ProfileTheme;
   notifications: NotificationSettings;
@@ -39,10 +42,15 @@ type ProfileState = {
     phone: string;
     email: string;
   }) => void;
+  setAvatarUrl: (avatarUrl: string | null) => void;
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
   toggleNotification: (key: keyof NotificationSettings) => void;
-  addCard: (payload: { holder: string; number: string; expiresAt: string }) => void;
+  addCard: (payload: {
+    holder: string;
+    number: string;
+    expiresAt: string;
+  }) => void;
   removeCard: (id: string) => void;
 };
 
@@ -55,14 +63,16 @@ const DEFAULT_NOTIFICATIONS: NotificationSettings = {
 
 const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
   {
-    id: crypto.randomUUID(),
+    id: "1",
     title: "Оплата бронирования",
+    reference: "123123",
     amount: 80000,
     date: "12 мая 2026",
   },
   {
-    id: crypto.randomUUID(),
+    id: "2",
     title: "Оплата бронирования",
+    reference: "123124",
     amount: 80000,
     date: "10 мая 2026",
   },
@@ -75,7 +85,12 @@ function normalizeCardNumber(raw: string): string {
 function maskCardNumber(raw: string): string {
   const normalized = normalizeCardNumber(raw);
   const tail = normalized.slice(-4).padStart(4, "0");
-  return `•••• ${tail}`;
+  return `.... ${tail}`;
+}
+
+function detectBrand(number: string): CardBrand {
+  const firstDigit = normalizeCardNumber(number)[0];
+  return firstDigit === "5" ? "mastercard" : "visa";
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -84,20 +99,21 @@ export const useProfileStore = create<ProfileState>()(
       fullName: "Иван Иванович",
       phone: "+998 99 999 99 99",
       email: "bron@gmail.com",
+      avatarUrl: null,
       language: "ru",
       theme: "light",
       notifications: DEFAULT_NOTIFICATIONS,
       cards: [
         {
-          id: crypto.randomUUID(),
-          holder: "Ivan Ivanovich",
-          numberMasked: "•••• 4242",
+          id: "visa-4242",
+          brand: "visa",
+          numberMasked: ".... 4242",
           expiresAt: "09/12",
         },
         {
-          id: crypto.randomUUID(),
-          holder: "Ivan Ivanovich",
-          numberMasked: "•••• 7878",
+          id: "mc-7878",
+          brand: "mastercard",
+          numberMasked: ".... 7878",
           expiresAt: "09/12",
         },
       ],
@@ -109,6 +125,8 @@ export const useProfileStore = create<ProfileState>()(
           phone: phone.trim(),
           email: email.trim(),
         }),
+
+      setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
 
       setLanguage: (language) => set({ language }),
 
@@ -127,7 +145,7 @@ export const useProfileStore = create<ProfileState>()(
           cards: [
             {
               id: crypto.randomUUID(),
-              holder: holder.trim(),
+              brand: detectBrand(number),
               numberMasked: maskCardNumber(number),
               expiresAt: expiresAt.trim(),
             },
@@ -142,6 +160,31 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as Partial<ProfileState>;
+        if (!state?.cards) {
+          return {
+            ...state,
+            avatarUrl: state.avatarUrl ?? null,
+          };
+        }
+
+        return {
+          ...state,
+          avatarUrl: state.avatarUrl ?? null,
+          cards: state.cards.map((card) => ({
+            ...card,
+            brand: card.brand ?? ("visa" as CardBrand),
+          })),
+          paymentHistory: (state.paymentHistory ?? DEFAULT_PAYMENT_HISTORY).map(
+            (item, index) => ({
+              ...item,
+              reference: item.reference ?? `12312${index + 3}`,
+            }),
+          ),
+        };
+      },
     },
   ),
 );

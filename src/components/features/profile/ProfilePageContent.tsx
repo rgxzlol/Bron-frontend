@@ -1,51 +1,81 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { formatPrice } from "@/lib/formatPrice";
+import { readImageFile } from "@/lib/readImageFile";
 import { useAuthStore } from "@/store/auth.store";
 import {
+  type CardBrand,
   type ProfileLanguage,
+  type ProfileTheme,
   useProfileStore,
 } from "@/store/profile.store";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
-  | "settings"
+  | "main"
   | "personal"
-  | "notifications"
   | "payments"
+  | "addCard"
+  | "appSettings"
+  | "notifications"
   | "theme"
   | "logout";
 
-const langMap: Record<ProfileLanguage, string> = {
-  ru: "RU",
-  uz: "UZ",
-  en: "EN",
+type ProfilePageContentProps = {
+  onClose?: () => void;
+  onSectionChange?: (section: ProfileSection) => void;
 };
 
-export default function ProfilePageContent() {
+const langOptions: { id: ProfileLanguage; label: string }[] = [
+  { id: "uz", label: "UZ" },
+  { id: "ru", label: "RU" },
+  { id: "en", label: "EN" },
+];
+
+const sectionTitles: Record<ProfileSection, string> = {
+  main: "Настройки профиля",
+  personal: "Личные данные",
+  payments: "Платежи",
+  addCard: "Добавить карту",
+  appSettings: "Настройки",
+  notifications: "Уведомления",
+  theme: "Тема",
+  logout: "Выйти из аккаунта",
+};
+
+export default function ProfilePageContent({
+  onClose,
+  onSectionChange,
+}: ProfilePageContentProps) {
+  const router = useRouter();
   const clearToken = useAuthStore((state) => state.clearToken);
   const {
     fullName,
     phone,
     email,
+    avatarUrl,
     language,
     theme,
     notifications,
     cards,
     paymentHistory,
     updatePersonalInfo,
+    setAvatarUrl,
     setLanguage,
     setTheme,
     toggleNotification,
     addCard,
-    removeCard,
   } = useProfileStore();
 
-  const [section, setSection] = useState<ProfileSection>("settings");
-  const [showAddCardForm, setShowAddCardForm] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const [section, setSection] = useState<ProfileSection>("main");
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const [nameDraft, setNameDraft] = useState(fullName);
   const [phoneDraft, setPhoneDraft] = useState(phone);
@@ -53,8 +83,19 @@ export default function ProfilePageContent() {
 
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [saveCard, setSaveCard] = useState(true);
+
+  useEffect(() => {
+    onSectionChange?.(section);
+  }, [section, onSectionChange]);
+
+  useEffect(() => {
+    setNameDraft(fullName);
+    setPhoneDraft(phone);
+    setEmailDraft(email);
+  }, [fullName, phone, email]);
 
   const isPersonalDirty = useMemo(
     () =>
@@ -64,6 +105,12 @@ export default function ProfilePageContent() {
     [nameDraft, fullName, phoneDraft, phone, emailDraft, email],
   );
 
+  const visibleHistory = showAllHistory ? paymentHistory : paymentHistory.slice(0, 2);
+
+  function goTo(next: ProfileSection) {
+    setSection(next);
+  }
+
   function handleSavePersonalInfo() {
     if (!nameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim()) return;
     updatePersonalInfo({
@@ -71,309 +118,527 @@ export default function ProfilePageContent() {
       phone: phoneDraft,
       email: emailDraft,
     });
+    goTo("main");
   }
 
   function handleAddCard() {
     const cardDigits = cardNumber.replace(/\D/g, "");
-    if (!cardHolder.trim() || cardDigits.length < 16 || !cardExpiry.trim()) return;
-    addCard({
-      holder: cardHolder,
-      number: cardDigits,
-      expiresAt: cardExpiry,
-    });
+    if (!cardHolder.trim() || cardDigits.length < 16 || !cardExpiry.trim() || !cardCvv.trim()) {
+      return;
+    }
+
+    if (saveCard) {
+      addCard({
+        holder: cardHolder,
+        number: cardDigits,
+        expiresAt: cardExpiry,
+      });
+    }
+
     setCardNumber("");
     setCardExpiry("");
+    setCardCvv("");
     setCardHolder("");
-    setShowAddCardForm(false);
-    if (!saveCard && cards.length === 0) {
-      setSaveCard(true);
-    }
+    goTo("payments");
   }
 
   function handleLogout() {
     clearToken();
-    setSection("settings");
+    onClose?.();
+    router.push(routes.home);
+  }
+
+  function handleBookingsClick() {
+    onClose?.();
+    router.push(routes.bookings);
+  }
+
+  async function handleAvatarUpload(file: File) {
+    const url = await readImageFile(file);
+    if (url) setAvatarUrl(url);
+  }
+
+  function getBackSection(current: ProfileSection): ProfileSection {
+    if (current === "addCard") return "payments";
+    if (current === "theme" || current === "notifications") return "appSettings";
+    return "main";
   }
 
   return (
     <div className={s.content}>
-      <section className={s.card}>
-        {section === "settings" && (
-          <div className={s.settingsRoot}>
-            <div className={s.profileHead}>
-              <div className={s.avatar}>{fullName.slice(0, 1)}</div>
-              <div className={s.headInfo}>
-                <h2>{fullName}</h2>
-                <p>{phone}</p>
-              </div>
-            </div>
+      {section !== "main" && (
+        <SectionHeader
+          title={sectionTitles[section]}
+          onBack={() => goTo(getBackSection(section))}
+        />
+      )}
 
-            <div className={s.menu}>
-              <button type="button" className={s.menuItem} onClick={() => setSection("personal")}>
-                <span>Персональная информация</span>
-                <small>Просмотр и редактирование данных</small>
-              </button>
+      {section === "main" && (
+        <div className={s.mainSection}>
+          <div className={s.profileHead}>
+            <div className={s.avatarWrap}>
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className={s.avatarImage} />
+              ) : (
+                <Image
+                  src={assets.profile.avatar}
+                  alt=""
+                  width={88}
+                  height={88}
+                  className={s.avatarImage}
+                />
+              )}
               <button
                 type="button"
-                className={s.menuItem}
-                onClick={() => setSection("notifications")}
+                className={s.cameraBtn}
+                aria-label="Изменить фото"
+                onClick={() => avatarInputRef.current?.click()}
               >
-                <span>Уведомления</span>
-                <small>Push, Email и напоминания</small>
-              </button>
-              <button type="button" className={s.menuItem} onClick={() => setSection("payments")}>
-                <span>Платежи</span>
-                <small>Карты и история платежей</small>
-              </button>
-              <button type="button" className={s.menuItem} onClick={() => setSection("theme")}>
-                <span>Настройки</span>
-                <small>Язык и тема приложения</small>
+                <Image src={assets.profile.camera} alt="" width={16} height={16} />
               </button>
             </div>
 
-            <button type="button" className={s.logoutBtn} onClick={() => setSection("logout")}>
-              Выйти из аккаунта
-            </button>
-          </div>
-        )}
-
-        {section === "personal" && (
-          <div className={s.section}>
-            <Header title="Персональные данные" onBack={() => setSection("settings")} />
-
-            <div className={s.avatarBlock}>
-              <div className={s.avatarLarge}>{nameDraft.slice(0, 1)}</div>
-            </div>
-
-            <label className={s.field}>
-              <span>Имя</span>
-              <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
-            </label>
-            <label className={s.field}>
-              <span>Номер телефона</span>
-              <input value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} />
-            </label>
-            <label className={s.field}>
-              <span>Электронная почта</span>
-              <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
-            </label>
-
-            <button
-              type="button"
-              className={s.primaryBtn}
-              onClick={handleSavePersonalInfo}
-              disabled={!isPersonalDirty}
-            >
-              Сохранить изменения
-            </button>
-          </div>
-        )}
-
-        {section === "notifications" && (
-          <div className={s.section}>
-            <Header title="Уведомления" onBack={() => setSection("settings")} />
-            <div className={s.switchList}>
-              <SwitchRow
-                title="Push-уведомления"
-                subtitle="Получать push-уведомления"
-                value={notifications.push}
-                onToggle={() => toggleNotification("push")}
-              />
-              <SwitchRow
-                title="Email уведомления"
-                subtitle="Получать письма на Email"
-                value={notifications.email}
-                onToggle={() => toggleNotification("email")}
-              />
-              <SwitchRow
-                title="Напоминать о брони"
-                subtitle="Уведомлять о будущих визитах"
-                value={notifications.bookingReminder}
-                onToggle={() => toggleNotification("bookingReminder")}
-              />
-              <SwitchRow
-                title="Акции и предложения"
-                subtitle="Получать акции и новости"
-                value={notifications.promotions}
-                onToggle={() => toggleNotification("promotions")}
-              />
-            </div>
-          </div>
-        )}
-
-        {section === "payments" && (
-          <div className={s.section}>
-            <Header title="Платежи" onBack={() => setSection("settings")} />
-            {showAddCardForm ? (
-              <div className={s.addCardForm}>
-                <label className={s.field}>
-                  <span>Номер карты</span>
-                  <input
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    placeholder="1234 5678 9012 3456"
-                  />
-                </label>
-                <div className={s.row}>
-                  <label className={s.field}>
-                    <span>Срок действия</span>
-                    <input
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      placeholder="09/28"
-                    />
-                  </label>
-                  <label className={s.field}>
-                    <span>Имя владельца</span>
-                    <input
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value)}
-                      placeholder="IVAN PETROV"
-                    />
-                  </label>
-                </div>
-                <label className={s.switchInline}>
-                  <span>Сохранить карту для будущих платежей</span>
-                  <input
-                    type="checkbox"
-                    checked={saveCard}
-                    onChange={() => setSaveCard((prev) => !prev)}
-                  />
-                </label>
-                <button type="button" className={s.primaryBtn} onClick={handleAddCard}>
-                  Добавить карту
+            <div className={s.headInfo}>
+              <div className={s.nameRow}>
+                <h2>{fullName}</h2>
+                <button type="button" onClick={() => goTo("personal")} aria-label="Редактировать">
+                  <Image src={assets.profile.edit} alt="" width={18} height={18} />
                 </button>
               </div>
-            ) : (
-              <>
-                <div className={s.cardList}>
-                  {cards.map((card) => (
-                    <div className={s.paymentCard} key={card.id}>
-                      <div>
-                        <strong>{card.numberMasked}</strong>
-                        <p>{card.holder}</p>
-                      </div>
-                      <div className={s.paymentMeta}>
-                        <small>{card.expiresAt}</small>
-                        <button type="button" onClick={() => removeCard(card.id)}>
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className={s.secondaryBtn}
-                  onClick={() => setShowAddCardForm(true)}
-                >
-                  Добавить карту
-                </button>
-              </>
-            )}
+              <p>{phone}</p>
+            </div>
+          </div>
 
-            <div className={s.history}>
-              <h3>История платежей</h3>
-              {paymentHistory.map((item) => (
+          <div className={s.menu}>
+            <MenuItem
+              icon={assets.profile.profileData}
+              title="Персональные данные"
+              subtitle="Редактирование данных"
+              onClick={() => goTo("personal")}
+            />
+            <MenuItem
+              icon={assets.profile.myBookings}
+              title="Мои брони"
+              subtitle="Все ваши брони"
+              onClick={handleBookingsClick}
+            />
+            <MenuItem
+              icon={assets.profile.card}
+              title="Платежи"
+              subtitle="Карты и способ оплаты"
+              onClick={() => goTo("payments")}
+            />
+            <MenuItem
+              icon={assets.profile.settings}
+              title="Настройки"
+              subtitle="Язык и тема"
+              onClick={() => goTo("appSettings")}
+            />
+          </div>
+
+          <button type="button" className={s.logoutBtn} onClick={() => goTo("logout")}>
+            <Image src={assets.profile.quit} alt="" width={17} height={21} />
+            Выйти из аккаунта
+          </button>
+        </div>
+      )}
+
+      {section === "personal" && (
+        <div className={s.section}>
+          <div className={s.avatarBlock}>
+            <div className={s.avatarWrapLarge}>
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className={s.avatarImageLarge} />
+              ) : (
+                <Image
+                  src={assets.profile.avatar}
+                  alt=""
+                  width={120}
+                  height={120}
+                  className={s.avatarImageLarge}
+                />
+              )}
+              <button
+                type="button"
+                className={s.cameraBtnLarge}
+                aria-label="Изменить фото"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                <Image src={assets.profile.camera} alt="" width={18} height={18} />
+              </button>
+            </div>
+          </div>
+
+          <label className={s.field}>
+            <span>Имя</span>
+            <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
+          </label>
+          <label className={s.field}>
+            <span>Номер телефона</span>
+            <input value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} />
+          </label>
+          <label className={s.field}>
+            <span>Электронная почта</span>
+            <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
+          </label>
+
+          <button
+            type="button"
+            className={s.primaryBtn}
+            onClick={handleSavePersonalInfo}
+            disabled={!isPersonalDirty}
+          >
+            Сохранить изменения
+          </button>
+        </div>
+      )}
+
+      {section === "payments" && (
+        <div className={s.section}>
+          <h3 className={s.blockTitle}>Мои карты</h3>
+
+          <div className={s.cardsList}>
+            {cards.map((card, index) => (
+              <PaymentCardRow
+                key={card.id}
+                card={card}
+                withDivider={index < cards.length - 1}
+              />
+            ))}
+          </div>
+
+          <button type="button" className={s.outlineBtn} onClick={() => goTo("addCard")}>
+            Добавить карту
+          </button>
+
+          <div className={s.historyBlock}>
+            <h3 className={s.blockTitle}>История платежей</h3>
+            <div className={s.historyList}>
+              {visibleHistory.map((item) => (
                 <div className={s.historyItem} key={item.id}>
                   <div>
                     <strong>{item.title}</strong>
-                    <p>№{item.id.slice(0, 8).toUpperCase()}</p>
+                    <p>№{item.reference}</p>
                   </div>
                   <div className={s.historyPrice}>
-                    <strong>{formatPrice(item.amount)}</strong>
+                    <strong>{formatPrice(item.amount)} сум</strong>
                     <p>{item.date}</p>
                   </div>
                 </div>
               ))}
             </div>
+            {!showAllHistory && paymentHistory.length > 2 && (
+              <button type="button" className={s.viewAllBtn} onClick={() => setShowAllHistory(true)}>
+                Смотреть все
+              </button>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {section === "theme" && (
-          <div className={s.section}>
-            <Header title="Настройки" onBack={() => setSection("settings")} />
-            <div className={s.themeBlock}>
-              <h3>Язык</h3>
-              <div className={s.segment}>
-                {(["uz", "ru", "en"] as ProfileLanguage[]).map((lang) => (
-                  <button
-                    type="button"
-                    key={lang}
-                    className={language === lang ? s.segmentActive : s.segmentBtn}
-                    onClick={() => setLanguage(lang)}
-                  >
-                    {langMap[lang]}
-                  </button>
-                ))}
-              </div>
+      {section === "addCard" && (
+        <div className={s.section}>
+          <div className={s.cardBrands}>
+            <Image src={assets.profile.visaMaster} alt="Visa Mastercard" width={120} height={24} />
+          </div>
+
+          <div className={`${s.cardPreview} ${s.cardPreviewEmpty}`}>
+            <span>{cardNumber ? maskDisplayNumber(cardNumber) : ".... .... .... ...."}</span>
+            <small>{cardExpiry || "MM/YY"}</small>
+          </div>
+
+          <label className={s.field}>
+            <span>Номер карты</span>
+            <input
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              placeholder="1234 5678 9012 3456"
+            />
+          </label>
+
+          <div className={s.row}>
+            <label className={s.field}>
+              <span>Срок действия</span>
+              <input
+                value={cardExpiry}
+                onChange={(e) => setCardExpiry(e.target.value)}
+                placeholder="MM/YY"
+              />
+            </label>
+            <label className={s.field}>
+              <span>CVV</span>
+              <input
+                value={cardCvv}
+                onChange={(e) => setCardCvv(e.target.value)}
+                placeholder="123"
+                maxLength={4}
+              />
+            </label>
+          </div>
+
+          <label className={s.field}>
+            <span>Имя владельца</span>
+            <input
+              value={cardHolder}
+              onChange={(e) => setCardHolder(e.target.value)}
+              placeholder="IVAN PETROV"
+            />
+          </label>
+
+          <div className={s.switchRow}>
+            <div>
+              <strong>Сохранить карту для будущих платежей</strong>
             </div>
+            <button
+              type="button"
+              className={saveCard ? s.toggleOn : s.toggleOff}
+              onClick={() => setSaveCard((prev) => !prev)}
+              aria-pressed={saveCard}
+            >
+              <span />
+            </button>
+          </div>
 
-            <div className={s.themeBlock}>
-              <h3>Тема</h3>
-              <div className={s.themeList}>
+          <button type="button" className={s.primaryBtn} onClick={handleAddCard}>
+            Добавить карту
+          </button>
+        </div>
+      )}
+
+      {section === "appSettings" && (
+        <div className={s.section}>
+          <div className={s.settingsCard}>
+            <div className={s.settingsIconWrap}>
+              <Image src={assets.profile.lang} alt="" width={20} height={20} />
+            </div>
+            <div className={s.settingsCardText}>
+              <strong>Язык</strong>
+              <p>Выберите удобный язык</p>
+            </div>
+            <div className={s.segment}>
+              {langOptions.map((lang) => (
                 <button
                   type="button"
-                  className={theme === "light" ? s.themeItemActive : s.themeItem}
-                  onClick={() => setTheme("light")}
+                  key={lang.id}
+                  className={language === lang.id ? s.segmentActive : s.segmentBtn}
+                  onClick={() => setLanguage(lang.id)}
                 >
-                  Светлая тема
+                  {lang.label}
                 </button>
-                <button
-                  type="button"
-                  className={theme === "dark" ? s.themeItemActive : s.themeItem}
-                  onClick={() => setTheme("dark")}
-                >
-                  Темная тема
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-        )}
 
-        {section === "logout" && (
-          <div className={s.section}>
-            <Header title="Выйти из аккаунта" onBack={() => setSection("settings")} />
-            <div className={s.logoutConfirm}>
-              <p>Вы уверены, что хотите выйти из аккаунта?</p>
-              <small>Вы выйдете из аккаунта с этого устройства</small>
-              <button type="button" className={s.logoutBtn} onClick={handleLogout}>
-                Выйти из аккаунта
-              </button>
-              <button type="button" className={s.linkBtn} onClick={() => setSection("settings")}>
-                Отменить
-              </button>
+          <button type="button" className={s.settingsCard} onClick={() => goTo("theme")}>
+            <div className={s.settingsIconWrap}>
+              <Image src={assets.profile.lightTheme} alt="" width={20} height={20} />
+            </div>
+            <div className={s.settingsCardText}>
+              <strong>Тема</strong>
+              <p>Можно выбрать любую тему</p>
+            </div>
+            <span className={s.navArrowBtn} aria-hidden>
+              <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+            </span>
+          </button>
+
+          <button type="button" className={s.settingsCard} onClick={() => goTo("notifications")}>
+            <div className={s.settingsIconWrap}>
+              <Image src={assets.header.notification} alt="" width={20} height={20} />
+            </div>
+            <div className={s.settingsCardText}>
+              <strong>Уведомления</strong>
+              <p>Настройте, какие уведомления вы хотите получать</p>
+            </div>
+            <span className={s.navArrowBtn} aria-hidden>
+              <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+            </span>
+          </button>
+
+          <div className={s.aboutBlock}>
+            <Image src={assets.profile.alert} alt="" width={24} height={24} />
+            <div>
+              <strong>О приложении</strong>
+              <p>Версия 1.0.0</p>
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
-      <div className={s.quickLinks}>
-        <Link href={routes.bookings} className={s.quickLink}>
-          Мои брони
-        </Link>
-      </div>
+      {section === "notifications" && (
+        <div className={s.section}>
+          <div className={s.switchList}>
+            <SwitchRow
+              icon={assets.profile.push}
+              title="Push-уведомления"
+              subtitle="Получать push-уведомления"
+              value={notifications.push}
+              onToggle={() => toggleNotification("push")}
+            />
+            <SwitchRow
+              icon={assets.profile.email}
+              title="Email уведомления"
+              subtitle="Получать письма на Email"
+              value={notifications.email}
+              onToggle={() => toggleNotification("email")}
+            />
+            <SwitchRow
+              icon={assets.profile.booking}
+              title="Напоминать о брони"
+              subtitle="Уведомлять о будущих визитах"
+              value={notifications.bookingReminder}
+              onToggle={() => toggleNotification("bookingReminder")}
+            />
+            <SwitchRow
+              icon={assets.profile.sales}
+              title="Акции и предложения"
+              subtitle="Получать акции и новости"
+              value={notifications.promotions}
+              onToggle={() => toggleNotification("promotions")}
+            />
+          </div>
+        </div>
+      )}
+
+      {section === "theme" && (
+        <div className={s.section}>
+          <ThemeOption
+            title="Светлая тема"
+            description="Светлый интерфейс приложения"
+            icon={assets.profile.lightTheme}
+            selected={theme === "light"}
+            onSelect={() => setTheme("light")}
+          />
+          <ThemeOption
+            title="Темная тема"
+            description="Темный интерфейс приложения"
+            icon={assets.profile.nightTheme}
+            selected={theme === "dark"}
+            onSelect={() => setTheme("dark")}
+          />
+
+          <div className={s.themePreviewWrap}>
+            <Image
+              src={assets.profile.lightThemePreview}
+              alt=""
+              width={220}
+              height={160}
+              className={s.themePreviewLight}
+            />
+            <Image
+              src={assets.profile.nightThemePreview}
+              alt=""
+              width={220}
+              height={160}
+              className={s.themePreviewDark}
+            />
+          </div>
+        </div>
+      )}
+
+      {section === "logout" && (
+        <div className={s.logoutSection}>
+          <Image
+            src={assets.profile.quitIllustration}
+            alt=""
+            width={200}
+            height={160}
+            className={s.logoutImage}
+          />
+          <p className={s.logoutTitle}>Вы уверены что хотите выйти из аккаунта?</p>
+          <small>Вы выйдете из аккаунта с этого устройства</small>
+          <button type="button" className={s.logoutConfirmBtn} onClick={handleLogout}>
+            <span className={s.logoutConfirmIcon}>
+              <Image src={assets.profile.quit} alt="" width={18} height={18} />
+            </span>
+            Выйти из аккаунта
+          </button>
+          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
+            Отменить
+          </button>
+        </div>
+      )}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        className={s.hiddenFileInput}
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          if (file) await handleAvatarUpload(file);
+          event.target.value = "";
+        }}
+      />
     </div>
   );
 }
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
+function SectionHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <div className={s.sectionHead}>
-      <button type="button" onClick={onBack}>
-        ←
+      <button type="button" className={s.backBtn} onClick={onBack} aria-label="Назад">
+        <Image src={assets.profile.arrow} alt="" width={14} height={14} className={s.arrowLeft} />
       </button>
       <h2>{title}</h2>
     </div>
   );
 }
 
+function MenuItem({
+  icon,
+  title,
+  subtitle,
+  onClick,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className={s.menuItem} onClick={onClick}>
+      <Image src={icon} alt="" width={24} height={24} />
+      <div className={s.menuText}>
+        <strong>{title}</strong>
+        <span>{subtitle}</span>
+      </div>
+      <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+    </button>
+  );
+}
+
+function PaymentCardRow({
+  card,
+  withDivider,
+}: {
+  card: { brand: CardBrand; numberMasked: string; expiresAt: string };
+  withDivider: boolean;
+}) {
+  return (
+    <div className={`${s.cardRow} ${withDivider ? s.cardRowDivider : ""}`}>
+      <Image
+        src={card.brand === "visa" ? assets.profile.visa : assets.profile.masterCard}
+        alt=""
+        width={card.brand === "visa" ? 44 : 36}
+        height={16}
+        className={s.cardBrandLogo}
+      />
+      <strong>{formatCardNumber(card.numberMasked)}</strong>
+      <small>{card.expiresAt}</small>
+    </div>
+  );
+}
+
 function SwitchRow({
+  icon,
   title,
   subtitle,
   value,
   onToggle,
 }: {
+  icon: string;
   title: string;
   subtitle: string;
   value: boolean;
@@ -381,13 +646,56 @@ function SwitchRow({
 }) {
   return (
     <div className={s.switchRow}>
-      <div>
+      <Image src={icon} alt="" width={24} height={24} />
+      <div className={s.switchText}>
         <strong>{title}</strong>
         <p>{subtitle}</p>
       </div>
-      <button type="button" className={value ? s.toggleOn : s.toggleOff} onClick={onToggle}>
+      <button
+        type="button"
+        className={value ? s.toggleOn : s.toggleOff}
+        onClick={onToggle}
+        aria-pressed={value}
+      >
         <span />
       </button>
     </div>
   );
+}
+
+function ThemeOption({
+  title,
+  description,
+  icon,
+  selected,
+  onSelect,
+}: {
+  title: string;
+  description: string;
+  icon: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button type="button" className={s.themeOption} onClick={onSelect}>
+      <div className={s.settingsIconWrap}>
+        <Image src={icon} alt="" width={20} height={20} />
+      </div>
+      <div className={s.themeOptionText}>
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      <span className={selected ? s.radioActive : s.radio} aria-hidden />
+    </button>
+  );
+}
+
+function formatCardNumber(masked: string): string {
+  const tail = masked.replace(/\D/g, "").slice(-4);
+  return `· · · · ${tail}`;
+}
+
+function maskDisplayNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
 }

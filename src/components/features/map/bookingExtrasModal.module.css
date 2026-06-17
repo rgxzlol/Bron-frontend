@@ -145,6 +145,34 @@
   background: #e8f0ff;
 }
 
+.qtyControls {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.qtyBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #0a6af7;
+  color: #0a6af7;
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.qtyValue {
+  min-width: 20px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .summaryRow {
   display: grid;
   grid-template-columns: 1fr auto;

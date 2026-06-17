@@ -34,24 +34,41 @@ import phoneIcon from "@/assets/images/phoneIcon.svg";
 import strenght from "@/assets/images/strenghtIcon.svg";
 import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
-
 import bussinesPhoto from "@/assets/images/businessPhoto.png";
 import callPhone from "@/assets/images/call.svg";
 import tg from "@/assets/images/tg.svg";
 import email from "@/assets/images/email.svg";
-
-import close from "@/assets/images/close.svg"
-import calendar from "@/assets/images/calendar.svg"
-import card from "@/assets/images/card.svg"
-import discount from "@/assets/images/discount.svg"
-import trash from "@/assets/images/trash.svg"
-import kebabIcon from "@/assets/images/kebabIcon.svg"
-import gpsIcon from "@/assets/images/gpsIcon.svg"
-import guestsIcon from "@/assets/images/guestsIcon.svg"
-import bagIcon from "@/assets/images/bagIcon.svg"
-import arrowDown from "@/assets/images/arrowDown.svg"
-import editIcon from "@/assets/images/editIcon.svg"
-import deleteIcon from "@/assets/images/deleteIcon.svg"
+import close from "@/assets/images/close.svg";
+import calendar from "@/assets/images/calendar.svg";
+import card from "@/assets/images/card.svg";
+import discount from "@/assets/images/discount.svg";
+import trash from "@/assets/images/trash.svg";
+import kebabIcon from "@/assets/images/kebabIcon.svg";
+import gpsIcon from "@/assets/images/gpsIcon.svg";
+import guestsIcon from "@/assets/images/guestsIcon.svg";
+import bagIcon from "@/assets/images/bagIcon.svg";
+import arrowDown from "@/assets/images/arrowDown.svg";
+import editIcon from "@/assets/images/editIcon.svg";
+import deleteIcon from "@/assets/images/deleteIcon.svg";
+import visaMaster from "@/assets/images/visa icon.svg";
+import pushNotification from "@/assets/images/pushNotification.svg";
+import emailIcon from "@/assets/images/emailIcon.svg";
+import myBookingIcon from "@/assets/images/myBookingIcon.svg";
+import salesIcon from "@/assets/images/sales.svg";
+import cameraIcon from "@/assets/images/cameraIcon.svg";
+import profileData from "@/assets/images/profileData.svg";
+import cardIcon from "@/assets/images/cardIcon.svg";
+import settings from "@/assets/images/settings.svg";
+import quitAcc from "@/assets/images/quitAcc.svg";
+import quitProfilePng from "@/assets/images/quitProfile.png";
+import visa from "@/assets/images/visa.svg";
+import masterCard from "@/assets/images/masterCard.svg";
+import lightTheme from "@/assets/images/lightTheme.svg";
+import nightTheme from "@/assets/images/nightTheme.svg";
+import nightThemeJpeg from "@/assets/images/nightThemeJpeg.jpg";
+import lightThemeJpeg from "@/assets/images/lightThemeJpeg.jpg";
+import langIcon from "@/assets/images/langIcon.svg";
+import alertIcon from "@/assets/images/alart.svg";
 
 export const assets = {
   nav: {
@@ -75,7 +92,7 @@ export const assets = {
     calendar,
     card,
     discount,
-    trash
+    trash,
   },
   hero: {
     photo1: mainPhoto1,
@@ -109,16 +126,15 @@ export const assets = {
     phoneIcon,
     strenght,
     quitIcon,
-    security
+    security,
   },
-
   bussines: {
     photo1: bussinesPhoto,
   },
   support: {
     phone: callPhone,
     tg,
-    email
+    email,
   },
   booking: {
     kebabIcon,
@@ -128,5 +144,30 @@ export const assets = {
     arrowDown,
     editIcon,
     deleteIcon,
-  }
+  },
+  profile: {
+    profileData,
+    myBookings: myBookingIcon,
+    card: cardIcon,
+    settings,
+    quit: quitAcc,
+    quitIllustration: quitProfilePng,
+    camera: cameraIcon,
+    push: pushNotification,
+    email: emailIcon,
+    booking: myBookingIcon,
+    sales: salesIcon,
+    visa,
+    masterCard,
+    visaMaster,
+    lightTheme,
+    nightTheme,
+    lightThemePreview: lightThemeJpeg,
+    nightThemePreview: nightThemeJpeg,
+    lang: langIcon,
+    alert: alertIcon,
+    edit: editIcon,
+    arrow: arrowDown,
+    avatar: mockPhoto1,
+  },
 } as const;

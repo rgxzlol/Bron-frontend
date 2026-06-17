@@ -2,16 +2,25 @@
 
 import mapboxgl from "mapbox-gl"
 import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
 import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
 import { businessMatchesMapFilter } from "@/lib/business/coordinates"
+import {
+  businessMatchesBusinessCategory,
+  shopMatchesBusinessCategory,
+} from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
+import { getDistanceKm } from "@/lib/distance"
+import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
+import { useMapFilterStore } from "@/store/mapFilter.store"
 import type { SavedBusiness } from "@/store/business.store"
+import type { MapLocationFilter } from "@/store/mapFilter.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import UserBusinessPanel from "./UserBusinessPanel"
-import { assets } from "@/lib/assets"
+import MapCategoriesModal from "./MapCategoriesModal"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
@@ -21,21 +30,46 @@ type FullMapProps = {
 }
 
 const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
+const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
+const INITIAL_MAP_ZOOM = 12
+
+function matchesDistanceFilter(
+  userLat: number,
+  userLng: number,
+  targetLat: number,
+  targetLng: number,
+  locationFilter: MapLocationFilter | null,
+): boolean {
+  if (!locationFilter) return true
+
+  const distance = getDistanceKm(userLat, userLng, targetLat, targetLng)
+
+  if (locationFilter === "nearby") return distance < 3
+  if (locationFilter === "3-7") return distance >= 3 && distance <= 7
+  if (locationFilter === "10-15") return distance >= 10 && distance <= 15
+
+  return true
+}
 
 export default function FullMap({ onStartBooking }: FullMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null)
+  const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
   const [selectedHospital, setSelectedHospital] =
     useState<ShopsType | null>(null)
   const [selectedUserBusiness, setSelectedUserBusiness] =
     useState<SavedBusiness | null>(null)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState("Все")
   const businesses = useBusinessStore((s) => s.businesses)
+  const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
+  const appliedMaxPrice = useMapFilterStore((s) => s.appliedMaxPrice)
+  const appliedLocation = useMapFilterStore((s) => s.appliedLocation)
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -58,6 +92,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         (position) => {
           const lng = position.coords.longitude
           const lat = position.coords.latitude
+          userLocationRef.current = { lat, lng }
 
           const el = document.createElement("div")
 
@@ -92,6 +127,26 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     }
   }, [])
 
+  function resetMapToInitialView() {
+    const map = mapRef.current
+    if (!map) return
+
+    map.flyTo({
+      center: INITIAL_MAP_CENTER,
+      zoom: INITIAL_MAP_ZOOM,
+      speed: 1.2,
+    })
+  }
+
+  function handleFilterSelect(filter: string) {
+    setActiveFilter(filter)
+    resetMapToInitialView()
+  }
+
+  function handleOpenCategories() {
+    setShowCategoriesModal(true)
+  }
+
   function goToMyLocation() {
     const map = mapRef.current
 
@@ -101,6 +156,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       (position) => {
         const lng = position.coords.longitude
         const lat = position.coords.latitude
+        userLocationRef.current = { lat, lng }
 
         if (userMarkerRef.current) {
           userMarkerRef.current.setLngLat([lng, lat])
@@ -138,23 +194,74 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const filteredShops =
-      activeFilter === "Все"
-        ? ShopsPlace
-        : ShopsPlace.filter((shop) => {
-            if (
-              activeFilter === "Спортзал" &&
-              shop.title.toLowerCase().includes("bronfitness")
-            ) {
-              return true
-            }
+    const userLocation = userLocationRef.current
 
-            return shop.type === activeFilter
-          })
+    const filteredShops = ShopsPlace.filter((shop) => {
+      const matchesPill =
+        activeFilter === "Все"
+          ? true
+          : activeFilter === "Спортзал"
+            ? shop.title.toLowerCase().includes("bronfitness") || shop.type === "Спортзал"
+            : shop.type === activeFilter
 
-    const filteredUserBusinesses = businesses.filter((business) =>
-      businessMatchesMapFilter(business.category, activeFilter),
-    )
+      if (!matchesPill) return false
+
+      if (
+        appliedCategory &&
+        !shopMatchesBusinessCategory(shop.type, shop.category, appliedCategory)
+      ) {
+        return false
+      }
+
+      if (appliedMaxPrice != null && shop.price > appliedMaxPrice) {
+        return false
+      }
+
+      if (
+        userLocation &&
+        appliedLocation &&
+        !matchesDistanceFilter(
+          userLocation.lat,
+          userLocation.lng,
+          shop.lat,
+          shop.lng,
+          appliedLocation,
+        )
+      ) {
+        return false
+      }
+
+      return true
+    })
+
+    const filteredUserBusinesses = businesses.filter((business) => {
+      if (!businessMatchesMapFilter(business.category, activeFilter)) {
+        return false
+      }
+
+      if (
+        appliedCategory &&
+        !businessMatchesBusinessCategory(business.category, appliedCategory)
+      ) {
+        return false
+      }
+
+      if (
+        userLocation &&
+        appliedLocation &&
+        !matchesDistanceFilter(
+          userLocation.lat,
+          userLocation.lng,
+          business.lat,
+          business.lng,
+          appliedLocation,
+        )
+      ) {
+        return false
+      }
+
+      return true
+    })
 
     filteredShops.forEach((shop) => {
       const el = document.createElement("div")
@@ -242,7 +349,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markersRef.current.push(marker)
     })
-  }, [activeFilter, businesses])
+  }, [activeFilter, businesses, appliedCategory, appliedMaxPrice, appliedLocation])
 
   function handleHospitalContinue(serviceIds: string[]) {
     if (!selectedHospital) return
@@ -270,11 +377,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   return (
     <div className="relative">
-      <div className="absolute top-4 left-4 z-10 flex gap-2 overflow-x-auto max-w-[90%]">
+      <div className="absolute top-4 left-4 z-10 flex max-w-[90%] gap-2 overflow-x-auto">
         {filters.map((filter) => (
           <button
             key={filter}
-            onClick={() => setActiveFilter(filter)}
+            type="button"
+            onClick={() => handleFilterSelect(filter)}
             className={`
               px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
               ${
@@ -288,6 +396,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           </button>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={handleOpenCategories}
+        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[#0a6af7] bg-white px-4 py-2 font-semibold shadow-lg"
+      >
+        <Image src={assets.header.filter} alt="" width={18} height={18} />
+        Категории
+      </button>
 
       <button
         onClick={goToMyLocation}
@@ -328,6 +445,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           onBook={handleUserBusinessBook}
         />
       )}
+
+      <MapCategoriesModal
+        isOpen={showCategoriesModal}
+        onClose={() => setShowCategoriesModal(false)}
+        onApply={resetMapToInitialView}
+      />
     </div>
   )
 }

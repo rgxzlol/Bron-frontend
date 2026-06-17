@@ -7,17 +7,45 @@ import { assets } from "@/lib/assets";
 import ProfilePageContent from "./ProfilePageContent";
 import s from "./profilePage.module.css";
 
+type ProfileSection =
+  | "main"
+  | "personal"
+  | "payments"
+  | "addCard"
+  | "appSettings"
+  | "notifications"
+  | "theme"
+  | "logout";
+
 type ProfileModalProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
+const sectionTitles: Record<ProfileSection, string> = {
+  main: "Настройки профиля",
+  personal: "Личные данные",
+  payments: "Платежи",
+  addCard: "Добавить карту",
+  appSettings: "Настройки",
+  notifications: "Уведомления",
+  theme: "Тема",
+  logout: "Выйти из аккаунта",
+};
+
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [section, setSection] = useState<ProfileSection>("main");
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSection("main");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -45,23 +73,34 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Профиль"
+      aria-label={sectionTitles[section]}
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
-        <div className={s.modalHead}>
-          <h1 className={s.title}>Профиль</h1>
+        {section === "main" ? (
+          <div className={s.modalHead}>
+            <h1 className={s.title}>{sectionTitles.main}</h1>
+            <button
+              type="button"
+              className={s.closeBtn}
+              onClick={onClose}
+              aria-label="Закрыть"
+            >
+              <Image src={assets.header.close} alt="" width={18} height={18} />
+            </button>
+          </div>
+        ) : (
           <button
             type="button"
-            className={s.closeBtn}
+            className={s.closeBtnFloating}
             onClick={onClose}
             aria-label="Закрыть"
           >
             <Image src={assets.header.close} alt="" width={18} height={18} />
           </button>
-        </div>
+        )}
 
         <div className={s.modalBody}>
-          <ProfilePageContent />
+          <ProfilePageContent onClose={onClose} onSectionChange={setSection} />
         </div>
       </div>
     </div>,

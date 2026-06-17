@@ -6,6 +6,7 @@ import { useBusinessStore } from "@/store/business.store";
 import Image from "next/image";
 import { useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
+import DeleteBusinessModal from "./DeleteBusinessModal";
 
 type Props = {
   onAddBusiness: () => void;
@@ -21,6 +22,9 @@ export default function MyBusiness({
   const businesses = useBusinessStore((s) => s.businesses);
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const deleteTarget = businesses.find((business) => business.id === deleteTargetId);
 
   return (
     <div className="rounded-[34px] bg-white px-[23px] py-[26px]">
@@ -114,9 +118,8 @@ export default function MyBusiness({
                         <BusinessCardMenu
                           onEdit={() => onEditBusiness(business.id)}
                           onDelete={() => {
-                            if (confirm("Удалить этот бизнес?")) {
-                              removeBusiness(business.id);
-                            }
+                            setDeleteTargetId(business.id);
+                            setOpenMenuId(null);
                           }}
                           onClose={() => setOpenMenuId(null)}
                         />
@@ -150,6 +153,16 @@ export default function MyBusiness({
           );
         })}
       </div>
+
+      <DeleteBusinessModal
+        businessName={deleteTarget?.name || "Без названия"}
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={() => {
+          if (deleteTargetId) removeBusiness(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 "use client"
 
 import { mainNavItems } from "@/config/navigation";
-import { siteConfig } from "@/config/site";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import s from "./sidebar.module.css";
+import { Logo } from "@/components/shared/Logo";
+import { NavLink } from "@/components/shared/Navlink";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -13,9 +14,7 @@ export default function Sidebar() {
     <aside
       className={`${s.sidebar} flex w-[320px] shrink-0 flex-col pt-[37px] pl-[30px] mr-[60px]`}
     >
-      <Link href="/" className={`${s.logo} self-start text-[60px] font-semibold`}>
-        {siteConfig.name}
-      </Link>
+      <Logo />
 
       <ul className={`${s.menu} mt-[25px]`}>
         {mainNavItems.map((item) => {
@@ -26,7 +25,7 @@ export default function Sidebar() {
 
           return (
             <li className={s.title} key={item.href}>
-              <Link
+              {/* <Link
                 href={item.href}
                 className={`${s.link} ${isActive ? s.active : ""}`}
               >
@@ -41,7 +40,25 @@ export default function Sidebar() {
                   aria-hidden
                 />
                 <span className="text-xl">{item.title}</span>
-              </Link>
+              </Link> */}
+
+              <NavLink
+                href={item.href}
+                className={s.link}
+                activeClassName={s.active}
+              >
+                <span
+                  className={s.icon}
+                  style={{
+                    width: item.icon.width,
+                    height: item.icon.height,
+                    WebkitMaskImage: `url(${item.icon.src})`,
+                    maskImage: `url(${item.icon.src})`,
+                  }}
+                  aria-hidden
+                />
+                <span className="text-xl">{item.title}</span>
+              </NavLink>
             </li>
           );
         })}

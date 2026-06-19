@@ -65,11 +65,11 @@ export default function DatePicker({
 
   return (
     <div className="">
-      <h2 className="text-[18px] font-bold mb-4 text-black">Выбрать день</h2>
+      <h2 className="text-[18px] font-bold mb-4 text-[var(--text-primary)]">Выбрать день</h2>
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
-          className="w-9 h-9 rounded-[10px] border border-[#e5e7eb] text-[18px] leading-none flex items-center justify-center hover:border-[#0a6af7] hover:text-[#0a6af7] transition-colors"
+          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
@@ -77,10 +77,10 @@ export default function DatePicker({
         >
           ‹
         </button>
-        <span className="text-[16px] font-bold capitalize text-black">{getMonthLabel(viewMonth)}</span>
+        <span className="text-[16px] font-bold capitalize text-[var(--text-primary)]">{getMonthLabel(viewMonth)}</span>
         <button
           type="button"
-          className="w-9 h-9 rounded-[10px] border border-[#e5e7eb] text-[18px] leading-none flex items-center justify-center hover:border-[#0a6af7] hover:text-[#0a6af7] transition-colors"
+          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }
@@ -92,7 +92,7 @@ export default function DatePicker({
 
       <div className="grid grid-cols-7 gap-1 mb-2">
         {WEEKDAYS.map((day) => (
-          <span key={day} className="text-center text-[12px] font-semibold text-[#9ca3af] p-1">
+          <span key={day} className="text-center text-[12px] font-semibold text-[var(--text-muted)] p-1">
             {day}
           </span>
         ))}
@@ -107,7 +107,7 @@ export default function DatePicker({
               key={date.toISOString()}
               type="button"
               className={`aspect-square max-h-[44px] rounded-full text-[14px] font-semibold flex items-center justify-center transition-all duration-200
-                ${!inMonth ? "text-[#d1d5db] cursor-not-allowed" : "text-[#374151] hover:bg-gray-100"}
+                ${!inMonth ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"}
                 ${selected ? "!bg-[#0a6af7] !text-white hover:!bg-[#0856c6]" : ""}
                 ${isToday && !selected ? "border-2 border-[#0a6af7]" : ""}
               `}

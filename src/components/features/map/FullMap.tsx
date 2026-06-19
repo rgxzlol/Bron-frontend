@@ -15,6 +15,7 @@ import { getDistanceKm } from "@/lib/distance"
 import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
 import { useMapFilterStore } from "@/store/mapFilter.store"
+import { useProfileStore } from "@/store/profile.store"
 import type { SavedBusiness } from "@/store/business.store"
 import type { MapLocationFilter } from "@/store/mapFilter.store"
 import ShopDetailPanel from "./ShopDetailPanel"
@@ -32,6 +33,8 @@ type FullMapProps = {
 const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
 const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
+const LIGHT_MAP_STYLE = "mapbox://styles/rgxzlol/cmpvg516h000o01r1279x7aje"
+const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
 
 function matchesDistanceFilter(
   userLat: number,
@@ -66,6 +69,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState("Все")
+  const theme = useProfileStore((s) => s.theme)
   const businesses = useBusinessStore((s) => s.businesses)
   const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
   const appliedMaxPrice = useMapFilterStore((s) => s.appliedMaxPrice)
@@ -76,7 +80,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/rgxzlol/cmpvg516h000o01r1279x7aje",
+      style: theme === "dark" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE,
       center: [69.2797, 41.3111],
       zoom: 12,
     })
@@ -98,7 +102,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
           el.className = `
             w-5 h-5 rounded-full bg-[#0a6af7]
-            border-4 border-white shadow-lg
+            border-4 border-[var(--bg-surface)] shadow-lg
           `
 
           userMarkerRef.current = new mapboxgl.Marker(el)
@@ -126,6 +130,23 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       map.remove()
     }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const style = theme === "dark" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE
+
+    const applyStyle = () => {
+      map.setStyle(style)
+    }
+
+    if (map.isStyleLoaded()) {
+      applyStyle()
+    } else {
+      map.once("load", applyStyle)
+    }
+  }, [theme])
 
   function resetMapToInitialView() {
     const map = mapRef.current
@@ -165,7 +186,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
           el.className = `
             w-5 h-5 rounded-full bg-[#0a6af7]
-            border-4 border-white shadow-lg
+            border-4 border-[var(--bg-surface)] shadow-lg
           `
 
           userMarkerRef.current = new mapboxgl.Marker(el)
@@ -269,9 +290,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       const isHospital = shop.type === "Больница"
 
       el.className = `
-        bg-white px-4 py-2 rounded-full shadow-lg
+        bg-[var(--bg-surface)] px-4 py-2 rounded-full shadow-lg
         cursor-pointer whitespace-nowrap transition
-        border border-gray-200
+        border border-[var(--border-default)] text-[var(--text-primary)]
       `
 
       const iconSrc = isHospital ? assets.categories.health.src : ""
@@ -349,7 +370,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markersRef.current.push(marker)
     })
-  }, [activeFilter, businesses, appliedCategory, appliedMaxPrice, appliedLocation])
+  }, [activeFilter, businesses, appliedCategory, appliedMaxPrice, appliedLocation, theme])
 
   function handleHospitalContinue(serviceIds: string[]) {
     if (!selectedHospital) return
@@ -387,8 +408,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
               ${
                 activeFilter === filter
-                  ? "bg-[#0A6AF7] text-white border-black"
-                  : "bg-white text-black border-[#0a6af7]"
+                  ? "bg-[var(--primary)] text-white border-[var(--text-primary)]"
+                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--primary)]"
               }
             `}
           >
@@ -400,7 +421,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       <button
         type="button"
         onClick={handleOpenCategories}
-        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[#0a6af7] bg-white px-4 py-2 font-semibold shadow-lg"
+        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
       >
         <Image src={assets.header.filter} alt="" width={18} height={18} />
         Категории
@@ -408,7 +429,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       <button
         onClick={goToMyLocation}
-        className="absolute bottom-4 right-4 z-10 bg-white px-4 py-3 rounded-full shadow-lg border border-[#0a6af7] font-semibold"
+        className="absolute bottom-4 right-4 z-10 bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-3 rounded-full shadow-lg border border-[var(--primary)] font-semibold"
       >
         📍
       </button>

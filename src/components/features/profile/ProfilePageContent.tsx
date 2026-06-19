@@ -9,7 +9,6 @@ import { formatPrice } from "@/lib/formatPrice";
 import { readImageFile } from "@/lib/readImageFile";
 import { useAuthStore } from "@/store/auth.store";
 import {
-  type CardBrand,
   type ProfileLanguage,
   type ProfileTheme,
   useProfileStore,
@@ -20,7 +19,6 @@ type ProfileSection =
   | "main"
   | "personal"
   | "payments"
-  | "addCard"
   | "appSettings"
   | "notifications"
   | "theme"
@@ -41,7 +39,6 @@ const sectionTitles: Record<ProfileSection, string> = {
   main: "Настройки профиля",
   personal: "Личные данные",
   payments: "Платежи",
-  addCard: "Добавить карту",
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
@@ -62,14 +59,12 @@ export default function ProfilePageContent({
     language,
     theme,
     notifications,
-    cards,
     paymentHistory,
     updatePersonalInfo,
     setAvatarUrl,
     setLanguage,
     setTheme,
     toggleNotification,
-    addCard,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -80,12 +75,6 @@ export default function ProfilePageContent({
   const [nameDraft, setNameDraft] = useState(fullName);
   const [phoneDraft, setPhoneDraft] = useState(phone);
   const [emailDraft, setEmailDraft] = useState(email);
-
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [saveCard, setSaveCard] = useState(true);
 
   useEffect(() => {
     onSectionChange?.(section);
@@ -121,27 +110,6 @@ export default function ProfilePageContent({
     goTo("main");
   }
 
-  function handleAddCard() {
-    const cardDigits = cardNumber.replace(/\D/g, "");
-    if (!cardHolder.trim() || cardDigits.length < 16 || !cardExpiry.trim() || !cardCvv.trim()) {
-      return;
-    }
-
-    if (saveCard) {
-      addCard({
-        holder: cardHolder,
-        number: cardDigits,
-        expiresAt: cardExpiry,
-      });
-    }
-
-    setCardNumber("");
-    setCardExpiry("");
-    setCardCvv("");
-    setCardHolder("");
-    goTo("payments");
-  }
-
   function handleLogout() {
     clearToken();
     onClose?.();
@@ -159,7 +127,6 @@ export default function ProfilePageContent({
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
-    if (current === "addCard") return "payments";
     if (current === "theme" || current === "notifications") return "appSettings";
     return "main";
   }
@@ -226,7 +193,7 @@ export default function ProfilePageContent({
             <MenuItem
               icon={assets.profile.card}
               title="Платежи"
-              subtitle="Карты и способ оплаты"
+              subtitle="История транзакций"
               onClick={() => goTo("payments")}
             />
             <MenuItem
@@ -297,22 +264,6 @@ export default function ProfilePageContent({
 
       {section === "payments" && (
         <div className={s.section}>
-          <h3 className={s.blockTitle}>Мои карты</h3>
-
-          <div className={s.cardsList}>
-            {cards.map((card, index) => (
-              <PaymentCardRow
-                key={card.id}
-                card={card}
-                withDivider={index < cards.length - 1}
-              />
-            ))}
-          </div>
-
-          <button type="button" className={s.outlineBtn} onClick={() => goTo("addCard")}>
-            Добавить карту
-          </button>
-
           <div className={s.historyBlock}>
             <h3 className={s.blockTitle}>История платежей</h3>
             <div className={s.historyList}>
@@ -335,75 +286,6 @@ export default function ProfilePageContent({
               </button>
             )}
           </div>
-        </div>
-      )}
-
-      {section === "addCard" && (
-        <div className={s.section}>
-          <div className={s.cardBrands}>
-            <Image src={assets.profile.visaMaster} alt="Visa Mastercard" width={120} height={24} />
-          </div>
-
-          <div className={`${s.cardPreview} ${s.cardPreviewEmpty}`}>
-            <span>{cardNumber ? maskDisplayNumber(cardNumber) : ".... .... .... ...."}</span>
-            <small>{cardExpiry || "MM/YY"}</small>
-          </div>
-
-          <label className={s.field}>
-            <span>Номер карты</span>
-            <input
-              value={cardNumber}
-              onChange={(e) => setCardNumber(e.target.value)}
-              placeholder="1234 5678 9012 3456"
-            />
-          </label>
-
-          <div className={s.row}>
-            <label className={s.field}>
-              <span>Срок действия</span>
-              <input
-                value={cardExpiry}
-                onChange={(e) => setCardExpiry(e.target.value)}
-                placeholder="MM/YY"
-              />
-            </label>
-            <label className={s.field}>
-              <span>CVV</span>
-              <input
-                value={cardCvv}
-                onChange={(e) => setCardCvv(e.target.value)}
-                placeholder="123"
-                maxLength={4}
-              />
-            </label>
-          </div>
-
-          <label className={s.field}>
-            <span>Имя владельца</span>
-            <input
-              value={cardHolder}
-              onChange={(e) => setCardHolder(e.target.value)}
-              placeholder="IVAN PETROV"
-            />
-          </label>
-
-          <div className={s.switchRow}>
-            <div>
-              <strong>Сохранить карту для будущих платежей</strong>
-            </div>
-            <button
-              type="button"
-              className={saveCard ? s.toggleOn : s.toggleOff}
-              onClick={() => setSaveCard((prev) => !prev)}
-              aria-pressed={saveCard}
-            >
-              <span />
-            </button>
-          </div>
-
-          <button type="button" className={s.primaryBtn} onClick={handleAddCard}>
-            Добавить карту
-          </button>
         </div>
       )}
 
@@ -609,28 +491,6 @@ function MenuItem({
   );
 }
 
-function PaymentCardRow({
-  card,
-  withDivider,
-}: {
-  card: { brand: CardBrand; numberMasked: string; expiresAt: string };
-  withDivider: boolean;
-}) {
-  return (
-    <div className={`${s.cardRow} ${withDivider ? s.cardRowDivider : ""}`}>
-      <Image
-        src={card.brand === "visa" ? assets.profile.visa : assets.profile.masterCard}
-        alt=""
-        width={card.brand === "visa" ? 44 : 36}
-        height={16}
-        className={s.cardBrandLogo}
-      />
-      <strong>{formatCardNumber(card.numberMasked)}</strong>
-      <small>{card.expiresAt}</small>
-    </div>
-  );
-}
-
 function SwitchRow({
   icon,
   title,
@@ -688,14 +548,4 @@ function ThemeOption({
       <span className={selected ? s.radioActive : s.radio} aria-hidden />
     </button>
   );
-}
-
-function formatCardNumber(masked: string): string {
-  const tail = masked.replace(/\D/g, "").slice(-4);
-  return `· · · · ${tail}`;
-}
-
-function maskDisplayNumber(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 16);
-  return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
 }

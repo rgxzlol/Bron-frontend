@@ -6,7 +6,7 @@
   z-index: 1000;
   width: min(400px, calc(100vw - 16px));
   max-height: 90vh;
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 26px 0 0 26px;
   box-shadow: -6px 0 28px rgba(0, 0, 0, 0.12);
   display: flex;
@@ -50,7 +50,7 @@
   height: 40px;
   padding: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
@@ -109,14 +109,14 @@
 
 .ratingMuted {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   white-space: normal;
 }
 
 .category {
   margin-top: -8px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .desc {
@@ -202,14 +202,14 @@
 
 .addressSub {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   overflow-wrap: anywhere;
 }
 
 .distance {
   flex-shrink: 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -275,7 +275,7 @@
 
 .priceDuration {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .priceAmount {

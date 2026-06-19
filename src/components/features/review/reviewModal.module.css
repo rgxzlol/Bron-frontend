@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--backdrop);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -15,7 +15,7 @@
   width: min(920px, 100%);
   max-height: min(92vh, 900px);
   overflow-y: auto;
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 18px;
   padding: 24px 28px 28px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
@@ -32,14 +32,14 @@
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: #000;
+  color: var(--text-primary);
 }
 
 .closeBtn {
   width: 55px;
   height: 55px;
   border-radius: 12px;
-  background: #fafaff;
+  background: var(--bg-input);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -62,7 +62,7 @@
   display: block;
   font-size: 16px;
   font-weight: 700;
-  color: #000;
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 
@@ -70,7 +70,7 @@
   margin-top: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #585858;
+  color: var(--text-secondary);
 }
 
 .stars {
@@ -102,8 +102,8 @@
   width: 100%;
   border: none;
   border-radius: 12px;
-  background: #fafaff;
-  color: #000;
+  background: var(--bg-input);
+  color: var(--text-primary);
   font-size: 16px;
   font-weight: 600;
   outline: none;
@@ -126,14 +126,14 @@
   bottom: 12px;
   font-size: 13px;
   font-weight: 600;
-  color: #585858;
+  color: var(--text-secondary);
 }
 
 .uploadArea {
   width: 100%;
   min-height: 120px;
   border-radius: 12px;
-  background: #fafaff;
+  background: var(--bg-input);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,7 +149,7 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #e8f1ff;
+  background: var(--bg-active-soft);
   display: grid;
   place-items: center;
   font-size: 20px;
@@ -188,7 +188,7 @@
   height: 20px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  color: var(--text-on-primary);
   font-size: 14px;
   line-height: 1;
   display: grid;
@@ -208,13 +208,13 @@
   font-size: 14px;
   font-weight: 700;
   color: #0a6af7;
-  background: #fff;
+  background: var(--bg-surface);
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .tagActive {
   background: #0a6af7;
-  color: #fff;
+  color: var(--text-on-primary);
 }
 
 .submitBtn {
@@ -222,7 +222,7 @@
   height: 56px;
   border-radius: 12px;
   background: #0a6af7;
-  color: #fff;
+  color: var(--text-on-primary);
   font-size: 18px;
   font-weight: 700;
 }

@@ -12,7 +12,7 @@ export default function ProfileButton() {
     <>
       <button
         type="button"
-        className="rounded-full bg-white p-[16px]"
+        className="rounded-full bg-[var(--bg-surface)] p-[16px] border border-[var(--border-default)]"
         aria-label="Профиль"
         onClick={() => setIsOpen(true)}
       >

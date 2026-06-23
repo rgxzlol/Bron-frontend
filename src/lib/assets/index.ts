@@ -52,9 +52,21 @@ import bagIcon from "@/assets/images/bagIcon.svg"
 import arrowDown from "@/assets/images/arrowDown.svg"
 import editIcon from "@/assets/images/editIcon.svg"
 import deleteIcon from "@/assets/images/deleteIcon.svg"
+import sunIcon from "@/assets/images/sunIcon.svg"
+import eyeIcon from "@/assets/images/eyeIcon.svg"
+import googleIcon from "@/assets/images/googleIcon.svg"
+import telegramIcon from "@/assets/images/telegramIcon.svg"
 import emptyNotification from "@/assets/images/emptyNotification.jpg"
 
 export const assets = {
+  common: {
+    sunIcon,
+  },
+  auth: {
+    eyeIcon,
+    googleIcon,
+    telegramIcon,
+  },
   nav: {
     home,
     map,

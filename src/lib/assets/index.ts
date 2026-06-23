@@ -56,7 +56,7 @@ import sunIcon from "@/assets/images/sunIcon.svg"
 import eyeIcon from "@/assets/images/eyeIcon.svg"
 import googleIcon from "@/assets/images/googleIcon.svg"
 import telegramIcon from "@/assets/images/telegramIcon.svg"
-
+import emptyNotification from "@/assets/images/emptyNotification.jpg"
 
 export const assets = {
   common: {
@@ -88,7 +88,8 @@ export const assets = {
     calendar,
     card,
     discount,
-    trash
+    trash,
+    emptyNotification,
   },
   hero: {
     photo1: mainPhoto1,

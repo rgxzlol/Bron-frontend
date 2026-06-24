@@ -96,5 +96,25 @@ export const ShopsPlace: ShopsType[] = [
                 icon: assets.categories.health
             }
         ]
+    },
+    {
+        id: 4,
+        title: "Beauty Bron Salon",
+        lat: 41.3100,
+        lng: 69.2800,
+        type: "Салон красоты",
+        img: assets.map.photo2,
+        desc: "Премиальный салон красоты: стрижки, укладки, маникюр и уход за кожей.",
+        rating: 4.9,
+        reviews: 88,
+        hours: "10:00 - 21:00",
+        freeSeats: 4,
+        price: 150000,
+        address: "ул. Тараса Шевченко 21, Ташкент",
+        district: "Мирабадский район",
+        phone: "+998 90 999 88 77",
+        category: "Услуги красоты",
+        distance: '0.8 км',
+        time: 45
     }
 ]

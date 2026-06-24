@@ -17,7 +17,7 @@ export default function Popular() {
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
-            href={routes.home}
+            href={`${routes.map}?shopId=${place.shopId || 1}`}
             className="flex w-full min-w-[270px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white"
           >
             <Image

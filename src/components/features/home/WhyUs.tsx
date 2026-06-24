@@ -1,6 +1,8 @@
 import { assets } from "@/lib/assets";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
+import Link from "next/link";
+import { routes } from "@/config/routes";
 
 const steps = [
   {
@@ -59,12 +61,16 @@ export default function WhyUs() {
               Заходи в Bron и развивай свой бизнес
             </p>
           </div>
-          <Button text="Начать" />
+          <Link href={routes.business}>
+            <Button text="Начать" as="span" className="cursor-pointer inline-block" />
+          </Link>
         </div>
         <Image
           className="absolute right-0 top-[-150px]"
           src={assets.marketing.homePng}
           alt="Bron для бизнеса"
+          width={400}
+          height={400}
         />
       </div>
     </section>

@@ -11,19 +11,18 @@ export default function Header() {
     <header className="my-[45px] flex justify-between">
       <SearchBar />
 
-        <div className="flex gap-[10px]">
-          <LanguageSelector />
+      <div className="flex gap-[10px]">
+        <LanguageSelector />
 
-          <NotificationDropdown />
+        <NotificationDropdown />
 
-          <Link
-            href={routes.profile}
-            className="rounded-full bg-white p-[16px]"
-            aria-label="Профиль"
-          >
-            <Image src={assets.header.profileIcon} alt="" />
-          </Link>
-        </div>
+        <Link
+          href={routes.profile}
+          className="rounded-full bg-white p-[16px]"
+          aria-label="Профиль"
+        >
+          <Image src={assets.header.profileIcon} alt="" />
+        </Link>
       </div>
     </header>
   );

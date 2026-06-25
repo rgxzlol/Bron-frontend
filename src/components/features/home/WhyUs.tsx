@@ -36,9 +36,9 @@ export default function WhyUs() {
         {steps.map(({ step, title, description }) => (
           <div
             key={step}
-            className="flex items-center gap-[13px] bg-white px-[15px] py-[15px] rounded-[24px]"
+            className="flex items-center gap-[13px] bg-white pt-3.5 pb-4.5 pl-3 pr-5 rounded-[24px]"
           >
-            <p className="max-w-[80px] rounded-full bg-[#f9f9fd] px-[32px] py-[18px] text-center text-[32px] font-semibold text-[#0a6af7]">
+            <p className="w-[74px] h-[74px] flex items-center justify-center rounded-full bg-[#f9f9fd] text-blue-600 text-[32px] font-semibold">
               {step}
             </p>
             <div className="flex flex-col gap-[7px]">
@@ -66,11 +66,11 @@ export default function WhyUs() {
           </Link>
         </div>
         <Image
-          className="absolute right-0 top-[-150px]"
+          className="absolute right-0 top-[-155px]"
           src={assets.marketing.homePng}
           alt="Bron для бизнеса"
-          width={400}
-          height={400}
+          width={493}
+          height={442}
         />
       </div>
     </section>

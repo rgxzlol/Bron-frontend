@@ -3,6 +3,16 @@ import type { PopularPlace } from "@/types/popular";
 
 export const popularPlaces: PopularPlace[] = [
   {
+    id: 1,
+    shopId: 4,
+    title: "Салон красоты",
+    rating: 4.3,
+    reviews: 132,
+    time: 15,
+    desc: "Специализированное помещение, оборудованное для занятий физической культурой",
+    img: assets.popular.photo1,
+  },
+  {
     id: 2,
     shopId: 1,
     title: "Фитнес зал",
@@ -21,15 +31,5 @@ export const popularPlaces: PopularPlace[] = [
     time: 15,
     desc: "Специализированное помещение, оборудованное для занятий физической культурой",
     img: assets.popular.photo3,
-  },
-  {
-    id: 1,
-    shopId: 4,
-    title: "Салон красоты",
-    rating: 4.3,
-    reviews: 132,
-    time: 15,
-    desc: "Специализированное помещение, оборудованное для занятий физической культурой",
-    img: assets.popular.photo1,
   },
 ];

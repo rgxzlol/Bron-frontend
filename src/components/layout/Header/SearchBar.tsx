@@ -20,7 +20,7 @@ export default function SearchBar() {
     return (
         <div className="flex items-center rounded-[38px] bg-[#f4f4f8] px-5 py-[6px]">
             <label className="relative flex items-center pb-1">
-                <Image className="mr-4" src={assets.header.search} alt="Поиск" width={20} height={20} />
+                <Image className="mr-4" src={assets.header.search} alt="Поиск" width={22} height={22} />
                 <input
                     className="mr-1 h-[25px] w-[600px] p-2 
                    focus:outline-none 
@@ -47,7 +47,7 @@ export default function SearchBar() {
                 type="button"
                 className="rounded-full bg-white p-[9px]"
                 aria-label="Фильтры" >
-                <Image src={assets.header.filter} alt="" />
+                <Image src={assets.header.filter} alt="" width={18} height={18} />
             </button>
             {
                 isOpen &&

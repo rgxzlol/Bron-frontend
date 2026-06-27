@@ -11,6 +11,8 @@ import {
   shopMatchesBusinessCategory,
 } from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
+import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync"
+import { apiBusinessToShop } from "@/lib/api/mappers"
 import { getDistanceKm } from "@/lib/distance"
 import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
@@ -22,9 +24,13 @@ import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import UserBusinessPanel from "./UserBusinessPanel"
 import MapCategoriesModal from "./MapCategoriesModal"
+import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
 import "mapbox-gl/dist/mapbox-gl.css"
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+const mapboxToken = getMapboxToken()
+if (mapboxToken) {
+  mapboxgl.accessToken = mapboxToken
+}
 
 type FullMapProps = {
   onStartBooking: (shop: ShopsType, serviceIds?: string[]) => void
@@ -69,6 +75,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState("Все")
+  const [apiShops, setApiShops] = useState<ShopsType[]>([])
   const theme = useProfileStore((s) => s.theme)
   const businesses = useBusinessStore((s) => s.businesses)
   const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
@@ -76,7 +83,36 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const appliedLocation = useMapFilterStore((s) => s.appliedLocation)
 
   useEffect(() => {
-    if (!mapContainer.current) return
+    void fetchPublicBusinessesFromApi()
+      .then((items) => {
+        setApiShops(
+          items.map((business) =>
+            apiBusinessToShop(
+              {
+                id: Number(business.id),
+                owner_id: 0,
+                owner_username: "",
+                name: business.name,
+                description: business.description,
+                logo: business.profilePhoto,
+                category: business.category,
+                address: business.address,
+                phone: business.phone,
+                latitude: business.lat,
+                longitude: business.lng,
+                created_at: "",
+              },
+              business.services,
+              business.defaultBranchId,
+            ),
+          ),
+        )
+      })
+      .catch((error) => console.error(error))
+  }, [])
+
+  useEffect(() => {
+    if (!mapContainer.current || !isMapboxConfigured()) return
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -217,7 +253,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
     const userLocation = userLocationRef.current
 
-    const filteredShops = ShopsPlace.filter((shop) => {
+    const filteredShops = [...ShopsPlace, ...apiShops].filter((shop) => {
       const matchesPill =
         activeFilter === "Все"
           ? true
@@ -370,7 +406,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markersRef.current.push(marker)
     })
-  }, [activeFilter, businesses, appliedCategory, appliedMaxPrice, appliedLocation, theme])
+  }, [activeFilter, businesses, appliedCategory, appliedMaxPrice, appliedLocation, theme, apiShops])
 
   function handleHospitalContinue(serviceIds: string[]) {
     if (!selectedHospital) return
@@ -442,6 +478,26 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           borderRadius: "26px",
         }}
       />
+
+      {!isMapboxConfigured() && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface-muted)] px-6 text-center"
+          style={{ height: "80dvh" }}
+        >
+          <div className="max-w-md">
+            <p className="text-[18px] font-semibold text-[var(--text-primary)]">
+              Карта недоступна
+            </p>
+            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+              Укажите реальный токен Mapbox в файле{" "}
+              <code className="rounded bg-[var(--bg-surface)] px-1 py-0.5">.env.local</code>:
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded-[12px] bg-[var(--bg-surface)] p-3 text-left text-[13px] text-[var(--text-primary)]">
+              NEXT_PUBLIC_MAPBOX_TOKEN=pk.ваш_токен
+            </pre>
+          </div>
+        </div>
+      )}
 
       {selectedHospital && (
         <HospitalServicesModal

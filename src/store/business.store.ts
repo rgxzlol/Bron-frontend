@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
+  createProductOnApi,
+  createServiceOnApi,
+  fetchMyBusinessesFromApi,
+  getCurrentUserId,
+  removeBusinessFromApi,
+  removeServiceFromApi,
+  saveBusinessDraftToApi,
+  updateServiceOnApi,
+} from "@/lib/api/businessSync";
+import { getAuthToken } from "@/lib/api/token";
+import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
 } from "@/lib/business/schedule";
@@ -64,6 +75,7 @@ export type SavedBusiness = BusinessDraft & {
   lng: number;
   services: BusinessService[];
   bookingRequests: BusinessBookingRequest[];
+  defaultBranchId?: number;
 };
 
 export const EMPTY_GALLERY: (string | null)[] = Array(6).fill(null);
@@ -174,29 +186,30 @@ type BusinessStore = {
   setDraftSchedule: (schedule: DaySchedule[]) => void;
   resetDraft: () => void;
   loadForEdit: (id: string) => void;
-  saveDraft: () => SavedBusiness;
-  removeBusiness: (id: string) => void;
+  saveDraft: () => Promise<SavedBusiness>;
+  removeBusiness: (id: string) => Promise<void>;
   setShowMyBusiness: (value: boolean) => void;
   getBusiness: (id: string) => SavedBusiness | undefined;
+  fetchBusinessesFromApi: () => Promise<void>;
   addService: (
     businessId: string,
     service: Omit<BusinessService, "id" | "active">,
-  ) => void;
+  ) => Promise<void>;
   addProduct: (
     businessId: string,
     product: Omit<BusinessService, "id" | "active" | "type">,
-  ) => void;
-  removeService: (businessId: string, serviceId: string) => void;
+  ) => Promise<void>;
+  removeService: (businessId: string, serviceId: string) => Promise<void>;
   updateService: (
     businessId: string,
     serviceId: string,
     partial: Partial<Pick<BusinessService, "name" | "category" | "price" | "description" | "photo">>,
-  ) => void;
+  ) => Promise<void>;
   toggleService: (
     businessId: string,
     serviceId: string,
     active: boolean,
-  ) => void;
+  ) => Promise<void>;
   updateBookingStatus: (
     businessId: string,
     bookingId: string,
@@ -255,8 +268,24 @@ export const useBusinessStore = create<BusinessStore>()(
         return business ? normalizeBusiness(business) : undefined;
       },
 
-      saveDraft: () => {
+      saveDraft: async () => {
         const { draft, businesses, editingId } = get();
+        const token = getAuthToken();
+
+        if (token) {
+          const saved = await saveBusinessDraftToApi(draft, editingId);
+          const next = editingId
+            ? businesses.map((business) => (business.id === saved.id ? saved : business))
+            : [...businesses, saved];
+
+          set({
+            businesses: next,
+            draft: createEmptyDraft(),
+            editingId: null,
+            showMyBusiness: true,
+          });
+          return saved;
+        }
 
         if (editingId) {
           let saved: SavedBusiness | null = null;
@@ -296,24 +325,38 @@ export const useBusinessStore = create<BusinessStore>()(
         return saved;
       },
 
-      removeBusiness: (id) =>
+      removeBusiness: async (id) => {
+        await removeBusinessFromApi(id);
         set((state) => {
           const businesses = state.businesses.filter((b) => b.id !== id);
           return {
             businesses,
             showMyBusiness: businesses.length > 0,
           };
-        }),
+        });
+      },
+
+      fetchBusinessesFromApi: async () => {
+        const userId = await getCurrentUserId();
+        if (!userId) return;
+
+        const businesses = await fetchMyBusinessesFromApi(userId);
+        set({
+          businesses,
+          showMyBusiness: businesses.length > 0,
+        });
+      },
 
       setShowMyBusiness: (value) => set({ showMyBusiness: value }),
 
-      addService: (businessId, service) =>
+      addService: async (businessId, service) => {
+        const created = await createServiceOnApi(businessId, service);
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
             services: [
               ...b.services,
-              {
+              created ?? {
                 ...service,
                 id: crypto.randomUUID(),
                 active: true,
@@ -321,15 +364,17 @@ export const useBusinessStore = create<BusinessStore>()(
               },
             ],
           })),
-        })),
+        }));
+      },
 
-      addProduct: (businessId, product) =>
+      addProduct: async (businessId, product) => {
+        const created = await createProductOnApi(businessId, product);
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
             services: [
               ...b.services,
-              {
+              created ?? {
                 ...product,
                 id: crypto.randomUUID(),
                 active: true,
@@ -337,27 +382,48 @@ export const useBusinessStore = create<BusinessStore>()(
               },
             ],
           })),
-        })),
+        }));
+      },
 
-      removeService: (businessId, serviceId) =>
+      removeService: async (businessId, serviceId) => {
+        const business = get().businesses.find((item) => item.id === businessId);
+        const service = business?.services.find((item) => item.id === serviceId);
+        if (service) {
+          await removeServiceFromApi(serviceId, service.type);
+        }
+
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
             services: b.services.filter((s) => s.id !== serviceId),
           })),
-        })),
+        }));
+      },
 
-      updateService: (businessId, serviceId, partial) =>
+      updateService: async (businessId, serviceId, partial) => {
+        const business = get().businesses.find((item) => item.id === businessId);
+        const current = business?.services.find((item) => item.id === serviceId);
+        const updated = current
+          ? await updateServiceOnApi(serviceId, { ...current, ...partial })
+          : null;
+
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
             services: b.services.map((s) =>
-              s.id === serviceId ? { ...s, ...partial } : s,
+              s.id === serviceId ? { ...s, ...partial, ...(updated ?? {}) } : s,
             ),
           })),
-        })),
+        }));
+      },
 
-      toggleService: (businessId, serviceId, active) =>
+      toggleService: async (businessId, serviceId, active) => {
+        const business = get().businesses.find((item) => item.id === businessId);
+        const current = business?.services.find((item) => item.id === serviceId);
+        if (current) {
+          await updateServiceOnApi(serviceId, { ...current, active });
+        }
+
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
@@ -365,7 +431,8 @@ export const useBusinessStore = create<BusinessStore>()(
               s.id === serviceId ? { ...s, active } : s,
             ),
           })),
-        })),
+        }));
+      },
 
       updateBookingStatus: (businessId, bookingId, status) =>
         set((state) => ({

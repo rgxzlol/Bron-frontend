@@ -65,6 +65,7 @@ export default function ProfilePageContent({
     setLanguage,
     setTheme,
     toggleNotification,
+    savePersonalInfoToApi,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -102,12 +103,11 @@ export default function ProfilePageContent({
 
   function handleSavePersonalInfo() {
     if (!nameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim()) return;
-    updatePersonalInfo({
+    void savePersonalInfoToApi({
       fullName: nameDraft,
       phone: phoneDraft,
       email: emailDraft,
-    });
-    goTo("main");
+    }).then(() => goTo("main"));
   }
 
   function handleLogout() {

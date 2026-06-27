@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { usersApi } from "@/lib/api";
+import { mapApiLanguage, mapProfileLanguage } from "@/lib/api/mappers";
+import { getAuthToken } from "@/lib/api/token";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -37,6 +40,12 @@ type ProfileState = {
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
   toggleNotification: (key: keyof NotificationSettings) => void;
+  hydrateFromApi: () => Promise<void>;
+  savePersonalInfoToApi: (payload: {
+    fullName: string;
+    phone: string;
+    email: string;
+  }) => Promise<void>;
 };
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
@@ -84,7 +93,12 @@ export const useProfileStore = create<ProfileState>()(
 
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
 
-      setLanguage: (language) => set({ language }),
+      setLanguage: (language) => {
+        set({ language });
+        const token = getAuthToken();
+        if (!token) return;
+        void usersApi.updateProfile({ language: mapProfileLanguage(language) }, token);
+      },
 
       setTheme: (theme) => set({ theme }),
 
@@ -95,6 +109,45 @@ export const useProfileStore = create<ProfileState>()(
             [key]: !state.notifications[key],
           },
         })),
+
+      hydrateFromApi: async () => {
+        const token = getAuthToken();
+        if (!token) return;
+
+        const profile = await usersApi.getProfile(token);
+        set({
+          fullName: profile.username,
+          phone: profile.phone,
+          email: profile.email,
+          language: mapApiLanguage(profile.language),
+        });
+      },
+
+      savePersonalInfoToApi: async ({ fullName, phone, email }) => {
+        const token = getAuthToken();
+        if (!token) {
+          set({
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            email: email.trim(),
+          });
+          return;
+        }
+
+        const profile = await usersApi.updateProfile(
+          {
+            phone: phone.trim(),
+            email: email.trim(),
+          },
+          token,
+        );
+
+        set({
+          fullName: fullName.trim() || profile.username,
+          phone: profile.phone,
+          email: profile.email,
+        });
+      },
     }),
     {
       name: "profile-storage",

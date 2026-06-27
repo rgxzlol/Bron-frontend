@@ -11,6 +11,8 @@ export type ShopService = {
 
 export type ShopsType = {
   id: number;
+  apiBusinessId?: number;
+  apiBranchId?: number;
   title: string;
   lat: number;
   lng: number;

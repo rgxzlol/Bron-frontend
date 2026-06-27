@@ -8,9 +8,17 @@ import { BookingEditModal } from './BookingEditModal';
 
 interface BookingCardProps {
     status?: 'upcoming' | 'finished';
+    bookingDate?: string;
+    bookingTime?: string;
+    totalPrice?: number;
 }
 
-export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
+export const BookingCard = ({
+    status = 'upcoming',
+    bookingDate,
+    bookingTime,
+    totalPrice,
+}: BookingCardProps) => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const UpcomingCardContent = () => (
@@ -75,7 +83,9 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                         <div className="flex flex-col justify-end">
                             <div className="flex flex-col gap-[2px] shrink-0">
                                 <span className="font-semibold text-[20px] text-black opacity-60">Итог</span>
-                                <strong className="font-bold text-[36px] text-black whitespace-nowrap">98 000 сум</strong>
+                                <strong className="font-bold text-[36px] text-black whitespace-nowrap">
+                                    {totalPrice != null ? `${totalPrice.toLocaleString("ru-RU")} сум` : "98 000 сум"}
+                                </strong>
                             </div>
                             <button
                                 onClick={() => setIsCancelModalOpen(true)}

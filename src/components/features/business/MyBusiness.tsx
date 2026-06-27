@@ -159,7 +159,7 @@ export default function MyBusiness({
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={() => {
-          if (deleteTargetId) removeBusiness(deleteTargetId);
+          if (deleteTargetId) void removeBusiness(deleteTargetId);
           setDeleteTargetId(null);
         }}
       />

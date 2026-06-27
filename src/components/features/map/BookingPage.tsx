@@ -15,6 +15,13 @@ import TimePicker from "@/components/shared/TimePicker";
 import { formatDateRu } from "@/lib/formatDate";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
+import { branchesApi } from "@/lib/api";
+import {
+  addMinutesToTime,
+  formatBookingDate,
+} from "@/lib/api/mappers";
+import { useAuthStore } from "@/store/auth.store";
+import { useBookingStore } from "@/store/booking.store";
 import s from "./bookingPage.module.css";
 
 type BookingPageProps = {
@@ -47,6 +54,9 @@ export default function BookingPage({
     phone: "",
     email: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const token = useAuthStore((state) => state.token);
+  const createBooking = useBookingStore((state) => state.createBooking);
 
   const today = useMemo(() => new Date(2026, 5, 2), []);
 
@@ -176,9 +186,59 @@ export default function BookingPage({
     setShowExtrasModal(true);
   }
 
-  function finishExtras() {
-    setShowExtrasModal(false);
-    setStep(3);
+  async function finishExtras() {
+    if (!token) {
+      alert("Войдите в аккаунт, чтобы оформить бронь");
+      return;
+    }
+
+    if (!shop.apiBusinessId) {
+      setShowExtrasModal(false);
+      setStep(3);
+      return;
+    }
+
+    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
+    if (!serviceId || !/^\d+$/.test(serviceId)) {
+      alert("Для этого места не выбрана услуга из API");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      let branchId = shop.apiBranchId;
+      if (!branchId) {
+        const branches = await branchesApi.listByBusiness(shop.apiBusinessId);
+        branchId = branches[0]?.id;
+      }
+
+      if (!branchId) {
+        throw new Error("У бизнеса нет доступного филиала");
+      }
+
+      const durationMin =
+        selectedServices[0]?.durationMin ??
+        shop.services?.find((item) => item.id === serviceId)?.durationMin ??
+        60;
+
+      await createBooking({
+        business_id: shop.apiBusinessId,
+        service_id: Number(serviceId),
+        branch_id: branchId,
+        booking_date: formatBookingDate(selectedDate),
+        start_time: selectedTime,
+        end_time: addMinutesToTime(selectedTime, durationMin),
+        guest_count: guests,
+      });
+
+      setShowExtrasModal(false);
+      setStep(3);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Не удалось создать бронь");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function renderStepper() {

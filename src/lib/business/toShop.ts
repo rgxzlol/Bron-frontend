@@ -24,7 +24,9 @@ export function businessToShop(business: SavedBusiness): ShopsType {
       : 50000;
 
   return {
-    id: hashId(business.id),
+    id: /^\d+$/.test(business.id) ? Number(business.id) : hashId(business.id),
+    apiBusinessId: /^\d+$/.test(business.id) ? Number(business.id) : undefined,
+    apiBranchId: business.defaultBranchId,
     title: business.name || "Бизнес",
     lat: business.lat,
     lng: business.lng,

@@ -221,8 +221,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
       alert("Укажите адрес бизнеса");
       return;
     }
-    saveDraft();
-    onSaved();
+    void saveDraft()
+      .then(() => onSaved())
+      .catch((error: unknown) => {
+        alert(error instanceof Error ? error.message : "Не удалось сохранить бизнес");
+      });
   }
 
   function handleDelete() {

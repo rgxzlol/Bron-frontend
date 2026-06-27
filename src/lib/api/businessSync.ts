@@ -1,0 +1,269 @@
+import {
+  authApi,
+  branchesApi,
+  businessesApi,
+  productsApi,
+  servicesApi,
+  workingHoursApi,
+} from "@/lib/api";
+import {
+  apiBusinessToSavedBusiness,
+  apiProductToBusinessService,
+  apiServiceToBusinessService,
+  draftToBusinessCreate,
+  draftToBusinessUpdate,
+  scheduleToWorkingHoursPayload,
+  workingHoursToSchedule,
+} from "@/lib/api/mappers";
+import { getAuthToken } from "@/lib/api/token";
+import type { BusinessDraft, BusinessService, SavedBusiness } from "@/store/business.store";
+import { randomTashkentCoords } from "@/lib/business/coordinates";
+
+async function loadBusinessDetails(businessId: number) {
+  const [business, services, products, branches, schedule] = await Promise.all([
+    businessesApi.get(businessId),
+    servicesApi.listByBusiness(businessId),
+    productsApi.listByBusiness(businessId),
+    branchesApi.listByBusiness(businessId),
+    workingHoursApi.getByBusiness(businessId).catch(() => []),
+  ]);
+
+  const serviceItems = await Promise.all(
+    services.map((item) => servicesApi.get(item.id)),
+  );
+  const productItems = await Promise.all(
+    products.map((item) => productsApi.get(item.id)),
+  );
+
+  const mappedServices: BusinessService[] = [
+    ...serviceItems.map(apiServiceToBusinessService),
+    ...productItems.map(apiProductToBusinessService),
+  ];
+
+  return apiBusinessToSavedBusiness(business, {
+    services: mappedServices,
+    defaultBranchId: branches[0]?.id,
+    schedule: workingHoursToSchedule(schedule),
+  });
+}
+
+export async function fetchMyBusinessesFromApi(userId: number) {
+  const list = await businessesApi.list();
+  const owned = await Promise.all(
+    list.map(async (item) => {
+      const detail = await businessesApi.get(item.id);
+      if (detail.owner_id !== userId) return null;
+      return loadBusinessDetails(item.id);
+    }),
+  );
+
+  return owned.filter((item): item is SavedBusiness => item != null);
+}
+
+export async function fetchPublicBusinessesFromApi() {
+  try {
+    const list = await businessesApi.list();
+    return await Promise.all(list.map((item) => loadBusinessDetails(item.id)));
+  } catch (error) {
+    console.error("Не удалось загрузить бизнесы с API:", error);
+    return [];
+  }
+}
+
+async function syncWorkingHours(businessId: number, draft: BusinessDraft) {
+  const token = getAuthToken();
+  if (!token) return;
+
+  const existing = await workingHoursApi.getByBusiness(businessId).catch(() => []);
+  await Promise.all(
+    existing.map((item) => workingHoursApi.remove(item.id, token).catch(() => undefined)),
+  );
+
+  const payload = scheduleToWorkingHoursPayload(businessId, draft.schedule);
+  await Promise.all(payload.map((item) => workingHoursApi.create(item, token)));
+}
+
+async function ensureDefaultBranch(businessId: number, draft: BusinessDraft) {
+  const token = getAuthToken();
+  if (!token) return undefined;
+
+  const branches = await branchesApi.listByBusiness(businessId);
+  if (branches.length > 0) return branches[0].id;
+
+  const branch = await branchesApi.create(
+    {
+      business_id: businessId,
+      name: draft.name || "Главный филиал",
+      address: draft.address,
+      phone: draft.phone,
+      latitude: null,
+      longitude: null,
+    },
+    token,
+  );
+
+  return branch.id;
+}
+
+async function resolveCreatedBusinessId(
+  draft: BusinessDraft,
+  userId: number,
+): Promise<number> {
+  const list = await businessesApi.list();
+  const owned = await Promise.all(
+    list.map(async (item) => {
+      const detail = await businessesApi.get(item.id);
+      return detail.owner_id === userId ? detail : null;
+    }),
+  );
+
+  const mine = owned.filter((item): item is NonNullable<typeof item> => item != null);
+  const byName = mine.find((item) => item.name === draft.name.trim());
+  if (byName) return byName.id;
+
+  if (mine.length === 0) {
+    throw new Error("Бизнес создан, но не найден в списке");
+  }
+
+  return mine.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0].id;
+}
+
+export async function saveBusinessDraftToApi(
+  draft: BusinessDraft,
+  editingId: string | null,
+) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
+  }
+
+  if (editingId && /^\d+$/.test(editingId)) {
+    const businessId = Number(editingId);
+    await businessesApi.update(businessId, draftToBusinessUpdate(draft), token);
+    await syncWorkingHours(businessId, draft);
+    await ensureDefaultBranch(businessId, draft);
+    return loadBusinessDetails(businessId);
+  }
+
+  const coords = randomTashkentCoords();
+  const created = await businessesApi.create(
+    draftToBusinessCreate(draft, coords),
+    token,
+  );
+
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("Не удалось определить пользователя");
+  }
+
+  const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));
+
+  await syncWorkingHours(businessId, draft);
+  await ensureDefaultBranch(businessId, draft);
+  return loadBusinessDetails(businessId);
+}
+
+export async function removeBusinessFromApi(businessId: string) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(businessId)) return;
+  await businessesApi.remove(Number(businessId), token);
+}
+
+export async function createServiceOnApi(
+  businessId: string,
+  service: Omit<BusinessService, "id" | "active" | "type">,
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(businessId)) return null;
+
+  const created = await servicesApi.create(
+    {
+      business_id: Number(businessId),
+      title: service.name,
+      description: service.description,
+      category: service.category,
+      duration: 60,
+      price: service.price,
+    },
+    token,
+  );
+
+  return apiServiceToBusinessService(created);
+}
+
+export async function createProductOnApi(
+  businessId: string,
+  product: Omit<BusinessService, "id" | "active" | "type">,
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(businessId)) return null;
+
+  const created = await productsApi.create(
+    {
+      business_id: Number(businessId),
+      name: product.name,
+      description: product.description || null,
+      price: product.price,
+    },
+    token,
+  );
+
+  return apiProductToBusinessService(created);
+}
+
+export async function updateServiceOnApi(
+  serviceId: string,
+  partial: Partial<BusinessService>,
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(serviceId)) return null;
+
+  if (partial.type === "product") {
+    const updated = await productsApi.update(
+      Number(serviceId),
+      {
+        name: partial.name,
+        description: partial.description,
+        price: partial.price,
+        is_active: partial.active,
+      },
+      token,
+    );
+    return apiProductToBusinessService(updated);
+  }
+
+  const updated = await servicesApi.update(
+    Number(serviceId),
+    {
+      title: partial.name,
+      description: partial.description,
+      category: partial.category,
+      price: partial.price,
+      is_active: partial.active,
+    },
+    token,
+  );
+
+  return apiServiceToBusinessService(updated);
+}
+
+export async function removeServiceFromApi(serviceId: string, type: "service" | "product") {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(serviceId)) return;
+
+  if (type === "product") {
+    await productsApi.remove(Number(serviceId), token);
+    return;
+  }
+
+  await servicesApi.remove(Number(serviceId), token);
+}
+
+export async function getCurrentUserId() {
+  const token = getAuthToken();
+  if (!token) return null;
+  const me = await authApi.me(token);
+  return me.id;
+}

@@ -1,31 +1,35 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
+
+const locales = ['ru', 'en'];
+const defaultLocale = 'ru';
+
+const intlMiddleware = createMiddleware({
+    locales,
+    defaultLocale
+});
 
 export function proxy(request: NextRequest) {
-    // return NextResponse.next();
-
-
     const token = false;
+    const pathname = request.nextUrl.pathname;
 
-    const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-        request.nextUrl.pathname.startsWith('/register');
+    const isAuthPage = pathname.includes('/login') || pathname.includes('/register');
+    const isProtectedRoute = pathname.includes('/profile');
 
-    if (!token && !isAuthPage) {
-        return NextResponse.redirect(new URL('/login', request.url));
+    const currentLocale = request.cookies.get('NEXT_LOCALE')?.value || defaultLocale;
+
+    if (!token && isProtectedRoute) {
+        return NextResponse.redirect(new URL(`/${currentLocale}/login`, request.url));
     }
 
     if (token && isAuthPage) {
-        return NextResponse.redirect(new URL('/', request.url));
+        return NextResponse.redirect(new URL(`/${currentLocale}/`, request.url));
     }
 
-    return NextResponse.next();
-
+    return intlMiddleware(request);
 }
 
 export const config = {
-    matcher: [
-        '/profile/:path*',
-        '/login',
-        '/register'
-    ],
+    matcher: ['/((?!api|_next|.*\\..*).*)']
 };

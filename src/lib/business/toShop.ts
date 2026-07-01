@@ -73,6 +73,7 @@ export function businessToShop(
       description: service.description,
       priceFrom: service.price,
       durationMin: 60,
+      icon: service.photo ?? undefined,
     })),
   };
 }

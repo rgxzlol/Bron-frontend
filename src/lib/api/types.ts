@@ -49,6 +49,7 @@ export type ChangePasswordRequest = {
 
 export type BusinessListItem = {
   id: number;
+  owner_id?: number;
   name: string;
   category: string;
   address: string;
@@ -98,8 +99,9 @@ export type Service = {
   description: string;
   category: string;
   duration: number;
-  price: number;
+  price: number | string;
   is_active: boolean;
+  image?: string | null;
 };
 
 export type ServiceListItem = {
@@ -107,7 +109,10 @@ export type ServiceListItem = {
   title: string;
   category: string;
   duration: number;
-  price: number;
+  price: number | string;
+  description?: string | null;
+  is_active?: boolean;
+  image?: string | null;
 };
 
 export type ServiceCreate = {
@@ -136,7 +141,9 @@ export type Product = {
 export type ProductListItem = {
   id: number;
   name: string;
-  price: number;
+  price: number | string;
+  description?: string | null;
+  is_active?: boolean;
   image: string | null;
 };
 

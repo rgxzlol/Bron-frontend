@@ -30,7 +30,7 @@ export default function Support() {
             className="flex flex-col rounded-[24px] bg-white px-[24px] py-[28px]">
             <div className="mb-[24px] flex items-start gap-[16px]">
               <div className="flex px-[50px] py-[40px] shrink-0 items-center justify-center rounded-[32px] bg-[#e8f1ff]">
-                <Image src={card.icon} alt="" width={28} height={28} />
+                <Image src={card.icon} alt="" width={70} height={70} />
               </div>
               <div className="flex flex-col gap-[6px]">
                 <h2 className="text-[24px] font-semibold">{card.title}</h2>
@@ -112,7 +112,7 @@ export default function Support() {
                 </button>
 
                 {isOpen && (
-                  <div className="px-[24px] pb-[20px] pl-[88px]">
+                  <div className="px-[24px] pb-[20px] pl-[24px]">
                     <p className="text-[18px] leading-relaxed opacity-75">
                       {item.answer}
                     </p>

@@ -1,4 +1,5 @@
 import type { SavedBusiness } from "@/store/business.store";
+import { resolveMediaUrl } from "@/lib/api/media";
 
 const GALLERY_SIZE = 6;
 
@@ -11,9 +12,10 @@ export function collectBusinessPhotoUrls(business: {
   const seen = new Set<string>();
 
   const add = (url?: string | null) => {
-    if (!url || seen.has(url)) return;
-    seen.add(url);
-    urls.push(url);
+    const resolved = resolveMediaUrl(url);
+    if (!resolved || seen.has(resolved)) return;
+    seen.add(resolved);
+    urls.push(resolved);
   };
 
   add(business.profilePhoto);
@@ -49,19 +51,32 @@ export function mergeBusinessFromApi(
       ? { lat: existing.lat, lng: existing.lng }
       : { lat: fromApi.lat, lng: fromApi.lng };
 
+  const apiPhotos = collectBusinessPhotoUrls({
+    ...fromApi,
+    profilePhoto: resolveMediaUrl(fromApi.profilePhoto),
+    services: fromApi.services,
+  });
   const existingPhotos = collectBusinessPhotoUrls(existing);
-  const apiPhotos = collectBusinessPhotoUrls(fromApi);
+  const remoteApiPhotos = apiPhotos.filter((photo) => photo.startsWith("http"));
   const photos =
-    existingPhotos.length >= apiPhotos.length ? existingPhotos : apiPhotos;
+    remoteApiPhotos.length > 0
+      ? [
+          ...remoteApiPhotos,
+          ...existingPhotos.filter((photo) => photo.startsWith("data:")),
+        ]
+      : existingPhotos.length > 0
+        ? existingPhotos
+        : apiPhotos;
 
   return {
     ...fromApi,
     lat: coords.lat,
     lng: coords.lng,
-    profilePhoto: photos[0] ?? fromApi.profilePhoto ?? existing.profilePhoto,
+    profilePhoto: photos[0] ?? resolveMediaUrl(fromApi.profilePhoto) ?? existing.profilePhoto,
     gallery: photosToGallerySlots(photos),
     website: existing.website || fromApi.website,
     description: fromApi.description || existing.description,
+    services: fromApi.services.length > 0 ? fromApi.services : existing.services,
   };
 }
 

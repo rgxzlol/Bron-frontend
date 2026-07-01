@@ -11,7 +11,9 @@ import { ApiError } from "@/lib/api/client";
 import {
   apiBookingToBusinessBookingRequest,
   apiBusinessToSavedBusiness,
+  apiProductListItemToBusinessService,
   apiProductToBusinessService,
+  apiServiceListItemToBusinessService,
   apiServiceToBusinessService,
   draftToBusinessCreate,
   draftToBusinessUpdate,
@@ -61,6 +63,13 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
   }
 }
 
+export async function fetchBusinessBookingsFromApi(
+  businessId: number,
+  services: BusinessService[],
+) {
+  return loadBusinessBookings(businessId, services);
+}
+
 async function loadBusinessStats(businessId: number) {
   const token = getAuthToken();
   if (!token) return undefined;
@@ -72,32 +81,73 @@ async function loadBusinessStats(businessId: number) {
   }
 }
 
+async function mapServicesFromApiList(
+  services: Awaited<ReturnType<typeof servicesApi.listByBusiness>>,
+) {
+  const results = await Promise.allSettled(
+    services.map(async (item) => {
+      if (item.description) {
+        return apiServiceListItemToBusinessService(item);
+      }
+
+      try {
+        const detail = await servicesApi.get(item.id);
+        return apiServiceToBusinessService(detail);
+      } catch {
+        return apiServiceListItemToBusinessService(item);
+      }
+    }),
+  );
+
+  return results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+}
+
+async function mapProductsFromApiList(
+  products: Awaited<ReturnType<typeof productsApi.listByBusiness>>,
+) {
+  const results = await Promise.allSettled(
+    products.map(async (item) => {
+      if (item.description) {
+        return apiProductListItemToBusinessService(item);
+      }
+
+      try {
+        const detail = await productsApi.get(item.id);
+        return apiProductToBusinessService(detail);
+      } catch {
+        return apiProductListItemToBusinessService(item);
+      }
+    }),
+  );
+
+  return results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+}
+
 async function loadBusinessDetails(businessId: number, withOwnerData = false) {
   const [business, services, products, branches, schedule] = await Promise.all([
     businessesApi.get(businessId),
-    servicesApi.listByBusiness(businessId),
-    productsApi.listByBusiness(businessId),
-    branchesApi.listByBusiness(businessId),
+    servicesApi.listByBusiness(businessId).catch(() => []),
+    productsApi.listByBusiness(businessId).catch(() => []),
+    branchesApi.listByBusiness(businessId).catch(() => []),
     workingHoursApi.getByBusiness(businessId).catch(() => []),
   ]);
 
-  const serviceItems = await Promise.all(
-    services.map((item) => servicesApi.get(item.id)),
-  );
-  const productItems = await Promise.all(
-    products.map((item) => productsApi.get(item.id)),
-  );
+  const [mappedServices, mappedProducts] = await Promise.all([
+    mapServicesFromApiList(services),
+    mapProductsFromApiList(products),
+  ]);
 
-  const mappedServices: BusinessService[] = [
-    ...serviceItems.map(apiServiceToBusinessService),
-    ...productItems.map(apiProductToBusinessService),
-  ];
+  const mappedItems: BusinessService[] = [...mappedServices, ...mappedProducts];
 
   const [ownerData, branchDetail] = await Promise.all([
     withOwnerData
       ? Promise.all([
           loadBusinessStats(businessId),
-          loadBusinessBookings(businessId, mappedServices),
+          loadBusinessBookings(businessId, mappedItems),
         ])
       : Promise.resolve<[undefined, BusinessBookingRequest[]]>([undefined, []]),
     branches[0]?.id
@@ -110,7 +160,7 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
   const coords = await resolveCoordsForBusiness(business, branchDetail);
 
   return apiBusinessToSavedBusiness(business, {
-    services: mappedServices,
+    services: mappedItems,
     defaultBranchId: branches[0]?.id,
     schedule: workingHoursToSchedule(schedule),
     stats,
@@ -122,21 +172,34 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
 
 export async function fetchMyBusinessesFromApi(userId: number) {
   const list = await businessesApi.list();
-  const owned = await Promise.all(
+  const ownedItems = await Promise.all(
     list.map(async (item) => {
+      if (item.owner_id != null) {
+        return item.owner_id === userId ? item : null;
+      }
+
       const detail = await businessesApi.get(item.id);
-      if (detail.owner_id !== userId) return null;
-      return loadBusinessDetails(item.id, true);
+      return detail.owner_id === userId ? item : null;
     }),
   );
 
-  return owned.filter((item): item is SavedBusiness => item != null);
+  const owned = ownedItems.filter(
+    (item): item is NonNullable<typeof item> => item != null,
+  );
+
+  return Promise.all(owned.map((item) => loadBusinessDetails(item.id, true)));
 }
 
 export async function fetchPublicBusinessesFromApi() {
   try {
     const list = await businessesApi.list();
-    return await Promise.all(list.map((item) => loadBusinessDetails(item.id)));
+    const results = await Promise.allSettled(
+      list.map((item) => loadBusinessDetails(item.id)),
+    );
+
+    return results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : [],
+    );
   } catch (error) {
     console.error("Не удалось загрузить бизнесы с API:", error);
     return [];

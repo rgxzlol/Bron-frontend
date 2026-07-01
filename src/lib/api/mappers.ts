@@ -22,6 +22,11 @@ import type { ShopsType } from "@/types/shops.types";
 import { assets } from "@/lib/assets";
 import { collectBusinessPhotoUrls, photosToGallerySlots } from "@/lib/business/photos";
 import { normalizeCoords } from "@/lib/geocoding";
+import { resolveMediaUrl } from "@/lib/api/media";
+import type {
+  ProductListItem,
+  ServiceListItem,
+} from "./types";
 
 const UI_TO_API_CATEGORY: Record<string, string> = {
   "Спорт зал": "gym",
@@ -38,6 +43,7 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   health: "Здоровье",
   education: "Образование",
   food: "Еда",
+  club: "Клуб",
   other: "Другое",
 };
 
@@ -46,7 +52,8 @@ export function uiCategoryToApi(category: string) {
 }
 
 export function apiCategoryToUi(category: string) {
-  return API_TO_UI_CATEGORY[category] ?? category;
+  const normalized = category.trim().toLowerCase();
+  return API_TO_UI_CATEGORY[normalized] ?? category;
 }
 
 function parsePrice(value: number | string) {
@@ -140,9 +147,24 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     name: service.title,
     category: service.category,
     price: parsePrice(service.price),
-    description: service.description,
-    photo: null,
-    active: service.is_active,
+    description: service.description ?? "",
+    photo: resolveMediaUrl(service.image),
+    active: service.is_active ?? true,
+    type: "service",
+  };
+}
+
+export function apiServiceListItemToBusinessService(
+  service: ServiceListItem,
+): BusinessService {
+  return {
+    id: String(service.id),
+    name: service.title,
+    category: service.category,
+    price: parsePrice(service.price),
+    description: service.description ?? "",
+    photo: resolveMediaUrl(service.image),
+    active: service.is_active ?? true,
     type: "service",
   };
 }
@@ -152,10 +174,25 @@ export function apiProductToBusinessService(product: ApiProduct): BusinessServic
     id: String(product.id),
     name: product.name,
     category: "Товар",
-    price: product.price,
+    price: parsePrice(product.price),
     description: product.description ?? "",
-    photo: product.image,
+    photo: resolveMediaUrl(product.image),
     active: product.is_active,
+    type: "product",
+  };
+}
+
+export function apiProductListItemToBusinessService(
+  product: ProductListItem,
+): BusinessService {
+  return {
+    id: String(product.id),
+    name: product.name,
+    category: "Товар",
+    price: parsePrice(product.price),
+    description: product.description ?? "",
+    photo: resolveMediaUrl(product.image),
+    active: product.is_active ?? true,
     type: "product",
   };
 }
@@ -189,20 +226,18 @@ export function apiBusinessToSavedBusiness(
     extras?.coords ?? resolveApiBusinessCoords(business, extras?.branch);
 
   const mappedServices = extras?.services ?? [];
-  const productPhotos = mappedServices
-    .map((service) => service.photo)
-    .filter((photo): photo is string => Boolean(photo));
-  const photoUrls = [
-    ...(business.logo ? [business.logo] : []),
-    ...productPhotos,
-  ];
+  const photoUrls = collectBusinessPhotoUrls({
+    profilePhoto: resolveMediaUrl(business.logo),
+    gallery: [],
+    services: mappedServices,
+  });
 
   return {
     id: String(business.id),
     status: "confirmed",
     bookings: extras?.stats?.total_bookings ?? 0,
     views: extras?.stats?.approved_bookings ?? 0,
-    profilePhoto: business.logo,
+    profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",
     category: apiCategoryToUi(business.category),
@@ -220,8 +255,9 @@ export function apiBusinessToSavedBusiness(
 }
 
 function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
-  if (status === "approved" || status === "accepted") return "accepted";
-  if (status === "waiting") return "waiting";
+  if (status === "approved" || status === "accepted" || status === "waiting") {
+    return "accepted";
+  }
   if (status === "cancelled" || status === "rejected") return "cancelled";
   return "pending";
 }
@@ -255,7 +291,7 @@ export function apiBusinessToShop(
 
   const coords = resolveApiBusinessCoords(business, branch);
   const savedBusiness = {
-    profilePhoto: business.logo,
+    profilePhoto: resolveMediaUrl(business.logo),
     gallery: [] as (string | null)[],
     services,
   };
@@ -270,7 +306,7 @@ export function apiBusinessToShop(
     lng: coords.lng,
     type: businessCategoryToMapFilter(apiCategoryToUi(business.category)),
     img: photoUrls[0] ?? assets.map.photo1,
-    profilePhoto: business.logo,
+    profilePhoto: resolveMediaUrl(business.logo),
     gallery: photoUrls,
     desc: business.description ?? "",
     rating: 0,
@@ -290,6 +326,7 @@ export function apiBusinessToShop(
       description: service.description,
       priceFrom: service.price,
       durationMin: service.type === "service" ? 60 : 0,
+      icon: service.photo ?? undefined,
     })),
   };
 }

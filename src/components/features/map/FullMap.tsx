@@ -19,7 +19,9 @@ import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
 import { useMapFilterStore } from "@/store/mapFilter.store"
 import { useProfileStore } from "@/store/profile.store"
+import { useAuthStore } from "@/store/auth.store"
 import type { MapLocationFilter } from "@/store/mapFilter.store"
+import type { SavedBusiness } from "@/store/business.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
@@ -96,6 +98,22 @@ function createUserBusinessMarkerElement(title: string) {
   return el
 }
 
+function getShopServices(shop: ShopsType) {
+  return shop.services ?? []
+}
+
+function shouldOpenServiceSelection(shop: ShopsType) {
+  return getShopServices(shop).length > 1
+}
+
+function businessHasActiveServices(business: SavedBusiness) {
+  return business.services.some((service) => service.active)
+}
+
+function shopHasActiveServices(shop: ShopsType) {
+  return (shop.services?.length ?? 0) > 0
+}
+
 function matchesDistanceFilter(
   userLat: number,
   userLng: number,
@@ -123,13 +141,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const locationFilterReadyRef = useRef(false)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
-  const [selectedHospital, setSelectedHospital] =
+  const [serviceSelectionShop, setServiceSelectionShop] =
     useState<ShopsType | null>(null)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState("Все")
   const [apiShops, setApiShops] = useState<ShopsType[]>([])
   const theme = useProfileStore((s) => s.theme)
+  const token = useAuthStore((s) => s.token)
   const businesses = useBusinessStore((s) => s.businesses)
   const mapFocusBusinessId = useBusinessStore((s) => s.mapFocusBusinessId)
   const clearMapFocus = useBusinessStore((s) => s.clearMapFocus)
@@ -138,7 +157,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       const photoCount =
         (business.profilePhoto ? 1 : 0) +
         business.gallery.filter(Boolean).length
-      return `${business.id}:${business.lat}:${business.lng}:${photoCount}`
+      const activeServices = business.services.filter((service) => service.active).length
+      return `${business.id}:${business.lat}:${business.lng}:${photoCount}:${activeServices}`
     })
     .join("|")
   const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
@@ -161,7 +181,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         )
       })
       .catch((error) => console.error(error))
-  }, [businessMapKey, businesses])
+  }, [businessMapKey, businesses, token])
 
   function createUserMarkerElement() {
     const el = document.createElement("div")
@@ -249,11 +269,30 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     return true
   }
 
+  function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
+    const coords = normalizeCoords(shop.lat, shop.lng)
+    if (!coords) return
+
+    if (shouldOpenServiceSelection(shop)) {
+      setSelectedShop(null)
+      setServiceSelectionShop(enrichShopWithDistance(shop))
+    } else {
+      openShop(shop, map)
+      return
+    }
+
+    map.flyTo({
+      center: [coords.lng, coords.lat],
+      zoom: 15,
+      speed: 1.2,
+    })
+  }
+
   function openShop(shop: ShopsType, map: mapboxgl.Map) {
     const coords = normalizeCoords(shop.lat, shop.lng)
     if (!coords) return
 
-    setSelectedHospital(null)
+    setServiceSelectionShop(null)
     setSelectedShop(enrichShopWithDistance(shop))
 
     map.flyTo({
@@ -280,11 +319,16 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         return false
       }
 
+      if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
+        return false
+      }
+
       return matchesShopFilters(shop)
     })
 
     const filteredUserBusinesses = businesses.filter((business) => {
       if (!hasValidCoords(business)) return false
+      if (!businessHasActiveServices(business)) return false
       if (!businessMatchesMapFilter(business.category || "Другое", activeFilter)) {
         return false
       }
@@ -303,12 +347,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         .addTo(map)
 
       marker.getElement().addEventListener("click", () => {
-        if (shop.type === "Больница") {
-          setSelectedShop(null)
-          setSelectedHospital(shop)
-        } else {
-          openShop(shop, map)
-        }
+        openShopOrServiceSelection(shop, map)
       })
 
       markersRef.current.push(marker)
@@ -326,7 +365,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       marker.getElement().addEventListener("click", () => {
         const shop = businessToShop(business, userLocationRef.current)
-        openShop(shop, map)
+        openShopOrServiceSelection(shop, map)
       })
 
       markersRef.current.push(marker)
@@ -558,20 +597,32 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     })
   }
 
-  function handleHospitalContinue(serviceIds: string[]) {
-    if (!selectedHospital) return
+  function handleServiceSelectionContinue(serviceIds: string[]) {
+    if (!serviceSelectionShop) return
 
-    setSelectedHospital(null)
+    const shop = serviceSelectionShop
+    setServiceSelectionShop(null)
 
-    onStartBooking(selectedHospital, serviceIds)
+    onStartBooking(shop, serviceIds)
   }
 
   function handleShopBook() {
     if (!selectedShop) return
 
     const shop = selectedShop
+    const services = shop.services ?? []
+
+    if (services.length > 1) {
+      setSelectedShop(null)
+      setServiceSelectionShop(shop)
+      return
+    }
+
     setSelectedShop(null)
-    onStartBooking(shop)
+    onStartBooking(
+      shop,
+      services.length === 1 ? [services[0].id] : undefined,
+    )
   }
 
   return (
@@ -641,11 +692,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         </div>
       )}
 
-      {selectedHospital && (
+      {serviceSelectionShop && (
         <HospitalServicesModal
-          hospital={selectedHospital}
-          onClose={() => setSelectedHospital(null)}
-          onContinue={handleHospitalContinue}
+          shop={serviceSelectionShop}
+          onClose={() => setServiceSelectionShop(null)}
+          onContinue={handleServiceSelectionContinue}
         />
       )}
 

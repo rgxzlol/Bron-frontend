@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { formatPrice, formatRating } from "@/lib/formatPrice";
 import {
-  formatDurationMinutes,
   pluralizeReviews,
 } from "@/lib/pluralize";
 import {
@@ -31,6 +30,10 @@ export default function ShopDetailPanel({
   const [imageIndex, setImageIndex] = useState(0);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [shop.id]);
 
   function showPrevImage() {
     setImageIndex((index) => (index > 0 ? index - 1 : gallery.length - 1));
@@ -61,6 +64,7 @@ export default function ShopDetailPanel({
               className={s.image}
               src={currentImage}
               alt={shop.title}
+              fill
               sizes="400px"
               priority
             />
@@ -122,22 +126,6 @@ export default function ShopDetailPanel({
             <div className={s.statBox}>
               <span className={s.statLabel}>Открыто</span>
               <span className={s.statValue}>{shop.hours}</span>
-            </div>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>Своб.Мест</span>
-              <span className={s.statValueRow}>
-                <Image
-                  src={assets.map.freeSeat}
-                  alt=""
-                  width={16}
-                  height={16}
-                />
-                <span>{shop.freeSeats}</span>
-              </span>
-            </div>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>от {formatPrice(shop.price)} сум</span>
-              <span className={s.statValue}>за час</span>
             </div>
           </div>
 
@@ -209,29 +197,6 @@ export default function ShopDetailPanel({
               ))}
             </div>
           )}
-
-          <div className={s.pricing}>
-            <h3 className={s.pricingTitle}>Ценна</h3>
-            <div className={s.priceItem}>
-              <div className={s.priceIcon}>
-                <Image
-                  src={assets.map.strenght}
-                  alt=""
-                  width={24}
-                  height={24}
-                />
-              </div>
-              <div className={s.priceInfo}>
-                <span className={s.priceName}>{shop.category}</span>
-                <span className={s.priceDuration}>
-                  {formatDurationMinutes(shop.time)}
-                </span>
-              </div>
-              <span className={s.priceAmount}>
-                {formatPrice(shop.price)} сум
-              </span>
-            </div>
-          </div>
 
           <Button
             text="Забронировать место"

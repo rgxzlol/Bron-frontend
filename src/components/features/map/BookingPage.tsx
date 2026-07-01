@@ -120,11 +120,7 @@ export default function BookingPage({
     return shop.type === "Больница" ? `${shop.time} мин` : "1 час";
   }, [selectedServices, shop]);
 
-  const maxGuests = shop.freeSeats;
-
-  useEffect(() => {
-    setGuests((current) => Math.min(current, maxGuests));
-  }, [maxGuests]);
+  const maxGuests = 20;
 
   const bookingPrice = useMemo(() => basePrice * guests, [basePrice, guests]);
 
@@ -375,13 +371,6 @@ export default function BookingPage({
               <span className={s.statValue}>{shop.hours}</span>
             </div>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Своб.Мест</span>
-              <span className={`${s.statValue} ${s.statValueRow}`}>
-                <Image src={assets.map.freeSeat} alt="" width={16} height={16} />
-                {shop.freeSeats}
-              </span>
-            </div>
-            <div className={s.statBox}>
               <span className={s.statLabel}>{priceLabel}</span>
               <span className={s.statValue}>{priceSubLabel}</span>
             </div>
@@ -554,9 +543,6 @@ export default function BookingPage({
             <div className={s.guestsRow}>
               <div>
                 <span className={s.label}>Количество гостей</span>
-                <p className={s.guestsHint}>
-                  Свободных мест: {maxGuests}
-                </p>
               </div>
               <div className={s.counter}>
                 <button
@@ -580,9 +566,6 @@ export default function BookingPage({
                 </button>
               </div>
             </div>
-            {guests >= maxGuests && (
-              <p className={s.fieldError}>Нельзя забронировать больше свободных мест</p>
-            )}
           </div>
         </section>
 

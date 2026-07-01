@@ -8,17 +8,17 @@ import Button from "@/components/shared/Button";
 import s from "./hospitalServicesModal.module.css";
 
 type HospitalServicesModalProps = {
-  hospital: ShopsType;
+  shop: ShopsType;
   onClose: () => void;
   onContinue: (serviceIds: string[]) => void;
 };
 
 export default function HospitalServicesModal({
-  hospital,
+  shop,
   onClose,
   onContinue,
 }: HospitalServicesModalProps) {
-  const services = useMemo<ShopService[]>(() => hospital.services ?? [], [hospital]);
+  const services = useMemo<ShopService[]>(() => shop.services ?? [], [shop]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selectedCount = selectedIds.length;
@@ -36,8 +36,13 @@ export default function HospitalServicesModal({
   }
 
   return (
-    <div className={s.backdrop} role="dialog" aria-modal="true">
-      <div className={s.modal}>
+    <div
+      className={s.backdrop}
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div className={s.modal} onClick={(e) => e.stopPropagation()}>
         <div className={s.header}>
           <h2 className={s.title}>Услуги</h2>
           <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
@@ -57,7 +62,18 @@ export default function HospitalServicesModal({
                 <div className={s.cardInner}>
                   <div className={s.iconBox} aria-hidden>
                     {service.icon ? (
-                      <Image src={service.icon} alt="" width={34} height={34} />
+                      typeof service.icon === "string" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={service.icon}
+                          alt=""
+                          width={34}
+                          height={34}
+                          className="h-[34px] w-[34px] rounded-[8px] object-cover"
+                        />
+                      ) : (
+                        <Image src={service.icon} alt="" width={34} height={34} />
+                      )
                     ) : (
                       <span className={s.iconFallback} />
                     )}
@@ -67,7 +83,7 @@ export default function HospitalServicesModal({
                     <h3 className={s.cardTitle}>{service.title}</h3>
                     <p className={s.cardDesc}>{service.description}</p>
                     <div className={s.cardMeta}>
-                      <span className={s.price}>От {formatPrice(service.priceFrom)} сум</span>
+                      <span className={s.price}>{formatPrice(service.priceFrom)} сум</span>
                       <span className={s.duration}>{service.durationMin}мин</span>
                     </div>
                     <button

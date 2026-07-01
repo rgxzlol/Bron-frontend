@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { bookingsApi } from "@/lib/api";
 import type { Booking, BookingListItem } from "@/lib/api/types";
+import { useBusinessStore } from "@/store/business.store";
 
 type BookingStore = {
   bookings: BookingListItem[];
@@ -37,6 +38,9 @@ export const useBookingStore = create<BookingStore>((set) => ({
     const booking = await bookingsApi.create(payload);
     const list = await bookingsApi.my();
     set({ bookings: list });
+    void useBusinessStore
+      .getState()
+      .refreshBusinessBookings(String(payload.business_id));
     return booking;
   },
 

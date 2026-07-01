@@ -13,6 +13,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   const token = useAuthStore((state) => state.token);
   const hydrateProfile = useProfileStore((state) => state.hydrateFromApi);
   const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
+  const clearBusinesses = useBusinessStore((state) => state.clearBusinesses);
   const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
 
   useEffect(() => {
@@ -29,12 +30,15 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      clearBusinesses();
+      return;
+    }
 
     void hydrateProfile();
     void fetchBusinessesFromApi();
     void fetchMyBookings();
-  }, [token, hydrateProfile, fetchBusinessesFromApi, fetchMyBookings]);
+  }, [token, hydrateProfile, fetchBusinessesFromApi, clearBusinesses, fetchMyBookings]);
 
   return children;
 }

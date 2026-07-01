@@ -28,66 +28,6 @@ const inputClass =
   "w-full rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] outline-none focus:ring-2 focus:ring-[#0a6af7]/30";
 
 const MAX_DESC = 120;
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
-const SERVICE_TIME_SLOTS = [
-  "17:00",
-  "17:30",
-  "18:20",
-  "18:50",
-  "19:20",
-  "19:50",
-  "20:20",
-  "20:50",
-  "21:20",
-  "21:50",
-  "22:00",
-  "22:30",
-] as const;
-
-const BUSY_TIME_SLOTS = new Set<string>([
-  "18:20",
-  "19:20",
-  "19:50",
-  "22:00",
-  "22:30",
-]);
-
-function getMonthLabel(date: Date) {
-  return date.toLocaleDateString("ru-RU", { month: "long" });
-}
-
-function buildCalendarDays(viewMonth: Date) {
-  const year = viewMonth.getFullYear();
-  const month = viewMonth.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const days: { date: Date; inMonth: boolean }[] = [];
-
-  for (let i = startOffset - 1; i >= 0; i--) {
-    days.push({ date: new Date(year, month, -i), inMonth: false });
-  }
-
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    days.push({ date: new Date(year, month, d), inMonth: true });
-  }
-
-  while (days.length % 7 !== 0) {
-    const next = days.length - startOffset - lastDay.getDate() + 1;
-    days.push({ date: new Date(year, month + 1, next), inMonth: false });
-  }
-
-  return days;
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
 
 function Toggle({
   checked,
@@ -102,14 +42,12 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative h-[28px] w-[52px] shrink-0 rounded-full transition-colors ${
-        checked ? "bg-[#0a6af7]" : "bg-[#d0d0d8]"
-      }`}
+      className={`relative h-[28px] w-[52px] shrink-0 rounded-full transition-colors ${checked ? "bg-[#0a6af7]" : "bg-[#d0d0d8]"
+        }`}
     >
       <span
-        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white transition-all ${
-          checked ? "left-[27px]" : "left-[3px]"
-        }`}
+        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white transition-all ${checked ? "left-[27px]" : "left-[3px]"
+          }`}
       />
     </button>
   );
@@ -211,7 +149,7 @@ function DeleteServiceModal({
           <strong>{serviceName}</strong>
         </p>
         <p className="mt-[10px] text-[14px] opacity-60">
-          Все данные об услуге, время, даты и свободные слоты удалятся без
+          Все данные об услуге, время и даты удалятся без
           возможности восстановить
         </p>
 
@@ -242,6 +180,34 @@ function DeleteServiceModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CategorySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <select
+        className={`${inputClass} appearance-none pr-[34px]`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Выберите категорию</option>
+        {SERVICE_CATEGORIES.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-[7px] top-1/2 -translate-y-1/2 text-[#6b7280]">
+        <ChevronDownIcon />
+      </span>
     </div>
   );
 }
@@ -435,8 +401,14 @@ function ProductFormModal({
   const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
-      <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-[28px] font-semibold">Добавить товар</h3>
         <p className="mt-[6px] text-[15px] opacity-60">
           Заполните информацией о вашем товаре
@@ -472,20 +444,10 @@ function ProductFormModal({
 
             <label className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-semibold">Категория</span>
-              <select
-                className={inputClass}
+              <CategorySelect
                 value={form.category}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, category: e.target.value }))
-                }
-              >
-                <option value="">Выберите категорию</option>
-                {SERVICE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                onChange={(category) => setForm((f) => ({ ...f, category }))}
+              />
             </label>
           </div>
 
@@ -528,83 +490,6 @@ function ProductFormModal({
   );
 }
 
-function ServiceCalendar({
-  viewMonth,
-  selectedDate,
-  onViewMonthChange,
-  onSelectDate,
-}: {
-  viewMonth: Date;
-  selectedDate: Date;
-  onViewMonthChange: (date: Date) => void;
-  onSelectDate: (date: Date) => void;
-}) {
-  const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
-
-  return (
-    <div>
-      <div className="mb-[12px] flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() =>
-            onViewMonthChange(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1),
-            )
-          }
-          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
-          aria-label="Предыдущий месяц"
-        >
-          ‹
-        </button>
-        <span className="text-[15px] font-semibold capitalize">
-          {getMonthLabel(viewMonth)}
-        </span>
-        <button
-          type="button"
-          onClick={() =>
-            onViewMonthChange(
-              new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1),
-            )
-          }
-          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
-          aria-label="Следующий месяц"
-        >
-          ›
-        </button>
-      </div>
-
-      <div className="mb-[8px] grid grid-cols-7 gap-[4px] text-center text-[12px] font-semibold opacity-50">
-        {WEEKDAYS.map((day) => (
-          <span key={day}>{day}</span>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-[4px]">
-        {calendarDays.map(({ date, inMonth }) => {
-          const selected = isSameDay(date, selectedDate);
-          return (
-            <button
-              key={date.toISOString()}
-              type="button"
-              disabled={!inMonth}
-              onClick={() => inMonth && onSelectDate(date)}
-              className={`flex aspect-square max-h-[36px] items-center justify-center rounded-full text-[13px] font-semibold ${
-                !inMonth
-                  ? "text-[#d0d0d8]"
-                  : selected
-                    ? "bg-[#0a6af7] text-white"
-                    : "text-[#374151] hover:bg-[#ececf2]"
-              }`}
-            >
-              {date.getDate()}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function AddServiceFormModal({
   onClose,
   onSave,
@@ -614,31 +499,19 @@ function AddServiceFormModal({
 }) {
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
   const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
-  const [showOnlyFree, setShowOnlyFree] = useState(true);
-  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
-  const [viewMonth, setViewMonth] = useState(() => new Date());
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
-
-  const visibleSlots = SERVICE_TIME_SLOTS.filter(
-    (slot) => !showOnlyFree || !BUSY_TIME_SLOTS.has(slot),
-  );
-
-  function toggleSlot(slot: string) {
-    if (BUSY_TIME_SLOTS.has(slot)) return;
-    setSelectedSlots((current) => {
-      const next = new Set(current);
-      if (next.has(slot)) next.delete(slot);
-      else next.add(slot);
-      return next;
-    });
-  }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
-      <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-[28px] font-semibold">Добавить услугу</h3>
         <p className="mt-[6px] text-[15px] opacity-60">
-          Добавьте услугу для брони
+          Заполните информацию об услуге
         </p>
 
         <div className="mt-[28px] grid grid-cols-1 gap-[24px] md:grid-cols-2">
@@ -671,76 +544,19 @@ function AddServiceFormModal({
 
             <label className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-semibold">Категория</span>
-              <select
-                className={inputClass}
+              <CategorySelect
                 value={form.category}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, category: e.target.value }))
-                }
-              >
-                <option value="">Выберите категорию</option>
-                {SERVICE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                onChange={(category) => setForm((f) => ({ ...f, category }))}
+              />
             </label>
-
-            <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
-              <div className="mb-[14px] flex items-center justify-between gap-[12px]">
-                <span className="text-[15px] font-semibold">Свободное время</span>
-                <div className="flex items-center gap-[10px]">
-                  <span className="text-[13px] opacity-60">
-                    Показать только свободное
-                  </span>
-                  <Toggle checked={showOnlyFree} onChange={setShowOnlyFree} />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-[8px]">
-                {visibleSlots.map((slot) => {
-                  const busy = BUSY_TIME_SLOTS.has(slot);
-                  const selected = selectedSlots.has(slot);
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => toggleSlot(slot)}
-                      className={`min-w-[64px] rounded-[10px] px-[12px] py-[8px] text-[13px] font-semibold transition ${
-                        busy
-                          ? "cursor-not-allowed bg-[#0a6af7] text-white"
-                          : selected
-                            ? "bg-white text-black ring-2 ring-[#0a6af7]"
-                            : "bg-white text-black hover:ring-2 hover:ring-[#0a6af7]/30"
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-[14px] flex items-center gap-[16px] text-[13px]">
-                <span className="flex items-center gap-[6px]">
-                  <span className="h-[8px] w-[8px] rounded-full bg-white ring-1 ring-[#d0d0d8]" />
-                  Свободно
-                </span>
-                <span className="flex items-center gap-[6px]">
-                  <span className="h-[8px] w-[8px] rounded-full bg-[#0a6af7]" />
-                  Занято
-                </span>
-              </div>
-            </div>
           </div>
 
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
               <span className="text-[15px] font-semibold">Описание услуги</span>
               <textarea
-                className={`${inputClass} min-h-[100px] resize-y`}
-                placeholder="Опишите услуги"
+                className={`${inputClass} min-h-[120px] resize-y`}
+                placeholder="Опишите услугу"
                 maxLength={MAX_DESC}
                 value={form.description}
                 onChange={(e) =>
@@ -757,23 +573,11 @@ function AddServiceFormModal({
               photo={form.photo}
               onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
             />
-
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Дата</span>
-              <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
-                <ServiceCalendar
-                  viewMonth={viewMonth}
-                  selectedDate={selectedDate}
-                  onViewMonthChange={setViewMonth}
-                  onSelectDate={setSelectedDate}
-                />
-              </div>
-            </div>
           </div>
         </div>
 
         <FormModalFooter
-          saveLabel="Сохранить услуги"
+          saveLabel="Сохранить услугу"
           onClose={onClose}
           saveDisabled={hasFormFieldErrors(fieldErrors)}
           onSave={() => {
@@ -797,6 +601,7 @@ export default function BusinessDashboard({
   const updateService = useBusinessStore((s) => s.updateService);
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
+  const refreshBusinessBookings = useBusinessStore((s) => s.refreshBusinessBookings);
   const businesses = useBusinessStore((s) => s.businesses);
 
   const business = useMemo(() => {
@@ -822,6 +627,11 @@ export default function BusinessDashboard({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (tab !== "bookings") return;
+    void refreshBusinessBookings(businessId);
+  }, [tab, businessId, refreshBusinessBookings]);
 
   if (!mounted || !business) return null;
 
@@ -905,339 +715,337 @@ export default function BusinessDashboard({
   return (
     <>
       <div className="flex min-w-0 w-full flex-col gap-[20px] pb-[20px]">
-          <div className="mb-[8px]">
-            <h2 className="text-[32px] font-semibold">Бизнес страница</h2>
-            <div className="mt-[16px] flex gap-[32px] border-b border-[#ececf2]">
-              <button
-                type="button"
-                onClick={() => setTab("services")}
-                className={`pb-[12px] text-[16px] font-semibold transition ${
-                  tab === "services"
-                    ? "border-b-2 border-[#0a6af7] text-[#0a6af7]"
-                    : "opacity-60"
+        <div className="mb-[8px]">
+          <h2 className="text-[32px] font-semibold">Бизнес страница</h2>
+          <div className="mt-[16px] flex gap-[32px] border-b border-[#ececf2]">
+            <button
+              type="button"
+              onClick={() => setTab("services")}
+              className={`pb-[12px] text-[16px] font-semibold transition ${tab === "services"
+                  ? "border-b-2 border-[#0a6af7] text-[#0a6af7]"
+                  : "opacity-60"
                 }`}
-              >
-                Услуги и персонал
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("bookings")}
-                className={`pb-[12px] text-[16px] font-semibold transition ${
-                  tab === "bookings"
-                    ? "border-b-2 border-[#0a6af7] text-[#0a6af7]"
-                    : "opacity-60"
+            >
+              Услуги и персонал
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("bookings")}
+              className={`pb-[12px] text-[16px] font-semibold transition ${tab === "bookings"
+                  ? "border-b-2 border-[#0a6af7] text-[#0a6af7]"
+                  : "opacity-60"
                 }`}
-              >
-                Бронирование
-              </button>
-            </div>
+            >
+              Бронирование
+            </button>
           </div>
+        </div>
 
-          {tab === "services" && (
-            <>
-              <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
-                <div className="flex flex-wrap items-start justify-between gap-[16px]">
-                  <div className="flex flex-wrap items-center gap-[24px]">
-                    <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-full bg-[#f4f4f8]">
-                      {isDataUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={profileImage as string}
-                          alt={business.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Image
-                          src={profileImage}
-                          alt={business.name}
-                          fill
-                          className="object-cover"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-[24px] font-semibold">
-                        {business.name}
-                      </h3>
-                      <p className="mt-[6px] flex items-center gap-[6px] text-[15px]">
-                        <Image
-                          src={assets.popular.starRating}
-                          alt=""
-                          width={16}
-                          height={16}
-                        />
-                        0,0 (0 отзыва)
-                      </p>
-                      <p className="mt-[6px] flex items-center gap-[6px] text-[15px] opacity-75">
-                        <Image
-                          src={assets.map.geoMark}
-                          alt=""
-                          width={14}
-                          height={14}
-                        />
-                        {business.address || "Ташкент, Узбекистан"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-[10px]">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
-                    >
-                      Назад
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onEditProfile}
-                      className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
-                    >
-                      Редактировать профиль
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
-                <div className="mb-[20px] flex items-start justify-between gap-[16px]">
-                  <div>
-                    <h3 className="text-[22px] font-semibold">Услуги</h3>
-                    <p className="mt-[6px] text-[15px] opacity-60">
-                      Рабочие дни и услуги
-                    </p>
-                  </div>
-                  <Button
-                    text="Добавить товар"
-                    onClick={() => setShowAddProduct(true)}
-                    className="!px-[24px] py-[12px] text-[15px]"
-                  />
-                </div>
-
-                <div className="min-w-0 overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left text-[14px]">
-                    <thead>
-                      <tr className="border-b border-[#ececf2] text-[13px] opacity-60">
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Название
-                        </th>
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Категория
-                        </th>
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Цена
-                        </th>
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Описание
-                        </th>
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Фото
-                        </th>
-                        <th className="pb-[12px] pr-[12px] font-semibold">
-                          Статус
-                        </th>
-                        <th className="pb-[12px] font-semibold">Действие</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {business.services.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan={7}
-                            className="py-[24px] text-center text-[15px] opacity-60"
-                          >
-                            Услуг пока нет. Добавьте первую услугу.
-                          </td>
-                        </tr>
-                      )}
-                      {business.services.map((service) => (
-                        <tr
-                          key={service.id}
-                          className="border-b border-[#f4f4f8] last:border-0"
-                        >
-                          <td className="py-[14px] pr-[12px] font-semibold">
-                            {service.name}
-                          </td>
-                          <td className="py-[14px] pr-[12px]">
-                            {service.category}
-                          </td>
-                          <td className="py-[14px] pr-[12px]">
-                            <input
-                              type="text"
-                              className="w-[130px] rounded-[10px] bg-[#f4f4f8] px-[10px] py-[8px] text-[14px] text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
-                              inputMode="numeric"
-                              autoComplete="off"
-                              aria-label={`Цена услуги ${service.name}`}
-                              value={
-                                priceEdits[service.id] ??
-                                formatPriceInput(service.price)
-                              }
-                              onFocus={() =>
-                                handlePriceFocus(service.id, service.price)
-                              }
-                              onChange={(e) =>
-                                setPriceEdits((current) => ({
-                                  ...current,
-                                  [service.id]: formatPriceInputOnChange(
-                                    e.target.value,
-                                  ),
-                                }))
-                              }
-                              onBlur={() =>
-                                handlePriceBlur(service.id, service.price)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                            />
-                          </td>
-                          <td className="max-w-[200px] truncate py-[14px] pr-[12px] opacity-75">
-                            {service.description}
-                          </td>
-                          <td className="py-[14px] pr-[12px]">
-                            <div className="h-[40px] w-[56px] overflow-hidden rounded-[8px] bg-[#f4f4f8]">
-                              {service.photo ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={service.photo}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <Image
-                                  src={assets.map.photo1}
-                                  alt=""
-                                  width={56}
-                                  height={40}
-                                  className="h-full w-full object-cover"
-                                />
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-[14px] pr-[12px]">
-                            <Toggle
-                              checked={service.active}
-                              onChange={(active) =>
-                                toggleService(businessId, service.id, active)
-                              }
-                            />
-                          </td>
-                          <td className="py-[14px]">
-                            <button
-                              type="button"
-                              aria-label={`Удалить услугу ${service.name}`}
-                              className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-[#fde8e8] transition hover:bg-[#f9d4d4]"
-                              onClick={() => setDeleteTarget(service)}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <div className="flex gap-[16px] pb-[20px]">
-                <Button
-                  text="Добавить услугу"
-                  onClick={() => setShowAddService(true)}
-                  className="flex-1 !w-full text-center !px-[20px] text-[17px]"
-                />
-                <Button
-                  text="Сохранить изменение"
-                  onClick={handleSaveChanges}
-                  className="flex-1 !w-full text-center !px-[20px] text-[17px]"
-                />
-              </div>
-            </>
-          )}
-
-          {tab === "bookings" && (
+        {tab === "services" && (
+          <>
             <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
-              <div className="mb-[24px] flex items-center justify-between">
-                <h3 className="text-[22px] font-semibold">Бронирования</h3>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
-                >
-                  Назад
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-[14px]">
-                {business.bookingRequests.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="flex flex-wrap items-center justify-between gap-[16px] rounded-[16px] border border-[#ececf2] px-[20px] py-[16px]"
-                  >
-                    <div className="flex flex-wrap items-center gap-[20px]">
-                      <span className="text-[18px] font-semibold">
-                        {booking.time}
-                      </span>
-                      <span className="text-[16px] font-semibold">
-                        {booking.customerName}
-                      </span>
-                      <span className="text-[15px] opacity-75">
-                        {booking.serviceName}
-                      </span>
-                      <span className="text-[15px] font-semibold">
-                        Цена {formatPrice(booking.price)}
-                      </span>
-                    </div>
-
-                    {booking.status === "waiting" ? (
-                      <span className="rounded-[12px] border border-[#e0e0e8] px-[28px] py-[12px] text-[15px] font-semibold opacity-60">
-                        Ожидает
-                      </span>
-                    ) : booking.status === "pending" ? (
-                      <div className="flex gap-[10px]">
-                        <Button
-                          text="Принять бронь"
-                          onClick={() =>
-                            updateBookingStatus(
-                              businessId,
-                              booking.id,
-                              "accepted",
-                            )
-                          }
-                          className="!px-[24px] py-[12px] text-[14px]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateBookingStatus(
-                              businessId,
-                              booking.id,
-                              "cancelled",
-                            )
-                          }
-                          className="rounded-[12px] border border-[#e0e0e8] px-[24px] py-[12px] text-[14px] font-semibold"
-                        >
-                          Отменить
-                        </button>
-                      </div>
+              <div className="flex flex-wrap items-start justify-between gap-[16px]">
+                <div className="flex flex-wrap items-center gap-[24px]">
+                  <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-full bg-[#f4f4f8]">
+                    {isDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profileImage as string}
+                        alt={business.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <span
-                        className={`rounded-[12px] px-[20px] py-[10px] text-[14px] font-semibold ${
-                          booking.status === "accepted"
-                            ? "bg-[#e8f8ee] text-[#1a9b4a]"
-                            : "bg-[#fde8e8] text-[#e53935]"
-                        }`}
-                      >
-                        {booking.status === "accepted"
-                          ? "Принято"
-                          : "Отменено"}
-                      </span>
+                      <Image
+                        src={profileImage}
+                        alt={business.name}
+                        fill
+                        className="object-cover"
+                      />
                     )}
                   </div>
-                ))}
+                  <div>
+                    <h3 className="text-[24px] font-semibold">
+                      {business.name}
+                    </h3>
+                    <p className="mt-[6px] flex items-center gap-[6px] text-[15px]">
+                      <Image
+                        src={assets.popular.starRating}
+                        alt=""
+                        width={16}
+                        height={16}
+                      />
+                      0,0 (0 отзыва)
+                    </p>
+                    <p className="mt-[6px] flex items-center gap-[6px] text-[15px] opacity-75">
+                      <Image
+                        src={assets.map.geoMark}
+                        alt=""
+                        width={14}
+                        height={14}
+                      />
+                      {business.address || "Ташкент, Узбекистан"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-[10px]">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
+                  >
+                    Назад
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onEditProfile}
+                    className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
+                  >
+                    Редактировать профиль
+                  </button>
+                </div>
               </div>
             </section>
-          )}
+
+            <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
+              <div className="mb-[20px] flex items-start justify-between gap-[16px]">
+                <div>
+                  <h3 className="text-[22px] font-semibold">Услуги</h3>
+                  <p className="mt-[6px] text-[15px] opacity-60">
+                    Рабочие дни и услуги
+                  </p>
+                </div>
+                <Button
+                  text="Добавить товар"
+                  onClick={() => setShowAddProduct(true)}
+                  className="!px-[24px] py-[12px] text-[15px]"
+                />
+              </div>
+
+              <div className="min-w-0 overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-[14px]">
+                  <thead>
+                    <tr className="border-b border-[#ececf2] text-[13px] opacity-60">
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Название
+                      </th>
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Категория
+                      </th>
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Цена
+                      </th>
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Описание
+                      </th>
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Фото
+                      </th>
+                      <th className="pb-[12px] pr-[12px] font-semibold">
+                        Статус
+                      </th>
+                      <th className="pb-[12px] font-semibold">Действие</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {business.services.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="py-[24px] text-center text-[15px] opacity-60"
+                        >
+                          Услуг пока нет. Добавьте первую услугу.
+                        </td>
+                      </tr>
+                    )}
+                    {business.services.map((service) => (
+                      <tr
+                        key={service.id}
+                        className="border-b border-[#f4f4f8] last:border-0"
+                      >
+                        <td className="py-[14px] pr-[12px] font-semibold">
+                          {service.name}
+                        </td>
+                        <td className="py-[14px] pr-[12px]">
+                          {service.category}
+                        </td>
+                        <td className="py-[14px] pr-[12px]">
+                          <input
+                            type="text"
+                            className="w-[130px] rounded-[10px] bg-[#f4f4f8] px-[10px] py-[8px] text-[14px] text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            aria-label={`Цена услуги ${service.name}`}
+                            value={
+                              priceEdits[service.id] ??
+                              formatPriceInput(service.price)
+                            }
+                            onFocus={() =>
+                              handlePriceFocus(service.id, service.price)
+                            }
+                            onChange={(e) =>
+                              setPriceEdits((current) => ({
+                                ...current,
+                                [service.id]: formatPriceInputOnChange(
+                                  e.target.value,
+                                ),
+                              }))
+                            }
+                            onBlur={() =>
+                              handlePriceBlur(service.id, service.price)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="max-w-[200px] truncate py-[14px] pr-[12px] opacity-75">
+                          {service.description}
+                        </td>
+                        <td className="py-[14px] pr-[12px]">
+                          <div className="h-[40px] w-[56px] overflow-hidden rounded-[8px] bg-[#f4f4f8]">
+                            {service.photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={service.photo}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Image
+                                src={assets.map.photo1}
+                                alt=""
+                                width={56}
+                                height={40}
+                                className="h-full w-full object-cover"
+                              />
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-[14px] pr-[12px]">
+                          <Toggle
+                            checked={service.active}
+                            onChange={(active) =>
+                              toggleService(businessId, service.id, active)
+                            }
+                          />
+                        </td>
+                        <td className="py-[14px]">
+                          <button
+                            type="button"
+                            aria-label={`Удалить услугу ${service.name}`}
+                            className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-[#fde8e8] transition hover:bg-[#f9d4d4]"
+                            onClick={() => setDeleteTarget(service)}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="flex gap-[16px] pb-[20px] ">
+              <Button
+                text="Добавить услугу"
+                onClick={() => setShowAddService(true)}
+                className="flex-1 !w-full text-center !px-[20px] text-[17px]"
+              />
+              <Button
+                text="Сохранить изменение"
+                onClick={handleSaveChanges}
+                className="flex-1 !w-full text-center !px-[20px] text-[17px]"
+              />
+            </div>
+          </>
+        )}
+
+        {tab === "bookings" && (
+          <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
+            <div className="mb-[24px] flex items-center justify-between">
+              <h3 className="text-[22px] font-semibold">Бронирования</h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
+              >
+                Назад
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-[14px]">
+              {business.bookingRequests.length === 0 && (
+                <p className="py-[24px] text-center text-[15px] opacity-60">
+                  Бронирований пока нет
+                </p>
+              )}
+              {business.bookingRequests.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="flex flex-wrap items-center justify-between gap-[16px] rounded-[16px] border border-[#ececf2] px-[20px] py-[16px]"
+                >
+                  <div className="flex flex-wrap items-center gap-[20px]">
+                    <span className="text-[18px] font-semibold">
+                      {booking.time}
+                    </span>
+                    <span className="text-[16px] font-semibold">
+                      {booking.customerName}
+                    </span>
+                    <span className="text-[15px] opacity-75">
+                      {booking.serviceName}
+                    </span>
+                    <span className="text-[15px] font-semibold">
+                      Цена {formatPrice(booking.price)}
+                    </span>
+                  </div>
+
+                  {booking.status === "pending" ? (
+                    <div className="flex gap-[10px]">
+                      <Button
+                        text="Принять бронь"
+                        onClick={() =>
+                          updateBookingStatus(
+                            businessId,
+                            booking.id,
+                            "accepted",
+                          )
+                        }
+                        className="!px-[24px] py-[12px] text-[14px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBookingStatus(
+                            businessId,
+                            booking.id,
+                            "cancelled",
+                          )
+                        }
+                        className="rounded-[12px] border border-[#e0e0e8] px-[24px] py-[12px] text-[14px] font-semibold"
+                      >
+                        Отменить
+                      </button>
+                    </div>
+                  ) : (
+                    <span
+                      className={`rounded-[12px] px-[20px] py-[10px] text-[14px] font-semibold ${booking.status === "accepted" || booking.status === "waiting"
+                          ? "bg-[#e8f8ee] text-[#1a9b4a]"
+                          : "bg-[#fde8e8] text-[#e53935]"
+                        }`}
+                    >
+                      {booking.status === "accepted" || booking.status === "waiting"
+                        ? "Принято"
+                        : "Отменено"}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {showAddService && (

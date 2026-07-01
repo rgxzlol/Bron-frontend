@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import {
   createProductOnApi,
   createServiceOnApi,
+  fetchBusinessBookingsFromApi,
   fetchMyBusinessesFromApi,
   getCurrentUserId,
   removeBusinessFromApi,
@@ -99,58 +100,6 @@ export const createEmptyDraft = (): BusinessDraft => ({
   schedule: DEFAULT_SCHEDULE.map((d) => ({ ...d })),
 });
 
-function createDefaultServices(): BusinessService[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      name: "Консультация терапевта",
-      category: "Консультация",
-      price: 150000,
-      description: "Первичный осмотр и консультация врача",
-      photo: null,
-      active: true,
-      type: "service",
-    },
-  ];
-}
-
-function createDefaultBookingRequests(): BusinessBookingRequest[] {
-  return [
-    {
-      id: crypto.randomUUID(),
-      time: "10:30",
-      customerName: "Мария Петровна",
-      serviceName: "Консультация терапевта кабинет №1",
-      price: 165000,
-      status: "pending",
-    },
-    {
-      id: crypto.randomUUID(),
-      time: "10:30",
-      customerName: "Мария Петровна",
-      serviceName: "Консультация терапевта кабинет №1",
-      price: 165000,
-      status: "waiting",
-    },
-    {
-      id: crypto.randomUUID(),
-      time: "10:30",
-      customerName: "Мария Петровна",
-      serviceName: "Консультация терапевта кабинет №1",
-      price: 165000,
-      status: "pending",
-    },
-    {
-      id: crypto.randomUUID(),
-      time: "10:30",
-      customerName: "Мария Петровна",
-      serviceName: "Консультация терапевта кабинет №1",
-      price: 165000,
-      status: "pending",
-    },
-  ];
-}
-
 function normalizeBusiness(business: SavedBusiness): SavedBusiness {
   return {
     ...business,
@@ -162,19 +111,7 @@ function normalizeBusiness(business: SavedBusiness): SavedBusiness {
 }
 
 function ensureNewBusinessDefaults(business: SavedBusiness): SavedBusiness {
-  const normalized = normalizeBusiness(business);
-
-  return {
-    ...normalized,
-    services:
-      normalized.services.length > 0
-        ? normalized.services
-        : createDefaultServices(),
-    bookingRequests:
-      normalized.bookingRequests.length > 0
-        ? normalized.bookingRequests
-        : createDefaultBookingRequests(),
-  };
+  return normalizeBusiness(business);
 }
 
 type BusinessStore = {
@@ -191,8 +128,10 @@ type BusinessStore = {
   removeBusiness: (id: string) => Promise<void>;
   setShowMyBusiness: (value: boolean) => void;
   clearMapFocus: () => void;
+  clearBusinesses: () => void;
   getBusiness: (id: string) => SavedBusiness | undefined;
   fetchBusinessesFromApi: () => Promise<void>;
+  refreshBusinessBookings: (businessId: string) => Promise<void>;
   addService: (
     businessId: string,
     service: Omit<BusinessService, "id" | "active">,
@@ -368,7 +307,10 @@ export const useBusinessStore = create<BusinessStore>()(
 
       fetchBusinessesFromApi: async () => {
         const userId = await getCurrentUserId();
-        if (!userId) return;
+        if (!userId) {
+          set({ businesses: [], showMyBusiness: false });
+          return;
+        }
 
         try {
           const existing = get().businesses;
@@ -377,23 +319,52 @@ export const useBusinessStore = create<BusinessStore>()(
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
-          const apiIds = new Set(merged.map((item) => item.id));
-          const localOnly = existing.filter(
-            (item) => !apiIds.has(item.id) && hasValidCoords(item),
-          );
 
           set({
-            businesses: [...merged, ...localOnly],
-            showMyBusiness: merged.length + localOnly.length > 0,
+            businesses: merged,
+            showMyBusiness: merged.length > 0,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
         }
       },
 
+      refreshBusinessBookings: async (businessId) => {
+        if (!/^\d+$/.test(businessId)) return;
+
+        const business = get().businesses.find((item) => item.id === businessId);
+        if (!business) return;
+
+        try {
+          const bookingRequests = await fetchBusinessBookingsFromApi(
+            Number(businessId),
+            business.services,
+          );
+
+          set((state) => ({
+            businesses: updateBusiness(state.businesses, businessId, (item) => ({
+              ...item,
+              bookingRequests,
+              bookings: bookingRequests.filter(
+                (booking) => booking.status === "accepted",
+              ).length,
+            })),
+          }));
+        } catch (error) {
+          console.error("Не удалось обновить бронирования:", error);
+        }
+      },
+
       setShowMyBusiness: (value) => set({ showMyBusiness: value }),
 
       clearMapFocus: () => set({ mapFocusBusinessId: null }),
+
+      clearBusinesses: () =>
+        set({
+          businesses: [],
+          showMyBusiness: false,
+          mapFocusBusinessId: null,
+        }),
 
       addService: async (businessId, service) => {
         const created = await createServiceOnApi(businessId, service);

@@ -40,15 +40,8 @@ export default function MyBusiness({
 
       <div className="flex flex-col gap-[20px]">
         {businesses.map((business) => {
-          const galleryImages = business.gallery.filter(
-            (url): url is string => Boolean(url),
-          );
-          const previewImage =
-            galleryImages[0] ??
-            business.profilePhoto ??
-            assets.map.photo1;
-          const galleryCount = galleryImages.length || 1;
-          const isDataUrl = typeof previewImage === "string";
+          const logoImage = business.profilePhoto ?? assets.map.photo1;
+          const isDataUrl = typeof logoImage === "string";
           const isMenuOpen = openMenuId === business.id;
 
           return (
@@ -56,25 +49,22 @@ export default function MyBusiness({
               key={business.id}
               className="flex gap-[24px] rounded-[24px] border border-[#ececf2] p-[20px]"
             >
-              <div className="relative h-[200px] w-[280px] shrink-0 overflow-hidden rounded-[18px]">
+              <div className="relative flex h-[200px] w-[280px] shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f4f8]">
                 {isDataUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={previewImage}
+                    src={logoImage}
                     alt={business.name}
-                    className="h-full w-full object-cover"
+                    className="max-h-full max-w-full object-contain"
                   />
                 ) : (
                   <Image
-                    src={previewImage}
+                    src={logoImage}
                     alt={business.name}
                     fill
-                    className="object-cover"
+                    className="object-contain p-[16px]"
                   />
                 )}
-                <span className="absolute bottom-[10px] left-[10px] rounded-[8px] bg-black/50 px-[8px] py-[4px] text-[13px] font-semibold text-white">
-                  1/{galleryCount}
-                </span>
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col">
@@ -144,7 +134,7 @@ export default function MyBusiness({
                   </div>
 
                   <Button
-                    text="Статистика"
+                    text="Панель управления"
                     className="text-[18px] !px-[40px] py-[14px]"
                     onClick={() => onOpenStatistics(business.id)}
                   />

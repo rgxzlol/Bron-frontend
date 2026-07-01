@@ -6,7 +6,7 @@ export type ShopService = {
   description: string;
   priceFrom: number;
   durationMin: number;
-  icon?: StaticImageData;
+  icon?: StaticImageData | string;
 };
 
 export type ShopsType = {

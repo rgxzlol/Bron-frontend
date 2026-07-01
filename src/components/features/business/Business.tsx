@@ -3,6 +3,7 @@
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { useBusinessStore } from "@/store/business.store";
+import { useAuthStore } from "@/store/auth.store";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import BusinessModal from "./BusinessModal";
@@ -15,11 +16,19 @@ const Business = () => {
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
+  const fetchBusinessesFromApi = useBusinessStore((s) => s.fetchBusinessesFromApi);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
+  const token = useAuthStore((s) => s.token);
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
+
+  useEffect(() => {
+    if (token) {
+      void fetchBusinessesFromApi();
+    }
+  }, [token, fetchBusinessesFromApi]);
 
   useEffect(() => {
     if (hasBusinesses) {

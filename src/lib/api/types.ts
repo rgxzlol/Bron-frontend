@@ -42,6 +42,11 @@ export type UserProfileUpdate = {
   telegram_id?: number | null;
 };
 
+export type ChangePasswordRequest = {
+  old_password: string;
+  new_password: string;
+};
+
 export type BusinessListItem = {
   id: number;
   name: string;
@@ -77,6 +82,14 @@ export type BusinessCreate = {
 };
 
 export type BusinessUpdate = Partial<BusinessCreate>;
+
+export type BusinessStats = {
+  total_bookings: number;
+  pending_bookings: number;
+  approved_bookings: number;
+  cancelled_bookings: number;
+  total_revenue: string;
+};
 
 export type Service = {
   id: number;

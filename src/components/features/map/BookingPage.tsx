@@ -6,6 +6,7 @@ import Link from "next/link";
 import { assets } from "@/lib/assets";
 import { formatPrice, formatRating } from "@/lib/formatPrice";
 import { pluralizeReviews } from "@/lib/pluralize";
+import { getShopGallery, isRemoteShopImage } from "@/lib/business/shopImages";
 import { bookingExtras } from "@/data/bookingExtras";
 import { routes } from "@/config/routes";
 import type { ShopsType } from "@/types/shops.types";
@@ -13,6 +14,12 @@ import Button from "@/components/shared/Button";
 import DatePicker from "@/components/shared/DatePicker";
 import TimePicker from "@/components/shared/TimePicker";
 import { formatDateRu } from "@/lib/formatDate";
+import {
+  buildTimeGroupsFromHours,
+  getAvailableSlotsForDate,
+  getDefaultBookingTime,
+  startOfDay,
+} from "@/lib/booking/timeSlots";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { branchesApi } from "@/lib/api";
@@ -42,9 +49,13 @@ export default function BookingPage({
   const [step, setStep] = useState<BookingStep>(1);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => new Date(2026, 5, 1));
-  const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 5, 12));
-  const [selectedTime, setSelectedTime] = useState("12:00");
+  const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [selectedTime, setSelectedTime] = useState(() => {
+    const slots = buildTimeGroupsFromHours(shop.hours).flatMap((group) => group.slots);
+    const todayDate = startOfDay(new Date());
+    return getDefaultBookingTime(slots, todayDate, new Date());
+  });
   const [guests, setGuests] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
@@ -58,7 +69,30 @@ export default function BookingPage({
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
 
-  const today = useMemo(() => new Date(2026, 5, 2), []);
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const timeGroups = useMemo(
+    () => buildTimeGroupsFromHours(shop.hours),
+    [shop.hours],
+  );
+
+  const allTimeSlots = useMemo(
+    () => timeGroups.flatMap((group) => group.slots),
+    [timeGroups],
+  );
+
+  const disabledTimeSlots = useMemo(() => {
+    const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+    const availableSet = new Set(available);
+    return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
+  }, [allTimeSlots, selectedDate]);
+
+  useEffect(() => {
+    const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+    if (!available.includes(selectedTime)) {
+      setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
+    }
+  }, [allTimeSlots, selectedDate, selectedTime]);
 
   const selectedServices = useMemo(() => {
     if (!shop.services?.length || !selectedServiceIds.length) return [];
@@ -268,17 +302,29 @@ export default function BookingPage({
   }
 
   function renderTopCard() {
+    const gallery = getShopGallery(shop);
+    const previewImage = gallery[0] ?? shop.img;
+
     return (
       <section className={s.topCard}>
         <div className={s.imageWrap}>
-          <Image
-            className={s.image}
-            src={shop.img}
-            alt={shop.title}
-            sizes="(max-width: 1024px) 100vw, 420px"
-            priority
-          />
-          <span className={s.slideCounter}>1/3</span>
+          {isRemoteShopImage(previewImage) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className={s.image}
+              src={previewImage}
+              alt={shop.title}
+            />
+          ) : (
+            <Image
+              className={s.image}
+              src={previewImage}
+              alt={shop.title}
+              sizes="(max-width: 1024px) 100vw, 420px"
+              priority
+            />
+          )}
+          <span className={s.slideCounter}>1/{gallery.length}</span>
         </div>
 
         <div className={s.topBody}>
@@ -355,10 +401,13 @@ export default function BookingPage({
             selectedDate={selectedDate}
             onSelectedDateChange={setSelectedDate}
             today={today}
+            minDate={today}
           />
           <TimePicker
             selectedTime={selectedTime}
             onSelectedTimeChange={setSelectedTime}
+            timeGroups={timeGroups}
+            disabledSlots={disabledTimeSlots}
           />
         </section>
 

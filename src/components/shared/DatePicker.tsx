@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { isDateBeforeDay, isSameDay, startOfDay } from "@/lib/booking/timeSlots";
 
 interface DatePickerProps {
   viewMonth: Date;
@@ -8,6 +9,7 @@ interface DatePickerProps {
   selectedDate: Date;
   onSelectedDateChange: (date: Date) => void;
   today?: Date;
+  minDate?: Date;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -46,22 +48,16 @@ function buildCalendarDays(viewMonth: Date) {
   return days;
 }
 
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 export default function DatePicker({
   viewMonth,
   onViewMonthChange,
   selectedDate,
   onSelectedDateChange,
-  today = new Date(2026, 5, 2),
+  today = new Date(),
+  minDate,
 }: DatePickerProps) {
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
+  const minSelectableDate = startOfDay(minDate ?? today);
 
   return (
     <div className="">
@@ -98,21 +94,25 @@ export default function DatePicker({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-[6px] mb-7">
+      <div className="grid grid-cols-7 gap-[6px] mb-7 justify-items-center">
         {calendarDays.map(({ date, inMonth }) => {
           const selected = isSameDay(date, selectedDate);
           const isToday = isSameDay(date, today);
+          const isDisabled =
+            !inMonth || isDateBeforeDay(date, minSelectableDate);
+
           return (
             <button
               key={date.toISOString()}
               type="button"
-              className={`aspect-square max-h-[44px] rounded-full text-[14px] font-semibold flex items-center justify-center transition-all duration-200
+              className={`aspect-square w-[44px] h-[44px] max-h-[44px] rounded-full text-[14px] font-semibold flex items-center justify-center transition-all duration-200
                 ${!inMonth ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"}
+                ${isDisabled && inMonth ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}
                 ${selected ? "!bg-[#0a6af7] !text-white hover:!bg-[#0856c6]" : ""}
                 ${isToday && !selected ? "border-2 border-[#0a6af7]" : ""}
               `}
-              onClick={() => inMonth && onSelectedDateChange(date)}
-              disabled={!inMonth}
+              onClick={() => !isDisabled && onSelectedDateChange(date)}
+              disabled={isDisabled}
             >
               {date.getDate()}
             </button>

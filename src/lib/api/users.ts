@@ -1,5 +1,10 @@
 import { apiRequest } from "./client";
-import type { LoginResponse, UserProfile, UserProfileUpdate } from "./types";
+import type {
+  ChangePasswordRequest,
+  LoginResponse,
+  UserProfile,
+  UserProfileUpdate,
+} from "./types";
 
 export const usersApi = {
   getProfile: (token?: string) =>
@@ -8,6 +13,21 @@ export const usersApi = {
   updateProfile: (body: UserProfileUpdate, token?: string) =>
     apiRequest<UserProfile>("/users/profile", {
       method: "PUT",
+      body,
+      auth: true,
+      token,
+    }),
+
+  deleteProfile: (token?: string) =>
+    apiRequest<unknown>("/users/profile", {
+      method: "DELETE",
+      auth: true,
+      token,
+    }),
+
+  changePassword: (body: ChangePasswordRequest, token?: string) =>
+    apiRequest<unknown>("/users/change-password", {
+      method: "POST",
       body,
       auth: true,
       token,

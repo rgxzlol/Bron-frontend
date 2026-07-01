@@ -23,6 +23,7 @@ export default function MyBusiness({
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const deleteTarget = businesses.find((business) => business.id === deleteTargetId);
 
@@ -118,8 +119,8 @@ export default function MyBusiness({
                         <BusinessCardMenu
                           onEdit={() => onEditBusiness(business.id)}
                           onDelete={() => {
-                            setDeleteTargetId(business.id);
                             setOpenMenuId(null);
+                            setDeleteTargetId(business.id);
                           }}
                           onClose={() => setOpenMenuId(null)}
                         />
@@ -158,9 +159,17 @@ export default function MyBusiness({
         businessName={deleteTarget?.name || "Без названия"}
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => {
-          if (deleteTargetId) void removeBusiness(deleteTargetId);
-          setDeleteTargetId(null);
+        onConfirm={async () => {
+          if (!deleteTargetId || isDeleting) return;
+          setIsDeleting(true);
+          try {
+            await removeBusiness(deleteTargetId);
+            setDeleteTargetId(null);
+          } catch {
+            alert("Не удалось удалить бизнес. Попробуйте ещё раз.");
+          } finally {
+            setIsDeleting(false);
+          }
         }}
       />
     </div>

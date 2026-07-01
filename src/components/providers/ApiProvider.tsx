@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { setTokenGetter } from "@/lib/api/token";
+import { setAuthCookie } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/auth.store";
 import { useProfileStore } from "@/store/profile.store";
 import { useBusinessStore } from "@/store/business.store";
@@ -15,6 +16,20 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     setTokenGetter(() => useAuthStore.getState().token);
+
+    function syncAuthCookie() {
+      const currentToken = useAuthStore.getState().token;
+      if (currentToken) {
+        setAuthCookie(currentToken);
+      }
+    }
+
+    if (useAuthStore.persist.hasHydrated()) {
+      syncAuthCookie();
+      return;
+    }
+
+    return useAuthStore.persist.onFinishHydration(syncAuthCookie);
   }, []);
 
   useEffect(() => {

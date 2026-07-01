@@ -5,6 +5,8 @@ export const routes = {
   bookings: "/bookings",
   support: "/support",
   auth: "/auth",
+  login: "/login",
+  register: "/register",
   profile: "/profile",
 } as const;
 

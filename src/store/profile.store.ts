@@ -42,10 +42,14 @@ type ProfileState = {
   toggleNotification: (key: keyof NotificationSettings) => void;
   hydrateFromApi: () => Promise<void>;
   savePersonalInfoToApi: (payload: {
-    fullName: string;
     phone: string;
     email: string;
   }) => Promise<void>;
+  changePasswordToApi: (payload: {
+    oldPassword: string;
+    newPassword: string;
+  }) => Promise<void>;
+  deleteAccountFromApi: () => Promise<void>;
 };
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
@@ -114,20 +118,23 @@ export const useProfileStore = create<ProfileState>()(
         const token = getAuthToken();
         if (!token) return;
 
-        const profile = await usersApi.getProfile(token);
-        set({
-          fullName: profile.username,
-          phone: profile.phone,
-          email: profile.email,
-          language: mapApiLanguage(profile.language),
-        });
+        try {
+          const profile = await usersApi.getProfile(token);
+          set({
+            fullName: profile.username,
+            phone: profile.phone,
+            email: profile.email,
+            language: mapApiLanguage(profile.language),
+          });
+        } catch (error) {
+          console.error("Не удалось загрузить профиль:", error);
+        }
       },
 
-      savePersonalInfoToApi: async ({ fullName, phone, email }) => {
+      savePersonalInfoToApi: async ({ phone, email }) => {
         const token = getAuthToken();
         if (!token) {
           set({
-            fullName: fullName.trim(),
             phone: phone.trim(),
             email: email.trim(),
           });
@@ -143,10 +150,34 @@ export const useProfileStore = create<ProfileState>()(
         );
 
         set({
-          fullName: fullName.trim() || profile.username,
+          fullName: profile.username,
           phone: profile.phone,
           email: profile.email,
         });
+      },
+
+      changePasswordToApi: async ({ oldPassword, newPassword }) => {
+        const token = getAuthToken();
+        if (!token) {
+          throw new Error("Войдите в аккаунт, чтобы сменить пароль");
+        }
+
+        await usersApi.changePassword(
+          {
+            old_password: oldPassword,
+            new_password: newPassword,
+          },
+          token,
+        );
+      },
+
+      deleteAccountFromApi: async () => {
+        const token = getAuthToken();
+        if (!token) {
+          throw new Error("Войдите в аккаунт");
+        }
+
+        await usersApi.deleteProfile(token);
       },
     }),
     {

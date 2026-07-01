@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { clearAuthCookie, setAuthCookie } from "@/lib/auth/session";
 
 type AuthStore = {
   token: string | null;
@@ -19,9 +20,14 @@ export const useAuthStore = create<AuthStore>()(
       token: null,
       userId: null,
       username: null,
-      setSession: ({ token, userId, username }) =>
-        set({ token, userId, username }),
-      clearToken: () => set({ token: null, userId: null, username: null }),
+      setSession: ({ token, userId, username }) => {
+        setAuthCookie(token);
+        set({ token, userId, username });
+      },
+      clearToken: () => {
+        clearAuthCookie();
+        set({ token: null, userId: null, username: null });
+      },
     }),
     {
       name: "auth-storage",

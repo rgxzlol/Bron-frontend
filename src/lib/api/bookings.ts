@@ -35,4 +35,24 @@ export const bookingsApi = {
       auth: true,
       token,
     }),
+
+  listByBusiness: (businessId: number, token?: string) =>
+    apiRequest<Booking[]>(`/bookings/business/${businessId}`, {
+      auth: true,
+      token,
+    }),
+
+  approve: (bookingId: number, token?: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/approve`, {
+      method: "PATCH",
+      auth: true,
+      token,
+    }),
+
+  reject: (bookingId: number, token?: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/reject`, {
+      method: "PATCH",
+      auth: true,
+      token,
+    }),
 };

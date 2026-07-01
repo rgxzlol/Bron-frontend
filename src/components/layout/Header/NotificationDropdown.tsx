@@ -4,27 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { NotificationCard } from "./NotificationCard";
+import { NotificationEmpty } from "./NotificationEmpty";
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const notifications = [
+  const [notifications, setNotifications] = useState([
     {
       icon: assets.notification.calendar,
       title: "Напоминание о бронировании",
@@ -43,7 +28,27 @@ export default function NotificationDropdown() {
       description: "Скидка 20% на все услуги до конца недели!",
       time: "09:00",
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+
+  const handleClear = () => {
+    setNotifications([]);
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -69,27 +74,32 @@ export default function NotificationDropdown() {
               <Image src={assets.header.close} alt="close" />
             </button>
           </div>
-          <div className="mt-3">
-            <span className="block font-semibold text-[13px] text-[var(--text-secondary)] mb-[14px]">Сегодня</span>
-            <ul className="flex flex-col my-[14px] gap-3">
-              {notifications.map((notif, index) => (
-                <NotificationCard
-                  key={index}
-                  icon={notif.icon}
-                  title={notif.title}
-                  description={notif.description}
-                  time={notif.time}
-                />
-              ))}
-            </ul>
-            <button
-              type="button"
-              className="mx-auto bg-[var(--bg-surface-muted)] rounded-[14px] px-[42px] py-[15px] flex gap-[15px] hover:bg-[var(--bg-hover)] hover:scale-[1.02] active:scale-95 transition-all duration-200"
-            >
-              <Image src={assets.notification.trash} alt="trash" />
-              <span className="font-semibold text-[16px] text-[#0A6AF7]">Удалить все прочитаные</span>
-            </button>
-          </div>
+          {
+            notifications.length > 0 ?
+              <div className="mt-3">
+                <span className="block font-semibold text-[13px] text-black opacity-60 mb-[14px]">Сегодня</span>
+                <ul className="flex flex-col my-[14px] gap-3">
+                  {notifications.map((notif, index) => (
+                    <NotificationCard
+                      key={index}
+                      icon={notif.icon}
+                      title={notif.title}
+                      description={notif.description}
+                      time={notif.time}
+                    />
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="mx-auto bg-[#FAFAFF] rounded-[14px] px-[42px] py-[15px] flex gap-[15px] hover:bg-[#eaeaff] hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                >
+                  <Image src={assets.notification.trash} alt="trash" />
+                  <span className="font-semibold text-[16px] text-[#0A6AF7]">Удалить все прочитаные</span>
+                </button>
+              </div> :
+              <NotificationEmpty />
+          }
         </div>
       )}
     </div>

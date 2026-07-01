@@ -8,14 +8,17 @@ import {
   removeBusinessFromApi,
   removeServiceFromApi,
   saveBusinessDraftToApi,
+  updateBusinessBookingStatusOnApi,
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
 import { getAuthToken } from "@/lib/api/token";
+import { geocodeAddress, resolveDraftCoords } from "@/lib/geocoding";
 import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
 } from "@/lib/business/schedule";
-import { randomTashkentCoords } from "@/lib/business/coordinates";
+import { mergeBusinessFromApi } from "@/lib/business/photos";
+import { hasValidCoords, normalizeCoords } from "@/lib/geocoding";
 
 export const BUSINESS_CATEGORIES = [
   "Спорт зал",
@@ -62,6 +65,8 @@ export type BusinessDraft = {
   website: string;
   phone: string;
   address: string;
+  lat: number | null;
+  lng: number | null;
   gallery: (string | null)[];
   schedule: DaySchedule[];
 };
@@ -88,6 +93,8 @@ export const createEmptyDraft = (): BusinessDraft => ({
   website: "",
   phone: "",
   address: "",
+  lat: null,
+  lng: null,
   gallery: [...EMPTY_GALLERY],
   schedule: DEFAULT_SCHEDULE.map((d) => ({ ...d })),
 });
@@ -145,15 +152,8 @@ function createDefaultBookingRequests(): BusinessBookingRequest[] {
 }
 
 function normalizeBusiness(business: SavedBusiness): SavedBusiness {
-  const coords =
-    business.lat != null && business.lng != null
-      ? { lat: business.lat, lng: business.lng }
-      : randomTashkentCoords();
-
   return {
     ...business,
-    lat: coords.lat,
-    lng: coords.lng,
     services: Array.isArray(business.services) ? business.services : [],
     bookingRequests: Array.isArray(business.bookingRequests)
       ? business.bookingRequests
@@ -182,6 +182,7 @@ type BusinessStore = {
   draft: BusinessDraft;
   editingId: string | null;
   showMyBusiness: boolean;
+  mapFocusBusinessId: string | null;
   updateDraft: (partial: Partial<BusinessDraft>) => void;
   setDraftSchedule: (schedule: DaySchedule[]) => void;
   resetDraft: () => void;
@@ -189,6 +190,7 @@ type BusinessStore = {
   saveDraft: () => Promise<SavedBusiness>;
   removeBusiness: (id: string) => Promise<void>;
   setShowMyBusiness: (value: boolean) => void;
+  clearMapFocus: () => void;
   getBusiness: (id: string) => SavedBusiness | undefined;
   fetchBusinessesFromApi: () => Promise<void>;
   addService: (
@@ -214,7 +216,7 @@ type BusinessStore = {
     businessId: string,
     bookingId: string,
     status: BusinessBookingRequest["status"],
-  ) => void;
+  ) => Promise<void>;
 };
 
 function draftFromBusiness(business: SavedBusiness): BusinessDraft {
@@ -226,6 +228,8 @@ function draftFromBusiness(business: SavedBusiness): BusinessDraft {
     website: business.website,
     phone: business.phone,
     address: business.address,
+    lat: hasValidCoords(business) ? business.lat : null,
+    lng: hasValidCoords(business) ? business.lng : null,
     gallery: [...business.gallery],
     schedule: business.schedule.map((d) => ({ ...d })),
   };
@@ -248,6 +252,7 @@ export const useBusinessStore = create<BusinessStore>()(
       draft: createEmptyDraft(),
       editingId: null,
       showMyBusiness: false,
+      mapFocusBusinessId: null,
 
       updateDraft: (partial) =>
         set((state) => ({ draft: { ...state.draft, ...partial } })),
@@ -273,38 +278,62 @@ export const useBusinessStore = create<BusinessStore>()(
         const token = getAuthToken();
 
         if (token) {
+          const coords = await resolveDraftCoords(draft);
           const saved = await saveBusinessDraftToApi(draft, editingId);
+          const resolved = normalizeCoords(coords.lat, coords.lng);
+          const normalized: SavedBusiness = normalizeBusiness({
+            ...saved,
+            lat: resolved?.lat ?? coords.lat,
+            lng: resolved?.lng ?? coords.lng,
+            profilePhoto: saved.profilePhoto ?? draft.profilePhoto,
+            gallery: saved.gallery.some(Boolean) ? saved.gallery : draft.gallery,
+            website: saved.website || draft.website,
+            description: saved.description || draft.description,
+          });
           const next = editingId
-            ? businesses.map((business) => (business.id === saved.id ? saved : business))
-            : [...businesses, saved];
+            ? businesses.map((business) =>
+                business.id === editingId || business.id === normalized.id
+                  ? normalized
+                  : business,
+              )
+            : [...businesses, normalized];
 
           set({
             businesses: next,
             draft: createEmptyDraft(),
             editingId: null,
             showMyBusiness: true,
+            mapFocusBusinessId: normalized.id,
           });
-          return saved;
+          return normalized;
         }
 
         if (editingId) {
-          let saved: SavedBusiness | null = null;
+          const coords = await resolveDraftCoords(draft);
+          let updatedBusiness: SavedBusiness | null = null;
           const next = businesses.map((business) => {
             if (business.id !== editingId) return business;
-            saved = normalizeBusiness({ ...business, ...draft });
-            return saved;
+            updatedBusiness = normalizeBusiness({
+              ...business,
+              ...draft,
+              lat: coords.lat,
+              lng: coords.lng,
+            });
+            return updatedBusiness;
           });
-          if (!saved) throw new Error("Business not found");
+          if (!updatedBusiness) throw new Error("Business not found");
+          const savedBusiness: SavedBusiness = updatedBusiness;
           set({
             businesses: next,
             draft: createEmptyDraft(),
             editingId: null,
             showMyBusiness: true,
+            mapFocusBusinessId: savedBusiness.id,
           });
-          return saved;
+          return savedBusiness;
         }
 
-        const coords = randomTashkentCoords();
+        const coords = await resolveDraftCoords(draft);
         const saved: SavedBusiness = ensureNewBusinessDefaults({
           ...draft,
           id: crypto.randomUUID(),
@@ -321,6 +350,7 @@ export const useBusinessStore = create<BusinessStore>()(
           draft: createEmptyDraft(),
           editingId: null,
           showMyBusiness: true,
+          mapFocusBusinessId: saved.id,
         });
         return saved;
       },
@@ -340,14 +370,30 @@ export const useBusinessStore = create<BusinessStore>()(
         const userId = await getCurrentUserId();
         if (!userId) return;
 
-        const businesses = await fetchMyBusinessesFromApi(userId);
-        set({
-          businesses,
-          showMyBusiness: businesses.length > 0,
-        });
+        try {
+          const existing = get().businesses;
+          const existingById = new Map(existing.map((item) => [item.id, item]));
+          const fromApi = await fetchMyBusinessesFromApi(userId);
+          const merged = fromApi.map((item) =>
+            mergeBusinessFromApi(item, existingById.get(item.id)),
+          );
+          const apiIds = new Set(merged.map((item) => item.id));
+          const localOnly = existing.filter(
+            (item) => !apiIds.has(item.id) && hasValidCoords(item),
+          );
+
+          set({
+            businesses: [...merged, ...localOnly],
+            showMyBusiness: merged.length + localOnly.length > 0,
+          });
+        } catch (error) {
+          console.error("Не удалось загрузить бизнесы:", error);
+        }
       },
 
       setShowMyBusiness: (value) => set({ showMyBusiness: value }),
+
+      clearMapFocus: () => set({ mapFocusBusinessId: null }),
 
       addService: async (businessId, service) => {
         const created = await createServiceOnApi(businessId, service);
@@ -434,7 +480,11 @@ export const useBusinessStore = create<BusinessStore>()(
         }));
       },
 
-      updateBookingStatus: (businessId, bookingId, status) =>
+      updateBookingStatus: async (businessId, bookingId, status) => {
+        if (status === "accepted" || status === "cancelled") {
+          await updateBusinessBookingStatusOnApi(bookingId, status);
+        }
+
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
@@ -444,7 +494,8 @@ export const useBusinessStore = create<BusinessStore>()(
             bookings:
               status === "accepted" ? b.bookings + 1 : b.bookings,
           })),
-        })),
+        }));
+      },
     }),
     {
       name: "business-storage",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { assets } from "@/lib/assets";
 import { siteConfig } from "@/config/site";
 import { routes } from "@/config/routes";
 import { authApi, ApiError } from "@/lib/api";
+import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import s from "./authPage.module.css";
@@ -16,6 +17,8 @@ type AuthTab = "login" | "register";
 
 export default function AuthPageContent() {
   const router = useRouter();
+  const hydrated = useAuthHydrated();
+  const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
 
   const [tab, setTab] = useState<AuthTab>("login");
@@ -26,6 +29,12 @@ export default function AuthPageContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (hydrated && token) {
+      router.replace(routes.profile);
+    }
+  }, [hydrated, token, router]);
 
   async function handleSubmit() {
     setError(null);
@@ -69,7 +78,7 @@ export default function AuthPageContent() {
         username: session.username,
       });
 
-      router.push(routes.home);
+      router.push(routes.profile);
     } catch (submitError) {
       setError(
         submitError instanceof ApiError

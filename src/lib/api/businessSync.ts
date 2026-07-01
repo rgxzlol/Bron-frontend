@@ -1,25 +1,78 @@
 import {
   authApi,
+  bookingsApi,
   branchesApi,
   businessesApi,
   productsApi,
   servicesApi,
   workingHoursApi,
 } from "@/lib/api";
+import { ApiError } from "@/lib/api/client";
 import {
+  apiBookingToBusinessBookingRequest,
   apiBusinessToSavedBusiness,
   apiProductToBusinessService,
   apiServiceToBusinessService,
   draftToBusinessCreate,
   draftToBusinessUpdate,
+  resolveApiBusinessCoords,
   scheduleToWorkingHoursPayload,
   workingHoursToSchedule,
 } from "@/lib/api/mappers";
 import { getAuthToken } from "@/lib/api/token";
-import type { BusinessDraft, BusinessService, SavedBusiness } from "@/store/business.store";
-import { randomTashkentCoords } from "@/lib/business/coordinates";
+import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
+import type { BusinessDraft, BusinessService, SavedBusiness, BusinessBookingRequest } from "@/store/business.store";
+import type { Branch, Business as ApiBusiness } from "@/lib/api/types";
 
-async function loadBusinessDetails(businessId: number) {
+async function resolveCoordsForBusiness(
+  business: ApiBusiness,
+  branch?: Pick<Branch, "address" | "latitude" | "longitude"> | null,
+): Promise<{ lat: number; lng: number }> {
+  const direct = resolveApiBusinessCoords(business, branch);
+  if (hasValidCoords(direct)) return direct;
+
+  const address = branch?.address?.trim() || business.address?.trim();
+  if (!address) return direct;
+
+  try {
+    const geocoded = await geocodeAddress(address);
+    return { lat: geocoded.lat, lng: geocoded.lng };
+  } catch {
+    return direct;
+  }
+}
+
+async function loadBusinessBookings(businessId: number, services: BusinessService[]) {
+  const token = getAuthToken();
+  if (!token) return [];
+
+  try {
+    const bookings = await bookingsApi.listByBusiness(businessId, token);
+    const serviceMap = new Map(services.map((service) => [service.id, service.name]));
+
+    return bookings.map((booking) =>
+      apiBookingToBusinessBookingRequest(
+        booking,
+        serviceMap.get(String(booking.service_id)) ?? "Услуга",
+      ),
+    );
+  } catch {
+    return [];
+  }
+}
+
+async function loadBusinessStats(businessId: number) {
+  const token = getAuthToken();
+  if (!token) return undefined;
+
+  try {
+    return await businessesApi.stats(businessId, token);
+  } catch {
+    return undefined;
+  }
+}
+
+async function loadBusinessDetails(businessId: number, withOwnerData = false) {
   const [business, services, products, branches, schedule] = await Promise.all([
     businessesApi.get(businessId),
     servicesApi.listByBusiness(businessId),
@@ -40,10 +93,30 @@ async function loadBusinessDetails(businessId: number) {
     ...productItems.map(apiProductToBusinessService),
   ];
 
+  const [ownerData, branchDetail] = await Promise.all([
+    withOwnerData
+      ? Promise.all([
+          loadBusinessStats(businessId),
+          loadBusinessBookings(businessId, mappedServices),
+        ])
+      : Promise.resolve<[undefined, BusinessBookingRequest[]]>([undefined, []]),
+    branches[0]?.id
+      ? branchesApi.get(branches[0].id).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
+  const [stats, bookingRequests] = ownerData;
+
+  const coords = await resolveCoordsForBusiness(business, branchDetail);
+
   return apiBusinessToSavedBusiness(business, {
     services: mappedServices,
     defaultBranchId: branches[0]?.id,
     schedule: workingHoursToSchedule(schedule),
+    stats,
+    bookingRequests,
+    branch: branchDetail,
+    coords,
   });
 }
 
@@ -53,7 +126,7 @@ export async function fetchMyBusinessesFromApi(userId: number) {
     list.map(async (item) => {
       const detail = await businessesApi.get(item.id);
       if (detail.owner_id !== userId) return null;
-      return loadBusinessDetails(item.id);
+      return loadBusinessDetails(item.id, true);
     }),
   );
 
@@ -83,12 +156,28 @@ async function syncWorkingHours(businessId: number, draft: BusinessDraft) {
   await Promise.all(payload.map((item) => workingHoursApi.create(item, token)));
 }
 
-async function ensureDefaultBranch(businessId: number, draft: BusinessDraft) {
+async function ensureDefaultBranch(
+  businessId: number,
+  draft: BusinessDraft,
+  coords: { lat: number; lng: number },
+) {
   const token = getAuthToken();
   if (!token) return undefined;
 
   const branches = await branchesApi.listByBusiness(businessId);
-  if (branches.length > 0) return branches[0].id;
+  if (branches.length > 0) {
+    await branchesApi.update(
+      branches[0].id,
+      {
+        address: draft.address,
+        phone: draft.phone,
+        latitude: coords.lat,
+        longitude: coords.lng,
+      },
+      token,
+    );
+    return branches[0].id;
+  }
 
   const branch = await branchesApi.create(
     {
@@ -96,8 +185,8 @@ async function ensureDefaultBranch(businessId: number, draft: BusinessDraft) {
       name: draft.name || "Главный филиал",
       address: draft.address,
       phone: draft.phone,
-      latitude: null,
-      longitude: null,
+      latitude: coords.lat,
+      longitude: coords.lng,
     },
     token,
   );
@@ -141,13 +230,18 @@ export async function saveBusinessDraftToApi(
 
   if (editingId && /^\d+$/.test(editingId)) {
     const businessId = Number(editingId);
-    await businessesApi.update(businessId, draftToBusinessUpdate(draft), token);
+    const coords = await resolveDraftCoords(draft);
+    await businessesApi.update(
+      businessId,
+      draftToBusinessUpdate(draft, coords),
+      token,
+    );
     await syncWorkingHours(businessId, draft);
-    await ensureDefaultBranch(businessId, draft);
+    await ensureDefaultBranch(businessId, draft, coords);
     return loadBusinessDetails(businessId);
   }
 
-  const coords = randomTashkentCoords();
+  const coords = await resolveDraftCoords(draft);
   const created = await businessesApi.create(
     draftToBusinessCreate(draft, coords),
     token,
@@ -161,14 +255,29 @@ export async function saveBusinessDraftToApi(
   const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));
 
   await syncWorkingHours(businessId, draft);
-  await ensureDefaultBranch(businessId, draft);
+  await ensureDefaultBranch(businessId, draft, coords);
+  await businessesApi.update(
+    businessId,
+    draftToBusinessUpdate(draft, coords),
+    token,
+  );
   return loadBusinessDetails(businessId);
 }
 
 export async function removeBusinessFromApi(businessId: string) {
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(businessId)) return;
-  await businessesApi.remove(Number(businessId), token);
+
+  try {
+    await businessesApi.remove(Number(businessId), token);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return;
+    }
+
+    console.error("Ошибка удаления бизнеса:", error);
+    throw error;
+  }
 }
 
 export async function createServiceOnApi(
@@ -259,6 +368,20 @@ export async function removeServiceFromApi(serviceId: string, type: "service" | 
   }
 
   await servicesApi.remove(Number(serviceId), token);
+}
+
+export async function updateBusinessBookingStatusOnApi(
+  bookingId: string,
+  status: "accepted" | "cancelled",
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(bookingId)) return null;
+
+  if (status === "accepted") {
+    return bookingsApi.approve(Number(bookingId), token);
+  }
+
+  return bookingsApi.reject(Number(bookingId), token);
 }
 
 export async function getCurrentUserId() {

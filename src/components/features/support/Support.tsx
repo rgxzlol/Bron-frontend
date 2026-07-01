@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 const contactButtonClassName =
-  "inline-flex items-center justify-center rounded-[10px] border border-[#0a6af7] px-[32px] py-[14px] text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5";
+  "inline-flex items-center justify-center rounded-[21px] border border-[#0a6af7] px-[32px] py-[14px] text-[24px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5 w-full";
 
 export default function Support() {
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
@@ -27,15 +27,14 @@ export default function Support() {
         {supportContactCards.map((card) => (
           <article
             key={card.id}
-            className="flex flex-col rounded-[24px] bg-white px-[24px] py-[28px]"
-          >
+            className="flex flex-col rounded-[24px] bg-white px-[24px] py-[28px]">
             <div className="mb-[24px] flex items-start gap-[16px]">
-              <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[16px] bg-[#e8f1ff]">
+              <div className="flex px-[50px] py-[40px] shrink-0 items-center justify-center rounded-[32px] bg-[#e8f1ff]">
                 <Image src={card.icon} alt="" width={28} height={28} />
               </div>
               <div className="flex flex-col gap-[6px]">
-                <h2 className="text-[20px] font-semibold">{card.title}</h2>
-                <p className="text-[14px] font-semibold opacity-75">
+                <h2 className="text-[24px] font-semibold">{card.title}</h2>
+                <p className="max-w-[170px] font-semibold">
                   {card.description}
                 </p>
               </div>
@@ -59,7 +58,7 @@ export default function Support() {
           Часто задаваемые вопросы
         </h2>
 
-        <div className="flex flex-col gap-[12px]">
+        <div className="flex flex-col gap-[21px]">
           {faqItems.map((item) => {
             const isOpen = openFaqId === item.id;
 
@@ -84,7 +83,7 @@ export default function Support() {
                     />
                   </div>
 
-                  <span className="flex-1 text-[16px] font-semibold">
+                  <span className="flex-1 text-[20px] font-semibold">
                     {item.question}
                   </span>
 
@@ -114,7 +113,7 @@ export default function Support() {
 
                 {isOpen && (
                   <div className="px-[24px] pb-[20px] pl-[88px]">
-                    <p className="text-[15px] leading-relaxed opacity-75">
+                    <p className="text-[18px] leading-relaxed opacity-75">
                       {item.answer}
                     </p>
                   </div>

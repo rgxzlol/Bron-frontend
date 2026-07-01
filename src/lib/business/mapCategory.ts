@@ -4,6 +4,8 @@ const SHOP_TYPE_TO_BUSINESS_CATEGORY: Record<string, string> = {
   Кофейня: "Еда",
   Больница: "Здоровье",
   Ресторан: "Еда",
+  Красота: "Красота",
+  Образование: "Образование",
 };
 
 export function shopMatchesBusinessCategory(
@@ -13,8 +15,14 @@ export function shopMatchesBusinessCategory(
 ): boolean {
   if (!businessCategory) return true;
 
+  if (shopCategory === businessCategory) return true;
+
   const mappedType = SHOP_TYPE_TO_BUSINESS_CATEGORY[shopType];
   if (mappedType === businessCategory) return true;
+
+  const normalizedShopCategory = shopCategory.replace(/\s+/g, " ").trim();
+  const normalizedFilter = businessCategory.replace(/\s+/g, " ").trim();
+  if (normalizedShopCategory === normalizedFilter) return true;
 
   return shopCategory.toLowerCase().includes(businessCategory.toLowerCase());
 }

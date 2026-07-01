@@ -16,7 +16,10 @@ export type ShopsType = {
   title: string;
   lat: number;
   lng: number;
-  img: StaticImageData;
+  img: StaticImageData | string;
+  profilePhoto?: string | null;
+  gallery?: string[];
+  website?: string;
   type: string;
   desc: string;
   rating: number;

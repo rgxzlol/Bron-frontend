@@ -1,21 +1,57 @@
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
-import { randomTashkentCoords } from "@/lib/business/coordinates";
+import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
   BusinessDraft,
   BusinessService,
   SavedBusiness,
 } from "@/store/business.store";
 import type {
+  Branch,
   Business as ApiBusiness,
   BusinessCreate as ApiBusinessCreate,
+  BusinessStats,
   BusinessUpdate as ApiBusinessUpdate,
+  Booking as ApiBooking,
   Product as ApiProduct,
   Service as ApiService,
   WorkingHours,
 } from "./types";
+import type { BusinessBookingRequest } from "@/store/business.store";
 import type { ProfileLanguage } from "@/store/profile.store";
 import type { ShopsType } from "@/types/shops.types";
 import { assets } from "@/lib/assets";
+import { collectBusinessPhotoUrls, photosToGallerySlots } from "@/lib/business/photos";
+import { normalizeCoords } from "@/lib/geocoding";
+
+const UI_TO_API_CATEGORY: Record<string, string> = {
+  "Спорт зал": "gym",
+  Красота: "beauty",
+  Здоровье: "health",
+  Образование: "education",
+  Еда: "food",
+  Другое: "other",
+};
+
+const API_TO_UI_CATEGORY: Record<string, string> = {
+  gym: "Спорт зал",
+  beauty: "Красота",
+  health: "Здоровье",
+  education: "Образование",
+  food: "Еда",
+  other: "Другое",
+};
+
+export function uiCategoryToApi(category: string) {
+  return UI_TO_API_CATEGORY[category] ?? category;
+}
+
+export function apiCategoryToUi(category: string) {
+  return API_TO_UI_CATEGORY[category] ?? category;
+}
+
+function parsePrice(value: number | string) {
+  return typeof value === "number" ? value : Number(value);
+}
 
 const DAY_KEY_TO_INDEX: Record<string, number> = {
   mon: 0,
@@ -75,7 +111,7 @@ export function draftToBusinessCreate(
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: draft.category,
+    category: uiCategoryToApi(draft.category),
     address: draft.address.trim(),
     phone: draft.phone.trim(),
     latitude: coords?.lat ?? null,
@@ -83,13 +119,18 @@ export function draftToBusinessCreate(
   };
 }
 
-export function draftToBusinessUpdate(draft: BusinessDraft): ApiBusinessUpdate {
+export function draftToBusinessUpdate(
+  draft: BusinessDraft,
+  coords?: { lat: number; lng: number },
+): ApiBusinessUpdate {
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: draft.category,
+    category: uiCategoryToApi(draft.category),
     address: draft.address.trim(),
     phone: draft.phone.trim(),
+    latitude: coords?.lat ?? null,
+    longitude: coords?.lng ?? null,
   };
 }
 
@@ -98,7 +139,7 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     id: String(service.id),
     name: service.title,
     category: service.category,
-    price: service.price,
+    price: parsePrice(service.price),
     description: service.description,
     photo: null,
     active: service.is_active,
@@ -119,38 +160,84 @@ export function apiProductToBusinessService(product: ApiProduct): BusinessServic
   };
 }
 
+export function resolveApiBusinessCoords(
+  business: Pick<ApiBusiness, "latitude" | "longitude">,
+  branch?: Pick<Branch, "latitude" | "longitude"> | null,
+): { lat: number; lng: number } {
+  const fromBusiness = normalizeCoords(business.latitude, business.longitude);
+  if (fromBusiness) return fromBusiness;
+
+  const fromBranch = normalizeCoords(branch?.latitude, branch?.longitude);
+  if (fromBranch) return fromBranch;
+
+  return { lat: 0, lng: 0 };
+}
+
 export function apiBusinessToSavedBusiness(
   business: ApiBusiness,
   extras?: {
     services?: BusinessService[];
     defaultBranchId?: number;
     schedule?: DaySchedule[];
+    stats?: BusinessStats;
+    bookingRequests?: BusinessBookingRequest[];
+    branch?: Pick<Branch, "latitude" | "longitude"> | null;
+    coords?: { lat: number; lng: number };
   },
 ): SavedBusiness {
   const coords =
-    business.latitude != null && business.longitude != null
-      ? { lat: business.latitude, lng: business.longitude }
-      : randomTashkentCoords();
+    extras?.coords ?? resolveApiBusinessCoords(business, extras?.branch);
+
+  const mappedServices = extras?.services ?? [];
+  const productPhotos = mappedServices
+    .map((service) => service.photo)
+    .filter((photo): photo is string => Boolean(photo));
+  const photoUrls = [
+    ...(business.logo ? [business.logo] : []),
+    ...productPhotos,
+  ];
 
   return {
     id: String(business.id),
     status: "confirmed",
-    bookings: 0,
-    views: 0,
+    bookings: extras?.stats?.total_bookings ?? 0,
+    views: extras?.stats?.approved_bookings ?? 0,
     profilePhoto: business.logo,
     name: business.name,
     description: business.description ?? "",
-    category: business.category,
+    category: apiCategoryToUi(business.category),
     website: "",
     phone: business.phone,
     address: business.address,
-    gallery: Array(6).fill(null),
+    gallery: photosToGallerySlots(photoUrls),
     schedule: extras?.schedule ?? DEFAULT_SCHEDULE.map((day) => ({ ...day })),
     lat: coords.lat,
     lng: coords.lng,
-    services: extras?.services ?? [],
-    bookingRequests: [],
+    services: mappedServices,
+    bookingRequests: extras?.bookingRequests ?? [],
     defaultBranchId: extras?.defaultBranchId,
+  };
+}
+
+function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
+  if (status === "approved" || status === "accepted") return "accepted";
+  if (status === "waiting") return "waiting";
+  if (status === "cancelled" || status === "rejected") return "cancelled";
+  return "pending";
+}
+
+export function apiBookingToBusinessBookingRequest(
+  booking: ApiBooking,
+  serviceName = "Услуга",
+  customerName = "Клиент",
+): BusinessBookingRequest {
+  return {
+    id: String(booking.id),
+    time: booking.start_time.slice(0, 5),
+    customerName,
+    serviceName,
+    price: booking.total_price,
+    status: apiBookingStatusToUi(booking.status),
   };
 }
 
@@ -158,6 +245,7 @@ export function apiBusinessToShop(
   business: ApiBusiness,
   services: BusinessService[] = [],
   defaultBranchId?: number,
+  branch?: Pick<Branch, "latitude" | "longitude"> | null,
 ): ShopsType {
   const activeServices = services.filter((service) => service.active);
   const minPrice =
@@ -165,15 +253,25 @@ export function apiBusinessToShop(
       ? Math.min(...activeServices.map((service) => service.price))
       : 50000;
 
+  const coords = resolveApiBusinessCoords(business, branch);
+  const savedBusiness = {
+    profilePhoto: business.logo,
+    gallery: [] as (string | null)[],
+    services,
+  };
+  const photoUrls = collectBusinessPhotoUrls(savedBusiness);
+
   return {
     id: business.id,
     apiBusinessId: business.id,
     apiBranchId: defaultBranchId,
     title: business.name,
-    lat: business.latitude ?? randomTashkentCoords().lat,
-    lng: business.longitude ?? randomTashkentCoords().lng,
-    type: business.category,
-    img: assets.map.photo1,
+    lat: coords.lat,
+    lng: coords.lng,
+    type: businessCategoryToMapFilter(apiCategoryToUi(business.category)),
+    img: photoUrls[0] ?? assets.map.photo1,
+    profilePhoto: business.logo,
+    gallery: photoUrls,
     desc: business.description ?? "",
     rating: 0,
     reviews: 0,
@@ -183,7 +281,7 @@ export function apiBusinessToShop(
     address: business.address,
     district: "Ташкент",
     phone: business.phone,
-    category: business.category,
+    category: apiCategoryToUi(business.category),
     distance: "—",
     time: 60,
     services: activeServices.map((service) => ({

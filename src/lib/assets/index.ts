@@ -34,6 +34,7 @@ import phoneIcon from "@/assets/images/phoneIcon.svg";
 import strenght from "@/assets/images/strenghtIcon.svg";
 import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
+
 import bussinesPhoto from "@/assets/images/businessPhoto.png";
 import callPhone from "@/assets/images/call.svg";
 import tg from "@/assets/images/tg.svg";
@@ -69,8 +70,29 @@ import nightThemeJpeg from "@/assets/images/nightThemeJpeg.jpg";
 import lightThemeJpeg from "@/assets/images/lightThemeJpeg.jpg";
 import langIcon from "@/assets/images/langIcon.svg";
 import alertIcon from "@/assets/images/alart.svg";
+import sunIcon from "@/assets/images/sunIcon.svg";
+import eyeIcon from "@/assets/images/eyeIcon.svg";
+import googleIcon from "@/assets/images/googleIcon.svg";
+import telegramIcon from "@/assets/images/telegramIcon.svg";
+import emptyNotification from "@/assets/images/emptyNotification.jpg";
+import book from "@/assets/images/bookbooking.svg";
+import cardSupport from "@/assets/images/cardSupport.svg";
+import bookandpen from "@/assets/images/bookandpen.svg";
+import clock from "@/assets/images/clock.svg";
+import securityIcon from "@/assets/images/securityIcon.svg";
+import profile from "@/assets/images/profile.jpg";
+
 
 export const assets = {
+  common: {
+    sunIcon,
+  },
+  auth: {
+    eyeIcon,
+    googleIcon,
+    telegramIcon,
+    profile
+  },
   nav: {
     home,
     map,
@@ -93,6 +115,7 @@ export const assets = {
     card,
     discount,
     trash,
+    emptyNotification,
   },
   hero: {
     photo1: mainPhoto1,
@@ -135,6 +158,11 @@ export const assets = {
     phone: callPhone,
     tg,
     email,
+    book,
+    cardSupport,
+    bookandpen,
+    clock,
+    securityIcon
   },
   booking: {
     kebabIcon,
@@ -168,6 +196,6 @@ export const assets = {
     alert: alertIcon,
     edit: editIcon,
     arrow: arrowDown,
-    avatar: mockPhoto1,
+    avatar: profile,
   },
 } as const;

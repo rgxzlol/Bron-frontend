@@ -1,20 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hasStoreHydrated, onStoreHydrated } from "@/lib/store/persist";
 import { useAuthStore } from "@/store/auth.store";
 
 export function useAuthHydrated() {
-  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(() => hasStoreHydrated(useAuthStore));
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setHydrated(true);
-      return;
-    }
-
-    return useAuthStore.persist.onFinishHydration(() => {
-      setHydrated(true);
-    });
+    return onStoreHydrated(useAuthStore, () => setHydrated(true));
   }, []);
 
   return hydrated;

@@ -23,6 +23,7 @@ import type { MapLocationFilter } from "@/store/mapFilter.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
+import { onStoreHydrated } from "@/lib/store/persist"
 import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -414,12 +415,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   useEffect(() => {
     const sync = () => syncMarkersRef.current()
 
-    if (useBusinessStore.persist.hasHydrated()) {
-      sync()
-      return
-    }
-
-    return useBusinessStore.persist.onFinishHydration(sync)
+    return onStoreHydrated(useBusinessStore, sync)
   }, [])
 
   useEffect(() => {

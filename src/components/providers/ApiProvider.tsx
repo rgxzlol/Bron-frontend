@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { onStoreHydrated } from "@/lib/store/persist";
 import { setTokenGetter } from "@/lib/api/token";
 import { setAuthCookie } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/auth.store";
@@ -24,12 +25,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       }
     }
 
-    if (useAuthStore.persist.hasHydrated()) {
-      syncAuthCookie();
-      return;
-    }
-
-    return useAuthStore.persist.onFinishHydration(syncAuthCookie);
+    return onStoreHydrated(useAuthStore, syncAuthCookie);
   }, []);
 
   useEffect(() => {

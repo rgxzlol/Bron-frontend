@@ -8,7 +8,7 @@ import SearchBar from "./SearchBar";
 
 export default function Header() {
   return (
-    <header className="my-[45px] flex justify-between">
+    <header className="sticky top-0 z-50 my-[45px] flex justify-between">
       <SearchBar />
 
       <div className="flex gap-[10px]">

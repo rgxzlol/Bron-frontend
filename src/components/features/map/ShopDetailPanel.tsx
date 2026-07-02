@@ -1,12 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { formatPrice, formatRating } from "@/lib/formatPrice";
 import {
-  formatDurationMinutes,
   pluralizeReviews,
 } from "@/lib/pluralize";
+import {
+  getShopGallery,
+  isRemoteShopImage,
+} from "@/lib/business/shopImages";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import s from "./fullMap.module.css";
@@ -22,6 +26,23 @@ export default function ShopDetailPanel({
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
+  const gallery = getShopGallery(shop);
+  const [imageIndex, setImageIndex] = useState(0);
+  const currentImage = gallery[imageIndex] ?? shop.img;
+  const activeServices = shop.services ?? [];
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [shop.id]);
+
+  function showPrevImage() {
+    setImageIndex((index) => (index > 0 ? index - 1 : gallery.length - 1));
+  }
+
+  function showNextImage() {
+    setImageIndex((index) => (index < gallery.length - 1 ? index + 1 : 0));
+  }
+
   return (
     <aside
       className={s.panel}
@@ -31,13 +52,23 @@ export default function ShopDetailPanel({
     >
       <div className={s.panelScroll}>
         <div className={s.imageWrap}>
-          <Image
-            className={s.image}
-            src={shop.img}
-            alt={shop.title}
-            sizes="400px"
-            priority
-          />
+          {isRemoteShopImage(currentImage) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className={s.image}
+              src={currentImage}
+              alt={shop.title}
+            />
+          ) : (
+            <Image
+              className={s.image}
+              src={currentImage}
+              alt={shop.title}
+              fill
+              sizes="400px"
+              priority
+            />
+          )}
           <button
             type="button"
             className={s.closeBtn}
@@ -46,7 +77,29 @@ export default function ShopDetailPanel({
           >
             <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
           </button>
-          <span className={s.slideCounter}>1/3</span>
+          {gallery.length > 1 && (
+            <>
+              <button
+                type="button"
+                className={`${s.galleryNav} ${s.galleryNavPrev}`}
+                onClick={showPrevImage}
+                aria-label="Предыдущее фото"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className={`${s.galleryNav} ${s.galleryNavNext}`}
+                onClick={showNextImage}
+                aria-label="Следующее фото"
+              >
+                ›
+              </button>
+            </>
+          )}
+          <span className={s.slideCounter}>
+            {imageIndex + 1}/{gallery.length}
+          </span>
         </div>
 
         <div className={s.body}>
@@ -66,29 +119,13 @@ export default function ShopDetailPanel({
             </div>
           </div>
 
-          <p className={s.category}>{shop.type}</p>
+          <p className={s.category}>{shop.category}</p>
           <p className={s.desc}>{shop.desc}</p>
 
           <div className={s.stats}>
             <div className={s.statBox}>
               <span className={s.statLabel}>Открыто</span>
               <span className={s.statValue}>{shop.hours}</span>
-            </div>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>Своб.Мест</span>
-              <span className={s.statValueRow}>
-                <Image
-                  src={assets.map.freeSeat}
-                  alt=""
-                  width={16}
-                  height={16}
-                />
-                <span>{shop.freeSeats}</span>
-              </span>
-            </div>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>от {formatPrice(shop.price)} сум</span>
-              <span className={s.statValue}>за час</span>
             </div>
           </div>
 
@@ -120,30 +157,46 @@ export default function ShopDetailPanel({
                 {shop.phone}
               </a>
             </div>
+
+            {shop.website && (
+              <div className={s.phoneRow}>
+                <Image
+                  className={s.contactIcon}
+                  src={assets.map.geoMark}
+                  alt=""
+                  width={20}
+                  height={20}
+                />
+                <a
+                  className={s.phone}
+                  href={shop.website.startsWith("http") ? shop.website : `https://${shop.website}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {shop.website}
+                </a>
+              </div>
+            )}
           </div>
 
-          <div className={s.pricing}>
-            <h3 className={s.pricingTitle}>Ценна</h3>
-            <div className={s.priceItem}>
-              <div className={s.priceIcon}>
-                <Image
-                  src={assets.map.strenght}
-                  alt=""
-                  width={24}
-                  height={24}
-                />
-              </div>
-              <div className={s.priceInfo}>
-                <span className={s.priceName}>{shop.category}</span>
-                <span className={s.priceDuration}>
-                  {formatDurationMinutes(shop.time)}
-                </span>
-              </div>
-              <span className={s.priceAmount}>
-                {formatPrice(shop.price)} сум
-              </span>
+          {activeServices.length > 0 && (
+            <div className="flex flex-col gap-[8px]">
+              <h3 className={s.pricingTitle}>Услуги</h3>
+              {activeServices.map((service) => (
+                <div key={service.id} className={s.priceItem}>
+                  <div className={s.priceInfo}>
+                    <span className={s.priceName}>{service.title}</span>
+                    {service.description && (
+                      <span className={s.priceDuration}>{service.description}</span>
+                    )}
+                  </div>
+                  <span className={s.priceAmount}>
+                    {formatPrice(service.priceFrom)} сум
+                  </span>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
 
           <Button
             text="Забронировать место"

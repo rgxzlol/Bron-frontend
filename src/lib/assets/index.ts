@@ -39,24 +39,49 @@ import bussinesPhoto from "@/assets/images/businessPhoto.png";
 import callPhone from "@/assets/images/call.svg";
 import tg from "@/assets/images/tg.svg";
 import email from "@/assets/images/email.svg";
+import close from "@/assets/images/close.svg";
+import calendar from "@/assets/images/calendar.svg";
+import card from "@/assets/images/card.svg";
+import discount from "@/assets/images/discount.svg";
+import trash from "@/assets/images/trash.svg";
+import kebabIcon from "@/assets/images/kebabIcon.svg";
+import gpsIcon from "@/assets/images/gpsIcon.svg";
+import guestsIcon from "@/assets/images/guestsIcon.svg";
+import bagIcon from "@/assets/images/bagIcon.svg";
+import arrowDown from "@/assets/images/arrowDown.svg";
+import editIcon from "@/assets/images/editIcon.svg";
+import deleteIcon from "@/assets/images/deleteIcon.svg";
+import visaMaster from "@/assets/images/visa icon.svg";
+import pushNotification from "@/assets/images/pushNotification.svg";
+import emailIcon from "@/assets/images/emailIcon.svg";
+import myBookingIcon from "@/assets/images/myBookingIcon.svg";
+import salesIcon from "@/assets/images/sales.svg";
+import cameraIcon from "@/assets/images/cameraIcon.svg";
+import profileData from "@/assets/images/profileData.svg";
+import cardIcon from "@/assets/images/cardIcon.svg";
+import settings from "@/assets/images/settings.svg";
+import quitAcc from "@/assets/images/quitAcc.svg";
+import quitProfilePng from "@/assets/images/quitProfile.png";
+import visa from "@/assets/images/visa.svg";
+import masterCard from "@/assets/images/masterCard.svg";
+import lightTheme from "@/assets/images/lightTheme.svg";
+import nightTheme from "@/assets/images/nightTheme.svg";
+import nightThemeJpeg from "@/assets/images/nightThemeJpeg.jpg";
+import lightThemeJpeg from "@/assets/images/lightThemeJpeg.jpg";
+import langIcon from "@/assets/images/langIcon.svg";
+import alertIcon from "@/assets/images/alart.svg";
+import sunIcon from "@/assets/images/sunIcon.svg";
+import eyeIcon from "@/assets/images/eyeIcon.svg";
+import googleIcon from "@/assets/images/googleIcon.svg";
+import telegramIcon from "@/assets/images/telegramIcon.svg";
+import emptyNotification from "@/assets/images/emptyNotification.jpg";
+import book from "@/assets/images/bookbooking.svg";
+import cardSupport from "@/assets/images/cardSupport.svg";
+import bookandpen from "@/assets/images/bookandpen.svg";
+import clock from "@/assets/images/clock.svg";
+import securityIcon from "@/assets/images/securityIcon.svg";
+import profile from "@/assets/images/profile.jpg";
 
-import close from "@/assets/images/close.svg"
-import calendar from "@/assets/images/calendar.svg"
-import card from "@/assets/images/card.svg"
-import discount from "@/assets/images/discount.svg"
-import trash from "@/assets/images/trash.svg"
-import kebabIcon from "@/assets/images/kebabIcon.svg"
-import gpsIcon from "@/assets/images/gpsIcon.svg"
-import guestsIcon from "@/assets/images/guestsIcon.svg"
-import bagIcon from "@/assets/images/bagIcon.svg"
-import arrowDown from "@/assets/images/arrowDown.svg"
-import editIcon from "@/assets/images/editIcon.svg"
-import deleteIcon from "@/assets/images/deleteIcon.svg"
-import sunIcon from "@/assets/images/sunIcon.svg"
-import eyeIcon from "@/assets/images/eyeIcon.svg"
-import googleIcon from "@/assets/images/googleIcon.svg"
-import telegramIcon from "@/assets/images/telegramIcon.svg"
-import emptyNotification from "@/assets/images/emptyNotification.jpg"
 
 export const assets = {
   common: {
@@ -66,6 +91,7 @@ export const assets = {
     eyeIcon,
     googleIcon,
     telegramIcon,
+    profile
   },
   nav: {
     home,
@@ -123,16 +149,20 @@ export const assets = {
     phoneIcon,
     strenght,
     quitIcon,
-    security
+    security,
   },
-
   bussines: {
     photo1: bussinesPhoto,
   },
   support: {
     phone: callPhone,
     tg,
-    email
+    email,
+    book,
+    cardSupport,
+    bookandpen,
+    clock,
+    securityIcon
   },
   booking: {
     kebabIcon,
@@ -142,5 +172,30 @@ export const assets = {
     arrowDown,
     editIcon,
     deleteIcon,
-  }
+  },
+  profile: {
+    profileData,
+    myBookings: myBookingIcon,
+    card: cardIcon,
+    settings,
+    quit: quitAcc,
+    quitIllustration: quitProfilePng,
+    camera: cameraIcon,
+    push: pushNotification,
+    email: emailIcon,
+    booking: myBookingIcon,
+    sales: salesIcon,
+    visa,
+    masterCard,
+    visaMaster,
+    lightTheme,
+    nightTheme,
+    lightThemePreview: lightThemeJpeg,
+    nightThemePreview: nightThemeJpeg,
+    lang: langIcon,
+    alert: alertIcon,
+    edit: editIcon,
+    arrow: arrowDown,
+    avatar: profile,
+  },
 } as const;

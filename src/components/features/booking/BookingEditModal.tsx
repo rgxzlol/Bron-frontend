@@ -1,20 +1,50 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
 import DatePicker from '@/components/shared/DatePicker';
 import TimePicker from '@/components/shared/TimePicker';
+import {
+  buildTimeGroupsFromHours,
+  getAvailableSlotsForDate,
+  getDefaultBookingTime,
+  startOfDay,
+} from '@/lib/booking/timeSlots';
 
 interface BookingEditModalProps {
     isOpen: boolean;
     onClose: () => void;
+    hours?: string;
 }
 
-export const BookingEditModal = ({ isOpen, onClose }: BookingEditModalProps) => {
-    const [viewMonth, setViewMonth] = useState(() => new Date(2026, 5, 1));
-    const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 5, 12));
-    const [selectedTime, setSelectedTime] = useState("12:00");
-    const today = useMemo(() => new Date(2026, 5, 2), []);
+export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: BookingEditModalProps) => {
+    const today = useMemo(() => startOfDay(new Date()), []);
+    const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
+    const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+    const timeGroups = useMemo(() => buildTimeGroupsFromHours(hours), [hours]);
+    const allTimeSlots = useMemo(
+      () => timeGroups.flatMap((group) => group.slots),
+      [timeGroups],
+    );
+    const [selectedTime, setSelectedTime] = useState(() => {
+      const slots = buildTimeGroupsFromHours(hours).flatMap((group) => group.slots);
+      return getDefaultBookingTime(slots, startOfDay(new Date()), new Date());
+    });
+
+    const disabledTimeSlots = useMemo(() => {
+      const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+      const availableSet = new Set(available);
+      return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
+    }, [allTimeSlots, selectedDate]);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
+      const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+      if (!available.includes(selectedTime)) {
+        setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
+      }
+    }, [allTimeSlots, isOpen, selectedDate, selectedTime]);
 
     if (!isOpen) return null;
 
@@ -68,11 +98,14 @@ export const BookingEditModal = ({ isOpen, onClose }: BookingEditModalProps) => 
                         selectedDate={selectedDate}
                         onSelectedDateChange={setSelectedDate}
                         today={today}
+                        minDate={today}
                     />
                     <div className="mx-auto">
                         <TimePicker
                             selectedTime={selectedTime}
                             onSelectedTimeChange={setSelectedTime}
+                            timeGroups={timeGroups}
+                            disabledSlots={disabledTimeSlots}
                         />
 
                     </div>

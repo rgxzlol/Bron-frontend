@@ -6,15 +6,20 @@ export type ShopService = {
   description: string;
   priceFrom: number;
   durationMin: number;
-  icon?: StaticImageData;
+  icon?: StaticImageData | string;
 };
 
 export type ShopsType = {
   id: number;
+  apiBusinessId?: number;
+  apiBranchId?: number;
   title: string;
   lat: number;
   lng: number;
-  img: StaticImageData;
+  img: StaticImageData | string;
+  profilePhoto?: string | null;
+  gallery?: string[];
+  website?: string;
   type: string;
   desc: string;
   rating: number;

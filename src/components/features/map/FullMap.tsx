@@ -1,286 +1,644 @@
 "use client"
 
 import mapboxgl from "mapbox-gl"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import Image from "next/image"
 import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
+import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
+import {
+  businessMatchesBusinessCategory,
+  shopMatchesBusinessCategory,
+} from "@/lib/business/mapCategory"
 import { businessMatchesMapFilter } from "@/lib/business/coordinates"
 import { businessToShop } from "@/lib/business/toShop"
+import { mergeBusinessFromApi } from "@/lib/business/photos"
+import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync"
+import { getDistanceKm } from "@/lib/distance"
+import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
+import { useMapFilterStore } from "@/store/mapFilter.store"
+import { useProfileStore } from "@/store/profile.store"
+import { useAuthStore } from "@/store/auth.store"
+import type { MapLocationFilter } from "@/store/mapFilter.store"
 import type { SavedBusiness } from "@/store/business.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
-import UserBusinessPanel from "./UserBusinessPanel"
-import { assets } from "@/lib/assets"
+import MapCategoriesModal from "./MapCategoriesModal"
+import { onStoreHydrated } from "@/lib/store/persist"
+import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
 import "mapbox-gl/dist/mapbox-gl.css"
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+const mapboxToken = getMapboxToken()
+if (mapboxToken) {
+  mapboxgl.accessToken = mapboxToken
+}
 
 type FullMapProps = {
   onStartBooking: (shop: ShopsType, serviceIds?: string[]) => void
 }
 
 const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
+const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
+const INITIAL_MAP_ZOOM = 12
+const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
+const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
+
+function createShopMarkerElement(title: string, isHospital: boolean) {
+  const el = document.createElement("div")
+  el.style.cssText = [
+    "display:flex",
+    "align-items:center",
+    "gap:8px",
+    "padding:8px 16px",
+    "border-radius:9999px",
+    "background:#ffffff",
+    "border:1px solid #e0e0e8",
+    "box-shadow:0 4px 14px rgba(0,0,0,0.12)",
+    "cursor:pointer",
+    "white-space:nowrap",
+    "color:#111111",
+    "font-weight:600",
+    "font-size:14px",
+    "line-height:1.2",
+  ].join(";")
+
+  if (isHospital) {
+    const icon = document.createElement("img")
+    icon.src = assets.categories.health.src
+    icon.width = 16
+    icon.height = 16
+    icon.alt = ""
+    el.appendChild(icon)
+  }
+
+  const label = document.createElement("span")
+  label.textContent = title
+  el.appendChild(label)
+
+  return el
+}
+
+function createUserBusinessMarkerElement(title: string) {
+  const el = document.createElement("div")
+  el.style.cssText = [
+    "padding:8px 16px",
+    "border-radius:9999px",
+    "background:#ede8ff",
+    "border:2px solid #6b4ee6",
+    "box-shadow:0 4px 14px rgba(107,78,230,0.25)",
+    "cursor:pointer",
+    "white-space:nowrap",
+    "color:#6b4ee6",
+    "font-weight:600",
+    "font-size:14px",
+    "line-height:1.2",
+  ].join(";")
+  el.textContent = title
+  return el
+}
+
+function getShopServices(shop: ShopsType) {
+  return shop.services ?? []
+}
+
+function shouldOpenServiceSelection(shop: ShopsType) {
+  return getShopServices(shop).length > 1
+}
+
+function businessHasActiveServices(business: SavedBusiness) {
+  return business.services.some((service) => service.active)
+}
+
+function shopHasActiveServices(shop: ShopsType) {
+  return (shop.services?.length ?? 0) > 0
+}
+
+function matchesDistanceFilter(
+  userLat: number,
+  userLng: number,
+  targetLat: number,
+  targetLng: number,
+  locationFilter: MapLocationFilter | null,
+): boolean {
+  if (!locationFilter) return true
+
+  const distance = getDistanceKm(userLat, userLng, targetLat, targetLng)
+
+  if (locationFilter === "nearby") return distance < 3
+  if (locationFilter === "3-7") return distance >= 3 && distance <= 7
+  if (locationFilter === "10-15") return distance >= 10 && distance <= 15
+
+  return true
+}
 
 export default function FullMap({ onStartBooking }: FullMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null)
+  const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
+  const locationFilterReadyRef = useRef(false)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
-  const [selectedHospital, setSelectedHospital] =
+  const [serviceSelectionShop, setServiceSelectionShop] =
     useState<ShopsType | null>(null)
-  const [selectedUserBusiness, setSelectedUserBusiness] =
-    useState<SavedBusiness | null>(null)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const [activeFilter, setActiveFilter] = useState("Все")
+  const [apiShops, setApiShops] = useState<ShopsType[]>([])
+  const theme = useProfileStore((s) => s.theme)
+  const token = useAuthStore((s) => s.token)
   const businesses = useBusinessStore((s) => s.businesses)
+  const mapFocusBusinessId = useBusinessStore((s) => s.mapFocusBusinessId)
+  const clearMapFocus = useBusinessStore((s) => s.clearMapFocus)
+  const businessMapKey = businesses
+    .map((business) => {
+      const photoCount =
+        (business.profilePhoto ? 1 : 0) +
+        business.gallery.filter(Boolean).length
+      const activeServices = business.services.filter((service) => service.active).length
+      return `${business.id}:${business.lat}:${business.lng}:${photoCount}:${activeServices}`
+    })
+    .join("|")
+  const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
+  const appliedMaxPrice = useMapFilterStore((s) => s.appliedMaxPrice)
+  const appliedLocation = useMapFilterStore((s) => s.appliedLocation)
 
   useEffect(() => {
-    if (!mapContainer.current) return
+    const localById = new Map(businesses.map((business) => [business.id, business]))
 
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/rgxzlol/cmpvg516h000o01r1279x7aje",
-      center: [69.2797, 41.3111],
-      zoom: 12,
-    })
+    void fetchPublicBusinessesFromApi()
+      .then((items) => {
+        setApiShops(
+          items.map((business) => {
+            const local = localById.get(business.id)
+            const source = local
+              ? mergeBusinessFromApi(business, local)
+              : business
+            return businessToShop(source)
+          }),
+        )
+      })
+      .catch((error) => console.error(error))
+  }, [businessMapKey, businesses, token])
 
-    map.setProjection("mercator")
-
-    mapRef.current = map
-
-    map.on("load", () => {
-      if (!navigator.geolocation) return
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lng = position.coords.longitude
-          const lat = position.coords.latitude
-
-          const el = document.createElement("div")
-
-          el.className = `
-            w-5 h-5 rounded-full bg-[#0a6af7]
-            border-4 border-white shadow-lg
-          `
-
-          userMarkerRef.current = new mapboxgl.Marker(el)
-            .setLngLat([lng, lat])
-            .addTo(map)
-
-          map.flyTo({
-            center: [lng, lat],
-            zoom: 14,
-            speed: 1.2,
-          })
-        },
-        (error) => {
-          console.error(error)
-        },
-        {
-          enableHighAccuracy: true,
-        }
-      )
-    })
-
-    return () => {
-      markersRef.current.forEach((marker) => marker.remove())
-      userMarkerRef.current?.remove()
-      map.remove()
-    }
-  }, [])
-
-  function goToMyLocation() {
-    const map = mapRef.current
-
-    if (!map || !navigator.geolocation) return
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lng = position.coords.longitude
-        const lat = position.coords.latitude
-
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setLngLat([lng, lat])
-        } else {
-          const el = document.createElement("div")
-
-          el.className = `
-            w-5 h-5 rounded-full bg-[#0a6af7]
-            border-4 border-white shadow-lg
-          `
-
-          userMarkerRef.current = new mapboxgl.Marker(el)
-            .setLngLat([lng, lat])
-            .addTo(map)
-        }
-
-        map.flyTo({
-          center: [lng, lat],
-          zoom: 15,
-          speed: 1.2,
-        })
-      },
-      (err) => console.error(err),
-      {
-        enableHighAccuracy: true,
-      }
-    )
+  function createUserMarkerElement() {
+    const el = document.createElement("div")
+    el.style.cssText = [
+      "width:20px",
+      "height:20px",
+      "border-radius:9999px",
+      "background:#0a6af7",
+      "border:4px solid #ffffff",
+      "box-shadow:0 2px 8px rgba(0,0,0,0.25)",
+    ].join(";")
+    return el
   }
 
-  useEffect(() => {
-    const map = mapRef.current
+  function placeUserMarker(
+    map: mapboxgl.Map,
+    lng: number,
+    lat: number,
+  ) {
+    userMarkerRef.current?.remove()
 
-    if (!map) return
+    userMarkerRef.current = new mapboxgl.Marker(createUserMarkerElement())
+      .setLngLat([lng, lat])
+      .addTo(map)
+  }
+
+  function whenMapReady(map: mapboxgl.Map, callback: () => void) {
+    if (map.isStyleLoaded()) {
+      callback()
+      return
+    }
+
+    map.once("style.load", callback)
+  }
+
+  function enrichShopWithDistance(shop: ShopsType): ShopsType {
+    const userLocation = userLocationRef.current
+    if (!userLocation) return shop
+
+    return {
+      ...shop,
+      distance: `${getDistanceKm(userLocation.lat, userLocation.lng, shop.lat, shop.lng)} км`,
+    }
+  }
+
+  function matchesShopFilters(shop: ShopsType): boolean {
+    if (!hasValidCoords(shop)) return false
+
+    const matchesPill =
+      activeFilter === "Все"
+        ? true
+        : activeFilter === "Спортзал"
+          ? shop.title.toLowerCase().includes("bronfitness") || shop.type === "Спортзал"
+          : shop.type === activeFilter
+
+    if (!matchesPill) return false
+
+    if (
+      appliedCategory &&
+      !shopMatchesBusinessCategory(shop.type, shop.category, appliedCategory)
+    ) {
+      return false
+    }
+
+    if (appliedMaxPrice != null && shop.price > appliedMaxPrice) {
+      return false
+    }
+
+    const userLocation = userLocationRef.current
+    if (
+      locationFilterReadyRef.current &&
+      userLocation &&
+      appliedLocation &&
+      !matchesDistanceFilter(
+        userLocation.lat,
+        userLocation.lng,
+        shop.lat,
+        shop.lng,
+        appliedLocation,
+      )
+    ) {
+      return false
+    }
+
+    return true
+  }
+
+  function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
+    const coords = normalizeCoords(shop.lat, shop.lng)
+    if (!coords) return
+
+    if (shouldOpenServiceSelection(shop)) {
+      setSelectedShop(null)
+      setServiceSelectionShop(enrichShopWithDistance(shop))
+    } else {
+      openShop(shop, map)
+      return
+    }
+
+    map.flyTo({
+      center: [coords.lng, coords.lat],
+      zoom: 15,
+      speed: 1.2,
+    })
+  }
+
+  function openShop(shop: ShopsType, map: mapboxgl.Map) {
+    const coords = normalizeCoords(shop.lat, shop.lng)
+    if (!coords) return
+
+    setServiceSelectionShop(null)
+    setSelectedShop(enrichShopWithDistance(shop))
+
+    map.flyTo({
+      center: [coords.lng, coords.lat],
+      zoom: 15,
+      speed: 1.2,
+    })
+  }
+
+  const syncMarkers = useCallback(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
 
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const filteredShops =
-      activeFilter === "Все"
-        ? ShopsPlace
-        : ShopsPlace.filter((shop) => {
-            if (
-              activeFilter === "Спортзал" &&
-              shop.title.toLowerCase().includes("bronfitness")
-            ) {
-              return true
-            }
+    const userBusinessIds = new Set(businesses.map((business) => business.id))
 
-            return shop.type === activeFilter
-          })
+    const filteredShops = [...ShopsPlace, ...apiShops].filter((shop) => {
+      if (
+        shop.apiBusinessId != null &&
+        userBusinessIds.has(String(shop.apiBusinessId))
+      ) {
+        return false
+      }
 
-    const filteredUserBusinesses = businesses.filter((business) =>
-      businessMatchesMapFilter(business.category, activeFilter),
-    )
+      if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
+        return false
+      }
+
+      return matchesShopFilters(shop)
+    })
+
+    const filteredUserBusinesses = businesses.filter((business) => {
+      if (!hasValidCoords(business)) return false
+      if (!businessHasActiveServices(business)) return false
+      if (!businessMatchesMapFilter(business.category || "Другое", activeFilter)) {
+        return false
+      }
+      return true
+    })
 
     filteredShops.forEach((shop) => {
-      const el = document.createElement("div")
+      const coords = normalizeCoords(shop.lat, shop.lng)
+      if (!coords) return
 
       const isHospital = shop.type === "Больница"
+      const el = createShopMarkerElement(shop.title, isHospital)
 
-      el.className = `
-        bg-white px-4 py-2 rounded-full shadow-lg
-        cursor-pointer whitespace-nowrap transition
-        border border-gray-200
-      `
-
-      const iconSrc = isHospital ? assets.categories.health.src : ""
-
-      el.innerHTML = `
-        <div class="flex items-center gap-2">
-          ${
-            isHospital
-              ? `<img src="${iconSrc}" width="16" height="16" />`
-              : ""
-          }
-          <span class="font-semibold text-[14px]">
-            ${shop.title}
-          </span>
-        </div>
-      `
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([shop.lng, shop.lat])
+      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([coords.lng, coords.lat])
         .addTo(map)
 
       marker.getElement().addEventListener("click", () => {
-        setSelectedUserBusiness(null)
-
-        if (shop.type === "Больница") {
-          setSelectedShop(null)
-          setSelectedHospital(shop)
-        } else {
-          setSelectedHospital(null)
-          setSelectedShop(shop)
-        }
-
-        map.flyTo({
-          center: [shop.lng, shop.lat],
-          zoom: 15,
-          speed: 1.2,
-        })
+        openShopOrServiceSelection(shop, map)
       })
 
       markersRef.current.push(marker)
     })
 
     filteredUserBusinesses.forEach((business) => {
-      const el = document.createElement("div")
+      const coords = normalizeCoords(business.lat, business.lng)
+      if (!coords) return
 
-      el.className = `
-        bg-[#ede8ff] px-4 py-2 rounded-full shadow-lg
-        cursor-pointer whitespace-nowrap transition
-        border-2 border-[#6b4ee6]
-      `
+      const el = createUserBusinessMarkerElement(business.name || "Мой бизнес")
 
-      el.innerHTML = `
-        <div class="flex items-center gap-2">
-          <span class="font-semibold text-[14px] text-[#6b4ee6]">
-            ${business.name || "Мой бизнес"}
-          </span>
-        </div>
-      `
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([business.lng, business.lat])
+      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([coords.lng, coords.lat])
         .addTo(map)
 
       marker.getElement().addEventListener("click", () => {
-        setSelectedShop(null)
-        setSelectedHospital(null)
-        setSelectedUserBusiness(business)
-
-        map.flyTo({
-          center: [business.lng, business.lat],
-          zoom: 15,
-          speed: 1.2,
-        })
+        const shop = businessToShop(business, userLocationRef.current)
+        openShopOrServiceSelection(shop, map)
       })
 
       markersRef.current.push(marker)
     })
-  }, [activeFilter, businesses])
+  }, [
+    activeFilter,
+    businesses,
+    appliedCategory,
+    appliedMaxPrice,
+    appliedLocation,
+    apiShops,
+  ])
 
-  function handleHospitalContinue(serviceIds: string[]) {
-    if (!selectedHospital) return
+  const syncMarkersRef = useRef(syncMarkers)
+  syncMarkersRef.current = syncMarkers
 
-    setSelectedHospital(null)
+  useEffect(() => {
+    if (!mapContainer.current || !isMapboxConfigured()) return
 
-    onStartBooking(selectedHospital, serviceIds)
+    let cancelled = false
+    const persistedLocation = useMapFilterStore.getState().appliedLocation
+    locationFilterReadyRef.current = !persistedLocation
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: theme === "dark" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE,
+      center: INITIAL_MAP_CENTER,
+      zoom: INITIAL_MAP_ZOOM,
+      projection: "mercator",
+    })
+
+    mapRef.current = map
+
+    const handleMapReady = () => {
+      if (cancelled || mapRef.current !== map) return
+      syncMarkersRef.current()
+    }
+
+    map.once("load", handleMapReady)
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (cancelled || mapRef.current !== map) return
+
+          const lng = position.coords.longitude
+          const lat = position.coords.latitude
+          userLocationRef.current = { lat, lng }
+
+          whenMapReady(map, () => {
+            placeUserMarker(map, lng, lat)
+
+            if (persistedLocation) {
+              locationFilterReadyRef.current = true
+              syncMarkersRef.current()
+            }
+
+            map.flyTo({
+              center: [lng, lat],
+              zoom: 14,
+              speed: 1.2,
+            })
+          })
+        },
+        (error) => {
+          console.error(error)
+          locationFilterReadyRef.current = false
+        },
+        {
+          enableHighAccuracy: true,
+        },
+      )
+    }
+
+    return () => {
+      cancelled = true
+      markersRef.current.forEach((marker) => marker.remove())
+      markersRef.current = []
+      userMarkerRef.current?.remove()
+      userMarkerRef.current = null
+      map.remove()
+      mapRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const sync = () => syncMarkersRef.current()
+
+    return onStoreHydrated(useBusinessStore, sync)
+  }, [])
+
+  useEffect(() => {
+    if (!mapFocusBusinessId) return
+
+    const business = businesses.find((item) => item.id === mapFocusBusinessId)
+    const coords = business ? normalizeCoords(business.lat, business.lng) : null
+    const map = mapRef.current
+
+    if (!business || !coords || !map) return
+
+    whenMapReady(map, () => {
+      syncMarkersRef.current()
+      map.flyTo({
+        center: [coords.lng, coords.lat],
+        zoom: 15,
+        speed: 1.2,
+      })
+      clearMapFocus()
+    })
+  }, [mapFocusBusinessId, businesses, clearMapFocus])
+
+  const initialThemeRef = useRef(theme)
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (theme === initialThemeRef.current) return
+
+    initialThemeRef.current = theme
+
+    const style = theme === "dark" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE
+
+    map.setStyle(style)
+    map.once("style.load", () => {
+      syncMarkersRef.current()
+    })
+  }, [theme])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    whenMapReady(map, () => syncMarkersRef.current())
+  }, [syncMarkers])
+
+  function resetMapToInitialView() {
+    const map = mapRef.current
+    if (!map) return
+
+    map.flyTo({
+      center: INITIAL_MAP_CENTER,
+      zoom: INITIAL_MAP_ZOOM,
+      speed: 1.2,
+    })
+  }
+
+  function handleFilterSelect(filter: string) {
+    setActiveFilter(filter)
+    resetMapToInitialView()
+  }
+
+  function handleOpenCategories() {
+    setShowCategoriesModal(true)
+  }
+
+  function requestUserLocation(onSuccess?: () => void, applyLocationFilter = false) {
+    if (!navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lng = position.coords.longitude
+        const lat = position.coords.latitude
+        userLocationRef.current = { lat, lng }
+
+        if (applyLocationFilter) {
+          locationFilterReadyRef.current = true
+        }
+
+        const map = mapRef.current
+        if (!map) return
+
+        whenMapReady(map, () => {
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLngLat([lng, lat])
+          } else {
+            placeUserMarker(map, lng, lat)
+          }
+          syncMarkersRef.current()
+          onSuccess?.()
+        })
+      },
+      (error) => {
+        console.error(error)
+        locationFilterReadyRef.current = false
+        alert("Не удалось определить ваше местоположение. Разрешите доступ к геолокации.")
+      },
+      {
+        enableHighAccuracy: true,
+      },
+    )
+  }
+
+  function handleCategoriesApply() {
+    const location = useMapFilterStore.getState().appliedLocation
+    if (location) {
+      requestUserLocation(() => {
+        const map = mapRef.current
+        const userLocation = userLocationRef.current
+        if (map && userLocation) {
+          map.flyTo({
+            center: [userLocation.lng, userLocation.lat],
+            zoom: 14,
+            speed: 1.2,
+          })
+        }
+      }, true)
+      return
+    }
+
+    locationFilterReadyRef.current = false
+    syncMarkersRef.current()
+    resetMapToInitialView()
+  }
+
+  function goToMyLocation() {
+    const map = mapRef.current
+    if (!map || !navigator.geolocation) return
+
+    requestUserLocation(() => {
+      const userLocation = userLocationRef.current
+      if (!userLocation) return
+
+      map.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 15,
+        speed: 1.2,
+      })
+    })
+  }
+
+  function handleServiceSelectionContinue(serviceIds: string[]) {
+    if (!serviceSelectionShop) return
+
+    const shop = serviceSelectionShop
+    setServiceSelectionShop(null)
+
+    onStartBooking(shop, serviceIds)
   }
 
   function handleShopBook() {
     if (!selectedShop) return
 
+    const shop = selectedShop
+    const services = shop.services ?? []
+
+    if (services.length > 1) {
+      setSelectedShop(null)
+      setServiceSelectionShop(shop)
+      return
+    }
+
     setSelectedShop(null)
-
-    onStartBooking(selectedShop)
-  }
-
-  function handleUserBusinessBook() {
-    if (!selectedUserBusiness) return
-
-    const shop = businessToShop(selectedUserBusiness)
-    setSelectedUserBusiness(null)
-    onStartBooking(shop)
+    onStartBooking(
+      shop,
+      services.length === 1 ? [services[0].id] : undefined,
+    )
   }
 
   return (
     <div className="relative">
-      <div className="absolute top-4 left-4 z-10 flex gap-2 overflow-x-auto max-w-[90%]">
+      <div className="absolute top-4 left-4 z-10 flex max-w-[90%] gap-2 overflow-x-auto">
         {filters.map((filter) => (
           <button
             key={filter}
-            onClick={() => setActiveFilter(filter)}
+            type="button"
+            onClick={() => handleFilterSelect(filter)}
             className={`
               px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
               ${
                 activeFilter === filter
-                  ? "bg-[#0A6AF7] text-white border-black"
-                  : "bg-white text-black border-[#0a6af7]"
+                  ? "bg-[var(--primary)] text-white border-[var(--text-primary)]"
+                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--primary)]"
               }
             `}
           >
@@ -290,8 +648,17 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       </div>
 
       <button
+        type="button"
+        onClick={handleOpenCategories}
+        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
+      >
+        <Image src={assets.header.filter} alt="" width={18} height={18} />
+        Категории
+      </button>
+
+      <button
         onClick={goToMyLocation}
-        className="absolute bottom-4 right-4 z-10 bg-white px-4 py-3 rounded-full shadow-lg border border-[#0a6af7] font-semibold"
+        className="absolute bottom-4 right-4 z-10 bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-3 rounded-full shadow-lg border border-[var(--primary)] font-semibold"
       >
         📍
       </button>
@@ -305,11 +672,31 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         }}
       />
 
-      {selectedHospital && (
+      {!isMapboxConfigured() && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface-muted)] px-6 text-center"
+          style={{ height: "80dvh" }}
+        >
+          <div className="max-w-md">
+            <p className="text-[18px] font-semibold text-[var(--text-primary)]">
+              Карта недоступна
+            </p>
+            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+              Укажите реальный токен Mapbox в файле{" "}
+              <code className="rounded bg-[var(--bg-surface)] px-1 py-0.5">.env.local</code>:
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded-[12px] bg-[var(--bg-surface)] p-3 text-left text-[13px] text-[var(--text-primary)]">
+              NEXT_PUBLIC_MAPBOX_TOKEN=pk.ваш_токен
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {serviceSelectionShop && (
         <HospitalServicesModal
-          hospital={selectedHospital}
-          onClose={() => setSelectedHospital(null)}
-          onContinue={handleHospitalContinue}
+          shop={serviceSelectionShop}
+          onClose={() => setServiceSelectionShop(null)}
+          onContinue={handleServiceSelectionContinue}
         />
       )}
 
@@ -321,13 +708,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         />
       )}
 
-      {selectedUserBusiness && (
-        <UserBusinessPanel
-          business={selectedUserBusiness}
-          onClose={() => setSelectedUserBusiness(null)}
-          onBook={handleUserBusinessBook}
-        />
-      )}
+      <MapCategoriesModal
+        isOpen={showCategoriesModal}
+        onClose={() => setShowCategoriesModal(false)}
+        onApply={handleCategoriesApply}
+      />
     </div>
   )
 }

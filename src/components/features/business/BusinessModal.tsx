@@ -12,6 +12,9 @@ import {
   BUSINESS_CATEGORIES,
   useBusinessStore,
 } from "@/store/business.store";
+import { ApiError } from "@/lib/api/client";
+import { GeocodingError } from "@/lib/geocoding";
+import AddressAutocomplete from "./AddressAutocomplete";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -165,6 +168,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   const profileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -204,7 +208,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     setDraftSchedule(schedule);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!draft.name.trim()) {
       alert("Укажите название бизнеса");
       return;
@@ -221,8 +225,36 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
       alert("Укажите адрес бизнеса");
       return;
     }
-    saveDraft();
-    onSaved();
+    if (draft.lat == null || draft.lng == null) {
+      alert("Выберите адрес из списка подсказок");
+      return;
+    }
+    if (!draft.description.trim()) {
+      alert("Укажите описание бизнеса");
+      return;
+    }
+    if (!draft.profilePhoto) {
+      alert("Загрузите аватар бизнеса");
+      return;
+    }
+    if (!draft.gallery.some(Boolean)) {
+      alert("Загрузите хотя бы одно дополнительное фото");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await saveDraft();
+      onSaved();
+    } catch (error) {
+      const message =
+        error instanceof ApiError || error instanceof GeocodingError
+          ? error.message
+          : "Не удалось сохранить бизнес";
+      alert(message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleDelete() {
@@ -415,12 +447,18 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
               <label className="flex flex-col gap-[8px]">
                 <span className="text-[15px] font-semibold">Адрес бизнеса</span>
-                <input
-                  className={inputClass}
+                <AddressAutocomplete
                   value={draft.address}
-                  placeholder="Обязательно"
-                  onChange={(e) => updateDraft({ address: e.target.value })}
+                  coordsSelected={draft.lat != null && draft.lng != null}
+                  inputClassName={inputClass}
+                  placeholder="Например: ул. Амира Темура 100, Ташкент"
+                  onChange={({ address, lat, lng }) =>
+                    updateDraft({ address, lat, lng })
+                  }
                 />
+                <span className="text-[13px] opacity-60">
+                  Выберите адрес из подсказок — бизнес появится на карте в этой точке
+                </span>
               </label>
             </div>
           </div>
@@ -578,7 +616,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             Удалить
           </button>
           <Button
-            text="Сохранить изменение"
+            text={saving ? "Сохранение..." : "Сохранить изменение"}
             onClick={handleSave}
             className="flex-1 !w-full text-center text-[18px] !px-[20px]"
           />

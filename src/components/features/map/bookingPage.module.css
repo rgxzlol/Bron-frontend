@@ -8,7 +8,7 @@
   display: grid;
   grid-template-columns: minmax(280px, 420px) 1fr;
   gap: 24px;
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 26px;
   padding: 20px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
@@ -58,7 +58,7 @@
   width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #e8f0ff;
+  background: var(--bg-active-soft);
   color: #0a6af7;
   font-size: 13px;
   font-weight: 600;
@@ -78,7 +78,7 @@
 }
 
 .ratingMuted {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .backBtn {
@@ -86,7 +86,7 @@
   padding: 10px 18px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
-  background: #fff;
+  background: var(--bg-surface);
   font-size: 14px;
   font-weight: 600;
 }
@@ -118,7 +118,7 @@
 
 .contactSub {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .stats {
@@ -196,7 +196,7 @@
   font-size: 14px;
   font-weight: 700;
   background: #e5e7eb;
-  color: #6b7280;
+  color: var(--text-muted);
   position: relative;
   z-index: 1;
 }
@@ -215,7 +215,7 @@
   font-size: 13px;
   font-weight: 600;
   text-align: center;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .stepActive .stepLabel,
@@ -232,7 +232,7 @@
 
 .formCard,
 .payCard {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 26px;
   padding: 24px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
@@ -246,7 +246,7 @@
 
 .formSubtitle {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 20px;
 }
 
@@ -267,7 +267,7 @@
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-  background: #fff;
+  background: var(--bg-surface);
   font-size: 14px;
 }
 
@@ -292,6 +292,29 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.inputError {
+  border-color: #e53935;
+  outline-color: #e53935;
+}
+
+.required {
+  color: #e53935;
+}
+
+.fieldError {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e53935;
+}
+
+.guestsHint {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .counterBtn {
@@ -329,7 +352,7 @@
   gap: 12px;
   font-size: 14px;
   padding: 10px 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-default);
 }
 
 .lineName {
@@ -388,7 +411,7 @@
 
 .payOptionSub {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -442,7 +465,7 @@
   padding: 10px 18px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
-  background: #fff;
+  background: var(--bg-surface);
   font-size: 14px;
   font-weight: 600;
 }
@@ -453,7 +476,7 @@
 }
 
 .timeCard {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 26px;
   padding: 24px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
@@ -467,7 +490,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 20px 24px;
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 20px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
@@ -480,7 +503,7 @@
 }
 
 .stepFooterMuted {
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -503,7 +526,7 @@
 
 .footerHint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .confirmColumns {
@@ -514,7 +537,7 @@
 }
 
 .confirmCard {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 26px;
   padding: 32px 28px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
@@ -541,7 +564,7 @@
 
 .confirmSub {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 24px;
 }
 
@@ -592,7 +615,7 @@
   border: 1px solid #e5e7eb;
   font-weight: 600;
   font-size: 14px;
-  background: #fff;
+  background: var(--bg-surface);
   display: flex;
   justify-content: center;
   align-items: center;

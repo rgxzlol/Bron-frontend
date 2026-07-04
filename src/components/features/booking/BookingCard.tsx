@@ -8,9 +8,17 @@ import { BookingEditModal } from './BookingEditModal';
 
 interface BookingCardProps {
     status?: 'upcoming' | 'finished';
+    bookingDate?: string;
+    bookingTime?: string;
+    totalPrice?: number;
 }
 
-export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
+export const BookingCard = ({
+    status = 'upcoming',
+    bookingDate,
+    bookingTime,
+    totalPrice,
+}: BookingCardProps) => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const UpcomingCardContent = () => (
@@ -75,7 +83,9 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                         <div className="flex flex-col justify-end">
                             <div className="flex flex-col gap-[2px] shrink-0">
                                 <span className="font-semibold text-[20px] text-black opacity-60">Итог</span>
-                                <strong className="font-bold text-[36px] text-black whitespace-nowrap">98 000 сум</strong>
+                                <strong className="font-bold text-[36px] text-black whitespace-nowrap">
+                                    {totalPrice != null ? `${totalPrice.toLocaleString("ru-RU")} сум` : "98 000 сум"}
+                                </strong>
                             </div>
                             <button
                                 onClick={() => setIsCancelModalOpen(true)}
@@ -88,7 +98,10 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                 </div>
             </div>
 
-            <button className="group flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] cursor-pointer ml-[18px] rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] active:scale-[0.99]">
+            <button
+                type="button"
+                className="group flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] ml-[18px] rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] active:scale-[0.99]"
+            >
                 <div className="flex items-center gap-[19px]">
                     <Image src={assets.booking.bagIcon} alt='bag' className="transition-transform duration-200 group-hover:-translate-y-1" />
                     <span className="font-semibold text-[20px] text-black">Состав заказа</span>
@@ -157,7 +170,10 @@ export const BookingCard = ({ status = 'upcoming' }: BookingCardProps) => {
                 </div>
             </div>
 
-            <button className="flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] cursor-pointer rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] shadow-inner">
+            <button
+                type="button"
+                className="flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] shadow-inner"
+            >
                 <div className="flex items-center gap-[19px]">
                     <Image src={assets.booking.bagIcon} alt='bag' />
                     <span className="font-semibold text-[20px] text-black">Состав заказа</span>

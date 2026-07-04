@@ -1,8 +1,0 @@
-.links:hover {
-  background: var(--bg-hover);
-}
-
-.links {
-  transition: 0.5s;
-  border-radius: 18px;
-}

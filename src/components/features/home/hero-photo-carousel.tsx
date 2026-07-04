@@ -16,9 +16,9 @@ const slotConfig: Record<
   Slot,
   { offsetX: number; rotate: number; scale: number; zIndex: number }
 > = {
-  left: { offsetX: -130, rotate: -12, scale: 0.78, zIndex: 1 },
+  left: { offsetX: -120, rotate: -12, scale: 0.7, zIndex: 1 },
   center: { offsetX: 0, rotate: 0, scale: 1, zIndex: 10 },
-  right: { offsetX: 130, rotate: 12, scale: 0.78, zIndex: 1 },
+  right: { offsetX: 120, rotate: 12, scale: 0.7, zIndex: 1 },
 };
 
 function getSlot(imageIndex: number, centerIndex: number): Slot {
@@ -32,24 +32,32 @@ const AUTO_PLAY_MS = 5000;
 
 export default function HeroPhotoCarousel() {
   const [centerIndex, setCenterIndex] = useState(1);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
+    if (isHovered) return;
+
     const timer = setInterval(() => {
       setCenterIndex((prev) => (prev + 1) % photos.length);
     }, AUTO_PLAY_MS);
+
     return () => clearInterval(timer);
-  }, []);
+  }, [isHovered]);
 
   return (
-    <div className="relative h-[400px] w-[min(100%,520px)] shrink-0">
+    <div
+      className="relative h-[250px] w-[min(100%,400px)] shrink-0"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {photos.map((src, index) => {
         const slot = getSlot(index, centerIndex);
         const { offsetX, rotate, scale, zIndex } = slotConfig[slot];
 
         return (
           <div
-            key={src.src}
-            className="absolute left-1/2 top-1/2 origin-center transition-all duration-700 ease-in-out"
+            key={src.src || index}
+            className="absolute left-1/2 top-1/2 origin-center transition-all duration-700 ease-in-out will-change-transform"
             style={{
               zIndex,
               transform: `translate(calc(-50% + ${offsetX}px), -50%) rotate(${rotate}deg) scale(${scale})`,
@@ -58,10 +66,10 @@ export default function HeroPhotoCarousel() {
             <Image
               src={src}
               alt={`Пример сервиса ${index + 1}`}
-              width={280}
-              height={380}
-              priority={slot === "center"}
-              className="h-[380px] w-[280px] rounded-[32px] object-cover shadow-lg"
+              width={157}
+              height={242}
+              priority
+              className="rounded-[32px] object-cover shadow-lg border border-transparent"
             />
           </div>
         );

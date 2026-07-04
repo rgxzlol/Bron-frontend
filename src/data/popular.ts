@@ -4,6 +4,7 @@ import type { PopularPlace } from "@/types/popular";
 export const popularPlaces: PopularPlace[] = [
   {
     id: 1,
+    shopId: 4,
     title: "Салон красоты",
     rating: 4.3,
     reviews: 132,
@@ -13,6 +14,7 @@ export const popularPlaces: PopularPlace[] = [
   },
   {
     id: 2,
+    shopId: 1,
     title: "Фитнес зал",
     rating: 4.6,
     reviews: 102,
@@ -22,6 +24,7 @@ export const popularPlaces: PopularPlace[] = [
   },
   {
     id: 3,
+    shopId: 3,
     title: "Клиника",
     rating: 4.3,
     reviews: 132,

@@ -19,6 +19,12 @@ import categoryGym from "@/assets/images/gym.svg";
 import categoryEducation from "@/assets/images/education.svg";
 import categoryFood from "@/assets/images/food.svg";
 import categoryMore from "@/assets/images/moreIcon.svg";
+import categoryСoffee from "@/assets/images/coffee.svg";
+import categoryAutoService from "@/assets/images/autoService.svg";
+import categoryCinema from "@/assets/images/cinema.svg";
+import categoryPcClub from "@/assets/images/pcClub.svg";
+import categoryCleaning from "@/assets/images/cleaning.svg";
+import categorySanatoriums from "@/assets/images/sanatoriums.svg";
 import popularPhoto1 from "@/assets/images/popularPhoto1.jpg";
 import popularPhoto2 from "@/assets/images/popularPhoto2.jpg";
 import popularPhoto3 from "@/assets/images/popularPhoto3.jpg";
@@ -129,6 +135,12 @@ export const assets = {
     education: categoryEducation,
     food: categoryFood,
     more: categoryMore,
+    coffee: categoryСoffee,
+    autoService: categoryAutoService,
+    cinema: categoryCinema,
+    pcClub: categoryPcClub,
+    cleaning: categoryCleaning,
+    sanatoriums: categorySanatoriums,
   },
   popular: {
     photo1: popularPhoto1,

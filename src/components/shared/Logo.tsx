@@ -1,9 +1,13 @@
 import { siteConfig } from "@/config/site"
 import Link from "next/link"
 
-export const Logo = () => {
+interface LogoProps {
+    className?: string;
+}
+
+export const Logo = ({ className = '' }: LogoProps) => {
     return (
-        <Link href="/" className='self-start text-[60px] font-semibold'>
+        <Link href="/" className={`text-[70px] font-semibold ${className}`.trim()}>
             {siteConfig.name}
         </Link>
     )

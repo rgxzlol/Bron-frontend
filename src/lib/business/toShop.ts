@@ -1,4 +1,8 @@
 import { assets } from "@/lib/assets";
+import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
+import { collectBusinessPhotoUrls } from "@/lib/business/photos";
+import { getDistanceKm } from "@/lib/distance";
+import { normalizeCoords } from "@/lib/geocoding";
 import type { SavedBusiness } from "@/store/business.store";
 import type { ShopsType } from "@/types/shops.types";
 
@@ -16,20 +20,41 @@ function formatHours(business: SavedBusiness): string {
   return `${openDay.openTime} - ${openDay.closeTime}`;
 }
 
-export function businessToShop(business: SavedBusiness): ShopsType {
+export function businessToShop(
+  business: SavedBusiness,
+  userLocation?: { lat: number; lng: number } | null,
+): ShopsType {
   const activeServices = business.services.filter((s) => s.active);
   const minPrice =
     activeServices.length > 0
       ? Math.min(...activeServices.map((s) => s.price))
       : 50000;
 
-  return {
-    id: hashId(business.id),
-    title: business.name || "Бизнес",
+  const coords = normalizeCoords(business.lat, business.lng) ?? {
     lat: business.lat,
     lng: business.lng,
-    type: business.category || "Другое",
-    img: assets.map.photo1,
+  };
+
+  const photoUrls = collectBusinessPhotoUrls(business);
+  const previewImage = photoUrls[0] ?? assets.map.photo1;
+
+  let distance = "—";
+  if (userLocation) {
+    distance = `${getDistanceKm(userLocation.lat, userLocation.lng, coords.lat, coords.lng)} км`;
+  }
+
+  return {
+    id: /^\d+$/.test(business.id) ? Number(business.id) : hashId(business.id),
+    apiBusinessId: /^\d+$/.test(business.id) ? Number(business.id) : undefined,
+    apiBranchId: business.defaultBranchId,
+    title: business.name || "Бизнес",
+    lat: coords.lat,
+    lng: coords.lng,
+    type: businessCategoryToMapFilter(business.category || "Другое"),
+    img: previewImage,
+    profilePhoto: business.profilePhoto,
+    gallery: photoUrls,
+    website: business.website || undefined,
     desc: business.description || "Описание отсутствует",
     rating: 0,
     reviews: 0,
@@ -40,7 +65,7 @@ export function businessToShop(business: SavedBusiness): ShopsType {
     district: "Ташкент",
     phone: business.phone || "",
     category: business.category || "Услуги",
-    distance: "—",
+    distance,
     time: 60,
     services: activeServices.map((service) => ({
       id: service.id,
@@ -48,6 +73,7 @@ export function businessToShop(business: SavedBusiness): ShopsType {
       description: service.description,
       priceFrom: service.price,
       durationMin: 60,
+      icon: service.photo ?? undefined,
     })),
   };
 }

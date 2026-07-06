@@ -1,16 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from 'next-intl';
 
 export const SupportModal = () => {
     const [isOpen, setIsOpen] = useState(false)
+    const t = useTranslations('SupportModal');
+
     return (
         <>
             <button
                 onClick={() => setIsOpen(true)}
                 className="p-4 rounded-3xl bg-white w-full font-semibold text-[20px] text-black transition-all duration-200 hover:bg-[#f2f2f7] active:scale-[0.98]"
             >
-                Тех.подержка
+                {t('openButton')}
             </button>
 
             {
@@ -25,7 +28,7 @@ export const SupportModal = () => {
                         className="w-full max-w-211.25 bg-slate-50 rounded-[30px] px-7 pt-5 pb-9 flex-col justify-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h1 className="text-black text-3xl font-semibold text-center mb-4.5">Тех.Подержка</h1>
+                        <h1 className="text-black text-3xl font-semibold text-center mb-4.5">{t('title')}</h1>
                         <div className="flex flex-col gap-2.5 mb-8">
 
                             <a
@@ -34,7 +37,7 @@ export const SupportModal = () => {
                                 rel="noopener noreferrer"
                                 className="flex flex-col gap-1.5 group text-left"
                             >
-                                <span className="text-black text-xl font-semibold">Телеграм</span>
+                                <span className="text-black text-xl font-semibold">{t('telegram')}</span>
                                 <div className="bg-white rounded-3xl py-7.5 px-6 w-full transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
                                     <span className="text-black text-2xl font-semibold  group-hover:text-blue-600 transition-colors">@Bron_Suport</span>
                                 </div>
@@ -44,7 +47,7 @@ export const SupportModal = () => {
                                 href="tel:+998999999999"
                                 className="flex flex-col gap-1.5 group text-left"
                             >
-                                <span className="text-black text-xl font-semibold">Номер телефона</span>
+                                <span className="text-black text-xl font-semibold">{t('phoneNumber')}</span>
                                 <div className="bg-white rounded-3xl py-7.5 px-6 w-full transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
                                     <span className="text-black text-2xl font-semibold  group-hover:text-blue-600 transition-colors">+998 99 999 99 99</span>
                                 </div>
@@ -65,7 +68,7 @@ export const SupportModal = () => {
                             onClick={() => setIsOpen(false)}
                             className="w-full h-20 bg-blue-600 rounded-3xl p-6 transition-all duration-200 hover:bg-blue-700 active:scale-[0.98]"
                         >
-                            <span className=" text-white text-2xl font-semibold">Закрыть</span>
+                            <span className=" text-white text-2xl font-semibold">{t('closeButton')}</span>
                         </button>
                     </section>
                 </div>

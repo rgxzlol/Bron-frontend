@@ -6,6 +6,7 @@ import type { ShopService, ShopsType } from "@/types/shops.types";
 import { formatPrice } from "@/lib/formatPrice";
 import Button from "@/components/shared/Button";
 import s from "./hospitalServicesModal.module.css";
+import { useTranslations } from 'next-intl';
 
 type HospitalServicesModalProps = {
   hospital: ShopsType;
@@ -18,6 +19,9 @@ export default function HospitalServicesModal({
   onClose,
   onContinue,
 }: HospitalServicesModalProps) {
+  const t = useTranslations('HospitalServicesModal');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
   const services = useMemo<ShopService[]>(() => hospital.services ?? [], [hospital]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -39,8 +43,8 @@ export default function HospitalServicesModal({
     <div className={s.backdrop} role="dialog" aria-modal="true">
       <div className={s.modal}>
         <div className={s.header}>
-          <h2 className={s.title}>Услуги</h2>
-          <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
+          <h2 className={s.title}>{t('services')}</h2>
+          <button type="button" className={s.close} onClick={onClose} aria-label={t('close')}>
             ×
           </button>
         </div>
@@ -64,11 +68,11 @@ export default function HospitalServicesModal({
                   </div>
 
                   <div className={s.cardBody}>
-                    <h3 className={s.cardTitle}>{service.title}</h3>
-                    <p className={s.cardDesc}>{service.description}</p>
+                    <h3 className={s.cardTitle}>{td(service.title)}</h3>
+                    <p className={s.cardDesc}>{td(service.description)}</p>
                     <div className={s.cardMeta}>
-                      <span className={s.price}>От {formatPrice(service.priceFrom)} сум</span>
-                      <span className={s.duration}>{service.durationMin}мин</span>
+                      <span className={s.price}>{t('from')} {formatPrice(service.priceFrom)} {t('sum')}</span>
+                      <span className={s.duration}>{service.durationMin}{t('min')}</span>
                     </div>
                     <button
                       type="button"
@@ -76,7 +80,7 @@ export default function HospitalServicesModal({
                       onClick={() => toggleService(service.id)}
                       aria-pressed={isSelected}
                     >
-                      {isSelected ? "Выбрано" : "Выбрать услугу"}
+                      {isSelected ? t('selectedText') : t('selectService')}
                     </button>
                   </div>
                 </div>
@@ -87,10 +91,10 @@ export default function HospitalServicesModal({
 
         <div className={s.footer}>
           <div className={s.footerInfo}>
-            <span className={s.infoText}>Выбрано: {selectedCount} услуг</span>
+            <span className={s.infoText}>{t('selected')}: {selectedCount} {t('servicesText')}</span>
           </div>
           <Button
-            text="Продолжить"
+            text={t('continue')}
             className={`${s.continueBtn} ${!canContinue ? s.continueDisabled : ""}`}
             onClick={handleContinue}
             disabled={!canContinue}

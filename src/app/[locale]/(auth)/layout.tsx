@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { Logo } from "@/components/shared/Logo";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
@@ -8,6 +9,8 @@ export default function AuthLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const t = useTranslations('AuthLayout');
+
     return (
         <main className="bg-white min-h-screen">
             <div className="container mx-auto">
@@ -33,14 +36,14 @@ export default function AuthLayout({
                                 className="relative text-center w-full font-semibold text-[20px] text-black opacity-70 py-[22px] rounded-[22px] transition-all duration-300 hover:opacity-100 active:scale-[0.98]"
                                 activeClassName="is-active !text-white !opacity-100"
                             >
-                                Войти в аккаунт
+                                {t('login')}
                             </NavLink>
                             <NavLink
                                 href={'/register'}
                                 className="relative text-center w-full font-semibold text-[20px] text-black opacity-70 py-[22px] rounded-[22px] transition-all duration-300 hover:opacity-100 active:scale-[0.98]"
                                 activeClassName="is-active !text-white !opacity-100"
                             >
-                                Создать аккаунт
+                                {t('register')}
                             </NavLink>
                         </div>
 

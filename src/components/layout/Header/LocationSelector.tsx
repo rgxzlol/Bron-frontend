@@ -3,6 +3,7 @@
 import { FC } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
+import { useTranslations } from 'next-intl';
 
 interface LocationOptionProps {
     label: string;
@@ -45,10 +46,11 @@ interface LocationSelectorProps {
 }
 
 export const LocationSelector: FC<LocationSelectorProps> = ({ value, onChange }) => {
+    const t = useTranslations('LocationSelector');
     const options = [
-        { id: 'nearby', label: 'По близости' },
-        { id: '3-7km', label: '3-7км от меня' },
-        { id: '10-15km', label: '10-15км от меня' },
+        { id: 'nearby', label: t('nearby') },
+        { id: '3-7km', label: t('threeToSevenKm') },
+        { id: '10-15km', label: t('tenToFifteenKm') },
     ];
 
     return (

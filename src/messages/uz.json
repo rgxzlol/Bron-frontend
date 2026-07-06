@@ -1,1 +1,645 @@
-{}
+{
+  "Navigations": {
+    "home": "Asosiy",
+    "map": "Xarita",
+    "business": "Biznes sahifasi",
+    "myBookins": "Mening band qilishlarim",
+    "support": "Qo'llab-quvvatlash"
+  },
+  "AuthLayout": {
+    "login": "Tizimga kirish",
+    "register": "Hisob yaratish"
+  },
+  "LoginPage": {
+    "nameLabel": "Ism",
+    "namePlaceholder": "Ivan",
+    "passwordLabel": "Parol",
+    "submitButton": "Kirish"
+  },
+  "RegisterPage": {
+    "nameLabel": "Ism",
+    "namePlaceholder": "Ivan",
+    "passwordLabel": "Parol",
+    "repeatPasswordLabel": "Parolni takrorlang",
+    "submitButton": "Ro'yxatdan o'tish"
+  },
+  "BookingsPage": {
+    "title": "Mening band qilishlarim"
+  },
+  "ProfilePage": {
+    "title": "Profil"
+  },
+  "SupportModal": {
+    "openButton": "Texnik qo'llab-quvvatlash",
+    "title": "Texnik qo'llab-quvvatlash",
+    "telegram": "Telegram",
+    "phoneNumber": "Telefon raqami",
+    "closeButton": "Yopish"
+  },
+  "BookingCancelModal": {
+    "title": "Band qilishni bekor qilish?",
+    "confirmText": "Band qilishni bekor qilishga ishonchingiz komilmi",
+    "confirmDetails": "Bron Fitness Club 2026 yil 16 may, 18:00 dan 19:00 gacha",
+    "close": "Yopish",
+    "gym": "Sport zali",
+    "address": "Sayram ko'chasi 123, Toshkent",
+    "total": "Jami",
+    "price": "98 000 so'm",
+    "refundNotice": "Mablag'lar 3-5 ish kuni ichida hisobingizga qaytariladi",
+    "keepBooking": "Bekor qilmaslik",
+    "cancelBooking": "Band qilishni bekor qilish"
+  },
+  "BookingCard": {
+    "gym": "Sport zali",
+    "confirmed": "• Tasdiqlangan",
+    "address": "Sayram ko'chasi 123, Toshkent",
+    "time": "Vaqt",
+    "date": "2026 yil 12 iyun, PAY",
+    "guests": "Mehmonlar",
+    "total": "Jami",
+    "price": "98 000 so'm",
+    "cancel": "Band qilishni bekor qilish",
+    "orderContent": "Buyurtma tarkibi",
+    "items": "3 ta mahsulot",
+    "finished": "• Yakunlangan"
+  },
+  "BookingDropdown": {
+    "menu": "Menyu",
+    "editBooking": "Band qilishni o'zgartirish",
+    "cancelBooking": "Band qilishni bekor qilish"
+  },
+  "BookingEditModal": {
+    "editBookingQuestion": "Band qilishni o'zgartirish",
+    "close": "Yopish",
+    "gym": "Sport zali",
+    "address": "Sayram ko'chasi 123, Toshkent",
+    "cancel": "Bekor qilish",
+    "saveChanges": "O'zgarishlarni saqlash"
+  },
+  "BookingNav": {
+    "navigation": "Band qilishlar bo'yicha navigatsiya",
+    "upcoming": "Kelgusi",
+    "past": "O'tgan"
+  },
+  "Business": {
+    "title": "Kattaroq aktivlar uchun o'z biznesingizni xaritaga qo'shing",
+    "subtitle": "Band qilish orqali aktivlarni ko'paytiring!",
+    "addBusiness": "Biznes qo'shish"
+  },
+  "BusinessCardMenu": {
+    "editProfile": "Profilni tahrirlash",
+    "deleteBusiness": "Biznesni o'chirish"
+  },
+  "MyBusiness": {
+    "title": "Mening biznesim",
+    "addNewBusiness": "Yangi biznes qo'shish",
+    "untitled": "Nomsiz",
+    "confirmed": "Tasdiqlangan",
+    "menu": "Menyu",
+    "deleteConfirm": "Ushbu biznesni o'chirish?",
+    "bookings": "Band qilishlar",
+    "views": "Ko'rishlar",
+    "statistics": "Statistika"
+  },
+  "Categories": {
+    "title": "Kategoriyalar",
+    "allCategories": "Barcha kategoriyalar",
+    "less": "Kamroq",
+    "more": "Ko'proq",
+    "goBack": "Orqaga qaytish",
+    "seeAll": "Barchasini ko'rish"
+  },
+  "HeroSection": {
+    "title": "Faqat eng yaxshi xizmatlarda band qiling",
+    "subtitle": "Go'zallik saloni, sog'liq, spa, fitnes klubi, ta'lim va boshqalar sizning ixtiyoringizda",
+    "findPlace": "Joy topish"
+  },
+  "BusinessModal": {
+    "errorJpgPng": "JPG yoki PNG yuklang",
+    "errorSize": "Fayl hajmi 2MB dan oshmasligi kerak",
+    "errorName": "Biznes nomini kiriting",
+    "errorCategory": "Biznes kategoriyasini tanlang",
+    "errorPhone": "Aloqa raqamini kiriting",
+    "errorAddress": "Biznes manzilini kiriting",
+    "deleteConfirm": "Kiritilgan barcha ma'lumotlar o'chirilsinmi?",
+    "uploadPhoto": "Rasm yuklash",
+    "profilePhoto": "Profil rasmi",
+    "profilePhotoSubtitle": "Bu rasm platformada sizning biznesingizni namoyish etadi",
+    "goBack": "Orqaga qaytish",
+    "profileAlt": "Profil",
+    "uploadProfilePhotoLabel": "Profil rasmini yuklash",
+    "photoRequirements": "Talablar: o'lchami 800x800px JPG, PNG, 2MB gacha",
+    "deletePhoto": "Rasmni o'chirish",
+    "businessInfo": "Biznes ma'lumotlari",
+    "businessName": "Biznes nomi",
+    "shortDescription": "Qisqacha tavsif",
+    "writePlaceholder": "Yozish...",
+    "words": "so'z",
+    "businessCategory": "Biznes kategoriyasi",
+    "required": "Majburiy",
+    "website": "Veb sayt",
+    "optional": "Ixtiyoriy",
+    "contactNumber": "Aloqa raqami",
+    "businessAddress": "Biznes manzili",
+    "businessGallery": "Biznes galereyasi",
+    "gallerySubtitle": "Muassasangizning qulayligini ko'rsating",
+    "schedule": "Ish grafigi",
+    "scheduleSubtitle": "Aniq vaqt va ish kunlari",
+    "open": "Ochiq",
+    "closed": "Yopiq",
+    "reset": "Qayta o'rnatish",
+    "weeklySchedule": "Haftalik grafik",
+    "worksHoursPrefix": "Sizning biznesingiz haftasiga",
+    "worksHoursSuffix": "soat ishlaydi",
+    "reviews": "Sharhlar",
+    "reviewsCount": "(102 ta sharh)",
+    "delete": "O'chirish",
+    "saveChange": "O'zgarishni saqlash",
+    "categories": {
+      "Gym": "Sport zal",
+      "Beauty": "Go'zallik",
+      "Health": "Sog'liqni saqlash",
+      "Education": "Ta'lim",
+      "Food": "Taomlar",
+      "Other": "Boshqa"
+    }
+  },
+  "BusinessDashboard": {
+    "deleteService": "Xizmatni o'chirish",
+    "deleteConfirm": "Xizmatni o'chirishga ishonchingiz komilmi",
+    "deleteWarning1": "Xizmat, vaqt, sanalar va bo'sh joylar haqidagi barcha ma'lumotlar qayta tiklanmaydigan tarzda o'chiriladi",
+    "deleteWarning2": "Bu amalni bekor qilib bo'lmaydi. Iltimos, muhim ma'lumotlarni saqlaganingizga ishonch hosil qiling",
+    "cancel": "Bekor qilish",
+    "currency": "Valyuta",
+    "sum": "So'm",
+    "uploadPhoto": "Rasm yuklash",
+    "back": "Orqaga",
+    "requiredField": "Majburiy maydon",
+    "addProduct": "Mahsulot qo'shish",
+    "fillProductInfo": "Mahsulotingiz haqidagi ma'lumotlarni to'ldiring",
+    "productName": "Mahsulot nomi",
+    "enterName": "Nomini kiriting",
+    "price": "Narxi",
+    "enterPrice": "Narxini kiriting",
+    "category": "Kategoriya",
+    "selectCategory": "Kategoriyani tanlang",
+    "description": "Tavsif",
+    "describeProduct": "Mahsulotni tasvirlab bering",
+    "serviceOrProductPhoto": "Xizmat yoki mahsulot rasmi",
+    "saveServiceOrProduct": "Xizmatlar yoki mahsulotni saqlash",
+    "prevMonth": "Oldingi oy",
+    "nextMonth": "Keyingi oy",
+    "addService": "Xizmat qo'shish",
+    "addServiceSubtitle": "Band qilish uchun xizmat qo'shing",
+    "serviceName": "Xizmat nomi",
+    "required": "Majburiy",
+    "servicePrice": "Xizmat narxi",
+    "freeTime": "Bo'sh vaqt",
+    "showOnlyFree": "Faqat bo'shlarni ko'rsatish",
+    "free": "Bo'sh",
+    "busy": "Band",
+    "serviceDescription": "Xizmat tavsifi",
+    "describeServices": "Xizmatlarni tasvirlab bering",
+    "photo": "Rasm",
+    "date": "Sana",
+    "saveServices": "Xizmatlarni saqlash",
+    "businessPage": "Biznes sahifasi",
+    "servicesAndStaff": "Xizmatlar va xodimlar",
+    "booking": "Band qilish",
+    "zeroReviews": "0,0 (0 ta sharh)",
+    "tashkentUzbekistan": "Toshkent, O'zbekiston",
+    "editProfile": "Profilni tahrirlash",
+    "services": "Xizmatlar",
+    "workingDaysAndServices": "Ish kunlari va xizmatlar",
+    "name": "Nomi",
+    "status": "Holati",
+    "action": "Harakat",
+    "noServices": "Hozircha xizmatlar yo'q. Birinchi xizmatni qo'shing.",
+    "priceOfService": "Xizmat narxi",
+    "deleteServiceAria": "Xizmatni o'chirish",
+    "saveChange": "O'zgarishni saqlash",
+    "bookings": "Band qilishlar",
+    "waiting": "Kutilmoqda",
+    "acceptBooking": "Band qilishni qabul qilish",
+    "cancelBooking": "Bekor qilish",
+    "accepted": "Qabul qilingan",
+    "cancelled": "Bekor qilingan",
+    "other": "Boshqa",
+    "categories": {
+      "Consultation": "Konsultatsiya",
+      "Procedure": "Muolaja",
+      "Training": "Mashg'ulot",
+      "Diagnostics": "Diagnostika",
+      "Other": "Boshqa"
+    }
+  },
+  "Popular": {
+    "title": "Mashhur joylar",
+    "rating": "Reyting",
+    "time": "Vaqt",
+    "book": "Band qilish",
+    "seeAllAlt": "Barchasini ko'rish",
+    "seeAll": "Barchasini ko'rish"
+  },
+  "WhyUs": {
+    "title": "Bu qanday ishlaydi?",
+    "businessTitle": "Yirik biznes va tadbirkorlar uchun",
+    "businessDesc": "Bronga kiring va biznesingizni rivojlantiring",
+    "start": "Boshlash",
+    "businessAlt": "Biznes uchun Bron"
+  },
+  "HeroPhotoCarousel": {
+    "serviceExample": "Xizmat misoli"
+  },
+  "BookingExtrasModal": {
+    "additionalServices": "Qo'shimcha xizmatlar",
+    "addSomethingToYourBooking": "Band qilishingizga biror narsa qo'shing",
+    "duringVisitYouCanPurchaseDrinksOrAdditionalServices": "Tashrif paytida siz ichimliklar yoki qo'shimcha xizmatlarni xarid qilishingiz mumkin.",
+    "close": "Yopish",
+    "back": "Orqaga",
+    "sum": "so'm",
+    "added": "Qo'shildi",
+    "add": "Qo'shish",
+    "forward": "Oldinga",
+    "yourOrder": "Sizning buyurtmangiz",
+    "remove": "O'chirish",
+    "total": "Jami",
+    "saveTimePayNow": "✓ Vaqtni tejash — hozir to'lash",
+    "skip": "O'tkazib yuborish",
+    "continue": "Davom etish"
+  },
+  "BookingPage": {
+    "servicesCount": "Xizmatlar ({count})",
+    "hallBooking": "Zalni band qilish",
+    "mins": "{mins} daq",
+    "oneHour": "1 soat",
+    "from": "dan",
+    "sum": "so'm",
+    "perAppointment": "qabul uchun",
+    "perHour": "soatiga",
+    "bookingSteps": "Band qilish bosqichlari",
+    "stepTime": "Vaqtni tanlash",
+    "stepData": "Sizning ma'lumotlaringiz",
+    "stepConfirm": "Tasdiqlash",
+    "back": "Orqaga",
+    "open": "Ochiq",
+    "freeSeats": "Bo'sh joylar",
+    "youSelected": "Siz tanladingiz",
+    "duration": "Davomiyligi",
+    "totalFor": "Jami",
+    "continue": "Davom etish",
+    "yourDataIsProtected": "Sizning ma'lumotlaringiz himoyalangan",
+    "payment": "To'lov",
+    "total": "Jami",
+    "paymentMethod": "To'lov usuli",
+    "bankCard": "Bank kartasi",
+    "instantPayment": "Darhol to'lov",
+    "otherMethods": "Boshqa usullar",
+    "yourData": "Sizning ma'lumotlaringiz",
+    "fillBookingInfo": "Band qilish uchun ma'lumotlarni to'ldiring",
+    "fullName": "Ism va familiya",
+    "phoneNumber": "Telefon raqami",
+    "emailOptional": "Elektron pochta (ixtiyoriy)",
+    "guestsCount": "Mehmonlar soni",
+    "decrease": "Kamaytirish",
+    "increase": "Ko'paytirish",
+    "bookingConfirmed": "Band qilish tasdiqlandi!",
+    "confirmationSentToEmail": "Biz pochtangizga tasdiqnoma yubordik",
+    "whatsNext": "Keyin nima bo'ladi?",
+    "come15MinsBefore": "Band qilingan vaqtdan 10-15 daqiqa oldin keling.",
+    "cancel2HoursBefore": "Bekor qilish tashrifdan kamida 2 soat oldin amalga oshirilishi mumkin.",
+    "leaveReview": "Sharh qoldirish",
+    "viewBooking": "Band qilishni ko'rish",
+    "toHome": "Asosiy sahifaga",
+    "backToMap": "Xaritaga qaytish",
+    "weUseEncryption": "Shaxsiy ma'lumotlaringiz va to'lovlarni himoya qilish uchun biz shifrlashdan foydalanamiz.",
+    "pay": "To'lash",
+    "paid": "To'langan"
+  },
+  "FullMap": {
+    "myBusiness": "Mening biznesim",
+    "all": "Barchasi",
+    "coffeeShop": "Qahvaxona",
+    "gym": "Sport zali",
+    "hospital": "Kasalxona",
+    "restaurant": "Restoran"
+  },
+  "HospitalServicesModal": {
+    "services": "Xizmatlar",
+    "close": "Yopish",
+    "from": "Dan",
+    "sum": "so'm",
+    "min": "daq",
+    "selectedText": "Tanlandi",
+    "selectService": "Xizmatni tanlash",
+    "selected": "Tanlangan",
+    "servicesText": "xizmatlar",
+    "continue": "Davom etish"
+  },
+  "ShopDetailPanel": {
+    "close": "Yopish",
+    "open": "Ochiq",
+    "freeSeats": "Bo'sh joylar",
+    "from": "dan",
+    "sum": "so'm",
+    "perHour": "soatiga",
+    "priceTitle": "Narxi",
+    "bookPlace": "Joyni band qilish"
+  },
+  "UserBusinessPanel": {
+    "close": "Yopish",
+    "zeroReviews": "(0 ta sharh)",
+    "noDescription": "Tavsif yo'q",
+    "address": "Manzil",
+    "tashkent": "Toshkent",
+    "phone": "Telefon",
+    "services": "Xizmatlar",
+    "from": "dan",
+    "book": "Band qilish"
+  },
+  "Support": {
+    "supportTitle": "Qo'llab-quvvatlash",
+    "supportSubtitle": "Biz sizga yordam berishga doim tayyormiz",
+    "faqTitle": "Ko'p beriladigan savollar"
+  },
+  "CategoryDropdown": {
+    "required": "Majburiy",
+    "allCategories": "Barcha kategoriyalar"
+  },
+  "CategoryModal": {
+    "title": "Kategoriyalar",
+    "closeWindow": "Oynani yopish",
+    "location": "Joylashuv",
+    "businessCategory": "Biznes kategoriyasi",
+    "enterApproximatePrice": "Taxminiy narxni kiriting",
+    "enterPrice": "Narxni kiriting",
+    "apply": "Qo'llash"
+  },
+  "CurrencyDropdown": {
+    "sum": "So'm"
+  },
+  "Header": {
+    "profile": "Profil"
+  },
+  "LanguageSelector": {
+    "selectLanguage": "Tilni tanlash"
+  },
+  "LocationSelector": {
+    "nearby": "Yaqin atrofda",
+    "threeToSevenKm": "Mendan 3-7km masofada",
+    "tenToFifteenKm": "Mendan 10-15km masofada"
+  },
+  "NotificationDropdown": {
+    "bookingReminderTitle": "Band qilish eslatmasi",
+    "bookingReminderDesc": "Ertaga BronFitnessda band qilishingiz bor",
+    "paymentSuccessTitle": "To'lov muvaffaqiyatli yakunlandi",
+    "paymentSuccessDesc": "98 000 so'm to'lov muvaffaqiyatli o'tdi!",
+    "promoTitle": "Siz uchun aksiya!",
+    "promoDesc": "Hafta oxirigacha barcha xizmatlarga 20% chegirma!",
+    "notifications": "Bildirishnomalar",
+    "today": "Bugun",
+    "deleteAllRead": "Barcha o'qilganlarni o'chirish"
+  },
+  "NotificationEmpty": {
+    "noNotifications": "Bildirishnomalar yo'q!",
+    "notificationsDesc": "Band qilishlar, to'lovlar, aksiyalar va boshqa voqealar haqidagi bildirishnomalar bu yerda paydo bo'ladi"
+  },
+  "SearchBar": {
+    "searchAlt": "Qidiruv",
+    "searchPlaceholder": "Qidirish...",
+    "filters": "Filtrlar"
+  },
+  "DatePicker": {
+    "selectDay": "Kunni tanlash",
+    "prevMonth": "Oldingi oy",
+    "nextMonth": "Keyingi oy"
+  },
+  "TimePicker": {
+    "selectTime": "Vaqtni tanlash"
+  },
+  "data": {
+    "categories": {
+      "hairCare": "Go'zallik saloni",
+      "health": "Sog'liq",
+      "gym": "Fitnes zal",
+      "education": "Ta'lim muassasalari",
+      "food": "Restoranlar",
+      "coffee": "Qahvaxonalar",
+      "autoService": "Avto servis",
+      "cinema": "Kinoteatrlar",
+      "pcClub": "Komp klub",
+      "cleaning": "Klining",
+      "sanatoriums": "Sanatoriylar"
+    },
+    "popular": {
+      "beautySalon": {
+        "title": "Go'zallik saloni",
+        "desc": "Jismoniy tarbiya mashg'ulotlari uchun jihozlangan maxsus xona"
+      },
+      "gym": {
+        "title": "Fitnes zal",
+        "desc": "Jismoniy tarbiya mashg'ulotlari uchun jihozlangan maxsus xona"
+      },
+      "clinic": {
+        "title": "Klinika",
+        "desc": "Jismoniy tarbiya mashg'ulotlari uchun jihozlangan maxsus xona"
+      }
+    },
+    "bookingExtras": {
+      "isotonic": {
+        "name": "Izotonik",
+        "description": "Chanqoqbosti sport ichimligi"
+      },
+      "proteinBar": {
+        "name": "Proteinli batonchik",
+        "description": "Mashg'ulotdan so'ng foydali tamaddi"
+      },
+      "proteinShake": {
+        "name": "Proteinli kokteyl",
+        "description": "Yuklamadan keyin mushaklarni tiklash"
+      },
+      "water": {
+        "name": "Mineral suv",
+        "description": "0.5 l, gazsiz"
+      },
+      "towel": {
+        "name": "Sochiq",
+        "description": "Tashrif vaqti uchun ijaraga"
+      }
+    },
+    "shops": {
+      "bronFitness": {
+        "title": "BronFitness Club",
+        "type": "Sport zali",
+        "desc": "Trenajyor zali, guruh mashg'ulotlari, SPA va dam olish zonasiga ega zamonaviy fitnes klub",
+        "address": "Sayram ko'chasi 123, Toshkent",
+        "district": "Yakkasaroy tumani",
+        "category": "Trenajyor zali"
+      },
+      "beanHouse": {
+        "title": "Bean House Coffee",
+        "type": "Qahvaxona",
+        "desc": "Maxsus qahva, yangi pishiriqlar, nonushta va noutbuk bilan ishlash zonasi bo'lgan shinam qahvaxona",
+        "address": "Afrosiyob ko'chasi 45, Toshkent",
+        "district": "Mirobod tumani",
+        "category": "Qahvaxona"
+      },
+      "cityHospital": {
+        "title": "City Hospital",
+        "type": "Kasalxona",
+        "desc": "Ko'p tarmoqli klinika: terapevt, stomatolog, kardiolog. Shifokor qabuliga onlayn yozilish.",
+        "address": "Shahrisabz ko'chasi 12, Toshkent",
+        "district": "Mirobod tumani",
+        "category": "Konsultatsiya",
+        "services": {
+          "therapist": {
+            "title": "Terapevt konsultatsiyasi",
+            "description": "Terapevt shifokori qabuli va ko'rigi, tashxis qo'yish, tavsiyalar."
+          },
+          "cardio": {
+            "title": "Kardiolog konsultatsiyasi",
+            "description": "Ko'rik, tavsiyalar, tekshiruv natijalarini izohlash."
+          },
+          "dentist": {
+            "title": "Stomatolog konsultatsiyasi",
+            "description": "Og'iz bo'shlig'ini ko'rish, diagnostika, davolash rejasi va tavsiyalar."
+          },
+          "pediatrics": {
+            "title": "Pediatr konsultatsiyasi",
+            "description": "Bolani ko'rikdan o'tkazish, zarurat tug'ilganda tavsiyalar va davolash rejasi."
+          }
+        }
+      },
+      "beautyBron": {
+        "title": "Beauty Bron Salon",
+        "type": "Go'zallik saloni",
+        "desc": "Premium go'zallik saloni: soch kesish, turmaklash, manikyur va terini parvarish qilish.",
+        "address": "Taras Shevchenko ko'chasi 21, Toshkent",
+        "district": "Mirobod tumani",
+        "category": "Go'zallik xizmatlari"
+      }
+    },
+    "support": {
+      "contacts": {
+        "phone": {
+          "title": "Qo'ng'iroq qilish",
+          "description": "Qaynoq liniyamiz orqali bizga qo'ng'iroq qiling"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "description": "Biz bilan bog'laning va muammoingizni tasvirlang",
+          "buttonText": "Telegram"
+        },
+        "email": {
+          "title": "Email",
+          "description": "Bizga xat yuboring va biz javob beramiz",
+          "buttonText": "Xat yozish"
+        }
+      },
+      "faq": {
+        "changeBooking": {
+          "question": "Band qilishni qanday o'zgartirish yoki bekor qilish mumkin?",
+          "answer": "«Mening band qilishlarim» bo'limiga o'ting, kerakli yozuvni tanlang va «O'zgartirish» yoki «Bekor qilish» tugmasini bosing. Bekor qilish xizmat boshlanishidan kamida 2 soat oldin amalga oshirilishi mumkin."
+        },
+        "paymentMethods": {
+          "question": "Qanday to'lov usullari mavjud?",
+          "answer": "Biz Visa va Mastercard bank kartalarini, shuningdek Payme va Click orqali to'lovlarni qabul qilamiz. Ba'zi muassasalarda joyida to'lash imkoniyati mavjud."
+        },
+        "viewBookings": {
+          "question": "Mening band qilishlarimni qayerda ko'rishim mumkin?",
+          "answer": "Barcha band qilishlaringiz yon menyudagi «Mening band qilishlarim» bo'limida ko'rsatiladi. U yerda siz kelgusi va o'tgan yozuvlarni ko'rasiz."
+        },
+        "howBookingWorks": {
+          "question": "Band qilish tizimi qanday ishlaydi?",
+          "answer": "Xaritada yoki asosiy sahifada muassasani tanlang, xizmatni va qulay vaqtni ko'rsating, onlayn to'lov qiling — va band qilish tasdiqnomasini oling."
+        },
+        "security": {
+          "question": "Xavfsizlik va maxfiylik",
+          "answer": "Sizning ma'lumotlaringiz shifrlash orqali himoyalangan. Biz shaxsiy ma'lumotlarni uchinchi shaxslarga bermaymiz va undan faqat band qilishlarni qayta ishlash uchun foydalanamiz."
+        }
+      }
+    },
+    "whyUs": {
+      "steps": [
+        {
+          "title": "Xizmatni tanlaysiz",
+          "description": "Sizga kerak bo'lgan xizmatni tanlaysiz"
+        },
+        {
+          "title": "Vaqtni tanlaysiz",
+          "description": "Vaqt va sanani tanlaysiz"
+        },
+        {
+          "title": "To'lov qilasiz",
+          "description": "Tanlangan xizmat uchun to'lov qilasiz"
+        },
+        {
+          "title": "Xizmatni olasiz",
+          "description": "Professionallardan xizmat oling"
+        }
+      ]
+    }
+  },
+  "pluralize": {
+    "services": {
+      "one": "xizmat",
+      "few": "xizmat",
+      "many": "xizmatlar",
+      "other": "xizmatlar"
+    },
+    "reviews": {
+      "one": "sharh",
+      "few": "sharh",
+      "many": "sharh",
+      "other": "sharh"
+    },
+    "time": {
+      "min": "daq.",
+      "hour": "soat"
+    }
+  },
+  "Weekdays": {
+    "mon": {
+      "long": "Dushanba",
+      "short": "Du"
+    },
+    "tue": {
+      "long": "Seshanba",
+      "short": "Se"
+    },
+    "wed": {
+      "long": "Chorshanba",
+      "short": "Ch"
+    },
+    "thu": {
+      "long": "Payshanba",
+      "short": "Pa"
+    },
+    "fri": {
+      "long": "Juma",
+      "short": "Ju"
+    },
+    "sat": {
+      "long": "Shanba",
+      "short": "Sh"
+    },
+    "sun": {
+      "long": "Yakshanba",
+      "short": "Ya"
+    }
+  },
+  "Months": {
+    "jan": "Yanvar",
+    "feb": "Fevral",
+    "mar": "Mart",
+    "apr": "Aprel",
+    "may": "May",
+    "jun": "Iyun",
+    "jul": "Iyul",
+    "aug": "Avgust",
+    "sep": "Sentyabr",
+    "oct": "Oktyabr",
+    "nov": "Noyabr",
+    "dec": "Dekabr"
+  }
+}

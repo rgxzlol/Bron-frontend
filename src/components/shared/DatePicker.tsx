@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from 'next-intl';
 
 interface DatePickerProps {
   viewMonth: Date;
@@ -61,11 +62,12 @@ export default function DatePicker({
   onSelectedDateChange,
   today = new Date(2026, 5, 2),
 }: DatePickerProps) {
+  const t = useTranslations('DatePicker');
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
 
   return (
     <div className="">
-      <h2 className="text-[18px] font-bold mb-4 text-black">Выбрать день</h2>
+      <h2 className="text-[18px] font-bold mb-4 text-black">{t('selectDay')}</h2>
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
@@ -73,7 +75,7 @@ export default function DatePicker({
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
-          aria-label="Предыдущий месяц"
+          aria-label={t('prevMonth')}
         >
           ‹
         </button>
@@ -84,7 +86,7 @@ export default function DatePicker({
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }
-          aria-label="Следующий месяц"
+          aria-label={t('nextMonth')}
         >
           ›
         </button>

@@ -1,6 +1,7 @@
 "use client";
 import { assets } from "@/lib/assets";
 import Image from "next/image";
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from "react";
 
 interface BookingDropdownProps {
@@ -9,6 +10,7 @@ interface BookingDropdownProps {
 }
 
 export const BookingDropdown = ({ onCancelClick, onEditClick }: BookingDropdownProps) => {
+    const t = useTranslations('BookingDropdown');
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +34,7 @@ export const BookingDropdown = ({ onCancelClick, onEditClick }: BookingDropdownP
                 type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
                 className="rounded-full w-[40px] h-[40px] bg-transparent grid place-items-center shrink-0 transition-colors duration-200 hover:bg-gray-100 active:scale-90"
-                aria-label="Меню"
+                aria-label={t('menu')}
                 aria-expanded={isOpen}
                 aria-haspopup="listbox"
             >
@@ -52,7 +54,7 @@ export const BookingDropdown = ({ onCancelClick, onEditClick }: BookingDropdownP
                                 className="flex w-full items-center gap-[14px] rounded-[17px] p-[18px] bg-white hover:bg-[#f4f4f8] transition-all duration-200 hover:scale-[1.02] active:scale-95"
                             >
                                 <Image src={assets.booking.editIcon} alt="edit" className="object-contain" width={17} height={17} />
-                                <span className="text-[16px] font-semibold">Изменить бронь</span>
+                                <span className="text-[16px] font-semibold">{t('editBooking')}</span>
                             </button>
                         </li>
                         <li>
@@ -65,7 +67,7 @@ export const BookingDropdown = ({ onCancelClick, onEditClick }: BookingDropdownP
                                 className="flex w-full items-center gap-[14px] rounded-[17px] p-[18px] bg-white hover:bg-[#f4f4f8] transition-all duration-200 hover:scale-[1.02] active:scale-95"
                             >
                                 <Image src={assets.booking.deleteIcon} alt="cancel" className="object-contain" width={17} height={17} />
-                                <span className="text-[16px] font-semibold">Отменить бронь</span>
+                                <span className="text-[16px] font-semibold">{t('cancelBooking')}</span>
                             </button>
                         </li>
                     </ul>

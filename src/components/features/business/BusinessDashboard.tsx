@@ -15,6 +15,15 @@ import {
 } from "@/store/business.store";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from 'next-intl';
+
+const categoryMap: Record<string, string> = {
+  "Консультация": "Consultation",
+  "Процедура": "Procedure",
+  "Тренировка": "Training",
+  "Диагностика": "Diagnostics",
+  "Другое": "Other"
+};
 
 type Props = {
   businessId: string;
@@ -28,7 +37,6 @@ const inputClass =
   "w-full rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] outline-none focus:ring-2 focus:ring-[#0a6af7]/30";
 
 const MAX_DESC = 120;
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
 const SERVICE_TIME_SLOTS = [
   "17:00",
@@ -52,10 +60,6 @@ const BUSY_TIME_SLOTS = new Set<string>([
   "22:00",
   "22:30",
 ]);
-
-function getMonthLabel(date: Date) {
-  return date.toLocaleDateString("ru-RU", { month: "long" });
-}
 
 function buildCalendarDays(viewMonth: Date) {
   const year = viewMonth.getFullYear();
@@ -187,6 +191,7 @@ function DeleteServiceModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations('BusinessDashboard');
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
       <div className="w-full max-w-[520px] rounded-[24px] bg-white p-[28px] shadow-xl">
@@ -195,7 +200,7 @@ function DeleteServiceModal({
             <span className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#fde8e8]">
               <TrashIcon />
             </span>
-            <h3 className="text-[22px] font-semibold">Удалить услугу</h3>
+            <h3 className="text-[22px] font-semibold">{t('deleteService')}</h3>
           </div>
           <button
             type="button"
@@ -207,12 +212,11 @@ function DeleteServiceModal({
         </div>
 
         <p className="text-[16px] leading-relaxed">
-          Вы уверены что хотите удалить услугу{" "}
+          {t('deleteConfirm')}{" "}
           <strong>{serviceName}</strong>
         </p>
         <p className="mt-[10px] text-[14px] opacity-60">
-          Все данные об услуге, время, даты и свободные слоты удалятся без
-          возможности восстановить
+          {t('deleteWarning1')}
         </p>
 
         <div className="mt-[20px] flex items-start gap-[12px] rounded-[14px] bg-[#fde8e8] px-[16px] py-[14px]">
@@ -220,8 +224,7 @@ function DeleteServiceModal({
             !
           </span>
           <p className="text-[14px] leading-snug">
-            Это действие нельзя будет отменить. Пожалуйста, убедитесь, что вы
-            сохранили важные данные
+            {t('deleteWarning2')}
           </p>
         </div>
 
@@ -231,14 +234,14 @@ function DeleteServiceModal({
             onClick={onCancel}
             className="flex-1 rounded-[14px] bg-[#0a6af7] py-[14px] text-[16px] font-semibold text-white"
           >
-            Отмена
+            {t('cancel')}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="flex-1 rounded-[14px] bg-[#e53935] py-[14px] text-[16px] font-semibold text-white"
           >
-            Удалить услугу
+            {t('deleteService')}
           </button>
         </div>
       </div>
@@ -273,6 +276,7 @@ function PriceField({
   onChange: (value: string) => void;
   error?: boolean;
 }) {
+  const t = useTranslations('BusinessDashboard');
   return (
     <div className="flex flex-col gap-[8px]">
       <span className="text-[15px] font-semibold text-black">{label}</span>
@@ -290,9 +294,9 @@ function PriceField({
           <select
             className="h-full w-full appearance-none rounded-[14px] bg-[#f4f4f8] py-[14px] pl-[18px] pr-[34px] text-[16px] font-semibold text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
             defaultValue="sum"
-            aria-label="Валюта"
+            aria-label={t('currency')}
           >
-            <option value="sum">Сум</option>
+            <option value="sum">{t('sum')}</option>
           </select>
           <span className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 text-[#6b7280]">
             <ChevronDownIcon />
@@ -313,6 +317,7 @@ function PhotoUploadField({
   photo: string | null;
   onPhotoChange: (photo: string | null) => void;
 }) {
+  const t = useTranslations('BusinessDashboard');
   const photoRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -337,13 +342,12 @@ function PhotoUploadField({
         className="flex h-[160px] flex-col items-center justify-center gap-[10px] overflow-hidden rounded-[16px] bg-[#f4f4f8]"
       >
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="h-full w-full object-cover" />
         ) : (
           <>
             <PhotoIcon />
             <span className="text-[15px] font-semibold text-[#0a6af7]">
-              Загрузить фото
+              {t('uploadPhoto')}
             </span>
           </>
         )}
@@ -363,6 +367,7 @@ function FormModalFooter({
   onSave: () => void;
   saveDisabled?: boolean;
 }) {
+  const t = useTranslations('BusinessDashboard');
   return (
     <div className="mt-[28px] flex gap-[12px]">
       <button
@@ -370,7 +375,7 @@ function FormModalFooter({
         onClick={onClose}
         className="flex-1 rounded-[14px] bg-[#f4f4f8] py-[14px] text-[16px] font-semibold"
       >
-        Назад
+        {t('back')}
       </button>
       <Button
         text={saveLabel}
@@ -399,8 +404,9 @@ function hasFormFieldErrors(errors: FormFieldErrors): boolean {
 }
 
 function FieldError({ show }: { show?: boolean }) {
+  const t = useTranslations('BusinessDashboard');
   if (!show) return null;
-  return <span className="text-[13px] text-[#e53935]">Обязательное поле</span>;
+  return <span className="text-[13px] text-[#e53935]">{t('requiredField')}</span>;
 }
 
 function useRequiredFormSubmit(form: ServiceFormData) {
@@ -431,24 +437,25 @@ function ProductFormModal({
   onClose: () => void;
   onSave: (data: ServiceFormData) => void;
 }) {
+  const t = useTranslations('BusinessDashboard');
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
   const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
       <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
-        <h3 className="text-[28px] font-semibold">Добавить товар</h3>
+        <h3 className="text-[28px] font-semibold">{t('addProduct')}</h3>
         <p className="mt-[6px] text-[15px] opacity-60">
-          Заполните информацией о вашем товаре
+          {t('fillProductInfo')}
         </p>
 
         <div className="mt-[28px] grid grid-cols-1 gap-[24px] md:grid-cols-2">
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название товара</span>
+              <span className="text-[15px] font-semibold">{t('productName')}</span>
               <input
                 className={inputClass}
-                placeholder="Введите название"
+                placeholder={t('enterName')}
                 value={form.name}
                 onChange={(e) => {
                   const name = e.target.value;
@@ -460,8 +467,8 @@ function ProductFormModal({
             </label>
 
             <PriceField
-              label="Цена"
-              placeholder="Введите цену"
+              label={t('price')}
+              placeholder={t('enterPrice')}
               value={form.price}
               error={fieldErrors.price}
               onChange={(price) => {
@@ -471,7 +478,7 @@ function ProductFormModal({
             />
 
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Категория</span>
+              <span className="text-[15px] font-semibold">{t('category')}</span>
               <select
                 className={inputClass}
                 value={form.category}
@@ -479,22 +486,25 @@ function ProductFormModal({
                   setForm((f) => ({ ...f, category: e.target.value }))
                 }
               >
-                <option value="">Выберите категорию</option>
-                {SERVICE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
+                <option value="">{t('selectCategory')}</option>
+                {SERVICE_CATEGORIES.map((cat) => {
+                  const key = categoryMap[cat];
+                  return (
+                    <option key={cat} value={cat}>
+                      {key ? t(`categories.${key}`) : cat}
+                    </option>
+                  );
+                })}
               </select>
             </label>
           </div>
 
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Описание</span>
+              <span className="text-[15px] font-semibold">{t('description')}</span>
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y`}
-                placeholder="Опишите товар"
+                placeholder={t('describeProduct')}
                 maxLength={MAX_DESC}
                 value={form.description}
                 onChange={(e) =>
@@ -507,7 +517,7 @@ function ProductFormModal({
             </label>
 
             <PhotoUploadField
-              label="Фото услуги или товара"
+              label={t('serviceOrProductPhoto')}
               photo={form.photo}
               onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
             />
@@ -515,7 +525,7 @@ function ProductFormModal({
         </div>
 
         <FormModalFooter
-          saveLabel="Сохранить услуги или товар"
+          saveLabel={t('saveServiceOrProduct')}
           onClose={onClose}
           saveDisabled={hasFormFieldErrors(fieldErrors)}
           onSave={() => {
@@ -539,7 +549,21 @@ function ServiceCalendar({
   onViewMonthChange: (date: Date) => void;
   onSelectDate: (date: Date) => void;
 }) {
+  const t = useTranslations('BusinessDashboard');
+  const tWeekdays = useTranslations('Weekdays');
+  const tMonths = useTranslations('Months');
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
+
+  const weekdays = useMemo(() => {
+    const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    return keys.map((key) => tWeekdays(`${key}.short`));
+  }, [tWeekdays]);
+
+  const monthLabel = useMemo(() => {
+    const monthKeys = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const key = monthKeys[viewMonth.getMonth()];
+    return tMonths(key);
+  }, [viewMonth, tMonths]);
 
   return (
     <div>
@@ -552,12 +576,12 @@ function ServiceCalendar({
             )
           }
           className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
-          aria-label="Предыдущий месяц"
+          aria-label={t('prevMonth')}
         >
           ‹
         </button>
         <span className="text-[15px] font-semibold capitalize">
-          {getMonthLabel(viewMonth)}
+          {monthLabel}
         </span>
         <button
           type="button"
@@ -567,14 +591,14 @@ function ServiceCalendar({
             )
           }
           className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[20px] opacity-60 hover:bg-[#ececf2]"
-          aria-label="Следующий месяц"
+          aria-label={t('nextMonth')}
         >
           ›
         </button>
       </div>
 
       <div className="mb-[8px] grid grid-cols-7 gap-[4px] text-center text-[12px] font-semibold opacity-50">
-        {WEEKDAYS.map((day) => (
+        {weekdays.map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
@@ -612,6 +636,7 @@ function AddServiceFormModal({
   onClose: () => void;
   onSave: (data: ServiceFormData) => void;
 }) {
+  const t = useTranslations('BusinessDashboard');
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
   const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
   const [showOnlyFree, setShowOnlyFree] = useState(true);
@@ -636,18 +661,18 @@ function AddServiceFormModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-[20px]">
       <div className="max-h-[90dvh] w-full max-w-[900px] overflow-y-auto rounded-[24px] bg-white p-[32px] shadow-xl">
-        <h3 className="text-[28px] font-semibold">Добавить услугу</h3>
+        <h3 className="text-[28px] font-semibold">{t('addService')}</h3>
         <p className="mt-[6px] text-[15px] opacity-60">
-          Добавьте услугу для брони
+          {t('addServiceSubtitle')}
         </p>
 
         <div className="mt-[28px] grid grid-cols-1 gap-[24px] md:grid-cols-2">
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название услуги</span>
+              <span className="text-[15px] font-semibold">{t('serviceName')}</span>
               <input
                 className={inputClass}
-                placeholder="Обязательно"
+                placeholder={t('required')}
                 value={form.name}
                 onChange={(e) => {
                   const name = e.target.value;
@@ -659,8 +684,8 @@ function AddServiceFormModal({
             </label>
 
             <PriceField
-              label="Цена услуги"
-              placeholder="Введите цену"
+              label={t('servicePrice')}
+              placeholder={t('enterPrice')}
               value={form.price}
               error={fieldErrors.price}
               onChange={(price) => {
@@ -670,7 +695,7 @@ function AddServiceFormModal({
             />
 
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Категория</span>
+              <span className="text-[15px] font-semibold">{t('category')}</span>
               <select
                 className={inputClass}
                 value={form.category}
@@ -678,21 +703,24 @@ function AddServiceFormModal({
                   setForm((f) => ({ ...f, category: e.target.value }))
                 }
               >
-                <option value="">Выберите категорию</option>
-                {SERVICE_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
+                <option value="">{t('selectCategory')}</option>
+                {SERVICE_CATEGORIES.map((cat) => {
+                  const key = categoryMap[cat];
+                  return (
+                    <option key={cat} value={cat}>
+                      {key ? t(`categories.${key}`) : cat}
+                    </option>
+                  );
+                })}
               </select>
             </label>
 
             <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
               <div className="mb-[14px] flex items-center justify-between gap-[12px]">
-                <span className="text-[15px] font-semibold">Свободное время</span>
+                <span className="text-[15px] font-semibold">{t('freeTime')}</span>
                 <div className="flex items-center gap-[10px]">
                   <span className="text-[13px] opacity-60">
-                    Показать только свободное
+                    {t('showOnlyFree')}
                   </span>
                   <Toggle checked={showOnlyFree} onChange={setShowOnlyFree} />
                 </div>
@@ -725,11 +753,11 @@ function AddServiceFormModal({
               <div className="mt-[14px] flex items-center gap-[16px] text-[13px]">
                 <span className="flex items-center gap-[6px]">
                   <span className="h-[8px] w-[8px] rounded-full bg-white ring-1 ring-[#d0d0d8]" />
-                  Свободно
+                  {t('free')}
                 </span>
                 <span className="flex items-center gap-[6px]">
                   <span className="h-[8px] w-[8px] rounded-full bg-[#0a6af7]" />
-                  Занято
+                  {t('busy')}
                 </span>
               </div>
             </div>
@@ -737,10 +765,10 @@ function AddServiceFormModal({
 
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Описание услуги</span>
+              <span className="text-[15px] font-semibold">{t('serviceDescription')}</span>
               <textarea
                 className={`${inputClass} min-h-[100px] resize-y`}
-                placeholder="Опишите услуги"
+                placeholder={t('describeServices')}
                 maxLength={MAX_DESC}
                 value={form.description}
                 onChange={(e) =>
@@ -753,13 +781,13 @@ function AddServiceFormModal({
             </label>
 
             <PhotoUploadField
-              label="Фото"
+              label={t('photo')}
               photo={form.photo}
               onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
             />
 
             <div className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Дата</span>
+              <span className="text-[15px] font-semibold">{t('date')}</span>
               <div className="rounded-[16px] bg-[#f4f4f8] p-[16px]">
                 <ServiceCalendar
                   viewMonth={viewMonth}
@@ -773,7 +801,7 @@ function AddServiceFormModal({
         </div>
 
         <FormModalFooter
-          saveLabel="Сохранить услуги"
+          saveLabel={t('saveServices')}
           onClose={onClose}
           saveDisabled={hasFormFieldErrors(fieldErrors)}
           onSave={() => {
@@ -791,6 +819,7 @@ export default function BusinessDashboard({
   onClose,
   onEditProfile,
 }: Props) {
+  const t = useTranslations('BusinessDashboard');
   const addService = useBusinessStore((s) => s.addService);
   const addProduct = useBusinessStore((s) => s.addProduct);
   const removeService = useBusinessStore((s) => s.removeService);
@@ -820,6 +849,7 @@ export default function BusinessDashboard({
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -831,7 +861,7 @@ export default function BusinessDashboard({
     assets.map.photo1;
   const isDataUrl = typeof profileImage === "string";
 
-  function commitPriceEdit(serviceId: string, fallbackPrice: number) {
+  function commitPriceEdit(serviceId: string) {
     const raw = priceEdits[serviceId];
     if (raw === undefined) return;
 
@@ -868,8 +898,8 @@ export default function BusinessDashboard({
     onClose();
   }
 
-  function handlePriceBlur(serviceId: string, fallbackPrice: number) {
-    commitPriceEdit(serviceId, fallbackPrice);
+  function handlePriceBlur(serviceId: string) {
+    commitPriceEdit(serviceId);
   }
 
   function handlePriceFocus(serviceId: string, currentPrice: number) {
@@ -906,7 +936,7 @@ export default function BusinessDashboard({
     <>
       <div className="flex min-w-0 w-full flex-col gap-[20px] pb-[20px]">
           <div className="mb-[8px]">
-            <h2 className="text-[32px] font-semibold">Бизнес страница</h2>
+            <h2 className="text-[32px] font-semibold">{t('businessPage')}</h2>
             <div className="mt-[16px] flex gap-[32px] border-b border-[#ececf2]">
               <button
                 type="button"
@@ -917,7 +947,7 @@ export default function BusinessDashboard({
                     : "opacity-60"
                 }`}
               >
-                Услуги и персонал
+                {t('servicesAndStaff')}
               </button>
               <button
                 type="button"
@@ -928,7 +958,7 @@ export default function BusinessDashboard({
                     : "opacity-60"
                 }`}
               >
-                Бронирование
+                {t('booking')}
               </button>
             </div>
           </div>
@@ -966,7 +996,7 @@ export default function BusinessDashboard({
                           width={16}
                           height={16}
                         />
-                        0,0 (0 отзыва)
+                        {t('zeroReviews')}
                       </p>
                       <p className="mt-[6px] flex items-center gap-[6px] text-[15px] opacity-75">
                         <Image
@@ -975,7 +1005,7 @@ export default function BusinessDashboard({
                           width={14}
                           height={14}
                         />
-                        {business.address || "Ташкент, Узбекистан"}
+                        {business.address || t('tashkentUzbekistan')}
                       </p>
                     </div>
                   </div>
@@ -985,14 +1015,14 @@ export default function BusinessDashboard({
                       onClick={onClose}
                       className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
                     >
-                      Назад
+                      {t('back')}
                     </button>
                     <button
                       type="button"
                       onClick={onEditProfile}
                       className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
                     >
-                      Редактировать профиль
+                      {t('editProfile')}
                     </button>
                   </div>
                 </div>
@@ -1001,13 +1031,13 @@ export default function BusinessDashboard({
               <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
                 <div className="mb-[20px] flex items-start justify-between gap-[16px]">
                   <div>
-                    <h3 className="text-[22px] font-semibold">Услуги</h3>
+                    <h3 className="text-[22px] font-semibold">{t('services')}</h3>
                     <p className="mt-[6px] text-[15px] opacity-60">
-                      Рабочие дни и услуги
+                      {t('workingDaysAndServices')}
                     </p>
                   </div>
                   <Button
-                    text="Добавить товар"
+                    text={t('addProduct')}
                     onClick={() => setShowAddProduct(true)}
                     className="!px-[24px] py-[12px] text-[15px]"
                   />
@@ -1018,24 +1048,24 @@ export default function BusinessDashboard({
                     <thead>
                       <tr className="border-b border-[#ececf2] text-[13px] opacity-60">
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Название
+                          {t('name')}
                         </th>
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Категория
+                          {t('category')}
                         </th>
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Цена
+                          {t('price')}
                         </th>
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Описание
+                          {t('description')}
                         </th>
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Фото
+                          {t('photo')}
                         </th>
                         <th className="pb-[12px] pr-[12px] font-semibold">
-                          Статус
+                          {t('status')}
                         </th>
-                        <th className="pb-[12px] font-semibold">Действие</th>
+                        <th className="pb-[12px] font-semibold">{t('action')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1045,7 +1075,7 @@ export default function BusinessDashboard({
                             colSpan={7}
                             className="py-[24px] text-center text-[15px] opacity-60"
                           >
-                            Услуг пока нет. Добавьте первую услугу.
+                            {t('noServices')}
                           </td>
                         </tr>
                       )}
@@ -1058,7 +1088,7 @@ export default function BusinessDashboard({
                             {service.name}
                           </td>
                           <td className="py-[14px] pr-[12px]">
-                            {service.category}
+                            {categoryMap[service.category] ? t(`categories.${categoryMap[service.category]}`) : service.category}
                           </td>
                           <td className="py-[14px] pr-[12px]">
                             <input
@@ -1066,7 +1096,7 @@ export default function BusinessDashboard({
                               className="w-[130px] rounded-[10px] bg-[#f4f4f8] px-[10px] py-[8px] text-[14px] text-black outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
                               inputMode="numeric"
                               autoComplete="off"
-                              aria-label={`Цена услуги ${service.name}`}
+                              aria-label={`${t('priceOfService')} ${service.name}`}
                               value={
                                 priceEdits[service.id] ??
                                 formatPriceInput(service.price)
@@ -1083,7 +1113,7 @@ export default function BusinessDashboard({
                                 }))
                               }
                               onBlur={() =>
-                                handlePriceBlur(service.id, service.price)
+                                handlePriceBlur(service.id)
                               }
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
@@ -1126,7 +1156,7 @@ export default function BusinessDashboard({
                           <td className="py-[14px]">
                             <button
                               type="button"
-                              aria-label={`Удалить услугу ${service.name}`}
+                              aria-label={`${t('deleteServiceAria')} ${service.name}`}
                               className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-[#fde8e8] transition hover:bg-[#f9d4d4]"
                               onClick={() => setDeleteTarget(service)}
                             >
@@ -1142,12 +1172,12 @@ export default function BusinessDashboard({
 
               <div className="flex gap-[16px] pb-[20px]">
                 <Button
-                  text="Добавить услугу"
+                  text={t('addService')}
                   onClick={() => setShowAddService(true)}
                   className="flex-1 !w-full text-center !px-[20px] text-[17px]"
                 />
                 <Button
-                  text="Сохранить изменение"
+                  text={t('saveChange')}
                   onClick={handleSaveChanges}
                   className="flex-1 !w-full text-center !px-[20px] text-[17px]"
                 />
@@ -1158,13 +1188,13 @@ export default function BusinessDashboard({
           {tab === "bookings" && (
             <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
               <div className="mb-[24px] flex items-center justify-between">
-                <h3 className="text-[22px] font-semibold">Бронирования</h3>
+                <h3 className="text-[22px] font-semibold">{t('bookings')}</h3>
                 <button
                   type="button"
                   onClick={onClose}
                   className="rounded-[12px] border border-[#e0e0e8] px-[20px] py-[10px] text-[15px] font-semibold"
                 >
-                  Назад
+                  {t('back')}
                 </button>
               </div>
 
@@ -1185,18 +1215,18 @@ export default function BusinessDashboard({
                         {booking.serviceName}
                       </span>
                       <span className="text-[15px] font-semibold">
-                        Цена {formatPrice(booking.price)}
+                        {t('price')} {formatPrice(booking.price)}
                       </span>
                     </div>
 
                     {booking.status === "waiting" ? (
                       <span className="rounded-[12px] border border-[#e0e0e8] px-[28px] py-[12px] text-[15px] font-semibold opacity-60">
-                        Ожидает
+                        {t('waiting')}
                       </span>
                     ) : booking.status === "pending" ? (
                       <div className="flex gap-[10px]">
                         <Button
-                          text="Принять бронь"
+                          text={t('acceptBooking')}
                           onClick={() =>
                             updateBookingStatus(
                               businessId,
@@ -1217,7 +1247,7 @@ export default function BusinessDashboard({
                           }
                           className="rounded-[12px] border border-[#e0e0e8] px-[24px] py-[12px] text-[14px] font-semibold"
                         >
-                          Отменить
+                          {t('cancelBooking')}
                         </button>
                       </div>
                     ) : (
@@ -1229,8 +1259,8 @@ export default function BusinessDashboard({
                         }`}
                       >
                         {booking.status === "accepted"
-                          ? "Принято"
-                          : "Отменено"}
+                          ? t('accepted')
+                          : t('cancelled')}
                       </span>
                     )}
                   </div>

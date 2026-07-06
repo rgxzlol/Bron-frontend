@@ -5,8 +5,10 @@ import Link from "next/link";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import NotificationDropdown from "@/components/layout/Header/NotificationDropdown";
 import SearchBar from "./SearchBar";
+import { useTranslations } from 'next-intl';
 
 export default function Header() {
+  const t = useTranslations('Header');
   return (
     <header className="sticky top-0 z-50 my-[45px] flex justify-between">
       <SearchBar />
@@ -19,7 +21,7 @@ export default function Header() {
         <Link
           href={routes.profile}
           className="rounded-full bg-white p-[16px]"
-          aria-label="Профиль"
+          aria-label={t('profile')}
         >
           <Image src={assets.header.profileIcon} alt="" />
         </Link>

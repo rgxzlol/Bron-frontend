@@ -9,9 +9,9 @@ export type NavItem = {
 };
 
 export const mainNavItems: NavItem[] = [
-  { title: "Главная", href: routes.home, icon: assets.nav.home },
-  { title: "Карта", href: routes.map, icon: assets.nav.map },
-  { title: "Бизнес страница", href: routes.business, icon: assets.nav.business },
-  { title: "Мои брони", href: routes.bookings, icon: assets.nav.booking },
-  { title: "Поддержка", href: routes.support, icon: assets.nav.support },
+  { title: "home", href: routes.home, icon: assets.nav.home },
+  { title: "map", href: routes.map, icon: assets.nav.map },
+  { title: "business", href: routes.business, icon: assets.nav.business },
+  { title: "myBookins", href: routes.bookings, icon: assets.nav.booking },
+  { title: "support", href: routes.support, icon: assets.nav.support },
 ];

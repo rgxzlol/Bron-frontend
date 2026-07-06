@@ -1,6 +1,7 @@
 "use client";
 
 import { FC, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
@@ -15,6 +16,7 @@ interface CategoryModalProps {
 
 
 export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
+    const t = useTranslations('CategoryModal');
     const [selectedLocation, setSelectedLocation] = useState<string>("nearby");
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [price, setPrice] = useState<string>("");
@@ -43,11 +45,11 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="relative flex items-center justify-center w-full mb-6">
-                    <h2 className="text-[24px] font-medium text-black">Категории</h2>
+                    <h2 className="text-[24px] font-medium text-black">{t('title')}</h2>
                     <button
                         onClick={handleClose}
                         className="absolute right-0 w-8 h-8 flex items-center justify-center bg-[#FAFAFF] hover:bg-[#EAEAEF] text-black  rounded-full transition-all duration-200 group"
-                        aria-label="Закрыть окно"
+                        aria-label={t('closeWindow')}
                     >
                         <span className="w-4 h-4 flex items-center justify-center">
                             <Image
@@ -63,7 +65,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
 
                     <div className="flex flex-col">
                         <h3 className="font-medium text-[16px] text-black mb-[9px]">
-                            Местоположение
+                            {t('location')}
                         </h3>
                         <LocationSelector value={selectedLocation} onChange={setSelectedLocation} />
                     </div>
@@ -71,14 +73,14 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
 
                     <div className="flex flex-col">
                         <label className="font-medium text-[16px] text-black mb-[9px]">
-                            Категория бизнеса
+                            {t('businessCategory')}
                         </label>
                         <CategoryDropdown selectedCategory={selectedCategory} onChange={setSelectedCategory} />
                     </div>
 
                     <div className="flex flex-col">
                         <label htmlFor="price-input" className="font-medium text-[16px] text-black mb-[9px]">
-                            Введите приблизительную цену
+                            {t('enterApproximatePrice')}
                         </label>
 
                         <div className="flex items-center gap-[12px] w-full">
@@ -86,7 +88,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                                 <input
                                     id="price-input"
                                     type="text"
-                                    placeholder="Введите цену"
+                                    placeholder={t('enterPrice')}
                                     className="w-full bg-transparent outline-none text-[18px] font-semibold text-black placeholder:text-gray-400 placeholder:font-normal"
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value)}
@@ -102,7 +104,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                         type="submit"
                         className="w-full py-[20px] rounded-[23px] bg-[#0A6AF7] hover:bg-[#0859d4] active:scale-[0.98] text-white font-semibold text-[20px] transition-all duration-200 shadow-md hover:shadow-lg mt-4 cursor-pointer"
                     >
-                        Применить
+                        {t('apply')}
                     </button>
                 </form>
             </section>

@@ -1,7 +1,9 @@
 import Image from 'next/image'
 import { assets } from '@/lib/assets'
+import { useTranslations } from 'next-intl';
 
 export const NotificationEmpty = () => {
+    const t = useTranslations('NotificationEmpty');
     return (
         <div className="flex flex-col items-center mt-8">
             <Image
@@ -10,10 +12,10 @@ export const NotificationEmpty = () => {
                 className="mb-[31px]"
             />
             <h1 className="font-semibold text-[20px] text-black mb-2">
-                Нет уведомлений!
+                {t('noNotifications')}
             </h1>
             <p className="font-semibold text-[16px] text-center text-black/60 mb-[50px]">
-                Уведомления о бронях, платежах, акциях и других событиях
+                {t('notificationsDesc')}
             </p>
         </div>
     )

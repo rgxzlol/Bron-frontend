@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
@@ -22,6 +24,23 @@ export const SERVICE_CATEGORIES = [
   "Диагностика",
   "Другое",
 ] as const;
+
+export const businessCategoryMap: Record<string, string> = {
+  "Спорт зал": "Gym",
+  "Красота": "Beauty",
+  "Здоровье": "Health",
+  "Образование": "Education",
+  "Еда": "Food",
+  "Другое": "Other",
+};
+
+export const serviceCategoryMap: Record<string, string> = {
+  "Консультация": "Consultation",
+  "Процедура": "Procedure",
+  "Тренировка": "Training",
+  "Диагностика": "Diagnostics",
+  "Другое": "Other",
+};
 
 export type BusinessService = {
   id: string;
@@ -400,3 +419,69 @@ export const useBusinessStore = create<BusinessStore>()(
     },
   ),
 );
+
+// Helper hooks for dynamic localization of business properties
+export function useLocalizedDay() {
+  const t = useTranslations("Weekdays");
+  return useMemo(() => {
+    return (key: string, format: "long" | "short" = "long") => {
+      try {
+        return t(`${key}.${format}`);
+      } catch {
+        return key;
+      }
+    };
+  }, [t]);
+}
+
+export function useLocalizedSchedule() {
+  const getLocalizedDay = useLocalizedDay();
+  return useMemo(() => {
+    return (schedule: DaySchedule[]) =>
+      schedule.map((day) => ({
+        ...day,
+        label: getLocalizedDay(day.key, "long"),
+        shortLabel: getLocalizedDay(day.key, "short"),
+      }));
+  }, [getLocalizedDay]);
+}
+
+export function useLocalizedBusinessCategory() {
+  const t = useTranslations("BusinessModal");
+  return useMemo(() => {
+    return (cat: string) => {
+      const key = businessCategoryMap[cat];
+      return key ? t(`categories.${key}`) : cat;
+    };
+  }, [t]);
+}
+
+export function useLocalizedServiceCategory() {
+  const t = useTranslations("BusinessDashboard");
+  return useMemo(() => {
+    return (cat: string) => {
+      const key = serviceCategoryMap[cat];
+      return key ? t(`categories.${key}`) : cat;
+    };
+  }, [t]);
+}
+
+export function useLocalizedBusinessCategories() {
+  const t = useTranslations("BusinessModal");
+  return useMemo(() => {
+    return BUSINESS_CATEGORIES.map((cat) => ({
+      value: cat,
+      label: businessCategoryMap[cat] ? t(`categories.${businessCategoryMap[cat]}`) : cat,
+    }));
+  }, [t]);
+}
+
+export function useLocalizedServiceCategories() {
+  const t = useTranslations("BusinessDashboard");
+  return useMemo(() => {
+    return SERVICE_CATEGORIES.map((cat) => ({
+      value: cat,
+      label: serviceCategoryMap[cat] ? t(`categories.${serviceCategoryMap[cat]}`) : cat,
+    }));
+  }, [t]);
+}

@@ -1,1 +1,645 @@
-{}
+{
+  "Navigations": {
+    "home": "Главная",
+    "map": "Карта",
+    "business": "Бизнес страница",
+    "myBookins": "Мои брони",
+    "support": "Поддержка"
+  },
+  "AuthLayout": {
+    "login": "Войти в аккаунт",
+    "register": "Создать аккаунт"
+  },
+  "LoginPage": {
+    "nameLabel": "Имя",
+    "namePlaceholder": "Иван",
+    "passwordLabel": "Пароль",
+    "submitButton": "Войти"
+  },
+  "RegisterPage": {
+    "nameLabel": "Имя",
+    "namePlaceholder": "Иван",
+    "passwordLabel": "Пароль",
+    "repeatPasswordLabel": "Повторите пароль",
+    "submitButton": "Регистрация"
+  },
+  "BookingsPage": {
+    "title": "Мои брони"
+  },
+  "ProfilePage": {
+    "title": "Профиль"
+  },
+  "SupportModal": {
+    "openButton": "Тех.подержка",
+    "title": "Тех.Подержка",
+    "telegram": "Телеграм",
+    "phoneNumber": "Номер телефона",
+    "closeButton": "Закрыть"
+  },
+  "BookingCancelModal": {
+    "title": "Отменить бронь?",
+    "confirmText": "Вы уверены что хотите отменить бронь в",
+    "confirmDetails": "Bron Fitness Club на 16 мая 2026, с 18:00 до 19:00",
+    "close": "Закрыть",
+    "gym": "Спорт зал",
+    "address": "ул. Сайрам 123, Ташкент",
+    "total": "Итого",
+    "price": "98 000 сум",
+    "refundNotice": "Средства будут возвращены на ваш счет в течение 3-5 рабочих дней",
+    "keepBooking": "Не отменять",
+    "cancelBooking": "Отменить бронь"
+  },
+  "BookingCard": {
+    "gym": "Спорт зал",
+    "confirmed": "• Подтверждено",
+    "address": "ул. Сайрам 123, Ташкент",
+    "time": "Время",
+    "date": "12 июня 2026, ЧТ",
+    "guests": "Гости",
+    "total": "Итог",
+    "price": "98 000 сум",
+    "cancel": "Отменить бронь",
+    "orderContent": "Состав заказа",
+    "items": "3 товара",
+    "finished": "• Завершено"
+  },
+  "BookingDropdown": {
+    "menu": "Меню",
+    "editBooking": "Изменить бронь",
+    "cancelBooking": "Отменить бронь"
+  },
+  "BookingEditModal": {
+    "editBookingQuestion": "Изменить бронь",
+    "close": "Закрыть",
+    "gym": "Спорт зал",
+    "address": "ул. Сайрам 123, Ташкент",
+    "cancel": "Отмена",
+    "saveChanges": "Сохранить изменения"
+  },
+  "BookingNav": {
+    "navigation": "Навигация по бронированиям",
+    "upcoming": "Предстоящие",
+    "past": "Прошлые"
+  },
+  "Business": {
+    "title": "Добавьте свой бизнес на карту для больших активов",
+    "subtitle": "Увеличь активы с помощью бронирования!",
+    "addBusiness": "Добавить бизнес"
+  },
+  "BusinessCardMenu": {
+    "editProfile": "Изменить профиль",
+    "deleteBusiness": "Удалить бизнес"
+  },
+  "MyBusiness": {
+    "title": "Мой бизнес",
+    "addNewBusiness": "Добавить новый бизнес",
+    "untitled": "Без названия",
+    "confirmed": "Подтверждено",
+    "menu": "Меню",
+    "deleteConfirm": "Удалить этот бизнес?",
+    "bookings": "Бронирования",
+    "views": "Просмотров",
+    "statistics": "Статистика"
+  },
+  "Categories": {
+    "title": "Категории",
+    "allCategories": "Все категории",
+    "less": "Меньше",
+    "more": "Больше",
+    "goBack": "Вернуться обратно",
+    "seeAll": "Посмотреть все"
+  },
+  "HeroSection": {
+    "title": "Бронируй только в лучших сервисах",
+    "subtitle": "Салон красоты, здоровье, спа, фитнес клуб, образование и многое другое\n          в твоем распоряжении",
+    "findPlace": "Найти местечко"
+  },
+  "BusinessModal": {
+    "errorJpgPng": "Загрузите JPG или PNG",
+    "errorSize": "Размер файла не должен превышать 2MB",
+    "errorName": "Укажите название бизнеса",
+    "errorCategory": "Выберите категорию бизнеса",
+    "errorPhone": "Укажите контактный номер",
+    "errorAddress": "Укажите адрес бизнеса",
+    "deleteConfirm": "Удалить все введённые данные?",
+    "uploadPhoto": "Загрузить фото",
+    "profilePhoto": "Профиль фото",
+    "profilePhotoSubtitle": "Это фото будет презентовать ваш бизнес на платформе",
+    "goBack": "Вернуться назад",
+    "profileAlt": "Профиль",
+    "uploadProfilePhotoLabel": "Загрузить фото профиля",
+    "photoRequirements": "Требования: размер 800x800px JPG, PNG, до 2MB",
+    "deletePhoto": "Удали фото",
+    "businessInfo": "Информация бизнеса",
+    "businessName": "Название бизнеса",
+    "shortDescription": "Короткое описание",
+    "writePlaceholder": "Написать...",
+    "words": "слов",
+    "businessCategory": "Категория бизнеса",
+    "required": "Обязательно",
+    "website": "Веб сайт",
+    "optional": "Необязательно",
+    "contactNumber": "Контактный номер",
+    "businessAddress": "Адрес бизнеса",
+    "businessGallery": "Бизнес галерея",
+    "gallerySubtitle": "Покажи свой уют и комфорт заведения",
+    "schedule": "График работы",
+    "scheduleSubtitle": "Точное время и дни работы",
+    "open": "Открыто",
+    "closed": "Закрыто",
+    "reset": "Сбросить",
+    "weeklySchedule": "Недельный график",
+    "worksHoursPrefix": "Ваш бизнес работает",
+    "worksHoursSuffix": "часа в неделю",
+    "reviews": "Отзывы",
+    "reviewsCount": "(102 отзыва)",
+    "delete": "Удалить",
+    "saveChange": "Сохранить изменение",
+    "categories": {
+      "Gym": "Спорт зал",
+      "Beauty": "Красота",
+      "Health": "Здоровье",
+      "Education": "Образование",
+      "Food": "Еда",
+      "Other": "Другое"
+    }
+  },
+  "BusinessDashboard": {
+    "deleteService": "Удалить услугу",
+    "deleteConfirm": "Вы уверены что хотите удалить услугу",
+    "deleteWarning1": "Все данные об услуге, время, даты и свободные слоты удалятся без\n          возможности восстановить",
+    "deleteWarning2": "Это действие нельзя будет отменить. Пожалуйста, убедитесь, что вы\n            сохранили важные данные",
+    "cancel": "Отмена",
+    "currency": "Валюта",
+    "sum": "Сум",
+    "uploadPhoto": "Загрузить фото",
+    "back": "Назад",
+    "requiredField": "Обязательное поле",
+    "addProduct": "Добавить товар",
+    "fillProductInfo": "Заполните информацией о вашем товаре",
+    "productName": "Название товара",
+    "enterName": "Введите название",
+    "price": "Цена",
+    "enterPrice": "Введите цену",
+    "category": "Категория",
+    "selectCategory": "Выберите категорию",
+    "description": "Описание",
+    "describeProduct": "Опишите товар",
+    "serviceOrProductPhoto": "Фото услуги или товара",
+    "saveServiceOrProduct": "Сохранить услуги или товар",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц",
+    "addService": "Добавить услугу",
+    "addServiceSubtitle": "Добавьте услугу для брони",
+    "serviceName": "Название услуги",
+    "required": "Обязательно",
+    "servicePrice": "Цена услуги",
+    "freeTime": "Свободное время",
+    "showOnlyFree": "Показать только свободное",
+    "free": "Свободно",
+    "busy": "Занято",
+    "serviceDescription": "Описание услуги",
+    "describeServices": "Опишите услуги",
+    "photo": "Фото",
+    "date": "Дата",
+    "saveServices": "Сохранить услуги",
+    "businessPage": "Бизнес страница",
+    "servicesAndStaff": "Услуги и персонал",
+    "booking": "Бронирование",
+    "zeroReviews": "0,0 (0 отзыва)",
+    "tashkentUzbekistan": "Ташкент, Узбекистан",
+    "editProfile": "Редактировать профиль",
+    "services": "Услуги",
+    "workingDaysAndServices": "Рабочие дни и услуги",
+    "name": "Название",
+    "status": "Статус",
+    "action": "Действие",
+    "noServices": "Услуг пока нет. Добавьте первую услугу.",
+    "priceOfService": "Цена услуги",
+    "deleteServiceAria": "Удалить услугу",
+    "saveChange": "Сохранить изменение",
+    "bookings": "Бронирования",
+    "waiting": "Ожидает",
+    "acceptBooking": "Принять бронь",
+    "cancelBooking": "Отменить",
+    "accepted": "Принято",
+    "cancelled": "Отменено",
+    "other": "Другое",
+    "categories": {
+      "Consultation": "Консультация",
+      "Procedure": "Процедура",
+      "Training": "Тренировка",
+      "Diagnostics": "Диагностика",
+      "Other": "Другое"
+    }
+  },
+  "Popular": {
+    "title": "Популярные места",
+    "rating": "Рейтинг",
+    "time": "Время",
+    "book": "Забронировать",
+    "seeAllAlt": "Смотреть все",
+    "seeAll": "Смотреть все"
+  },
+  "WhyUs": {
+    "title": "Как это работает?",
+    "businessTitle": "Для крупных бизнесов и предпринимателей",
+    "businessDesc": "Заходи в Bron и развивай свой бизнес",
+    "start": "Начать",
+    "businessAlt": "Bron для бизнеса"
+  },
+  "HeroPhotoCarousel": {
+    "serviceExample": "Пример сервиса"
+  },
+  "BookingExtrasModal": {
+    "additionalServices": "Дополнительные услуги",
+    "addSomethingToYourBooking": "Добавить что-нибудь к вашему бронированию",
+    "duringVisitYouCanPurchaseDrinksOrAdditionalServices": "Во время посещения вы можете приобрести напитки или доп услугу.",
+    "close": "Закрыть",
+    "back": "Назад",
+    "sum": "сум",
+    "added": "Добавлено",
+    "add": "Добавить",
+    "forward": "Вперёд",
+    "yourOrder": "Ваш заказ",
+    "remove": "Удалить",
+    "total": "Итого",
+    "saveTimePayNow": "✓ Экономия времени — оплатить сейчас",
+    "skip": "Пропустить",
+    "continue": "Продолжить"
+  },
+  "BookingPage": {
+    "servicesCount": "Услуги ({count})",
+    "hallBooking": "Бронирование зала",
+    "mins": "{mins} мин",
+    "oneHour": "1 час",
+    "from": "от",
+    "sum": "сум",
+    "perAppointment": "за приём",
+    "perHour": "за час",
+    "bookingSteps": "Шаги бронирования",
+    "stepTime": "Выбор времени",
+    "stepData": "Ваши данные",
+    "stepConfirm": "Подтверждение",
+    "back": "Назад",
+    "open": "Открыто",
+    "freeSeats": "Своб.Мест",
+    "youSelected": "Вы выбрали",
+    "duration": "Продолжительность",
+    "totalFor": "Итог за",
+    "continue": "Продолжить",
+    "yourDataIsProtected": "Ваши данные защищены",
+    "payment": "Оплата",
+    "total": "Итого",
+    "paymentMethod": "Способ оплаты",
+    "bankCard": "Банковская карта",
+    "instantPayment": "Мгновенная оплата",
+    "otherMethods": "Другие способы",
+    "yourData": "Ваши данные",
+    "fillBookingInfo": "Заполните информацию для бронирования",
+    "fullName": "Имя и фамилия",
+    "phoneNumber": "Номер телефона",
+    "emailOptional": "Электроная почта (необязательно)",
+    "guestsCount": "Количество гостей",
+    "decrease": "Уменьшить",
+    "increase": "Увеличить",
+    "bookingConfirmed": "Бронирование подтверждено!",
+    "confirmationSentToEmail": "Мы отправили подтверждение на вашу почту",
+    "whatsNext": "Что дальше?",
+    "come15MinsBefore": "Приходите за 10–15 минут до начала бронирования.",
+    "cancel2HoursBefore": "Отмена возможна не позднее чем за 2 часа до визита.",
+    "leaveReview": "Оставить отзыв",
+    "viewBooking": "Посмотреть бронь",
+    "toHome": "На главную",
+    "backToMap": "Назад к карте",
+    "weUseEncryption": "Мы используем шифрование для защиты ваших персональных данных и платежей.",
+    "pay": "Оплатить",
+    "paid": "Оплачено"
+  },
+  "FullMap": {
+    "myBusiness": "Мой бизнес",
+    "all": "Все",
+    "coffeeShop": "Кофейня",
+    "gym": "Спортзал",
+    "hospital": "Больница",
+    "restaurant": "Ресторан"
+  },
+  "HospitalServicesModal": {
+    "services": "Услуги",
+    "close": "Закрыть",
+    "from": "От",
+    "sum": "сум",
+    "min": "мин",
+    "selectedText": "Выбрано",
+    "selectService": "Выбрать услугу",
+    "selected": "Выбрано",
+    "servicesText": "услуг",
+    "continue": "Продолжить"
+  },
+  "ShopDetailPanel": {
+    "close": "Закрыть",
+    "open": "Открыто",
+    "freeSeats": "Своб.Мест",
+    "from": "от",
+    "sum": "сум",
+    "perHour": "за час",
+    "priceTitle": "Ценна",
+    "bookPlace": "Забронировать место"
+  },
+  "UserBusinessPanel": {
+    "close": "Закрыть",
+    "zeroReviews": "(0 отзывов)",
+    "noDescription": "Описание отсутствует",
+    "address": "Адрес",
+    "tashkent": "Ташкент",
+    "phone": "Телефон",
+    "services": "Услуги",
+    "from": "от",
+    "book": "Забронировать"
+  },
+  "Support": {
+    "supportTitle": "Поддержка",
+    "supportSubtitle": "Мы всегда готовы вам помочь",
+    "faqTitle": "Часто задаваемые вопросы"
+  },
+  "CategoryDropdown": {
+    "required": "Обязательно",
+    "allCategories": "Все категории"
+  },
+  "CategoryModal": {
+    "title": "Категории",
+    "closeWindow": "Закрыть окно",
+    "location": "Местоположение",
+    "businessCategory": "Категория бизнеса",
+    "enterApproximatePrice": "Введите приблизительную цену",
+    "enterPrice": "Введите цену",
+    "apply": "Применить"
+  },
+  "CurrencyDropdown": {
+    "sum": "Сум"
+  },
+  "Header": {
+    "profile": "Профиль"
+  },
+  "LanguageSelector": {
+    "selectLanguage": "Выбрать язык"
+  },
+  "LocationSelector": {
+    "nearby": "По близости",
+    "threeToSevenKm": "3-7км от меня",
+    "tenToFifteenKm": "10-15км от меня"
+  },
+  "NotificationDropdown": {
+    "bookingReminderTitle": "Напоминание о бронировании",
+    "bookingReminderDesc": "У вас завтра бронь в BronFitness",
+    "paymentSuccessTitle": "Платеж успешно выполнен",
+    "paymentSuccessDesc": "Платеж на 98 000 сум прошол успешно!",
+    "promoTitle": "Акция для вас!",
+    "promoDesc": "Скидка 20% на все услуги до конца недели!",
+    "notifications": "Уведомления",
+    "today": "Сегодня",
+    "deleteAllRead": "Удалить все прочитаные"
+  },
+  "NotificationEmpty": {
+    "noNotifications": "Нет уведомлений!",
+    "notificationsDesc": "Уведомления о бронях, платежах, акциях и других событиях"
+  },
+  "SearchBar": {
+    "searchAlt": "Поиск",
+    "searchPlaceholder": "Поиск...",
+    "filters": "Фильтры"
+  },
+  "DatePicker": {
+    "selectDay": "Выбрать день",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц"
+  },
+  "TimePicker": {
+    "selectTime": "Выбрать время"
+  },
+  "data": {
+    "categories": {
+      "hairCare": "Салон красоты",
+      "health": "Здоровье",
+      "gym": "Фитнес зал",
+      "education": "Учебные заведения",
+      "food": "Рестораны",
+      "coffee": "Кафейни",
+      "autoService": "Авто сервис",
+      "cinema": "Кинотеатры",
+      "pcClub": "Комп клуб",
+      "cleaning": "Клининг",
+      "sanatoriums": "Санатории"
+    },
+    "popular": {
+      "beautySalon": {
+        "title": "Салон красоты",
+        "desc": "Специализированное помещение, оборудованное для занятий физической культурой"
+      },
+      "gym": {
+        "title": "Фитнес зал",
+        "desc": "Специализированное помещение, оборудованное для занятий физической культурой"
+      },
+      "clinic": {
+        "title": "Клиника",
+        "desc": "Специализированное помещение, оборудованное для занятий физической культурой"
+      }
+    },
+    "bookingExtras": {
+      "isotonic": {
+        "name": "Изотоник",
+        "description": "Освежающий спортивный напиток"
+      },
+      "proteinBar": {
+        "name": "Протеиновый батончик",
+        "description": "Полезный перекус после тренировки"
+      },
+      "proteinShake": {
+        "name": "Протеиновый коктейль",
+        "description": "Восстановление мышц после нагрузки"
+      },
+      "water": {
+        "name": "Минеральная вода",
+        "description": "0.5 л, без газа"
+      },
+      "towel": {
+        "name": "Полотенце",
+        "description": "Аренда на время посещения"
+      }
+    },
+    "shops": {
+      "bronFitness": {
+        "title": "BronFitness Club",
+        "type": "Спорт зал",
+        "desc": "Современный фитнес клуб с тренажерным залом,групповые тренировки,SPA и зона отдыха",
+        "address": "ул. Сайрам 123, Ташкент",
+        "district": "Яккасарайский район",
+        "category": "Тренажерный зал"
+      },
+      "beanHouse": {
+        "title": "Bean House Coffee",
+        "type": "Кофейня",
+        "desc": "Уютная кофейня со specialty coffee, свежей выпечкой, завтраками и зоной для работы с ноутбуком",
+        "address": "ул. Афросиаб 45, Ташкент",
+        "district": "Мирабадский район",
+        "category": "Кофейня"
+      },
+      "cityHospital": {
+        "title": "City Hospital",
+        "type": "Больница",
+        "desc": "Многопрофильная клиника: терапевт, стоматолог, кардиолог. Запись к врачу онлайн.",
+        "address": "ул. Шахрисабз 12, Ташкент",
+        "district": "Мирабадский район",
+        "category": "Консультация",
+        "services": {
+          "therapist": {
+            "title": "Консультация терапевта",
+            "description": "Прием и осмотр врача-терапевта, постановка диагноза, рекомендации."
+          },
+          "cardio": {
+            "title": "Консультация кардиолога",
+            "description": "Осмотр, рекомендации, интерпретация результатов обследований."
+          },
+          "dentist": {
+            "title": "Консультация стоматолога",
+            "description": "Осмотр полости рта, диагностика, план лечения и рекомендации."
+          },
+          "pediatrics": {
+            "title": "Консультация педиатра",
+            "description": "Осмотр ребенка, рекомендации и план лечения при необходимости."
+          }
+        }
+      },
+      "beautyBron": {
+        "title": "Beauty Bron Salon",
+        "type": "Салон красоты",
+        "desc": "Премиальный салон красоты: стрижки, укладки, маникюр и уход за кожей.",
+        "address": "ул. Тараса Шевченко 21, Ташкент",
+        "district": " ",
+        "category": "Услуги красоты"
+      }
+    },
+    "support": {
+      "contacts": {
+        "phone": {
+          "title": "Позвонить",
+          "description": "Позвоните нам по горячей линии"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "description": "Свяжитесь с нами и опишите свою проблему",
+          "buttonText": "Telegram"
+        },
+        "email": {
+          "title": "Email",
+          "description": "Отправьте нам письмо и мы ответим",
+          "buttonText": "Написать письмо"
+        }
+      },
+      "faq": {
+        "changeBooking": {
+          "question": "Как изменить бронь или отменить?",
+          "answer": "Перейдите в раздел «Мои брони», выберите нужную запись и нажмите «Изменить» или «Отменить». Отмена возможна не позднее чем за 2 часа до начала услуги."
+        },
+        "paymentMethods": {
+          "question": "Какие способы оплаты доступны?",
+          "answer": "Мы принимаем банковские карты Visa и Mastercard, а также оплату через Payme и Click. В некоторых заведениях доступна оплата на месте."
+        },
+        "viewBookings": {
+          "question": "Где я могу посмотреть свои брони?",
+          "answer": "Все ваши бронирования отображаются в разделе «Мои брони» в боковом меню. Там вы увидите предстоящие и прошедшие записи."
+        },
+        "howBookingWorks": {
+          "question": "Как работает система бронирования?",
+          "answer": "Выберите заведение на карте или главной странице, укажите услугу и удобное время, оплатите онлайн — и получите подтверждение брони."
+        },
+        "security": {
+          "question": "Безопасность и конфиденциальность",
+          "answer": "Ваши данные защищены шифрованием. Мы не передаём личную информацию третьим лицам и используем её только для обработки бронирований."
+        }
+      }
+    },
+    "whyUs": {
+      "steps": [
+        {
+          "title": "Выбираете сервис",
+          "description": "Выбираете сервис, который вам нужен"
+        },
+        {
+          "title": "Подбираете время",
+          "description": "Выбираете время и дату"
+        },
+        {
+          "title": "Оплачиваете",
+          "description": "Оплачиваете выбранный сервис"
+        },
+        {
+          "title": "Получаете услугу",
+          "description": "Получайте услугу от профессионалов"
+        }
+      ]
+    }
+  },
+  "pluralize": {
+    "services": {
+      "one": "сервис",
+      "few": "сервиса",
+      "many": "сервисов",
+      "other": "сервисов"
+    },
+    "reviews": {
+      "one": "отзыв",
+      "few": "отзыва",
+      "many": "отзывов",
+      "other": "отзывов"
+    },
+    "time": {
+      "min": "мин.",
+      "hour": "ч."
+    }
+  },
+  "Weekdays": {
+    "mon": {
+      "long": "Понедельник",
+      "short": "Пн"
+    },
+    "tue": {
+      "long": "Вторник",
+      "short": "Вт"
+    },
+    "wed": {
+      "long": "Среда",
+      "short": "Ср"
+    },
+    "thu": {
+      "long": "Четверг",
+      "short": "Чт"
+    },
+    "fri": {
+      "long": "Пятница",
+      "short": "Пт"
+    },
+    "sat": {
+      "long": "Суббота",
+      "short": "Сб"
+    },
+    "sun": {
+      "long": "Воскресенье",
+      "short": "Вс"
+    }
+  },
+  "Months": {
+    "jan": "Январь",
+    "feb": "Февраль",
+    "mar": "Март",
+    "apr": "Апрель",
+    "may": "Май",
+    "jun": "Июнь",
+    "jul": "Июль",
+    "aug": "Август",
+    "sep": "Сентябрь",
+    "oct": "Октябрь",
+    "nov": "Ноябрь",
+    "dec": "Декабрь"
+  }
+}

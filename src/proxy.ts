@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
+import { routing } from '@/i18n/routing';
 
-const locales = ['ru', 'en'];
-const defaultLocale = 'ru';
-
-const intlMiddleware = createMiddleware({
-    locales,
-    defaultLocale
-});
+const intlMiddleware = createMiddleware(routing);
 
 export function proxy(request: NextRequest) {
     const token = false;
@@ -17,7 +12,7 @@ export function proxy(request: NextRequest) {
     const isAuthPage = pathname.includes('/login') || pathname.includes('/register');
     const isProtectedRoute = pathname.includes('/profile');
 
-    const currentLocale = request.cookies.get('NEXT_LOCALE')?.value || defaultLocale;
+    const currentLocale = request.cookies.get('NEXT_LOCALE')?.value || routing.defaultLocale;
 
     if (!token && isProtectedRoute) {
         return NextResponse.redirect(new URL(`/${currentLocale}/login`, request.url));

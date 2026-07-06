@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { Metadata } from "next";
 import { BookingNav } from "@/components/features/booking/BookingNav";
 import { BookingCard } from "@/components/features/booking/BookingCard";
@@ -9,6 +10,8 @@ export default async function BookingsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const t = await getTranslations('BookingsPage');
+
   const resolvedParams = await searchParams;
 
   const currentTab = resolvedParams.tab || 'upcoming';
@@ -16,7 +19,7 @@ export default async function BookingsPage({
   return (
     <main>
       <h1 className="font-semibold text-[32px] text-black mb-[22px]">
-        Мои брони
+        {t('title')}
       </h1>
 
       <BookingNav />

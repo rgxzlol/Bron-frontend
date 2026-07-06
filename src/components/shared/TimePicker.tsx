@@ -20,15 +20,18 @@ const DEFAULT_TIME_GROUPS: TimeGroup[] = [
 
 const DEFAULT_BUSY_SLOTS = new Set(["10:00", "15:00"]);
 
+import { useTranslations } from 'next-intl';
+
 export default function TimePicker({
   selectedTime,
   onSelectedTimeChange,
   busySlots = DEFAULT_BUSY_SLOTS,
   timeGroups = DEFAULT_TIME_GROUPS,
 }: TimePickerProps) {
+  const t = useTranslations('TimePicker');
   return (
     <div>
-      <h2 className="text-[18px] font-bold mb-4 text-black">Выбрать время</h2>
+      <h2 className="text-[18px] font-bold mb-4 text-black">{t('selectTime')}</h2>
       <div className="flex flex-col gap-5">
         {timeGroups.map((group) => (
           <div key={group.label}>

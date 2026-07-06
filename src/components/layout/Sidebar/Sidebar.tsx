@@ -1,8 +1,10 @@
 import { mainNavItems } from "@/config/navigation";
 import { Logo } from "@/components/shared/Logo";
 import { NavLink } from "@/components/shared/Navlink";
+import { useTranslations } from "next-intl";
 
 export default function Sidebar() {
+  const t = useTranslations("Navigations");
 
   return (
     <aside
@@ -32,7 +34,7 @@ export default function Sidebar() {
                   aria-hidden
                 />
                 <span className="text-[24px] font-semibold text-black/70 transition-colors duration-500 group-hover:text-[#0a6af7]">
-                  {item.title}
+                  {t(item.title)}
                 </span>
               </NavLink>
             </li>

@@ -1,14 +1,19 @@
 "use client";
 import { categories } from "@/data/categories";
 import { assets } from "@/lib/assets";
-import { pluralizeServices } from "@/lib/pluralize";
+import { usePluralize } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslations } from 'next-intl';
 
 export default function Categories() {
+  const t = useTranslations('Categories');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
+  const { pluralizeServices } = usePluralize();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const renderCategoryCard = (category: Category) => (
@@ -30,7 +35,7 @@ export default function Categories() {
       </div>
 
       <span className="line-clamp-2 min-h-12 font-semibold">
-        {category.title}
+        {td(category.title)}
       </span>
 
       <span className="text-[14px] opacity-75">
@@ -42,7 +47,7 @@ export default function Categories() {
   return (
     <section className="my-8.75" id="categories">
       <h2 className="mb-15 text-[24px] font-semibold">
-        Категории
+        {t('title')}
       </h2>
 
       <div className="flex flex-col gap-4">
@@ -56,18 +61,18 @@ export default function Categories() {
             <div className="flex h-18.75 w-18.75 items-center justify-center rounded-full bg-[#ffebd3]">
               <Image
                 src={assets.categories.more}
-                alt="Все категории"
+                alt={t('allCategories')}
                 width={32}
                 height={32}
               />
             </div>
 
             <span className="min-h-12 font-semibold">
-              {isExpanded ? 'Меньше' : 'Больше'}
+              {isExpanded ? t('less') : t('more')}
             </span>
 
             <span className="text-[14px] opacity-75">
-              {isExpanded ? 'Вернуться обратно' : 'Посмотреть все'}
+              {isExpanded ? t('goBack') : t('seeAll')}
             </span>
           </button>
         </div>

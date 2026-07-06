@@ -2,10 +2,11 @@
 
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
-import { useBusinessStore } from "@/store/business.store";
+import { useBusinessStore, useLocalizedBusinessCategory } from "@/store/business.store";
 import Image from "next/image";
 import { useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
+import { useTranslations } from 'next-intl';
 
 type Props = {
   onAddBusiness: () => void;
@@ -18,6 +19,8 @@ export default function MyBusiness({
   onEditBusiness,
   onOpenStatistics,
 }: Props) {
+  const t = useTranslations('MyBusiness');
+  const getLocalizedCategory = useLocalizedBusinessCategory();
   const businesses = useBusinessStore((s) => s.businesses);
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -25,9 +28,9 @@ export default function MyBusiness({
   return (
     <div className="rounded-[34px] bg-white px-[23px] py-[26px]">
       <div className="mb-[24px] flex items-center justify-between">
-        <h2 className="text-[36px] font-semibold">Мой бизнес</h2>
+        <h2 className="text-[36px] font-semibold">{t('title')}</h2>
         <Button
-          text="Добавить новый бизнес"
+          text={t('addNewBusiness')}
           onClick={onAddBusiness}
           className="text-[18px] !px-[28px] py-[14px]"
         />
@@ -77,11 +80,11 @@ export default function MyBusiness({
                   <div className="flex flex-col gap-[8px]">
                     {business.category && (
                       <span className="w-fit rounded-full bg-[#ede8ff] px-[14px] py-[5px] text-[14px] font-semibold text-[#6b4ee6]">
-                        {business.category}
+                        {getLocalizedCategory(business.category)}
                       </span>
                     )}
                     <h3 className="text-[24px] font-semibold">
-                      {business.name || "Без названия"}
+                      {business.name || t('untitled')}
                     </h3>
                     {business.address && (
                       <p className="flex items-center gap-[8px] text-[16px] opacity-75">
@@ -94,7 +97,7 @@ export default function MyBusiness({
                   <div className="flex items-center gap-[10px]">
                     <span className="flex items-center gap-[6px] rounded-full bg-[#e8f8ee] px-[12px] py-[6px] text-[14px] font-semibold text-[#1a9b4a]">
                       <span className="h-[8px] w-[8px] rounded-full bg-[#1a9b4a]" />
-                      Подтверждено
+                      {t('confirmed')}
                     </span>
                     <div className="relative">
                       <button
@@ -102,7 +105,7 @@ export default function MyBusiness({
                         className={`flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[#f4f4f8] text-[22px] leading-none transition hover:bg-[#ececf2] ${
                           isMenuOpen ? "ring-2 ring-[#0a6af7]/20" : ""
                         }`}
-                        aria-label="Меню"
+                        aria-label={t('menu')}
                         aria-expanded={isMenuOpen}
                         onClick={() =>
                           setOpenMenuId(isMenuOpen ? null : business.id)
@@ -114,7 +117,7 @@ export default function MyBusiness({
                         <BusinessCardMenu
                           onEdit={() => onEditBusiness(business.id)}
                           onDelete={() => {
-                            if (confirm("Удалить этот бизнес?")) {
+                            if (confirm(t('deleteConfirm'))) {
                               removeBusiness(business.id);
                             }
                           }}
@@ -128,11 +131,11 @@ export default function MyBusiness({
                 <div className="mt-auto flex items-end justify-between gap-[16px] pt-[20px]">
                   <div className="flex gap-[12px]">
                     <div className="rounded-[12px] bg-[#f4f4f8] px-[16px] py-[10px]">
-                      <p className="text-[13px] opacity-60">Бронирования</p>
+                      <p className="text-[13px] opacity-60">{t('bookings')}</p>
                       <p className="text-[20px] font-semibold">{business.bookings}</p>
                     </div>
                     <div className="rounded-[12px] bg-[#f4f4f8] px-[16px] py-[10px]">
-                      <p className="text-[13px] opacity-60">Просмотров</p>
+                      <p className="text-[13px] opacity-60">{t('views')}</p>
                       <p className="text-[20px] font-semibold">
                         {business.views.toLocaleString("ru-RU")}
                       </p>
@@ -140,7 +143,7 @@ export default function MyBusiness({
                   </div>
 
                   <Button
-                    text="Статистика"
+                    text={t('statistics')}
                     className="text-[18px] !px-[40px] py-[14px]"
                     onClick={() => onOpenStatistics(business.id)}
                   />

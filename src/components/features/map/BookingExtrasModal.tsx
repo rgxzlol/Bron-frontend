@@ -6,6 +6,7 @@ import { bookingExtras, type BookingExtra } from "@/data/bookingExtras";
 import { formatPrice } from "@/lib/formatPrice";
 import Button from "@/components/shared/Button";
 import s from "./bookingExtrasModal.module.css";
+import { useTranslations } from 'next-intl';
 
 export type OrderLineItem = {
   id: string;
@@ -33,6 +34,9 @@ export default function BookingExtrasModal({
   onContinue,
   onClose,
 }: BookingExtrasModalProps) {
+  const t = useTranslations('BookingExtrasModal');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const extrasInCart = useMemo(
@@ -43,7 +47,7 @@ export default function BookingExtrasModal({
   const orderItems = useMemo(() => {
     const extras: OrderLineItem[] = extrasInCart.map((e) => ({
       id: e.id,
-      name: e.name,
+      name: td(e.name),
       price: e.price,
       removable: true,
     }));
@@ -60,19 +64,19 @@ export default function BookingExtrasModal({
   }
 
   return (
-    <div className={s.backdrop} role="dialog" aria-modal="true" aria-label="Дополнительные услуги">
+    <div className={s.backdrop} role="dialog" aria-modal="true" aria-label={t('additionalServices')}>
       <div className={s.modal}>
         <div className={s.header}>
           <div className={s.headerIcon} aria-hidden>
             🛍
           </div>
           <div className={s.headerText}>
-            <h2 className={s.title}>Добавить что-нибудь к вашему бронированию</h2>
+            <h2 className={s.title}>{t('addSomethingToYourBooking')}</h2>
             <p className={s.subtitle}>
-              Во время посещения вы можете приобрести напитки или доп услугу.
+              {t('duringVisitYouCanPurchaseDrinksOrAdditionalServices')}
             </p>
           </div>
-          <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
+          <button type="button" className={s.close} onClick={onClose} aria-label={t('close')}>
             ×
           </button>
         </div>
@@ -82,7 +86,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(-1)}
-            aria-label="Назад"
+            aria-label={t('back')}
           >
             ‹
           </button>
@@ -101,15 +105,15 @@ export default function BookingExtrasModal({
                       className={s.productImage}
                     />
                   </div>
-                  <h3 className={s.productName}>{extra.name}</h3>
-                  <p className={s.productDesc}>{extra.description}</p>
-                  <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
+                  <h3 className={s.productName}>{td(extra.name)}</h3>
+                  <p className={s.productDesc}>{td(extra.description)}</p>
+                  <p className={s.productPrice}>{formatPrice(extra.price)} {t('sum')}</p>
                   <button
                     type="button"
                     className={`${s.addBtn} ${isAdded ? s.addBtnActive : ""}`}
                     onClick={() => onToggleExtra(extra.id)}
                   >
-                    {isAdded ? "Добавлено" : "Добавить"}
+                    {isAdded ? t('added') : t('add')}
                   </button>
                 </article>
               );
@@ -120,7 +124,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(1)}
-            aria-label="Вперёд"
+            aria-label={t('forward')}
           >
             ›
           </button>
@@ -128,18 +132,18 @@ export default function BookingExtrasModal({
 
         <div className={s.summaryRow}>
           <div className={s.orderBlock}>
-            <h3 className={s.orderTitle}>Ваш заказ</h3>
+            <h3 className={s.orderTitle}>{t('yourOrder')}</h3>
             {orderItems.map((item) => (
               <div key={item.id} className={s.orderLine}>
                 <span className={s.orderName}>{item.name}</span>
                 <span className={s.orderPriceWrap}>
-                  <span className={s.orderPrice}>{formatPrice(item.price)} сум</span>
+                  <span className={s.orderPrice}>{formatPrice(item.price)} {t('sum')}</span>
                   {item.removable && (
                     <button
                       type="button"
                       className={s.removeBtn}
                       onClick={() => onRemoveExtra(item.id)}
-                      aria-label={`Удалить ${item.name}`}
+                      aria-label={`${t('remove')} ${item.name}`}
                     >
                       ×
                     </button>
@@ -150,17 +154,17 @@ export default function BookingExtrasModal({
           </div>
 
           <div className={s.totalBlock}>
-            <span className={s.totalLabel}>Итого</span>
-            <span className={s.totalAmount}>{formatPrice(total)} сум</span>
-            <p className={s.totalHint}>✓ Экономия времени — оплатить сейчас</p>
+            <span className={s.totalLabel}>{t('total')}</span>
+            <span className={s.totalAmount}>{formatPrice(total)} {t('sum')}</span>
+            <p className={s.totalHint}>{t('saveTimePayNow')}</p>
           </div>
         </div>
 
         <div className={s.footer}>
           <button type="button" className={s.skipBtn} onClick={onSkip}>
-            Пропустить
+            {t('skip')}
           </button>
-          <Button text="Продолжить" className={s.continueBtn} onClick={onContinue} />
+          <Button text={t('continue')} className={s.continueBtn} onClick={onContinue} />
         </div>
       </div>
     </div>

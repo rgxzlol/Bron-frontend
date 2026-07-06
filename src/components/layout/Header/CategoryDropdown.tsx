@@ -1,11 +1,12 @@
 "use client";
 
 import { FC, useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
 import { Category } from '@/types/category';
 import { categories } from '@/data/categories';
-import { pluralizeServices } from '@/lib/pluralize';
+import { usePluralize } from '@/lib/pluralize';
 
 interface CategoryDropdownProps {
     selectedCategory: Category | null;
@@ -13,6 +14,10 @@ interface CategoryDropdownProps {
 }
 
 export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, onChange }) => {
+    const t = useTranslations('CategoryDropdown');
+    const tData = useTranslations('data');
+    const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
+    const { pluralizeServices } = usePluralize();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +55,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             />
                         </div>
                         <span className="text-[18px] font-semibold text-black">
-                            {selectedCategory.title}
+                            {td(selectedCategory.title)}
                         </span>
                         <span className="text-[14px] text-gray-500 font-normal">
                             ({selectedCategory.count} {pluralizeServices(selectedCategory.count)})
@@ -59,7 +64,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                 ) : (
                     <div className="flex items-center gap-3">
                         <span className="text-[16px] font-semibold text-black opacity-70">
-                            Обязательно
+                            {t('required')}
                         </span>
                     </div>
                 )}
@@ -86,7 +91,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             <span className="text-gray-400 text-lg">★</span>
                         </div>
                         <div className="flex flex-col text-left">
-                            <span className="text-[16px] font-semibold">Все категории</span>
+                            <span className="text-[16px] font-semibold">{t('allCategories')}</span>
                         </div>
                         {selectedCategory === null && (
                             <span className="ml-auto text-[#0A6AF7] font-semibold animate-in zoom-in duration-200">✓</span>
@@ -115,7 +120,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                                     <Image src={cat.icon} alt={cat.title} width={18} height={18} />
                                 </div>
                                 <div className="flex flex-col text-left">
-                                    <span className="text-[16px] font-semibold">{cat.title}</span>
+                                    <span className="text-[16px] font-semibold">{td(cat.title)}</span>
                                     <span className="text-[12px] opacity-70">
                                         {cat.count} {pluralizeServices(cat.count)}
                                     </span>

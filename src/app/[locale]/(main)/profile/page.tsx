@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -5,5 +6,6 @@ export const metadata: Metadata = {
 };
 
 export default function ProfilePage() {
-  return <div>Профиль</div>;
+  const t = useTranslations('ProfilePage');
+  return <div>{t('title')}</div>;
 }

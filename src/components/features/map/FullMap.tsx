@@ -13,6 +13,7 @@ import HospitalServicesModal from "./HospitalServicesModal"
 import UserBusinessPanel from "./UserBusinessPanel"
 import { assets } from "@/lib/assets"
 import "mapbox-gl/dist/mapbox-gl.css"
+import { useTranslations } from 'next-intl';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -22,7 +23,17 @@ type FullMapProps = {
 
 const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
 
+const SHOP_TYPE_MAP: Record<string, string> = {
+  "data.shops.bronFitness.type": "Спортзал",
+  "data.shops.beanHouse.type": "Кофейня",
+  "data.shops.cityHospital.type": "Больница",
+  "data.shops.beautyBron.type": "Все",
+}
+
 export default function FullMap({ onStartBooking }: FullMapProps) {
+  const t = useTranslations('FullMap');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
@@ -142,14 +153,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       activeFilter === "Все"
         ? ShopsPlace
         : ShopsPlace.filter((shop) => {
-            if (
-              activeFilter === "Спортзал" &&
-              shop.title.toLowerCase().includes("bronfitness")
-            ) {
-              return true
-            }
-
-            return shop.type === activeFilter
+            const mappedCategory = SHOP_TYPE_MAP[shop.type] || "Все";
+            return mappedCategory === activeFilter;
           })
 
     const filteredUserBusinesses = businesses.filter((business) =>
@@ -159,7 +164,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     filteredShops.forEach((shop) => {
       const el = document.createElement("div")
 
-      const isHospital = shop.type === "Больница"
+      const isHospital = SHOP_TYPE_MAP[shop.type] === "Больница"
 
       el.className = `
         bg-white px-4 py-2 rounded-full shadow-lg
@@ -177,7 +182,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               : ""
           }
           <span class="font-semibold text-[14px]">
-            ${shop.title}
+            ${td(shop.title)}
           </span>
         </div>
       `
@@ -189,7 +194,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       marker.getElement().addEventListener("click", () => {
         setSelectedUserBusiness(null)
 
-        if (shop.type === "Больница") {
+        if (SHOP_TYPE_MAP[shop.type] === "Больница") {
           setSelectedShop(null)
           setSelectedHospital(shop)
         } else {
@@ -219,7 +224,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       el.innerHTML = `
         <div class="flex items-center gap-2">
           <span class="font-semibold text-[14px] text-[#6b4ee6]">
-            ${business.name || "Мой бизнес"}
+            ${business.name || t('myBusiness')}
           </span>
         </div>
       `
@@ -268,6 +273,17 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     onStartBooking(shop)
   }
 
+    const translateFilter = (f: string) => {
+      switch (f) {
+        case "Все": return t('all');
+        case "Кофейня": return t('coffeeShop');
+        case "Спортзал": return t('gym');
+        case "Больница": return t('hospital');
+        case "Ресторан": return t('restaurant');
+        default: return f;
+      }
+    };
+
   return (
     <div className="relative">
       <div className="absolute top-4 left-4 z-10 flex gap-2 overflow-x-auto max-w-[90%]">
@@ -284,7 +300,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               }
             `}
           >
-            {filter}
+            {translateFilter(filter)}
           </button>
         ))}
       </div>

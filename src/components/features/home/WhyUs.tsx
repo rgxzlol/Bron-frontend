@@ -3,34 +3,18 @@ import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
+import { useTranslations } from 'next-intl';
 
-const steps = [
-  {
-    step: 1,
-    title: "Выбираете сервис",
-    description: "Выбираете сервис, который вам нужен",
-  },
-  {
-    step: 2,
-    title: "Подбираете время",
-    description: "Выбираете время и дату",
-  },
-  {
-    step: 3,
-    title: "Оплачиваете",
-    description: "Оплачиваете выбранный сервис",
-  },
-  {
-    step: 4,
-    title: "Получаете услугу",
-    description: "Получайте услугу от профессионалов",
-  },
-] as const;
+import { steps } from "@/data/whyUs";
 
 export default function WhyUs() {
+  const t = useTranslations('WhyUs');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
+
   return (
     <section className="my-[36px] mb-[100px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold">Как это работает?</h2>
+      <h2 className="mb-[16px] text-[24px] font-semibold">{t('title')}</h2>
 
       <div className="flex gap-[22px]">
         {steps.map(({ step, title, description }) => (
@@ -42,9 +26,9 @@ export default function WhyUs() {
               {step}
             </p>
             <div className="flex flex-col gap-[7px]">
-              <p className="max-w-[90px] font-semibold">{title}</p>
+              <p className="max-w-[90px] font-semibold">{td(title)}</p>
               <p className="max-w-[144px] text-[14px] font-semibold opacity-75">
-                {description}
+                {td(description)}
               </p>
             </div>
           </div>
@@ -55,20 +39,20 @@ export default function WhyUs() {
         <div>
           <div className="mb-[70px] flex flex-col gap-[9px]">
             <p className="max-w-[400px] text-[32px] font-semibold">
-              Для крупных бизнесов и предпринимателей
+              {t('businessTitle')}
             </p>
             <p className="max-w-[210px] font-semibold opacity-75">
-              Заходи в Bron и развивай свой бизнес
+              {t('businessDesc')}
             </p>
           </div>
           <Link href={routes.business}>
-            <Button text="Начать" as="span" className="cursor-pointer inline-block" />
+            <Button text={t('start')} as="span" className="cursor-pointer inline-block" />
           </Link>
         </div>
         <Image
           className="absolute right-0 top-[-155px]"
           src={assets.marketing.homePng}
-          alt="Bron для бизнеса"
+          alt={t('businessAlt')}
           width={493}
           height={442}
         />

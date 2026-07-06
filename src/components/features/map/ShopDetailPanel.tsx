@@ -3,13 +3,11 @@
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { formatPrice, formatRating } from "@/lib/formatPrice";
-import {
-  formatDurationMinutes,
-  pluralizeReviews,
-} from "@/lib/pluralize";
+import { usePluralize } from "@/lib/pluralize";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import s from "./fullMap.module.css";
+import { useTranslations } from 'next-intl';
 
 type ShopDetailPanelProps = {
   shop: ShopsType;
@@ -22,6 +20,10 @@ export default function ShopDetailPanel({
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
+  const t = useTranslations('ShopDetailPanel');
+  const tData = useTranslations('data');
+  const td = (text: string) => text?.startsWith('data.') ? tData(text.replace('data.', '') as any) : text;
+  const { formatDurationMinutes, pluralizeReviews } = usePluralize();
   return (
     <aside
       className={s.panel}
@@ -42,7 +44,7 @@ export default function ShopDetailPanel({
             type="button"
             className={s.closeBtn}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t('close')}
           >
             <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
           </button>
@@ -51,7 +53,7 @@ export default function ShopDetailPanel({
 
         <div className={s.body}>
           <div className={s.titleRow}>
-            <h2 className={s.title}>{shop.title}</h2>
+            <h2 className={s.title}>{td(shop.title)}</h2>
             <div className={s.rating}>
               <Image
                 src={assets.popular.starRating}
@@ -66,16 +68,16 @@ export default function ShopDetailPanel({
             </div>
           </div>
 
-          <p className={s.category}>{shop.type}</p>
-          <p className={s.desc}>{shop.desc}</p>
+          <p className={s.category}>{td(shop.type)}</p>
+          <p className={s.desc}>{td(shop.desc)}</p>
 
           <div className={s.stats}>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Открыто</span>
+              <span className={s.statLabel}>{t('open')}</span>
               <span className={s.statValue}>{shop.hours}</span>
             </div>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Своб.Мест</span>
+              <span className={s.statLabel}>{t('freeSeats')}</span>
               <span className={s.statValueRow}>
                 <Image
                   src={assets.map.freeSeat}
@@ -87,8 +89,8 @@ export default function ShopDetailPanel({
               </span>
             </div>
             <div className={s.statBox}>
-              <span className={s.statLabel}>от {formatPrice(shop.price)} сум</span>
-              <span className={s.statValue}>за час</span>
+              <span className={s.statLabel}>{t('from')} {formatPrice(shop.price)} {t('sum')}</span>
+              <span className={s.statValue}>{t('perHour')}</span>
             </div>
           </div>
 
@@ -102,8 +104,8 @@ export default function ShopDetailPanel({
                 height={20}
               />
               <div className={s.addressText}>
-                <span className={s.addressMain}>{shop.address}</span>
-                <span className={s.addressSub}>{shop.district}</span>
+                <span className={s.addressMain}>{td(shop.address)}</span>
+                <span className={s.addressSub}>{td(shop.district)}</span>
               </div>
               <span className={s.distance}>{shop.distance}</span>
             </div>
@@ -123,7 +125,7 @@ export default function ShopDetailPanel({
           </div>
 
           <div className={s.pricing}>
-            <h3 className={s.pricingTitle}>Ценна</h3>
+            <h3 className={s.pricingTitle}>{t('priceTitle')}</h3>
             <div className={s.priceItem}>
               <div className={s.priceIcon}>
                 <Image
@@ -134,19 +136,19 @@ export default function ShopDetailPanel({
                 />
               </div>
               <div className={s.priceInfo}>
-                <span className={s.priceName}>{shop.category}</span>
+                <span className={s.priceName}>{td(shop.category)}</span>
                 <span className={s.priceDuration}>
                   {formatDurationMinutes(shop.time)}
                 </span>
               </div>
               <span className={s.priceAmount}>
-                {formatPrice(shop.price)} сум
+                {formatPrice(shop.price)} {t('sum')}
               </span>
             </div>
           </div>
 
           <Button
-            text="Забронировать место"
+            text={t('bookPlace')}
             className={s.bookBtn}
             onClick={onBook}
           />

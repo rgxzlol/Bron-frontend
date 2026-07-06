@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { useBusinessStore } from "@/store/business.store";
@@ -10,6 +11,7 @@ import BusinessDashboard from "./BusinessDashboard";
 import MyBusiness from "./MyBusiness";
 
 const Business = () => {
+  const t = useTranslations('Business');
   const [modalOpen, setModalOpen] = useState(false);
   const [dashboardId, setDashboardId] = useState<string | null>(null);
   const businesses = useBusinessStore((s) => s.businesses);
@@ -91,17 +93,17 @@ const Business = () => {
       <div className="flex justify-between rounded-[34px] bg-white px-[23px] py-[26px]">
         <div className="flex flex-col gap-[8px]">
           <h3 className="max-w-[450px] text-[36px] font-semibold">
-            Добавьте свой бизнес на карту для больших активов
+            {t('title')}
           </h3>
 
           <p className="text-[20px] font-semibold opacity-75">
-            Увеличь активы с помощью бронирования!
+            {t('subtitle')}
           </p>
 
           <Button
             onClick={openModal}
             className="mt-[25px] py-[15px] text-[20px] !px-[30px]"
-            text="Добавить бизнес"
+            text={t('addBusiness')}
           />
         </div>
 

@@ -3,6 +3,7 @@
 import { assets } from "@/lib/assets";
 import Image, { StaticImageData } from "next/image";
 import { useEffect, useState } from "react";
+import { useTranslations } from 'next-intl';
 
 const photos: StaticImageData[] = [
   assets.hero.photo1,
@@ -31,6 +32,7 @@ function getSlot(imageIndex: number, centerIndex: number): Slot {
 const AUTO_PLAY_MS = 5000;
 
 export default function HeroPhotoCarousel() {
+  const t = useTranslations('HeroPhotoCarousel');
   const [centerIndex, setCenterIndex] = useState(1);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -65,7 +67,7 @@ export default function HeroPhotoCarousel() {
           >
             <Image
               src={src}
-              alt={`Пример сервиса ${index + 1}`}
+              alt={`${t('serviceExample')} ${index + 1}`}
               width={157}
               height={242}
               priority

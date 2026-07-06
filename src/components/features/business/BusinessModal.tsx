@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
@@ -9,8 +10,9 @@ import {
   type DaySchedule,
 } from "@/lib/business/schedule";
 import {
-  BUSINESS_CATEGORIES,
   useBusinessStore,
+  useLocalizedDay,
+  useLocalizedBusinessCategories,
 } from "@/store/business.store";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -156,6 +158,9 @@ const inputClass =
   "w-full rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] outline-none focus:ring-2 focus:ring-[#0a6af7]/30";
 
 export default function BusinessModal({ onClose, onSaved }: Props) {
+  const t = useTranslations("BusinessModal");
+  const getLocalizedDay = useLocalizedDay();
+  const localizedCategories = useLocalizedBusinessCategories();
   const draft = useBusinessStore((s) => s.draft);
   const updateDraft = useBusinessStore((s) => s.updateDraft);
   const setDraftSchedule = useBusinessStore((s) => s.setDraftSchedule);
@@ -167,6 +172,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -261,7 +267,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <>
               <PhotoIcon />
               <span className="text-[15px] font-semibold text-[#0a6af7]">
-                Загрузить фото
+                {t('uploadPhoto')}
               </span>
             </>
           )}
@@ -276,15 +282,15 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     <div className={s.backdrop}>
       <div className={s.panel}>
         <SectionCard
-          title="Профиль фото"
-          subtitle="Это фото будет презентовать ваш бизнес на платформе"
+          title={t('profilePhoto')}
+          subtitle={t('profilePhotoSubtitle')}
           action={
             <button
               type="button"
               onClick={onClose}
               className="rounded-[12px] border border-[#e0e0e8] px-[18px] py-[10px] text-[15px] font-semibold hover:bg-[#f4f4f8]"
             >
-              Вернуться назад
+              {t('goBack')}
             </button>
           }
         >
@@ -312,7 +318,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 type="button"
                 onClick={() => profileInputRef.current?.click()}
                 className="absolute bottom-[4px] right-[4px] flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#0a6af7]"
-                aria-label="Загрузить фото профиля"
+                aria-label={t('uploadProfilePhotoLabel')}
               >
                 <CameraIcon />
               </button>
@@ -331,7 +337,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
             <div className="flex flex-col gap-[14px]">
               <p className="text-[14px] opacity-60">
-                Требования: размер 800x800px JPG, PNG, до 2MB
+                {t('photoRequirements')}
               </p>
               <button
                 type="button"
@@ -340,16 +346,16 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 className="flex w-fit items-center gap-[8px] text-[15px] font-semibold text-[#e53935] disabled:opacity-40"
               >
                 <TrashIcon />
-                Удали фото
+                {t('deletePhoto')}
               </button>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Информация бизнеса">
+        <SectionCard title={t('businessInfo')}>
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название бизнеса</span>
+              <span className="text-[15px] font-semibold">{t('businessName')}</span>
               <input
                 className={inputClass}
                 value={draft.name}
@@ -359,11 +365,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </label>
 
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Короткое описание</span>
+              <span className="text-[15px] font-semibold">{t('shortDescription')}</span>
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y`}
                 value={draft.description}
-                placeholder="Написать..."
+                placeholder={t('writePlaceholder')}
                 onChange={(e) => {
                   const words = countWords(e.target.value);
                   if (words <= MAX_DESCRIPTION_WORDS) {
@@ -372,53 +378,55 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 }}
               />
               <span className="text-[14px] opacity-60">
-                {wordCount}/{MAX_DESCRIPTION_WORDS} слов
+                {wordCount}/{MAX_DESCRIPTION_WORDS} {t('words')}
               </span>
             </label>
 
             <div className="grid grid-cols-1 gap-[18px] md:grid-cols-2">
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Категория бизнеса</span>
+                <span className="text-[15px] font-semibold">{t('businessCategory')}</span>
                 <select
                   className={inputClass}
                   value={draft.category}
                   onChange={(e) => updateDraft({ category: e.target.value })}
                 >
-                  <option value="">Обязательно</option>
-                  {BUSINESS_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
+                  <option value="">{t('required')}</option>
+                  {localizedCategories.map((cat) => {
+                    return (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Веб сайт</span>
+                <span className="text-[15px] font-semibold">{t('website')}</span>
                 <input
                   className={inputClass}
                   value={draft.website}
-                  placeholder="Необязательно"
+                  placeholder={t('optional')}
                   onChange={(e) => updateDraft({ website: e.target.value })}
                 />
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Контактный номер</span>
+                <span className="text-[15px] font-semibold">{t('contactNumber')}</span>
                 <input
                   className={inputClass}
                   value={draft.phone}
-                  placeholder="Обязательно"
+                  placeholder={t('required')}
                   onChange={(e) => updateDraft({ phone: e.target.value })}
                 />
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Адрес бизнеса</span>
+                <span className="text-[15px] font-semibold">{t('businessAddress')}</span>
                 <input
                   className={inputClass}
                   value={draft.address}
-                  placeholder="Обязательно"
+                  placeholder={t('required')}
                   onChange={(e) => updateDraft({ address: e.target.value })}
                 />
               </label>
@@ -427,8 +435,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         </SectionCard>
 
         <SectionCard
-          title="Бизнес галерея"
-          subtitle="Покажи свой уют и комфорт заведения"
+          title={t('businessGallery')}
+          subtitle={t('gallerySubtitle')}
         >
           <div className="grid min-h-[280px] grid-cols-3 gap-[12px]">
             {renderGallerySlot(0, "row-span-2")}
@@ -443,8 +451,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         </SectionCard>
 
         <SectionCard
-          title="График работы"
-          subtitle="Точное время и дни работы"
+          title={t('schedule')}
+          subtitle={t('scheduleSubtitle')}
         >
           <div className="flex flex-col gap-[24px] lg:flex-row">
             <div className="flex flex-1 flex-col gap-[10px]">
@@ -454,7 +462,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   className="flex flex-wrap items-center gap-[12px] rounded-[16px] bg-[#f4f4f8] px-[16px] py-[12px]"
                 >
                   <span className="min-w-[120px] text-[15px] font-semibold">
-                    {day.label}
+                    {getLocalizedDay(day.key, 'long')}
                   </span>
                   <Toggle
                     checked={day.isOpen}
@@ -465,7 +473,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       day.isOpen ? "text-[#5a6a5a]" : "text-[#e53935]"
                     }`}
                   >
-                    {day.isOpen ? "Открыто" : "Закрыто"}
+                    {day.isOpen ? t('open') : t('closed')}
                   </span>
                   <select
                     className={`rounded-[10px] bg-white px-[10px] py-[6px] text-[14px] ${
@@ -503,7 +511,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   <button
                     type="button"
                     className="ml-auto rounded-[8px] p-[6px] opacity-50 hover:bg-white hover:opacity-100"
-                    aria-label={`Сбросить ${day.label}`}
+                    aria-label={`${t('reset')} ${getLocalizedDay(day.key, 'long')}`}
                     onClick={() => {
                       const schedule = draft.schedule.map((d, i) =>
                         i === index ? resetDaySchedule(d) : d,
@@ -518,20 +526,20 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </div>
 
             <div className="w-full shrink-0 rounded-[20px] bg-[#f0f4fa] p-[22px] lg:w-[280px]">
-              <h4 className="mb-[16px] text-[17px] font-semibold">Недельный график</h4>
+              <h4 className="mb-[16px] text-[17px] font-semibold">{t('weeklySchedule')}</h4>
               <ul className="flex flex-col gap-[8px]">
                 {draft.schedule.map((day) => (
                   <li
                     key={day.key}
                     className="flex justify-between text-[15px] font-semibold"
                   >
-                    <span>{day.shortLabel}</span>
+                    <span>{getLocalizedDay(day.key, 'short')}</span>
                     {day.isOpen ? (
                       <span>
                         {day.openTime} – {day.closeTime}
                       </span>
                     ) : (
-                      <span className="text-[#e53935]">Закрыто</span>
+                      <span className="text-[#e53935]">{t('closed')}</span>
                     )}
                   </li>
                 ))}
@@ -539,18 +547,18 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               <div className="mt-[20px] flex items-center gap-[12px] rounded-[14px] border border-[#0a6af7]/30 bg-white/60 px-[14px] py-[12px]">
                 <Image src={assets.popular.timeIcon} alt="" width={22} height={22} />
                 <p className="text-[14px] font-semibold leading-snug text-[#0a6af7]">
-                  Ваш бизнес работает {weeklyHours} часа в неделю
+                  {t('worksHoursPrefix')} {weeklyHours} {t('worksHoursSuffix')}
                 </p>
               </div>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Отзывы">
+        <SectionCard title={t('reviews')}>
           <div className="flex flex-wrap items-center gap-[40px]">
             <div>
               <p className="text-[48px] font-bold leading-none">4,6</p>
-              <p className="mt-[6px] text-[15px] opacity-60">(102 отзыва)</p>
+              <p className="mt-[6px] text-[15px] opacity-60">{t('reviewsCount')}</p>
             </div>
             <div className="flex flex-col gap-[8px]">
               {REVIEW_DISTRIBUTION.map(({ stars, percent }) => (
@@ -575,10 +583,10 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             onClick={handleDelete}
             className="flex-1 rounded-[14px] border border-[#e0e0e8] bg-white py-[16px] text-[18px] font-semibold hover:bg-[#f4f4f8]"
           >
-            Удалить
+            {t('delete')}
           </button>
           <Button
-            text="Сохранить изменение"
+            text={t('saveChange')}
             onClick={handleSave}
             className="flex-1 !w-full text-center text-[18px] !px-[20px]"
           />

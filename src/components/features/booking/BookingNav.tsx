@@ -1,7 +1,9 @@
 "use client";
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export const BookingNav = () => {
+    const t = useTranslations('BookingNav');
     const router = useRouter();
     const searchParams = useSearchParams();
     
@@ -13,7 +15,7 @@ export const BookingNav = () => {
     };
 
     return (
-        <nav aria-label="Навигация по бронированиям">
+        <nav aria-label={t('navigation')}>
             <ul className="relative flex gap-[46px] isolate">
                 <div
                     className={`absolute bottom-[-5px] left-0 h-[3px] bg-[#0A6AF7] transition-all duration-300 ease-in-out -z-10
@@ -26,7 +28,7 @@ export const BookingNav = () => {
                         className={`flex items-center text-[20px] font-semibold transition-colors duration-300 focus:outline-none
                             ${isUpcoming ? 'text-[#0A6AF7] opacity-100' : 'text-black opacity-60 hover:opacity-80'}`}
                     >
-                        Предстоящие
+                        {t('upcoming')}
                         <span className={`ml-[7px] flex h-7 min-w-7 items-center justify-center rounded-full px-[7px] text-[20px] font-semibold text-white transition-colors duration-300
                             ${isUpcoming ? 'bg-[#0A6AF7]' : 'bg-[#1e1e1e]'}`}>
                             2
@@ -40,7 +42,7 @@ export const BookingNav = () => {
                         className={`flex items-center text-[20px] font-semibold transition-colors duration-300 focus:outline-none
                             ${!isUpcoming ? 'text-[#0A6AF7] opacity-100' : 'text-black opacity-60 hover:opacity-80'}`}
                     >
-                        Прошлые
+                        {t('past')}
                         <span className={`ml-[7px] flex h-7 min-w-7 items-center justify-center rounded-full px-[7px] text-[20px] font-semibold text-white transition-colors duration-300
                             ${!isUpcoming ? 'bg-[#0A6AF7]' : 'bg-[#1e1e1e]'}`}>
                             4

@@ -1,1 +1,645 @@
-{}
+{
+    "Navigations": {
+    "home": "Home",
+    "map": "Map",
+    "business": "Business page",
+    "myBookins": "My bookins",
+    "support": "Support"
+  },
+  "AuthLayout": {
+    "login": "Sign In",
+    "register": "Create Account"
+  },
+  "LoginPage": {
+    "nameLabel": "Name",
+    "namePlaceholder": "Ivan",
+    "passwordLabel": "Password",
+    "submitButton": "Sign In"
+  },
+  "RegisterPage": {
+    "nameLabel": "Name",
+    "namePlaceholder": "Ivan",
+    "passwordLabel": "Password",
+    "repeatPasswordLabel": "Repeat Password",
+    "submitButton": "Create Account"
+  },
+  "BookingsPage": {
+    "title": "My Bookings"
+  },
+  "ProfilePage": {
+    "title": "Profile"
+  },
+  "SupportModal": {
+    "openButton": "Tech Support",
+    "title": "Tech Support",
+    "telegram": "Telegram",
+    "phoneNumber": "Phone Number",
+    "closeButton": "Close"
+  },
+  "BookingCancelModal": {
+    "title": "Cancel booking?",
+    "confirmText": "Are you sure you want to cancel your booking at",
+    "confirmDetails": "BronFitness Club for May 16, 2026, from 18:00 to 19:00",
+    "close": "Close",
+    "gym": "Gym",
+    "address": "123 Sairam St, Tashkent",
+    "total": "Total",
+    "price": "98,000 UZS",
+    "refundNotice": "Funds will be returned to your account within 3-5 business days",
+    "keepBooking": "Keep booking",
+    "cancelBooking": "Cancel booking"
+  },
+  "BookingCard": {
+    "gym": "Gym",
+    "confirmed": "• Confirmed",
+    "address": "123 Sairam St, Tashkent",
+    "time": "Time",
+    "date": "Date",
+    "guests": "Guests",
+    "total": "Total",
+    "price": "98,000 UZS",
+    "cancel": "Cancel booking",
+    "orderContent": "Order details",
+    "items": "3 items",
+    "finished": "• Completed"
+  },
+  "BookingDropdown": {
+    "menu": "Menu",
+    "editBooking": "Change booking",
+    "cancelBooking": "Cancel booking"
+  },
+  "BookingEditModal": {
+    "editBookingQuestion": "Change booking",
+    "close": "Close",
+    "gym": "Gym",
+    "address": "123 Sairam St, Tashkent",
+    "cancel": "Cancel",
+    "saveChanges": "Save changes"
+  },
+  "BookingNav": {
+    "navigation": "Navigating through bookings",
+    "upcoming": "Upcoming",
+    "past": "Past"
+  },
+  "Business": {
+    "title": "Add your business to the map for greater assets",
+    "subtitle": "Increase your assets with bookings!",
+    "addBusiness": "Add Business"
+  },
+  "BusinessCardMenu": {
+    "editProfile": "Edit profile",
+    "deleteBusiness": "Delete business"
+  },
+  "MyBusiness": {
+    "title": "My Business",
+    "addNewBusiness": "Add New Business",
+    "untitled": "Untitled",
+    "confirmed": "Verified",
+    "menu": "Menu",
+    "deleteConfirm": "Delete business?",
+    "bookings": "Bookings",
+    "views": "Views",
+    "statistics": "Статистика"
+  },
+  "Categories": {
+    "title": "Categories",
+    "allCategories": "All categories",
+    "less": "Less",
+    "more": "More",
+    "goBack": "Go back",
+    "seeAll": "See All"
+  },
+  "HeroSection": {
+    "title": "Book only the best services",
+    "subtitle": "Beauty salons, health, spa, fitness clubs, education, and much more\n at your disposal",
+    "findPlace": "Find a Spot"
+  },
+  "BusinessModal": {
+    "errorJpgPng": "Upload JPG or PNG",
+    "errorSize": "The file size must not exceed 2MB.",
+    "errorName": "Please provide the name of your business",
+    "errorCategory": "Select a business category",
+    "errorPhone": "Please provide a contact number",
+    "errorAddress": "Please provide your business address",
+    "deleteConfirm": "Delete all entered data?",
+    "uploadPhoto": "Upload a photo",
+    "profilePhoto": "Profile Photo",
+    "profilePhotoSubtitle": "This photo will represent your business on the platform.",
+    "goBack": "Go Back",
+    "profileAlt": "Profile",
+    "uploadProfilePhotoLabel": "Upload a profile photo",
+    "photoRequirements": "Requirements: 800x600px  JPG or PNG, up to 2MB.",
+    "deletePhoto": "Delete Photo",
+    "businessInfo": "Business Information",
+    "businessName": "Business Name",
+    "shortDescription": "Short Description",
+    "writePlaceholder": "ype here...",
+    "words": "chars",
+    "businessCategory": "Business Category",
+    "required": "Required",
+    "website": "Website",
+    "optional": "Optional",
+    "contactNumber": "Contact Number",
+    "businessAddress": "Business Address",
+    "businessGallery": "Business Gallery",
+    "gallerySubtitle": "Show the cozy and comfortable environment of your establishment",
+    "schedule": "Working Hours",
+    "scheduleSubtitle": "Exact days and operating hours",
+    "open": "Open",
+    "closed": "Closed",
+    "reset": "Reset",
+    "weeklySchedule": "Weekly Schedule",
+    "worksHoursPrefix": "Your business is open ",
+    "worksHoursSuffix": "hours a week",
+    "reviews": "Reviews",
+    "reviewsCount": "(102 review)",
+    "delete": "Delete",
+    "saveChange": "Save Changes",
+    "categories": {
+      "Gym": "Gym",
+      "Beauty": "Beauty",
+      "Health": "Health",
+      "Education": "Education",
+      "Food": "Food",
+      "Other": "Other"
+    }
+  },
+  "BusinessDashboard": {
+    "deleteService": "Delete service",
+    "deleteConfirm": "Are you sure you want to delete the service?",
+    "deleteWarning1": "All service data, time, dates and available slots will be deleted without the\n          possibility of recovery",
+    "deleteWarning2": "This action cannot be undone. Please make sure\n            you back up any important data",
+    "cancel": "Cancel",
+    "currency": "Currency",
+    "sum": "UZS",
+    "uploadPhoto": "Upload a photo",
+    "back": "Back",
+    "requiredField": "Required field",
+    "addProduct": "Add product",
+    "fillProductInfo": "Fill in the information about your product",
+    "productName": "Product name",
+    "enterName": "Enter name",
+    "price": "Price",
+    "enterPrice": "Enter price",
+    "category": "Category",
+    "selectCategory": "Select category",
+    "description": "Description",
+    "describeProduct": "Describe product",
+    "serviceOrProductPhoto": "Photo of the service or product",
+    "saveServiceOrProduct": "Save services or goods",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "addService": "Add a service",
+    "addServiceSubtitle": "Add a service for booking",
+    "serviceName": "Service name",
+    "required": "Required",
+    "servicePrice": "Service price",
+    "freeTime": "Free time",
+    "showOnlyFree": "Show only available",
+    "free": "Free",
+    "busy": "Busy",
+    "serviceDescription": "Service description",
+    "describeServices": "Describe services",
+    "photo": "Photo",
+    "date": "Date",
+    "saveServices": "Save services",
+    "businessPage": "Business Page",
+    "servicesAndStaff": "Services",
+    "booking": "Bookings",
+    "zeroReviews": "0,0 (0 reviews)",
+    "tashkentUzbekistan": "Tashkent, Uzbekistan",
+    "editProfile": "Edit profile",
+    "services": "Services",
+    "workingDaysAndServices": "Working days and services",
+    "name": "Name",
+    "status": "Status",
+    "action": "Action",
+    "noServices": "There are no services yet. Add your first service.",
+    "priceOfService": "Price of service",
+    "deleteServiceAria": "Delete service",
+    "saveChange": "Save changes",
+    "bookings": "Bookings",
+    "waiting": "Pending",
+    "acceptBooking": "Accept booking",
+    "cancelBooking": "Cancel",
+    "accepted": "Accepted",
+    "cancelled": "Cancelled",
+    "other": "Other",
+    "categories": {
+      "Consultation": "Consultation",
+      "Procedure": "Procedure",
+      "Training": "Training",
+      "Diagnostics": "Diagnostics",
+      "Other": "Other"
+    }
+  },
+  "Popular": {
+    "title": "Popular",
+    "rating": "Rating",
+    "time": "Time",
+    "book": "Book Now",
+    "seeAllAlt": "View All",
+    "seeAll": "View All"
+  },
+  "WhyUs": {
+    "title": "How it Works?",
+    "businessTitle": "For Large Businesses and Entrepreneurs",
+    "businessDesc": "Join Bron and grow your business",
+    "start": "Get Started",
+    "businessAlt": "Bron for business"
+  },
+  "HeroPhotoCarousel": {
+    "serviceExample": "Service example"
+  },
+  "BookingExtrasModal": {
+    "additionalServices": "Additional services",
+    "addSomethingToYourBooking": "Add something to your booking",
+    "duringVisitYouCanPurchaseDrinksOrAdditionalServices": "You can purchase drinks or additional services during your visit",
+    "close": "Close",
+    "back": "Back",
+    "sum": "UZS",
+    "added": "Added",
+    "add": "Add",
+    "forward": "Forward",
+    "yourOrder": "Your Order",
+    "remove": "Remove",
+    "total": "Total",
+    "saveTimePayNow": "Saves time at checkout",
+    "skip": "Skip",
+    "continue": "Continue"
+  },
+  "BookingPage": {
+    "servicesCount": "Services ({count})",
+    "hallBooking": "Gym Booking",
+    "mins": "{mins} min",
+    "oneHour": "1 hour",
+    "from": "from",
+    "sum": "UZS",
+    "perAppointment": "per appointment",
+    "perHour": "per hour",
+    "bookingSteps": "Booking steps",
+    "stepTime": "Select time",
+    "stepData": "Your details",
+    "stepConfirm": "Confirmation",
+    "back": "Back",
+    "open": "Open",
+    "freeSeats": "Available Spots",
+    "youSelected": "You selected",
+    "duration": "Duration",
+    "totalFor": "Total for",
+    "continue": "Continue",
+    "yourDataIsProtected": "Your data is protected",
+    "payment": "Payment",
+    "total": "Total",
+    "paymentMethod": "Payment Method",
+    "bankCard": "Bank Card",
+    "instantPayment": "Instant Payment",
+    "otherMethods": "Other Methods",
+    "yourData": "Your data",
+    "fillBookingInfo": "Fill out your booking information",
+    "fullName": "First and last name",
+    "phoneNumber": "Phone number",
+    "emailOptional": "Email (optional)",
+    "guestsCount": "Number of Guests",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "bookingConfirmed": "Booking confirmed!",
+    "confirmationSentToEmail": "We have sent a confirmation to your email",
+    "whatsNext": "What next?",
+    "come15MinsBefore": "Arrive at BronFitness Club 10-15 minutes before your workout starts",
+    "cancel2HoursBefore": "You can cancel or modify your booking no later than two hours before the start time",
+    "leaveReview": "Leave feedback",
+    "viewBooking": "View Booking",
+    "toHome": "Go to Home",
+    "backToMap": "Back to map",
+    "weUseEncryption": "We use encryption to protect your data and payments",
+    "pay": "Pay",
+    "paid": "Paid"
+  },
+  "FullMap": {
+    "myBusiness": "My business",
+    "all": "All",
+    "coffeeShop": "Coffee shop",
+    "gym": "Gym",
+    "hospital": "Hospital",
+    "restaurant": "Restaurant"
+  },
+  "HospitalServicesModal": {
+    "services": "Services",
+    "close": "Close",
+    "from": "From",
+    "sum": "UZS",
+    "min": "min",
+    "selectedText": "Selected",
+    "selectService": "Select Service",
+    "selected": "Selected",
+    "servicesText": "services",
+    "continue": "Continue"
+  },
+  "ShopDetailPanel": {
+    "close": "Close",
+    "open": "Open",
+    "freeSeats": "Available Spots",
+    "from": "from",
+    "sum": "UZS",
+    "perHour": "per hour",
+    "priceTitle": "Pricing",
+    "bookPlace": "Book a Spot"
+  },
+  "UserBusinessPanel": {
+    "close": "Close",
+    "zeroReviews": "(0 reviews)",
+    "noDescription": "Description missing",
+    "address": "Address",
+    "tashkent": "Tashkent",
+    "phone": "Phone",
+    "services": "Services",
+    "from": "from",
+    "book": "Book"
+  },
+  "Support": {
+    "supportTitle": "Support",
+    "supportSubtitle": "We are always ready to help you",
+    "faqTitle": "Frequently Asked Questions"
+  },
+  "CategoryDropdown": {
+    "required": "Required",
+    "allCategories": "All categories"
+  },
+  "CategoryModal": {
+    "title": "Categories",
+    "closeWindow": "Close modal",
+    "location": "Location",
+    "businessCategory": "Business Category",
+    "enterApproximatePrice": "Enter price",
+    "enterPrice": "Enter price",
+    "apply": "Apply"
+  },
+  "CurrencyDropdown": {
+    "sum": "UZS"
+  },
+  "Header": {
+    "profile": "Profile"
+  },
+  "LanguageSelector": {
+    "selectLanguage": "Select language"
+  },
+  "LocationSelector": {
+    "nearby": "Nearby",
+    "threeToSevenKm": "3-7 km from me",
+    "tenToFifteenKm": "10-15 km from me"
+  },
+  "NotificationDropdown": {
+    "bookingReminderTitle": "Booking reminder",
+    "bookingReminderDesc": "You have a booking at BronFitness tomorrow",
+    "paymentSuccessTitle": "Payment completed successfully",
+    "paymentSuccessDesc": "Payment of 98,000 UZS was successful!",
+    "promoTitle": "Special offer for you!",
+    "promoDesc": "20% discount on all services until the end of the week!",
+    "notifications": "Notifications",
+    "today": "Today",
+    "deleteAllRead": "Delete all read"
+  },
+  "NotificationEmpty": {
+    "noNotifications": "No notifications!",
+    "notificationsDesc": "Your notifications about bookings, payments, promotions, and other events will appear here"
+  },
+  "SearchBar": {
+    "searchAlt": "Search",
+    "searchPlaceholder": "Search...",
+    "filters": "Filters"
+  },
+  "DatePicker": {
+    "selectDay": "Select date",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
+  "TimePicker": {
+    "selectTime": "Select time"
+  },
+  "data": {
+    "categories": {
+      "hairCare": "Beauty salon",
+      "health": "Health",
+      "gym": "Gym",
+      "education": "Educational institutions",
+      "food": "Restaurants",
+      "coffee": "Coffee shops",
+      "autoService": "Car service",
+      "cinema": "Cinemas",
+      "pcClub": "Computer Club",
+      "cleaning": "Cleaning",
+      "sanatoriums": "Sanatoriums"
+    },
+    "popular": {
+      "beautySalon": {
+        "title": "Beauty salon",
+        "desc": "A specialized room equipped for physical education classes"
+      },
+      "gym": {
+        "title": "Gym",
+        "desc": "A specialized room equipped for physical education classes"
+      },
+      "clinic": {
+        "title": "Clinic",
+        "desc": "A specialized room equipped for physical education classes"
+      }
+    },
+    "bookingExtras": {
+      "isotonic": {
+        "name": "Isotonic",
+        "description": "Refreshing sports drink"
+      },
+      "proteinBar": {
+        "name": "Protein bar",
+        "description": "A healthy post-workout snack"
+      },
+      "proteinShake": {
+        "name": "Protein shake",
+        "description": "Muscle recovery after exercise"
+      },
+      "water": {
+        "name": "Mineral water",
+        "description": "0.5 l, still"
+      },
+      "towel": {
+        "name": "Towel",
+        "description": "Rent for the duration of your visit"
+      }
+    },
+    "shops": {
+      "bronFitness": {
+        "title": "BronFitness Club",
+        "type": "Gym",
+        "desc": "A modern fitness club with a gym, group training, spa, and relaxation area.",
+        "address": "st. Sairam 123, Tashkent",
+        "district": "Yakkasaray district",
+        "category": "Gym"
+      },
+      "beanHouse": {
+        "title": "Bean House Coffee",
+        "type": "Coffe shop",
+        "desc": "A cozy coffee shop with specialty coffee, fresh pastries, breakfast options, and a laptop area.",
+        "address": "st. Afrosiab 45, Tashkent",
+        "district": "Mirabad district",
+        "category": "Coffee shop"
+      },
+      "cityHospital": {
+        "title": "City Hospital",
+        "type": "Hospital",
+        "desc": "Multidisciplinary clinic: general practitioner, dentist, cardiologist. Book an appointment online.",
+        "address": "st. Shakhrisabz 12, Tashkent",
+        "district": "Mirabad district",
+        "category": "Consultation",
+        "services": {
+          "therapist": {
+            "title": "Consultation with a therapist",
+            "description": "Appointment and examination by a general practitioner, diagnosis, recommendations."
+          },
+          "cardio": {
+            "title": "Cardiologist consultation",
+            "description": "Examination, recommendations, interpretation of examination results."
+          },
+          "dentist": {
+            "title": "Dentist consultation",
+            "description": "Oral examination, diagnosis, treatment plan and recommendations."
+          },
+          "pediatrics": {
+            "title": "Consultation with a pediatrician",
+            "description": "Examination of the child, recommendations and treatment plan if necessary."
+          }
+        }
+      },
+      "beautyBron": {
+        "title": "Beauty Bron Salon",
+        "type": "Beauty salon",
+        "desc": "Premium beauty salon: haircuts, styling, manicures and skin care.",
+        "address": "st. Taras Shevchenko 21, Tashkent",
+        "district": "Mirabad district",
+        "category": "Beauty services"
+      }
+    },
+    "support": {
+      "contacts": {
+        "phone": {
+          "title": "Call",
+          "description": "Call us on our hotline"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "description": "Contact us and describe your problem",
+          "buttonText": "Telegram"
+        },
+        "email": {
+          "title": "Email",
+          "description": "Send us a letter and we will respond",
+          "buttonText": "Write a letter"
+        }
+      },
+      "faq": {
+        "changeBooking": {
+          "question": "How do I change or cancel my reservation?",
+          "answer": "Go to the «My Reservations» section, select the desired reservation, and click «Edit» or «Cancel». Cancellations are accepted up to 2 hours before the service starts."
+        },
+        "paymentMethods": {
+          "question": "What payment methods are available?",
+          "answer": "We accept Visa and Mastercard, as well as Payme and Click. In-store payment is available at some locations."
+        },
+        "viewBookings": {
+          "question": "Where can I view my reservations?",
+          "answer": "All your reservations are displayed in the «My Reservations» section of the sidebar. There you'll see upcoming and past bookings."
+        },
+        "howBookingWorks": {
+          "question": "How does the booking system work?",
+          "answer": "Select a location on the map or main page, specify the service and convenient time, pay online, and receive a booking confirmation."
+        },
+        "security": {
+          "question": "Security and privacy",
+          "answer": "Your data is protected by encryption. We do not share personal information with third parties and use it only to process reservations."
+        }
+      }
+    },
+    "whyUs": {
+      "steps": [
+        {
+          "title": "Choose a service",
+          "description": "Choose the service you need"
+        },
+        {
+          "title": "You are choosing the time",
+          "description": "Choose the time and date"
+        },
+        {
+          "title": "You pay",
+          "description": "Pay for the selected service"
+        },
+        {
+          "title": "You receive the service",
+          "description": "Get service from professionals"
+        }
+      ]
+    }
+  },
+  "pluralize": {
+    "services": {
+      "one": "service",
+      "few": "services",
+      "many": "services",
+      "other": "services"
+    },
+    "reviews": {
+      "one": "review",
+      "few": "reviews",
+      "many": "reviews",
+      "other": "reviews"
+    },
+    "time": {
+      "min": "min.",
+      "hour": "h."
+    }
+  },
+  "Weekdays": {
+    "mon": {
+      "long": "Monday",
+      "short": "Mon"
+    },
+    "tue": {
+      "long": "Tuesday",
+      "short": "Tue"
+    },
+    "wed": {
+      "long": "Wednesday",
+      "short": "Wed"
+    },
+    "thu": {
+      "long": "Thursday",
+      "short": "Thu"
+    },
+    "fri": {
+      "long": "Friday",
+      "short": "Fri"
+    },
+    "sat": {
+      "long": "Saturday",
+      "short": "Sat"
+    },
+    "sun": {
+      "long": "Sunday",
+      "short": "Sun"
+    }
+  },
+  "Months": {
+    "jan": "January",
+    "feb": "February",
+    "mar": "March",
+    "apr": "April",
+    "may": "May",
+    "jun": "June",
+    "jul": "July",
+    "aug": "August",
+    "sep": "September",
+    "oct": "October",
+    "nov": "November",
+    "dec": "December"
+  }
+}

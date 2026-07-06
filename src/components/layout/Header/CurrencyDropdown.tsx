@@ -1,6 +1,7 @@
 "use client";
 
 import { FC, useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
 
@@ -10,11 +11,12 @@ interface CurrencyDropdownProps {
 }
 
 export const CurrencyDropdown: FC<CurrencyDropdownProps> = ({ value, onChange }) => {
+    const t = useTranslations('CurrencyDropdown');
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const options = [
-        { id: 'sum', label: 'Сум', badge: 'UZS' },
+        { id: 'sum', label: t('sum'), badge: 'UZS' },
         { id: 'usd', label: 'USD', badge: '$' },
     ];
 

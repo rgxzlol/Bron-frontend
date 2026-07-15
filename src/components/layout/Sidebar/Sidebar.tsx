@@ -1,8 +1,12 @@
+"use client";
+
 import { mainNavItems } from "@/config/navigation";
 import { Logo } from "@/components/shared/Logo";
 import { NavLink } from "@/components/shared/Navlink";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function Sidebar() {
+  const { t } = useTranslation();
 
   return (
     <aside
@@ -12,7 +16,6 @@ export default function Sidebar() {
 
       <ul className="list-none w-full mt-[47px]">
         {mainNavItems.map((item) => {
-
           return (
             <li key={item.href} className="w-full">
               <NavLink
@@ -32,7 +35,7 @@ export default function Sidebar() {
                   aria-hidden
                 />
                 <span className="text-[24px] font-semibold text-black/70 transition-colors duration-500 group-hover:text-[#0a6af7]">
-                  {item.title}
+                  {t(item.titleKey)}
                 </span>
               </NavLink>
             </li>

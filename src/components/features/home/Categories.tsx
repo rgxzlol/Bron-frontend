@@ -1,4 +1,5 @@
 "use client";
+
 import { categories } from "@/data/categories";
 import { assets } from "@/lib/assets";
 import { pluralizeServices } from "@/lib/pluralize";
@@ -7,9 +8,17 @@ import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { HOME_CATEGORY_KEYS } from "@/lib/i18n/labels";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t, language } = useTranslation();
+
+  const categoryTitle = (category: Category) =>
+    HOME_CATEGORY_KEYS[category.id]
+      ? t(HOME_CATEGORY_KEYS[category.id])
+      : category.title;
 
   const renderCategoryCard = (category: Category) => (
     <Link
@@ -23,18 +32,18 @@ export default function Categories() {
       >
         <Image
           src={category.icon}
-          alt={category.title}
+          alt={categoryTitle(category)}
           width={32}
           height={32}
         />
       </div>
 
       <span className="line-clamp-2 min-h-12 font-semibold">
-        {category.title}
+        {categoryTitle(category)}
       </span>
 
       <span className="text-[14px] opacity-75">
-        {category.count} {pluralizeServices(category.count)}
+        {category.count} {pluralizeServices(category.count, language)}
       </span>
     </Link>
   );
@@ -42,7 +51,7 @@ export default function Categories() {
   return (
     <section className="my-8.75" id="categories">
       <h2 className="mb-15 text-[24px] font-semibold">
-        Категории
+        {t("home.categories")}
       </h2>
 
       <div className="flex flex-col gap-4">
@@ -56,18 +65,18 @@ export default function Categories() {
             <div className="flex h-18.75 w-18.75 items-center justify-center rounded-full bg-[#ffebd3]">
               <Image
                 src={assets.categories.more}
-                alt="Все категории"
+                alt={t("home.allCategories")}
                 width={32}
                 height={32}
               />
             </div>
 
             <span className="min-h-12 font-semibold">
-              {isExpanded ? 'Меньше' : 'Больше'}
+              {isExpanded ? t("common.less") : t("common.more")}
             </span>
 
             <span className="text-[14px] opacity-75">
-              {isExpanded ? 'Вернуться обратно' : 'Посмотреть все'}
+              {isExpanded ? t("common.collapseHint") : t("common.viewAllHint")}
             </span>
           </button>
         </div>

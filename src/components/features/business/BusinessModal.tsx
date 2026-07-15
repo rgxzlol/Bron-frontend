@@ -14,6 +14,13 @@ import {
 } from "@/store/business.store";
 import { ApiError } from "@/lib/api/client";
 import { GeocodingError } from "@/lib/geocoding";
+import {
+  BUSINESS_CATEGORY_KEYS,
+  SCHEDULE_DAY_KEYS,
+  translateErrorMessage,
+  translateLabel,
+} from "@/lib/i18n/labels";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -42,13 +49,16 @@ function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-async function readImageFile(file: File): Promise<string | null> {
+async function readImageFile(
+  file: File,
+  onError: (message: string) => void,
+): Promise<string | null> {
   if (!file.type.startsWith("image/")) {
-    alert("Загрузите JPG или PNG");
+    onError("businessErrors.imageType");
     return null;
   }
   if (file.size > MAX_IMAGE_SIZE) {
-    alert("Размер файла не должен превышать 2MB");
+    onError("businessErrors.imageSize");
     return null;
   }
   return new Promise((resolve) => {
@@ -159,6 +169,7 @@ const inputClass =
   "w-full rounded-[14px] bg-[#f4f4f8] px-[18px] py-[14px] text-[16px] outline-none focus:ring-2 focus:ring-[#0a6af7]/30";
 
 export default function BusinessModal({ onClose, onSaved }: Props) {
+  const { t } = useTranslation();
   const draft = useBusinessStore((s) => s.draft);
   const updateDraft = useBusinessStore((s) => s.updateDraft);
   const setDraftSchedule = useBusinessStore((s) => s.setDraftSchedule);
@@ -180,13 +191,17 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     [draft.schedule],
   );
 
+  function alertError(key: string) {
+    alert(t(key));
+  }
+
   async function handleProfileUpload(file: File) {
-    const url = await readImageFile(file);
+    const url = await readImageFile(file, alertError);
     if (url) updateDraft({ profilePhoto: url });
   }
 
   async function handleGalleryUpload(index: number, file: File) {
-    const url = await readImageFile(file);
+    const url = await readImageFile(file, alertError);
     if (!url) return;
     const gallery = [...draft.gallery];
     gallery[index] = url;
@@ -210,35 +225,35 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
   async function handleSave() {
     if (!draft.name.trim()) {
-      alert("Укажите название бизнеса");
+      alertError("businessErrors.nameRequired");
       return;
     }
     if (!draft.category) {
-      alert("Выберите категорию бизнеса");
+      alertError("businessErrors.categoryRequired");
       return;
     }
     if (!draft.phone.trim()) {
-      alert("Укажите контактный номер");
+      alertError("businessErrors.phoneRequired");
       return;
     }
     if (!draft.address.trim()) {
-      alert("Укажите адрес бизнеса");
+      alertError("businessErrors.addressRequired");
       return;
     }
     if (draft.lat == null || draft.lng == null) {
-      alert("Выберите адрес из списка подсказок");
+      alertError("businessErrors.addressSelectFromSuggestions");
       return;
     }
     if (!draft.description.trim()) {
-      alert("Укажите описание бизнеса");
+      alertError("businessErrors.descriptionRequired");
       return;
     }
     if (!draft.profilePhoto) {
-      alert("Загрузите аватар бизнеса");
+      alertError("businessErrors.profilePhotoRequired");
       return;
     }
     if (!draft.gallery.some(Boolean)) {
-      alert("Загрузите хотя бы одно дополнительное фото");
+      alertError("businessErrors.galleryRequired");
       return;
     }
 
@@ -249,8 +264,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     } catch (error) {
       const message =
         error instanceof ApiError || error instanceof GeocodingError
-          ? error.message
-          : "Не удалось сохранить бизнес";
+          ? translateErrorMessage(t, error.message)
+          : t("businessErrors.saveFailed");
       alert(message);
     } finally {
       setSaving(false);
@@ -258,10 +273,20 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   }
 
   function handleDelete() {
-    if (confirm("Удалить все введённые данные?")) {
+    if (confirm(t("businessModal.deleteConfirm"))) {
       resetDraft();
       onClose();
     }
+  }
+
+  function dayLabel(key: string) {
+    const keys = SCHEDULE_DAY_KEYS[key];
+    return keys ? t(keys.label) : key;
+  }
+
+  function dayShortLabel(key: string) {
+    const keys = SCHEDULE_DAY_KEYS[key];
+    return keys ? t(keys.short) : key;
   }
 
   function renderGallerySlot(index: number, className: string) {
@@ -293,7 +318,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <>
               <PhotoIcon />
               <span className="text-[15px] font-semibold text-[#0a6af7]">
-                Загрузить фото
+                {t("businessModal.uploadPhoto")}
               </span>
             </>
           )}
@@ -308,15 +333,15 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     <div className={s.backdrop}>
       <div className={s.panel}>
         <SectionCard
-          title="Профиль фото"
-          subtitle="Это фото будет презентовать ваш бизнес на платформе"
+          title={t("businessModal.profilePhotoTitle")}
+          subtitle={t("businessModal.profilePhotoSubtitle")}
           action={
             <button
               type="button"
               onClick={onClose}
               className="rounded-[12px] border border-[#e0e0e8] px-[18px] py-[10px] text-[15px] font-semibold hover:bg-[#f4f4f8]"
             >
-              Вернуться назад
+              {t("businessModal.back")}
             </button>
           }
         >
@@ -327,7 +352,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={draft.profilePhoto}
-                    alt="Профиль"
+                    alt={t("businessModal.profileAlt")}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -344,7 +369,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 type="button"
                 onClick={() => profileInputRef.current?.click()}
                 className="absolute bottom-[4px] right-[4px] flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#0a6af7]"
-                aria-label="Загрузить фото профиля"
+                aria-label={t("businessModal.uploadProfilePhotoAria")}
               >
                 <CameraIcon />
               </button>
@@ -363,7 +388,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
             <div className="flex flex-col gap-[14px]">
               <p className="text-[14px] opacity-60">
-                Требования: размер 800x800px JPG, PNG, до 2MB
+                {t("businessModal.photoRequirements")}
               </p>
               <button
                 type="button"
@@ -372,16 +397,18 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 className="flex w-fit items-center gap-[8px] text-[15px] font-semibold text-[#e53935] disabled:opacity-40"
               >
                 <TrashIcon />
-                Удали фото
+                {t("businessModal.deletePhoto")}
               </button>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Информация бизнеса">
+        <SectionCard title={t("businessModal.infoTitle")}>
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название бизнеса</span>
+              <span className="text-[15px] font-semibold">
+                {t("businessModal.nameLabel")}
+              </span>
               <input
                 className={inputClass}
                 value={draft.name}
@@ -391,11 +418,13 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </label>
 
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Короткое описание</span>
+              <span className="text-[15px] font-semibold">
+                {t("businessModal.descriptionLabel")}
+              </span>
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y`}
                 value={draft.description}
-                placeholder="Написать..."
+                placeholder={t("businessModal.descriptionPlaceholder")}
                 onChange={(e) => {
                   const words = countWords(e.target.value);
                   if (words <= MAX_DESCRIPTION_WORDS) {
@@ -404,60 +433,71 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 }}
               />
               <span className="text-[14px] opacity-60">
-                {wordCount}/{MAX_DESCRIPTION_WORDS} слов
+                {t("businessModal.wordCount", {
+                  count: wordCount,
+                  max: MAX_DESCRIPTION_WORDS,
+                })}
               </span>
             </label>
 
             <div className="grid grid-cols-1 gap-[18px] md:grid-cols-2">
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Категория бизнеса</span>
+                <span className="text-[15px] font-semibold">
+                  {t("businessModal.categoryLabel")}
+                </span>
                 <select
                   className={inputClass}
                   value={draft.category}
                   onChange={(e) => updateDraft({ category: e.target.value })}
                 >
-                  <option value="">Обязательно</option>
+                  <option value="">{t("businessModal.required")}</option>
                   {BUSINESS_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat}
+                      {translateLabel(t, cat, BUSINESS_CATEGORY_KEYS)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Веб сайт</span>
+                <span className="text-[15px] font-semibold">
+                  {t("businessModal.websiteLabel")}
+                </span>
                 <input
                   className={inputClass}
                   value={draft.website}
-                  placeholder="Необязательно"
+                  placeholder={t("businessModal.optional")}
                   onChange={(e) => updateDraft({ website: e.target.value })}
                 />
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Контактный номер</span>
+                <span className="text-[15px] font-semibold">
+                  {t("businessModal.phoneLabel")}
+                </span>
                 <input
                   className={inputClass}
                   value={draft.phone}
-                  placeholder="Обязательно"
+                  placeholder={t("businessModal.required")}
                   onChange={(e) => updateDraft({ phone: e.target.value })}
                 />
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Адрес бизнеса</span>
+                <span className="text-[15px] font-semibold">
+                  {t("businessModal.addressLabel")}
+                </span>
                 <AddressAutocomplete
                   value={draft.address}
                   coordsSelected={draft.lat != null && draft.lng != null}
                   inputClassName={inputClass}
-                  placeholder="Например: ул. Амира Темура 100, Ташкент"
+                  placeholder={t("businessModal.addressPlaceholder")}
                   onChange={({ address, lat, lng }) =>
                     updateDraft({ address, lat, lng })
                   }
                 />
                 <span className="text-[13px] opacity-60">
-                  Выберите адрес из подсказок — бизнес появится на карте в этой точке
+                  {t("businessModal.addressHint")}
                 </span>
               </label>
             </div>
@@ -465,8 +505,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         </SectionCard>
 
         <SectionCard
-          title="Бизнес галерея"
-          subtitle="Покажи свой уют и комфорт заведения"
+          title={t("businessModal.galleryTitle")}
+          subtitle={t("businessModal.gallerySubtitle")}
         >
           <div className="grid min-h-[280px] grid-cols-3 gap-[12px]">
             {renderGallerySlot(0, "row-span-2")}
@@ -481,8 +521,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         </SectionCard>
 
         <SectionCard
-          title="График работы"
-          subtitle="Точное время и дни работы"
+          title={t("businessModal.scheduleTitle")}
+          subtitle={t("businessModal.scheduleSubtitle")}
         >
           <div className="flex flex-col gap-[24px] lg:flex-row">
             <div className="flex flex-1 flex-col gap-[10px]">
@@ -492,7 +532,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   className="flex flex-wrap items-center gap-[12px] rounded-[16px] bg-[#f4f4f8] px-[16px] py-[12px]"
                 >
                   <span className="min-w-[120px] text-[15px] font-semibold">
-                    {day.label}
+                    {dayLabel(day.key)}
                   </span>
                   <Toggle
                     checked={day.isOpen}
@@ -503,7 +543,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       day.isOpen ? "text-[#5a6a5a]" : "text-[#e53935]"
                     }`}
                   >
-                    {day.isOpen ? "Открыто" : "Закрыто"}
+                    {day.isOpen
+                      ? t("businessModal.open")
+                      : t("businessModal.closed")}
                   </span>
                   <select
                     className={`rounded-[10px] bg-white px-[10px] py-[6px] text-[14px] ${
@@ -515,9 +557,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       updateScheduleDay(index, { openTime: e.target.value })
                     }
                   >
-                    {TIME_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
                       </option>
                     ))}
                   </select>
@@ -532,16 +574,18 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       updateScheduleDay(index, { closeTime: e.target.value })
                     }
                   >
-                    {TIME_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
                     className="ml-auto rounded-[8px] p-[6px] opacity-50 hover:bg-white hover:opacity-100"
-                    aria-label={`Сбросить ${day.label}`}
+                    aria-label={t("businessModal.resetDayAria", {
+                      day: dayLabel(day.key),
+                    })}
                     onClick={() => {
                       const schedule = draft.schedule.map((d, i) =>
                         i === index ? resetDaySchedule(d) : d,
@@ -556,20 +600,24 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </div>
 
             <div className="w-full shrink-0 rounded-[20px] bg-[#f0f4fa] p-[22px] lg:w-[280px]">
-              <h4 className="mb-[16px] text-[17px] font-semibold">Недельный график</h4>
+              <h4 className="mb-[16px] text-[17px] font-semibold">
+                {t("businessModal.weeklySchedule")}
+              </h4>
               <ul className="flex flex-col gap-[8px]">
                 {draft.schedule.map((day) => (
                   <li
                     key={day.key}
                     className="flex justify-between text-[15px] font-semibold"
                   >
-                    <span>{day.shortLabel}</span>
+                    <span>{dayShortLabel(day.key)}</span>
                     {day.isOpen ? (
                       <span>
                         {day.openTime} – {day.closeTime}
                       </span>
                     ) : (
-                      <span className="text-[#e53935]">Закрыто</span>
+                      <span className="text-[#e53935]">
+                        {t("businessModal.closed")}
+                      </span>
                     )}
                   </li>
                 ))}
@@ -577,18 +625,20 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               <div className="mt-[20px] flex items-center gap-[12px] rounded-[14px] border border-[#0a6af7]/30 bg-white/60 px-[14px] py-[12px]">
                 <Image src={assets.popular.timeIcon} alt="" width={22} height={22} />
                 <p className="text-[14px] font-semibold leading-snug text-[#0a6af7]">
-                  Ваш бизнес работает {weeklyHours} часа в неделю
+                  {t("businessModal.weeklyHours", { hours: weeklyHours })}
                 </p>
               </div>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard title="Отзывы">
+        <SectionCard title={t("businessModal.reviewsTitle")}>
           <div className="flex flex-wrap items-center gap-[40px]">
             <div>
               <p className="text-[48px] font-bold leading-none">4,6</p>
-              <p className="mt-[6px] text-[15px] opacity-60">(102 отзыва)</p>
+              <p className="mt-[6px] text-[15px] opacity-60">
+                {t("businessModal.reviewsCount")}
+              </p>
             </div>
             <div className="flex flex-col gap-[8px]">
               {REVIEW_DISTRIBUTION.map(({ stars, percent }) => (
@@ -613,10 +663,14 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             onClick={handleDelete}
             className="flex-1 rounded-[14px] border border-[#e0e0e8] bg-white py-[16px] text-[18px] font-semibold hover:bg-[#f4f4f8]"
           >
-            Удалить
+            {t("businessModal.delete")}
           </button>
           <Button
-            text={saving ? "Сохранение..." : "Сохранить изменение"}
+            text={
+              saving
+                ? t("businessModal.saving")
+                : t("businessModal.saveChanges")
+            }
             onClick={handleSave}
             className="flex-1 !w-full text-center text-[18px] !px-[20px]"
           />

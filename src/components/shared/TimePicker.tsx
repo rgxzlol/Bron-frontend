@@ -5,7 +5,9 @@ import {
   buildTimeGroupsFromHours,
   groupTimeSlots,
   type TimeGroup,
+  type TimePeriodKey,
 } from "@/lib/booking/timeSlots";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface TimePickerProps {
   selectedTime: string;
@@ -17,6 +19,12 @@ interface TimePickerProps {
 
 const DEFAULT_TIME_GROUPS = buildTimeGroupsFromHours("09:00 - 20:00");
 
+const TIME_PERIOD_KEYS: Record<TimePeriodKey, string> = {
+  morning: "timePicker.morning",
+  day: "timePicker.day",
+  evening: "timePicker.evening",
+};
+
 export default function TimePicker({
   selectedTime,
   onSelectedTimeChange,
@@ -24,20 +32,25 @@ export default function TimePicker({
   timeGroups = DEFAULT_TIME_GROUPS,
   disabledSlots = new Set(),
 }: TimePickerProps) {
+  const { t } = useTranslation();
   const hasSlots = timeGroups.some((group) => group.slots.length > 0);
 
   return (
     <div>
-      <h2 className="text-[18px] font-bold mb-4 text-[var(--text-primary)]">Выбрать время</h2>
+      <h2 className="text-[18px] font-bold mb-4 text-[var(--text-primary)]">
+        {t("timePicker.title")}
+      </h2>
       {!hasSlots ? (
         <p className="text-[15px] text-[var(--text-muted)]">
-          На выбранный день нет доступного времени
+          {t("timePicker.noSlots")}
         </p>
       ) : (
         <div className="flex flex-col gap-5">
           {timeGroups.map((group) => (
-            <div key={group.label}>
-              <h3 className="text-[15px] font-bold mb-[10px] text-[var(--text-primary)]">{group.label}</h3>
+            <div key={group.periodKey}>
+              <h3 className="text-[15px] font-bold mb-[10px] text-[var(--text-primary)]">
+                {t(TIME_PERIOD_KEYS[group.periodKey])}
+              </h3>
               <div className="flex flex-wrap gap-[10px]">
                 {group.slots.map((slot) => {
                   const busy = busySlots.has(slot);

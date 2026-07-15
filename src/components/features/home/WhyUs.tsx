@@ -1,36 +1,41 @@
+"use client";
+
 import { assets } from "@/lib/assets";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
-
-const steps = [
-  {
-    step: 1,
-    title: "Выбираете сервис",
-    description: "Выбираете сервис, который вам нужен",
-  },
-  {
-    step: 2,
-    title: "Подбираете время",
-    description: "Выбираете время и дату",
-  },
-  {
-    step: 3,
-    title: "Оплачиваете",
-    description: "Оплачиваете выбранный сервис",
-  },
-  {
-    step: 4,
-    title: "Получаете услугу",
-    description: "Получайте услугу от профессионалов",
-  },
-] as const;
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function WhyUs() {
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      step: 1,
+      title: t("home.step1Title"),
+      description: t("home.step1Desc"),
+    },
+    {
+      step: 2,
+      title: t("home.step2Title"),
+      description: t("home.step2Desc"),
+    },
+    {
+      step: 3,
+      title: t("home.step3Title"),
+      description: t("home.step3Desc"),
+    },
+    {
+      step: 4,
+      title: t("home.step4Title"),
+      description: t("home.step4Desc"),
+    },
+  ] as const;
+
   return (
     <section className="my-[36px] mb-[100px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold">Как это работает?</h2>
+      <h2 className="mb-[16px] text-[24px] font-semibold">{t("home.howItWorks")}</h2>
 
       <div className="flex gap-[22px]">
         {steps.map(({ step, title, description }) => (
@@ -55,20 +60,20 @@ export default function WhyUs() {
         <div>
           <div className="mb-[70px] flex flex-col gap-[9px]">
             <p className="max-w-[400px] text-[32px] font-semibold">
-              Для крупных бизнесов и предпринимателей
+              {t("home.businessTitle")}
             </p>
             <p className="max-w-[210px] font-semibold opacity-75">
-              Заходи в Bron и развивай свой бизнес
+              {t("home.businessSubtitle")}
             </p>
           </div>
           <Link href={routes.business}>
-            <Button text="Начать" as="span" className="cursor-pointer inline-block" />
+            <Button text={t("home.start")} as="span" className="cursor-pointer inline-block" />
           </Link>
         </div>
         <Image
           className="absolute right-0 top-[-155px]"
           src={assets.marketing.homePng}
-          alt="Bron для бизнеса"
+          alt={t("home.businessAlt")}
           width={493}
           height={442}
         />

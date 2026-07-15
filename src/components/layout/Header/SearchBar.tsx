@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { CategoryModal } from "./CategoryModal";
 
 export default function SearchBar() {
     const [searchValue, setSearchValue] = useState("");
     const [isOpen, setIsOpen] = useState(false)
+    const { t } = useTranslation();
 
     const handleClear = () => {
         setSearchValue("");
@@ -20,12 +22,12 @@ export default function SearchBar() {
     return (
         <div className="flex items-center rounded-[38px] bg-[#f4f4f8] px-5 py-[6px]">
             <label className="relative flex items-center pb-1">
-                <Image className="mr-4" src={assets.header.search} alt="Поиск" width={22} height={22} />
+                <Image className="mr-4" src={assets.header.search} alt={t("common.search")} width={22} height={22} />
                 <input
                     className="mr-1 h-[25px] w-[600px] p-2 
                    focus:outline-none 
                    [&::-webkit-search-cancel-button]:appearance-none"
-                    placeholder="Поиск..."
+                    placeholder={t("common.searchPlaceholder")}
                     type="search"
                     name="search"
                     value={searchValue}
@@ -46,7 +48,7 @@ export default function SearchBar() {
                 onClick={() => setIsOpen(true)}
                 type="button"
                 className="rounded-full bg-white p-[9px]"
-                aria-label="Фильтры" >
+                aria-label={t("common.filters")} >
                 <Image src={assets.header.filter} alt="" width={18} height={18} />
             </button>
             {

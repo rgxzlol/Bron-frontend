@@ -1,5 +1,5 @@
-export function formatPrice(price: number): string {
-  return price.toLocaleString("ru-RU");
+export function formatPrice(price: number, locale = "ru-RU"): string {
+  return price.toLocaleString(locale);
 }
 
 export function parsePrice(value: string): number {
@@ -21,8 +21,8 @@ export function formatPriceInputOnChange(value: string): string {
   return Number.isFinite(num) ? formatPrice(num) : "";
 }
 
-export function formatRating(rating: number): string {
-  return rating.toLocaleString("ru-RU", {
+export function formatRating(rating: number, locale = "ru-RU"): string {
+  return rating.toLocaleString(locale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });

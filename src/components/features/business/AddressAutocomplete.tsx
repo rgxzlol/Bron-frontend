@@ -5,6 +5,7 @@ import {
   searchAddressSuggestions,
   type AddressSuggestion,
 } from "@/lib/geocoding";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import s from "./addressAutocomplete.module.css";
 
 type Props = {
@@ -28,6 +29,7 @@ export default function AddressAutocomplete({
   placeholder,
   inputClassName = "",
 }: Props) {
+  const { t, language } = useTranslation();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function AddressAutocomplete({
     const timeoutId = window.setTimeout(() => {
       setIsLoading(true);
 
-      void searchAddressSuggestions(value)
+      void searchAddressSuggestions(value, language)
         .then((items) => {
           setSuggestions(items);
           setIsOpen(items.length > 0);
@@ -58,7 +60,7 @@ export default function AddressAutocomplete({
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [value]);
+  }, [value, language]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -100,12 +102,12 @@ export default function AddressAutocomplete({
         autoComplete="off"
       />
 
-      {isLoading && <span className={s.hint}>Поиск адреса...</span>}
+      {isLoading && <span className={s.hint}>{t("businessAddress.searching")}</span>}
       {!isLoading && value.trim() && !coordsSelected && (
-        <span className={s.hint}>Выберите адрес из списка, чтобы поставить метку на карте</span>
+        <span className={s.hint}>{t("businessAddress.pickFromList")}</span>
       )}
       {!isLoading && coordsSelected && (
-        <span className={s.hintOk}>Адрес выбран — бизнес появится на карте</span>
+        <span className={s.hintOk}>{t("businessAddress.selectedOk")}</span>
       )}
 
       {isOpen && suggestions.length > 0 && (

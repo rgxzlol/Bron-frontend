@@ -5,6 +5,8 @@ import Image from "next/image";
 import type { ShopService, ShopsType } from "@/types/shops.types";
 import { formatPrice } from "@/lib/formatPrice";
 import Button from "@/components/shared/Button";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { DEMO_SERVICE_KEYS } from "@/lib/i18n/labels";
 import s from "./hospitalServicesModal.module.css";
 
 type HospitalServicesModalProps = {
@@ -18,6 +20,7 @@ export default function HospitalServicesModal({
   onClose,
   onContinue,
 }: HospitalServicesModalProps) {
+  const { t, locale } = useTranslation();
   const services = useMemo<ShopService[]>(() => shop.services ?? [], [shop]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -44,8 +47,13 @@ export default function HospitalServicesModal({
     >
       <div className={s.modal} onClick={(e) => e.stopPropagation()}>
         <div className={s.header}>
-          <h2 className={s.title}>Услуги</h2>
-          <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
+          <h2 className={s.title}>{t("map.services")}</h2>
+          <button
+            type="button"
+            className={s.close}
+            onClick={onClose}
+            aria-label={t("common.close")}
+          >
             ×
           </button>
         </div>
@@ -53,6 +61,12 @@ export default function HospitalServicesModal({
         <div className={s.grid} role="list">
           {services.map((service) => {
             const isSelected = selectedIds.includes(service.id);
+            const demoKeys = DEMO_SERVICE_KEYS[service.id];
+            const title = demoKeys ? t(demoKeys.title) : service.title;
+            const description = demoKeys
+              ? t(demoKeys.description)
+              : service.description;
+
             return (
               <article
                 key={service.id}
@@ -80,19 +94,23 @@ export default function HospitalServicesModal({
                   </div>
 
                   <div className={s.cardBody}>
-                    <h3 className={s.cardTitle}>{service.title}</h3>
-                    <p className={s.cardDesc}>{service.description}</p>
+                    <h3 className={s.cardTitle}>{title}</h3>
+                    <p className={s.cardDesc}>{description}</p>
                     <div className={s.cardMeta}>
-                      <span className={s.price}>{formatPrice(service.priceFrom)} сум</span>
-                      <span className={s.duration}>{service.durationMin}мин</span>
+                      <span className={s.price}>
+                        {formatPrice(service.priceFrom, locale)} {t("common.sum")}
+                      </span>
+                      <span className={s.duration}>
+                        {t("map.durationMin", { min: service.durationMin })}
+                      </span>
                     </div>
                     <button
                       type="button"
-                      className={isSelected ? s.pickBtnPress : s.pickBtn }
+                      className={isSelected ? s.pickBtnPress : s.pickBtn}
                       onClick={() => toggleService(service.id)}
                       aria-pressed={isSelected}
                     >
-                      {isSelected ? "Выбрано" : "Выбрать услугу"}
+                      {isSelected ? t("map.selected") : t("map.selectService")}
                     </button>
                   </div>
                 </div>
@@ -103,10 +121,12 @@ export default function HospitalServicesModal({
 
         <div className={s.footer}>
           <div className={s.footerInfo}>
-            <span className={s.infoText}>Выбрано: {selectedCount} услуг</span>
+            <span className={s.infoText}>
+              {t("map.selectedCount", { count: selectedCount })}
+            </span>
           </div>
           <Button
-            text="Продолжить"
+            text={t("map.continue")}
             className={`${s.continueBtn} ${!canContinue ? s.continueDisabled : ""}`}
             onClick={handleContinue}
             disabled={!canContinue}

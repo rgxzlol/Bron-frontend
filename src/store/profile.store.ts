@@ -65,14 +65,14 @@ const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
     title: "Оплата бронирования",
     reference: "123123",
     amount: 80000,
-    date: "12 мая 2026",
+    date: "2026-05-12",
   },
   {
     id: "2",
     title: "Оплата бронирования",
     reference: "123124",
     amount: 80000,
-    date: "10 мая 2026",
+    date: "2026-05-10",
   },
 ];
 
@@ -159,7 +159,7 @@ export const useProfileStore = create<ProfileState>()(
       changePasswordToApi: async ({ oldPassword, newPassword }) => {
         const token = getAuthToken();
         if (!token) {
-          throw new Error("Войдите в аккаунт, чтобы сменить пароль");
+          throw new Error("profile.loginToChangePassword");
         }
 
         await usersApi.changePassword(
@@ -174,7 +174,7 @@ export const useProfileStore = create<ProfileState>()(
       deleteAccountFromApi: async () => {
         const token = getAuthToken();
         if (!token) {
-          throw new Error("Войдите в аккаунт");
+          throw new Error("profile.loginRequired");
         }
 
         await usersApi.deleteProfile(token);

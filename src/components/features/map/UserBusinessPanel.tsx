@@ -3,6 +3,11 @@
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { formatPrice } from "@/lib/formatPrice";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  BUSINESS_CATEGORY_KEYS,
+  translateLabel,
+} from "@/lib/i18n/labels";
 import type { SavedBusiness } from "@/store/business.store";
 import Image from "next/image";
 import s from "./fullMap.module.css";
@@ -18,12 +23,13 @@ export default function UserBusinessPanel({
   onClose,
   onBook,
 }: UserBusinessPanelProps) {
+  const { t, locale } = useTranslation();
   const previewImage =
     business.gallery.find(Boolean) ??
     business.profilePhoto ??
     assets.map.photo1;
   const isDataUrl = typeof previewImage === "string";
-  const activeServices = business.services.filter((s) => s.active);
+  const activeServices = business.services.filter((svc) => svc.active);
   const minPrice =
     activeServices.length > 0
       ? Math.min(...activeServices.map((svc) => svc.price))
@@ -58,7 +64,7 @@ export default function UserBusinessPanel({
             type="button"
             className={s.closeBtn}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
           >
             <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
           </button>
@@ -75,31 +81,33 @@ export default function UserBusinessPanel({
                 height={18}
               />
               <span className={s.ratingValue}>0,0</span>
-              <span className={s.ratingMuted}>(0 отзывов)</span>
+              <span className={s.ratingMuted}>{t("map.zeroReviews")}</span>
             </div>
           </div>
 
-          <p className={s.category}>{business.category}</p>
+          <p className={s.category}>
+            {translateLabel(t, business.category, BUSINESS_CATEGORY_KEYS)}
+          </p>
           <p className={s.desc}>
-            {business.description || "Описание отсутствует"}
+            {business.description || t("map.noDescription")}
           </p>
 
           <div className={s.stats}>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Адрес</span>
+              <span className={s.statLabel}>{t("map.address")}</span>
               <span className={s.statValue}>
-                {business.address || "Ташкент"}
+                {business.address || t("map.defaultCity")}
               </span>
             </div>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Телефон</span>
+              <span className={s.statLabel}>{t("map.phone")}</span>
               <span className={s.statValue}>{business.phone || "—"}</span>
             </div>
           </div>
 
           {activeServices.length > 0 && (
             <div className="mt-[16px]">
-              <p className="mb-[10px] text-[15px] font-semibold">Услуги</p>
+              <p className="mb-[10px] text-[15px] font-semibold">{t("map.services")}</p>
               <ul className="flex flex-col gap-[8px]">
                 {activeServices.slice(0, 3).map((service) => (
                   <li
@@ -107,7 +115,7 @@ export default function UserBusinessPanel({
                     className="flex justify-between rounded-[12px] bg-[#f4f4f8] px-[14px] py-[10px] text-[14px]"
                   >
                     <span className="font-semibold">{service.name}</span>
-                    <span>{formatPrice(service.price)}</span>
+                    <span>{formatPrice(service.price, locale)}</span>
                   </li>
                 ))}
               </ul>
@@ -116,12 +124,12 @@ export default function UserBusinessPanel({
 
           {minPrice != null && (
             <p className="mt-[16px] text-[18px] font-semibold">
-              от {formatPrice(minPrice)}
+              {t("map.priceFrom", { price: formatPrice(minPrice, locale) })}
             </p>
           )}
 
           <Button
-            text="Забронировать"
+            text={t("home.book")}
             onClick={onBook}
             className="mt-[20px] w-full !px-[20px] text-center"
           />

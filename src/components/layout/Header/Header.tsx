@@ -7,8 +7,11 @@ import NotificationDropdown from "@/components/layout/Header/NotificationDropdow
 import SearchBar from "./SearchBar";
 import { routes } from "@/config/routes";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function Header() {
+  const { t } = useTranslation();
+
   return (
     <header className="my-[45px] flex justify-between">
       <SearchBar />
@@ -19,7 +22,7 @@ export default function Header() {
         <Link
           href={routes.profile}
           className="rounded-full bg-white p-[16px]"
-          aria-label="Профиль"
+          aria-label={t("common.profile")}
         >
           <Image src={assets.header.profileIcon} alt="" />
         </Link>

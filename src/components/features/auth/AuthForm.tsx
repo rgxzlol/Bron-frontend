@@ -8,6 +8,7 @@ import { routes } from "@/config/routes";
 import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportModal } from "./SupportModal";
 
 type AuthMode = "login" | "register";
@@ -21,6 +22,7 @@ export default function AuthForm({ mode }: Props) {
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
+  const { t } = useTranslation();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -42,17 +44,17 @@ export default function AuthForm({ mode }: Props) {
     setError(null);
 
     if (!username.trim() || !password.trim()) {
-      setError("Заполните имя пользователя и пароль");
+      setError(t("auth.fillUsernamePassword"));
       return;
     }
 
     if (mode === "register") {
       if (!email.trim() || !phone.trim()) {
-        setError("Для регистрации укажите email и телефон");
+        setError(t("auth.fillEmailPhone"));
         return;
       }
       if (password !== confirmPassword) {
-        setError("Пароли не совпадают");
+        setError(t("auth.passwordMismatch"));
         return;
       }
     }
@@ -92,8 +94,8 @@ export default function AuthForm({ mode }: Props) {
         submitError instanceof ApiError
           ? submitError.message
           : mode === "login"
-            ? "Не удалось выполнить вход"
-            : "Не удалось создать аккаунт",
+            ? t("auth.loginFailed")
+            : t("auth.registerFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -116,13 +118,13 @@ export default function AuthForm({ mode }: Props) {
               htmlFor="username-input"
               className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
             >
-              Имя пользователя
+              {t("auth.username")}
             </label>
             <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
               <input
                 id="username-input"
                 type="text"
-                placeholder="Иван"
+                placeholder={t("auth.usernamePlaceholderShort")}
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 className="w-full bg-transparent text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
@@ -137,7 +139,7 @@ export default function AuthForm({ mode }: Props) {
                   htmlFor="email-input"
                   className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
                 >
-                  Email
+                  {t("auth.email")}
                 </label>
                 <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
                   <input
@@ -156,7 +158,7 @@ export default function AuthForm({ mode }: Props) {
                   htmlFor="phone-input"
                   className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
                 >
-                  Телефон
+                  {t("auth.phone")}
                 </label>
                 <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
                   <input
@@ -177,13 +179,13 @@ export default function AuthForm({ mode }: Props) {
               htmlFor="password-input"
               className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
             >
-              Пароль
+              {t("auth.password")}
             </label>
             <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
               <input
                 id="password-input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Введите пароль"
+                placeholder={t("auth.passwordPlaceholder")}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full bg-transparent pr-10 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
@@ -192,7 +194,7 @@ export default function AuthForm({ mode }: Props) {
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 className="absolute right-5 top-5 transition-all duration-200 hover:opacity-70 active:scale-90"
-                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+                aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
               >
                 <Image src={assets.auth.eyeIcon} alt="" />
               </button>
@@ -205,13 +207,13 @@ export default function AuthForm({ mode }: Props) {
                 htmlFor="confirm-password-input"
                 className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
               >
-                Повторите пароль
+                {t("auth.confirmPassword")}
               </label>
               <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
                 <input
                   id="confirm-password-input"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Повторите пароль"
+                  placeholder={t("auth.confirmPasswordPlaceholder")}
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   className="w-full bg-transparent pr-10 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
@@ -221,7 +223,7 @@ export default function AuthForm({ mode }: Props) {
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                   className="absolute right-5 top-5 transition-all duration-200 hover:opacity-70 active:scale-90"
                   aria-label={
-                    showConfirmPassword ? "Скрыть пароль" : "Показать пароль"
+                    showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")
                   }
                 >
                   <Image src={assets.auth.eyeIcon} alt="" />
@@ -245,10 +247,10 @@ export default function AuthForm({ mode }: Props) {
             className="w-full rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-[#0A6AF7] p-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98] disabled:opacity-60"
           >
             {isSubmitting
-              ? "Загрузка..."
+              ? t("common.loading")
               : mode === "login"
-                ? "Войти"
-                : "Регистрация"}
+                ? t("auth.login")
+                : t("auth.register")}
           </button>
 
           <button

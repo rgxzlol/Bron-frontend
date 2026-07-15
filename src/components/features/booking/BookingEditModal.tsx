@@ -10,6 +10,7 @@ import {
   getDefaultBookingTime,
   startOfDay,
 } from '@/lib/booking/timeSlots';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface BookingEditModalProps {
     isOpen: boolean;
@@ -18,6 +19,7 @@ interface BookingEditModalProps {
 }
 
 export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: BookingEditModalProps) => {
+    const { t } = useTranslation();
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
     const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
@@ -60,7 +62,7 @@ export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: B
 
                 <div className="flex justify-between mb-4">
                     <div className="flex flex-col gap-[7px]">
-                        <h3 className="font-semibold text-[20px] text-black">Изменить бронь?</h3>
+                        <h3 className="font-semibold text-[20px] text-black">{t("bookingsEdit.title")}</h3>
                     </div>
                     <button
                         onClick={onClose}
@@ -69,7 +71,7 @@ export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: B
                         <div className="transition-transform duration-200 transform-gpu group-active:scale-90 flex items-center justify-center">
                             <Image
                                 src={assets.map.quitIcon}
-                                alt='Закрыть'
+                                alt={t("common.close")}
                                 height={24}
                                 width={24}
                             />
@@ -81,12 +83,12 @@ export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: B
                     <Image src={assets.map.photo1} width={211} height={113} alt='gym' className="rounded-[17px] object-cover" />
                     <div className="flex flex-col items-start gap-[5px]">
                         <span className="rounded-[17px] padding-[6px_16px] px-4 py-[6px] bg-[#e7ebfd] font-semibold text-[16px] text-[#4a58fe] whitespace-nowrap">
-                            Спорт зал
+                            {t("categories.sportGym")}
                         </span>
                         <h2 className="font-semibold text-[32px] text-black">BronFitness Club</h2>
                         <p className="flex items-center gap-[7px] font-semibold text-[20px] text-black">
                             <Image src={assets.booking.gpsIcon} alt='gps' />
-                            ул. Сайрам 123, Ташкент
+                            {t("bookingsCard.sampleAddress")}
                         </p>
                     </div>
                 </div>
@@ -116,13 +118,13 @@ export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: B
                         onClick={onClose}
                         className="flex items-center justify-center w-full max-w-[566px] h-[68px] rounded-[11px] bg-[#FAFAFF] text-black font-semibold text-[20px] transition-all duration-200 transform-gpu hover:bg-[#EAEAEF] active:scale-[0.98]"
                     >
-                        Отмена
+                        {t("bookingsEdit.cancel")}
                     </button>
                     <button
                         onClick={onClose}
                         className="flex items-center justify-center w-full max-w-[566px] h-[68px] rounded-[11px] bg-[#0A6AF7] text-white font-semibold text-[20px] transition-all duration-200 transform-gpu hover:bg-[#0856c6] active:scale-[0.98]"
                     >
-                        Сохранить изменения
+                        {t("bookingsEdit.saveChanges")}
                     </button>
                 </div>
 

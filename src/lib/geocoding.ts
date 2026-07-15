@@ -62,34 +62,127 @@ const TYPE_PRIORITY: Record<string, number> = {
   country: 8,
 };
 
-const AMENITY_LABELS: Record<string, string> = {
-  school: "школа",
-  university: "университет",
-  college: "колледж",
-  kindergarten: "детский сад",
-  hospital: "больница",
-  clinic: "клиника",
-  pharmacy: "аптека",
-  restaurant: "ресторан",
-  cafe: "кафе",
-  fast_food: "фастфуд",
-  bank: "банк",
-  gym: "спортзал",
-  fitness_centre: "фитнес-центр",
-  sports_centre: "спорткомплекс",
-  marketplace: "рынок",
-  library: "библиотека",
-  place_of_worship: "религиозное место",
-  office: "офис",
-  public_building: "общественное здание",
+export type GeocodeLanguage = "ru" | "uz" | "en";
+
+type KindLabels = {
+  street: string;
+  organization: string;
+  shop: string;
+  leisure: string;
+  building: string;
+  historic: string;
+  transport: string;
+  district: string;
+};
+
+const AMENITY_LABELS: Record<GeocodeLanguage, Record<string, string>> = {
+  ru: {
+    school: "школа",
+    university: "университет",
+    college: "колледж",
+    kindergarten: "детский сад",
+    hospital: "больница",
+    clinic: "клиника",
+    pharmacy: "аптека",
+    restaurant: "ресторан",
+    cafe: "кафе",
+    fast_food: "фастфуд",
+    bank: "банк",
+    gym: "спортзал",
+    fitness_centre: "фитнес-центр",
+    sports_centre: "спорткомплекс",
+    marketplace: "рынок",
+    library: "библиотека",
+    place_of_worship: "религиозное место",
+    office: "офис",
+    public_building: "общественное здание",
+  },
+  en: {
+    school: "school",
+    university: "university",
+    college: "college",
+    kindergarten: "kindergarten",
+    hospital: "hospital",
+    clinic: "clinic",
+    pharmacy: "pharmacy",
+    restaurant: "restaurant",
+    cafe: "cafe",
+    fast_food: "fast food",
+    bank: "bank",
+    gym: "gym",
+    fitness_centre: "fitness centre",
+    sports_centre: "sports centre",
+    marketplace: "marketplace",
+    library: "library",
+    place_of_worship: "place of worship",
+    office: "office",
+    public_building: "public building",
+  },
+  uz: {
+    school: "maktab",
+    university: "universitet",
+    college: "kollej",
+    kindergarten: "bolalar bog‘chasi",
+    hospital: "kasalxona",
+    clinic: "klinika",
+    pharmacy: "dorixona",
+    restaurant: "restoran",
+    cafe: "kafe",
+    fast_food: "fast food",
+    bank: "bank",
+    gym: "sportzal",
+    fitness_centre: "fitnes markazi",
+    sports_centre: "sport majmuasi",
+    marketplace: "bozor",
+    library: "kutubxona",
+    place_of_worship: "ibodat joyi",
+    office: "ofis",
+    public_building: "jamiyat binosi",
+  },
+};
+
+const KIND_LABELS: Record<GeocodeLanguage, KindLabels> = {
+  ru: {
+    street: "улица",
+    organization: "организация",
+    shop: "магазин",
+    leisure: "досуг",
+    building: "здание",
+    historic: "достопримечательность",
+    transport: "транспорт",
+    district: "район",
+  },
+  en: {
+    street: "street",
+    organization: "organization",
+    shop: "shop",
+    leisure: "leisure",
+    building: "building",
+    historic: "landmark",
+    transport: "transport",
+    district: "district",
+  },
+  uz: {
+    street: "ko‘cha",
+    organization: "tashkilot",
+    shop: "do‘kon",
+    leisure: "dam olish",
+    building: "bino",
+    historic: "diqqatga sazovor joy",
+    transport: "transport",
+    district: "tuman",
+  },
 };
 
 function roundCoord(value: number) {
   return Math.round(value * 100000) / 100000;
 }
 
-function buildLocationSubtitle(props: PhotonProperties): string {
-  const kind = getFeatureKind(props);
+function buildLocationSubtitle(
+  props: PhotonProperties,
+  language: GeocodeLanguage,
+): string {
+  const kind = getFeatureKind(props, language);
   const location = [props.locality, props.district, props.city, props.state]
     .map((part) => part?.trim())
     .filter(Boolean)
@@ -100,21 +193,27 @@ function buildLocationSubtitle(props: PhotonProperties): string {
   return kind || location || props.country?.trim() || "";
 }
 
-function getFeatureKind(props: PhotonProperties): string {
+function getFeatureKind(
+  props: PhotonProperties,
+  language: GeocodeLanguage,
+): string {
+  const labels = KIND_LABELS[language];
+  const amenities = AMENITY_LABELS[language];
+
   if (props.type === "street" || props.osm_key === "highway") {
-    return "улица";
+    return labels.street;
   }
 
   if (props.osm_key === "amenity" && props.osm_value) {
-    return AMENITY_LABELS[props.osm_value] ?? "организация";
+    return amenities[props.osm_value] ?? labels.organization;
   }
 
-  if (props.osm_key === "shop") return "магазин";
-  if (props.osm_key === "leisure") return "досуг";
-  if (props.osm_key === "building") return "здание";
-  if (props.osm_key === "historic") return "достопримечательность";
-  if (props.osm_key === "railway") return "транспорт";
-  if (props.type === "city" || props.type === "district") return "район";
+  if (props.osm_key === "shop") return labels.shop;
+  if (props.osm_key === "leisure") return labels.leisure;
+  if (props.osm_key === "building") return labels.building;
+  if (props.osm_key === "historic") return labels.historic;
+  if (props.osm_key === "railway") return labels.transport;
+  if (props.type === "city" || props.type === "district") return labels.district;
 
   return "";
 }
@@ -194,7 +293,10 @@ function isUzbekistanFeature(props: PhotonProperties, lat: number, lng: number) 
   return isInUzbekistan(lat, lng);
 }
 
-function parsePhotonFeature(feature: PhotonFeature): AddressSuggestion | null {
+function parsePhotonFeature(
+  feature: PhotonFeature,
+  language: GeocodeLanguage = "ru",
+): AddressSuggestion | null {
   const coords = feature.geometry?.coordinates;
   if (!coords || coords.length < 2) return null;
 
@@ -215,7 +317,7 @@ function parsePhotonFeature(feature: PhotonFeature): AddressSuggestion | null {
     lat: roundCoord(lat),
     lng: roundCoord(lng),
     placeName,
-    subtitle: buildLocationSubtitle(props),
+    subtitle: buildLocationSubtitle(props, language),
   };
 }
 
@@ -240,11 +342,11 @@ async function fetchPhotonFeatures(url: string): Promise<PhotonFeature[]> {
   try {
     response = await fetch(url);
   } catch {
-    throw new GeocodingError("Не удалось подключиться к сервису геокодинга");
+    throw new GeocodingError("errors.geocodingConnection");
   }
 
   if (!response.ok) {
-    throw new GeocodingError("Ошибка при определении координат адреса");
+    throw new GeocodingError("errors.geocodingLookup");
   }
 
   const data = (await response.json()) as PhotonResponse;
@@ -272,6 +374,7 @@ function mergePhotonFeatures(...groups: PhotonFeature[][]): PhotonFeature[] {
 
 export async function searchAddressSuggestions(
   query: string,
+  language: GeocodeLanguage = "ru",
 ): Promise<AddressSuggestion[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
@@ -291,7 +394,7 @@ export async function searchAddressSuggestions(
   }
 
   return features
-    .map(parsePhotonFeature)
+    .map((feature) => parsePhotonFeature(feature, language))
     .filter((item): item is AddressSuggestion => item != null)
     .slice(0, SUGGESTION_LIMIT);
 }
@@ -299,7 +402,7 @@ export async function searchAddressSuggestions(
 export async function geocodeAddress(address: string): Promise<GeocodedLocation> {
   const query = address.trim();
   if (!query) {
-    throw new GeocodingError("Укажите адрес бизнеса");
+    throw new GeocodingError("errors.geocodingAddressRequired");
   }
 
   const features = mergePhotonFeatures(
@@ -311,9 +414,7 @@ export async function geocodeAddress(address: string): Promise<GeocodedLocation>
   const parsed = parsePhotonFeature(features[0] ?? {});
 
   if (!parsed) {
-    throw new GeocodingError(
-      "Не удалось найти указанный адрес на карте. Выберите адрес из подсказок.",
-    );
+    throw new GeocodingError("errors.geocodingNotFound");
   }
 
   return parsed;

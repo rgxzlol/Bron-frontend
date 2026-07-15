@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import ProfilePageContent from "./ProfilePageContent";
 import s from "./profilePage.module.css";
 
@@ -21,19 +22,20 @@ type ProfileModalProps = {
   onClose: () => void;
 };
 
-const sectionTitles: Record<ProfileSection, string> = {
-  main: "Настройки профиля",
-  personal: "Личные данные",
-  payments: "Платежи",
-  appSettings: "Настройки",
-  notifications: "Уведомления",
-  theme: "Тема",
-  logout: "Выйти из аккаунта",
-};
-
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [section, setSection] = useState<ProfileSection>("main");
+
+  const sectionTitles: Record<ProfileSection, string> = {
+    main: t("profile.sectionMain"),
+    personal: t("profile.sectionPersonal"),
+    payments: t("profile.sectionPayments"),
+    appSettings: t("profile.sectionAppSettings"),
+    notifications: t("profile.sectionNotifications"),
+    theme: t("profile.sectionTheme"),
+    logout: t("profile.sectionLogout"),
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -81,7 +83,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
               type="button"
               className={s.closeBtn}
               onClick={onClose}
-              aria-label="Закрыть"
+              aria-label={t("common.close")}
             >
               <Image src={assets.header.close} alt="" width={18} height={18} />
             </button>
@@ -91,7 +93,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             type="button"
             className={s.closeBtnFloating}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
           >
             <Image src={assets.header.close} alt="" width={18} height={18} />
           </button>

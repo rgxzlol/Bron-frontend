@@ -15,43 +15,43 @@ export default function Categories() {
     <Link
       key={category.id}
       href={routes.home}
-      className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8]"
+      className="min-w-40 gap-1.5 px-6.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8]"
     >
       <div
         style={{ backgroundColor: category.color }}
-        className="flex h-18.75 w-18.75 items-center justify-center rounded-full"
+        className="flex h-18.5 w-18.5 items-center justify-center rounded-full"
       >
         <Image
           src={category.icon}
           alt={category.title}
-          width={32}
-          height={32}
+          width={29}
+          height={29}
         />
       </div>
 
-      <span className="line-clamp-2 min-h-12 font-semibold">
+      <span className="h-[19px] line-clamp-2 font-semibold whitespace-nowrap">
         {category.title}
       </span>
 
-      <span className="text-[14px] opacity-75">
+      <span className="h-[17px] text-[14px] opacity-70 whitespace-nowrap">
         {category.count} {pluralizeServices(category.count)}
       </span>
     </Link>
   );
 
   return (
-    <section className="my-8.75" id="categories">
-      <h2 className="mb-15 text-[24px] font-semibold">
+    <section className="mt-[33px] mb-[36px] " id="categories">
+      <h2 className="mb-9 text-[24px] font-semibold">
         Категории
       </h2>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-nowrap gap-4">
+        <div className="flex flex-nowrap gap-4.75">
           {categories.slice(0, 5).map(renderCategoryCard)}
 
           <button
             onClick={() => setIsExpanded(prev => !prev)}
-            className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2]"
+            className="min-w-40 gap-1.5 px-4.50 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2]"
           >
             <div className="flex h-18.75 w-18.75 items-center justify-center rounded-full bg-[#ffebd3]">
               <Image
@@ -62,7 +62,7 @@ export default function Categories() {
               />
             </div>
 
-            <span className="min-h-12 font-semibold">
+            <span className="font-semibold">
               {isExpanded ? 'Меньше' : 'Больше'}
             </span>
 

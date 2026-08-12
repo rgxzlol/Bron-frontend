@@ -8,10 +8,7 @@ import {
   TIME_OPTIONS,
   type DaySchedule,
 } from "@/lib/business/schedule";
-import {
-  BUSINESS_CATEGORIES,
-  useBusinessStore,
-} from "@/store/business.store";
+import { BUSINESS_CATEGORIES, useBusinessStore } from "@/store/business.store";
 import { ApiError } from "@/lib/api/client";
 import { GeocodingError } from "@/lib/geocoding";
 import AddressAutocomplete from "./AddressAutocomplete";
@@ -75,18 +72,55 @@ function CameraIcon() {
 function TrashIcon({ className = "" }: { className?: string }) {
   return (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       className={className}
       aria-hidden
     >
+      {/* ручка */}
+      <rect
+        x="7.68"
+        y="2.83"
+        width="8.36"
+        height="1.98"
+        rx="0.99"
+        fill="#766261"
+      />
+
+      {/* крышка */}
+      <rect
+        x="4.2"
+        y="5.1"
+        width="15.6"
+        height="2.64"
+        rx="1.32"
+        fill="#766261"
+      />
+
+      {/* корпус */}
       <path
-        d="M4 7h16M9 7V5h6v2M7 7l1 12h8l1-12"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
+        d="
+          M5.62 8.9
+          H18.38
+          C18.71 8.9 18.97 9.18 18.94 9.51
+          L17.99 19.44
+          C17.87 20.75 16.77 21.73 15.46 21.73
+          H8.54
+          C7.23 21.73 6.13 20.75 6.01 19.44
+          L5.06 9.51
+          C5.03 9.18 5.29 8.9 5.62 8.9
+          Z
+        "
+        fill="#766261"
+      />
+
+      {/* сглаживание нижних углов корпуса */}
+      <path
+        d="M6.5 18.5c0 1.1.9 2 2 2h7c1.1 0 2-.9 2-2"
+        stroke="none"
+        fill="none"
       />
     </svg>
   );
@@ -95,7 +129,15 @@ function TrashIcon({ className = "" }: { className?: string }) {
 function PhotoIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="2" stroke="#0a6af7" strokeWidth="2" />
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="14"
+        rx="2"
+        stroke="#0a6af7"
+        strokeWidth="2"
+      />
       <circle cx="9" cy="10" r="2" fill="#0a6af7" />
       <path d="M21 15l-5-5-4 4-2-2-5 5" stroke="#0a6af7" strokeWidth="2" />
     </svg>
@@ -133,19 +175,31 @@ function SectionCard({
   subtitle,
   action,
   children,
+  className,
+  padding = "p-[28px]",
+  headerMargin = "mb-[28px]",
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  className?: string;
+  padding?: string;
+  headerMargin?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[24px] border border-[#ececf2] bg-white p-[28px]">
-      <div className="mb-[24px] flex items-start justify-between gap-[16px]">
+    <section
+      className={`rounded-[24px] border border-[#ececf2] bg-white ${padding} ${className ?? ""}`}
+    >
+      <div
+        className={`flex items-start justify-between gap-[16px] ${headerMargin}`}
+      >
         <div>
-          <h3 className="text-[22px] font-semibold">{title}</h3>
+          <h3 className="text-[24px] font-semibold">{title}</h3>
           {subtitle && (
-            <p className="mt-[6px] text-[15px] opacity-60">{subtitle}</p>
+            <p className="mt-[6px] w-[194px] h-[38px] text-[16px] font-semibold opacity-60">
+              {subtitle}
+            </p>
           )}
         </div>
         {action}
@@ -381,7 +435,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         <SectionCard title="Информация бизнеса">
           <div className="flex flex-col gap-[18px]">
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Название бизнеса</span>
+              <span className="text-[15px] font-semibold">
+                Название бизнеса
+              </span>
               <input
                 className={inputClass}
                 value={draft.name}
@@ -391,7 +447,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </label>
 
             <label className="flex flex-col gap-[8px]">
-              <span className="text-[15px] font-semibold">Короткое описание</span>
+              <span className="text-[15px] font-semibold">
+                Короткое описание
+              </span>
               <textarea
                 className={`${inputClass} min-h-[120px] resize-y`}
                 value={draft.description}
@@ -410,7 +468,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
             <div className="grid grid-cols-1 gap-[18px] md:grid-cols-2">
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Категория бизнеса</span>
+                <span className="text-[15px] font-semibold">
+                  Категория бизнеса
+                </span>
                 <select
                   className={inputClass}
                   value={draft.category}
@@ -436,7 +496,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               </label>
 
               <label className="flex flex-col gap-[8px]">
-                <span className="text-[15px] font-semibold">Контактный номер</span>
+                <span className="text-[15px] font-semibold">
+                  Контактный номер
+                </span>
                 <input
                   className={inputClass}
                   value={draft.phone}
@@ -457,7 +519,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   }
                 />
                 <span className="text-[13px] opacity-60">
-                  Выберите адрес из подсказок — бизнес появится на карте в этой точке
+                  Выберите адрес из подсказок — бизнес появится на карте в этой
+                  точке
                 </span>
               </label>
             </div>
@@ -480,18 +543,15 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
           </div>
         </SectionCard>
 
-        <SectionCard
-          title="График работы"
-          subtitle="Точное время и дни работы"
-        >
+        <SectionCard title="График работы" subtitle="Точное время и дни работы">
           <div className="flex flex-col gap-[24px] lg:flex-row">
-            <div className="flex flex-1 flex-col gap-[10px]">
+            <div className="flex flex-1 flex-col gap-[20px] mb-[2px]">
               {draft.schedule.map((day, index) => (
                 <div
                   key={day.key}
-                  className="flex flex-wrap items-center gap-[12px] rounded-[16px] bg-[#f4f4f8] px-[16px] py-[12px]"
+                  className="flex flex-wrap items-center gap-[16px] rounded-[16px] bg-[#f4f4f8] p-[24px_17px_24px_26px]"
                 >
-                  <span className="min-w-[120px] text-[15px] font-semibold">
+                  <span className="flex h-[24px] w-[141px] shrink-0 items-center text-[20px] font-semibold">
                     {day.label}
                   </span>
                   <Toggle
@@ -499,48 +559,78 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                     onChange={(isOpen) => updateScheduleDay(index, { isOpen })}
                   />
                   <span
-                    className={`text-[14px] font-semibold ${
-                      day.isOpen ? "text-[#5a6a5a]" : "text-[#e53935]"
+                    className={`text-[16px] ml-[13px] mr-[3px] font-semibold ${
+                      day.isOpen ? "text-[#5a6a5a]" : "text-[#FF6666]"
                     }`}
                   >
                     {day.isOpen ? "Открыто" : "Закрыто"}
                   </span>
-                  <select
-                    className={`rounded-[10px] bg-white px-[10px] py-[6px] text-[14px] ${
-                      !day.isOpen ? "opacity-40" : ""
-                    }`}
-                    value={day.openTime}
-                    disabled={!day.isOpen}
-                    onChange={(e) =>
-                      updateScheduleDay(index, { openTime: e.target.value })
-                    }
-                  >
-                    {TIME_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="opacity-50">—</span>
-                  <select
-                    className={`rounded-[10px] bg-white px-[10px] py-[6px] text-[14px] ${
-                      !day.isOpen ? "opacity-40" : ""
-                    }`}
-                    value={day.closeTime}
-                    disabled={!day.isOpen}
-                    onChange={(e) =>
-                      updateScheduleDay(index, { closeTime: e.target.value })
-                    }
-                  >
-                    {TIME_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative w-[96px] h-[44px]">
+                    <select
+                      className={`h-full w-full appearance-none rounded-[10px] bg-white text-[16px] text-center pl-[16px] pr-[28px] border border-transparent outline-none focus:border-gray-300 ${
+                        !day.isOpen ? "opacity-40" : ""
+                      }`}
+                      value={day.openTime}
+                      disabled={!day.isOpen}
+                      onChange={(e) =>
+                        updateScheduleDay(index, { openTime: e.target.value })
+                      }
+                    >
+                      {TIME_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-[8px] top-1/2 -translate-y-1/2 w-[12px] h-[12px]"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                    >
+                      <path
+                        d="M2.5 4.5L6 8L9.5 4.5"
+                        stroke="black"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="opacity-100">—</span>
+                  <div className="relative w-[96px] h-[44px]">
+                    <select
+                      className={`h-full w-full appearance-none rounded-[10px] bg-white text-[16px] text-center pl-[16px] pr-[28px] border border-transparent outline-none focus:border-gray-300 ${
+                        !day.isOpen ? "opacity-40" : ""
+                      }`}
+                      value={day.closeTime}
+                      disabled={!day.isOpen}
+                      onChange={(e) =>
+                        updateScheduleDay(index, { closeTime: e.target.value })
+                      }
+                    >
+                      {TIME_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-[8px] top-1/2 -translate-y-1/2 w-[12px] h-[12px]"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                    >
+                      <path
+                        d="M2.5 4.5L6 8L9.5 4.5"
+                        stroke="black"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
                   <button
                     type="button"
-                    className="ml-auto rounded-[8px] p-[6px] opacity-50 hover:bg-white hover:opacity-100"
+                    className="ml-auto rounded-[8px] py-[10px] px-[12px] bg-white opacity-100 w-[48px] h-[44px]"
                     aria-label={`Сбросить ${day.label}`}
                     onClick={() => {
                       const schedule = draft.schedule.map((d, i) =>
@@ -549,34 +639,47 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       setDraftSchedule(schedule);
                     }}
                   >
-                    <TrashIcon />
+                    <TrashIcon className="w-[24px] h-[24px]" />
                   </button>
                 </div>
               ))}
             </div>
 
-            <div className="w-full shrink-0 rounded-[20px] bg-[#f0f4fa] p-[22px] lg:w-[280px]">
-              <h4 className="mb-[16px] text-[17px] font-semibold">Недельный график</h4>
-              <ul className="flex flex-col gap-[8px]">
-                {draft.schedule.map((day) => (
-                  <li
-                    key={day.key}
-                    className="flex justify-between text-[15px] font-semibold"
-                  >
-                    <span>{day.shortLabel}</span>
-                    {day.isOpen ? (
-                      <span>
-                        {day.openTime} – {day.closeTime}
-                      </span>
-                    ) : (
-                      <span className="text-[#e53935]">Закрыто</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-[20px] flex items-center gap-[12px] rounded-[14px] border border-[#0a6af7]/30 bg-white/60 px-[14px] py-[12px]">
-                <Image src={assets.popular.timeIcon} alt="" width={22} height={22} />
-                <p className="text-[14px] font-semibold leading-snug text-[#0a6af7]">
+            <div className="mr-[10px]">
+              <div className="w-full shrink-0 rounded-[20px] bg-[#f0f4fa] p-[17px_38px_22px_26px] lg:w-[322px]">
+                <h4 className="mb-[20px] text-[17px] font-semibold text-center font-urbanist">
+                  Недельный график
+                </h4>
+                <div className="h-px w-[calc(100%+66px)] bg-white -ml-[26px] mb-[28px]" />
+                <ul className="flex flex-col gap-[26px]">
+                  {draft.schedule.map((day) => (
+                    <li
+                      key={day.key}
+                      className="flex  justify-between text-[16px] font-semibold"
+                    >
+                      <span className="text-[20px]">{day.shortLabel}</span>
+                      {day.isOpen ? (
+                        <span className="w-[112px] mt-[5px] text-[16px] semibold text-[#000000]">
+                          {day.openTime} – {day.closeTime}
+                        </span>
+                      ) : (
+                        <span className="text-[#e53935] mr-[44px]">
+                          Закрыто
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-[9px] flex items-center gap-[22px] rounded-[14px] border border-[#0a6af7]/30 bg-white/60 p-[26px_36px_26px_28px]">
+                <Image
+                  src={assets.popular.timeIcon}
+                  alt=""
+                  width={48}
+                  height={48}
+                />
+                <p className="text-[16px] w-[186px] h-[38px] mb-[10px] font-semibold leading-snug text-[#0a6af7]">
                   Ваш бизнес работает {weeklyHours} часа в неделю
                 </p>
               </div>
@@ -584,18 +687,32 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Отзывы">
-          <div className="flex flex-wrap items-center gap-[40px]">
+        <SectionCard
+          title="Отзывы"
+          padding="p-[14px_66px_28px_18px]"
+          headerMargin="mb-[15px]"
+        >
+          <div className="flex flex-col items-start gap-[10px]">
             <div>
-              <p className="text-[48px] font-bold leading-none">4,6</p>
-              <p className="mt-[6px] text-[15px] opacity-60">(102 отзыва)</p>
+              <p className="text-[32px] font-bold leading-none">4,6</p>
+              <p className="mt-[6px] text-[16px] opacity-60">(102 отзыва)</p>
             </div>
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex w-full flex-col gap-[8px]">
               {REVIEW_DISTRIBUTION.map(({ stars, percent }) => (
-                <div key={stars} className="flex items-center gap-[10px]">
-                  <span className="w-[12px] text-[15px] font-semibold">{stars}</span>
-                  <Image src={assets.popular.starRating} alt="" width={16} height={16} />
-                  <div className="h-[8px] w-[200px] overflow-hidden rounded-full bg-[#ececf2]">
+                <div
+                  key={stars}
+                  className="flex w-full items-center gap-[10px]"
+                >
+                  <span className="w-[12px] text-[15px] font-semibold">
+                    {stars}
+                  </span>
+                  <Image
+                    src={assets.popular.starRating}
+                    alt=""
+                    width={21}
+                    height={21}
+                  />
+                  <div className="h-[8px] flex-1 overflow-hidden rounded-full bg-[#ececf2]">
                     <div
                       className="h-full rounded-full bg-[#f5b800]"
                       style={{ width: `${percent}%` }}
@@ -607,20 +724,24 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
           </div>
         </SectionCard>
 
-        <div className="flex gap-[16px] pb-[40px]">
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="flex-1 rounded-[14px] border border-[#e0e0e8] bg-white py-[16px] text-[18px] font-semibold hover:bg-[#f4f4f8]"
-          >
-            Удалить
-          </button>
-          <Button
-            text={saving ? "Сохранение..." : "Сохранить изменение"}
-            onClick={handleSave}
-            className="flex-1 !w-full text-center text-[18px] !px-[20px]"
-          />
-        </div>
+        <div className="flex gap-[34px] pb-[40px] mt-[28px]">
+  <button
+    type="button"
+    onClick={handleDelete}
+    className="flex-1 h-[56px] rounded-[14px] border border-[#e0e0e8] bg-white text-[20px] font-semibold hover:bg-[#f4f4f8]"
+  >
+    Удалить
+  </button>
+  <Button
+    text={saving ? "Сохранение..." : "Сохранить изменение"}
+    onClick={handleSave}
+    paddingTop="pt-0"
+    paddingBottom="pb-0"
+    paddingLeft="pl-0"
+    paddingRight="pr-0"
+    className="flex-1 h-[56px] flex items-center justify-center text-center text-[20px]"
+  />
+</div>
       </div>
     </div>,
     document.body,

@@ -55,11 +55,11 @@ export default function NotificationDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="grid place-items-center rounded-full p-[18px] hover:bg-[var(--bg-hover)] transition-colors border border-transparent"
+        className="w-[58px] h-[58px] grid place-items-center rounded-full p-[18px] hover:bg-[var(--bg-hover)] transition-colors border border-transparent bg-[# FFFFFF] "
         aria-label="Уведомления"
         aria-expanded={isOpen}
       >
-        <Image src={assets.header.notification} alt="" className="opacity-60" />
+        <Image src={assets.header.notification} alt="" className="opacity-60" width={27} height={27} />
       </button>
 
       {isOpen && (

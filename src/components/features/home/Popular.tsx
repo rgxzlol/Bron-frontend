@@ -13,7 +13,7 @@ export default function Popular() {
         Популярные места
       </h2>
 
-      <div className="flex flex-nowrap gap-[20px] items-center">
+      <div className="flex flex-nowrap gap-[35px] items-center">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
@@ -28,7 +28,7 @@ export default function Popular() {
               height={169}
             />
 
-            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[4px] items-center">
+            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[6px] items-center">
               <div className="flex flex-col gap-[4px]">
                 <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
                   {place.title}
@@ -39,6 +39,8 @@ export default function Popular() {
                     <Image
                       src={assets.popular.starRating}
                       alt="Рейтинг"
+                      width={21}
+                      height={21}
                     />
 
                     <p className="text-[15px] font-semibold">
@@ -55,6 +57,8 @@ export default function Popular() {
                     <Image
                       src={assets.popular.timeIcon}
                       alt="Время"
+                      width={18}
+                      height={18}
                     />
 
                     <p className="text-[15px] font-semibold">
@@ -68,23 +72,23 @@ export default function Popular() {
                 </p>
               </div>
 
-              <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3]" />
+              <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3] leading-[19px]  " />
             </div>
           </Link>
         ))}
 
         <Link
           href={routes.home}
-          className="max-h-max flex flex-col items-center gap-2.5 rounded-[18px] bg-white pb-11 pt-14 pl-7 pr-6 group transition-all duration-300 hover:shadow-lg"
+          className="max-h-max flex flex-col items-center gap-1.75 rounded-[18px] bg-white pb-11 pt-14 pl-6.5  pr-6 group transition-all duration-300 hover:shadow-lg"
         >
           <Image
             src={assets.popular.blueMore}
             alt="Смотреть все"
-            height={23}
-            width={23}
+            height={24}
+            width={24}
           />
 
-          <span className="text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
+          <span className="h-[24px] text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
             Смотреть все
           </span>
         </Link>

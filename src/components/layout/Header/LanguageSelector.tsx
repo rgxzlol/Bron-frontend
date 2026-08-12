@@ -28,7 +28,7 @@ export default function LanguageSelector() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-[18px] rounded-[27px] bg-[var(--bg-surface)] p-[7px] hover:bg-[var(--bg-surface-muted)] transition-colors border border-[var(--border-default)]"
+        className="flex items-center gap-[18px] rounded-[27px] bg-[var(--bg-surface)] p-[7px] hover:bg-[var(--bg-surface-muted)] transition-colors "
         aria-label="Выбрать язык"
         aria-expanded={isOpen}
         aria-haspopup="listbox"

@@ -23,10 +23,7 @@ import {
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { branchesApi } from "@/lib/api";
-import {
-  addMinutesToTime,
-  formatBookingDate,
-} from "@/lib/api/mappers";
+import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import s from "./bookingPage.module.css";
@@ -39,8 +36,6 @@ type BookingPageProps = {
 
 type BookingStep = 1 | 2 | 3;
 
-
-
 export default function BookingPage({
   shop,
   selectedServiceIds = [],
@@ -50,22 +45,32 @@ export default function BookingPage({
   const [showExtrasModal, setShowExtrasModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    startOfDay(new Date()),
+  );
   const [selectedTime, setSelectedTime] = useState(() => {
-    const slots = buildTimeGroupsFromHours(shop.hours).flatMap((group) => group.slots);
+    const slots = buildTimeGroupsFromHours(shop.hours).flatMap(
+      (group) => group.slots,
+    );
     const todayDate = startOfDay(new Date());
     return getDefaultBookingTime(slots, todayDate, new Date());
   });
   const [guests, setGuests] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
-  const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string }>({});
+  const [extraQuantities, setExtraQuantities] = useState<
+    Record<string, number>
+  >({});
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    phone?: string;
+  }>({});
   const [form, setForm] = useState({
     name: "",
     phone: "",
     email: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
 
@@ -82,15 +87,25 @@ export default function BookingPage({
   );
 
   const disabledTimeSlots = useMemo(() => {
-    const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+    const available = getAvailableSlotsForDate(
+      allTimeSlots,
+      selectedDate,
+      new Date(),
+    );
     const availableSet = new Set(available);
     return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
   }, [allTimeSlots, selectedDate]);
 
   useEffect(() => {
-    const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+    const available = getAvailableSlotsForDate(
+      allTimeSlots,
+      selectedDate,
+      new Date(),
+    );
     if (!available.includes(selectedTime)) {
-      setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
+      setSelectedTime(
+        getDefaultBookingTime(allTimeSlots, selectedDate, new Date()),
+      );
     }
   }, [allTimeSlots, selectedDate, selectedTime]);
 
@@ -108,13 +123,17 @@ export default function BookingPage({
 
   const baseBookingName = useMemo(() => {
     if (selectedServices.length === 1) return selectedServices[0].title;
-    if (selectedServices.length > 1) return `Услуги (${selectedServices.length})`;
+    if (selectedServices.length > 1)
+      return `Услуги (${selectedServices.length})`;
     return shop.type === "Больница" ? shop.category : "Бронирование зала";
   }, [selectedServices, shop]);
 
   const durationLabel = useMemo(() => {
     if (selectedServices.length > 0) {
-      const mins = selectedServices.reduce((sum, svc) => sum + svc.durationMin, 0);
+      const mins = selectedServices.reduce(
+        (sum, svc) => sum + svc.durationMin,
+        0,
+      );
       return `${mins} мин`;
     }
     return shop.type === "Больница" ? `${shop.time} мин` : "1 час";
@@ -162,8 +181,6 @@ export default function BookingPage({
   );
 
   const total = allLineItems.reduce((sum, item) => sum + item.price, 0);
-
-
 
   const priceLabel = `от ${formatPrice(shop.price)} сум`;
   const priceSubLabel = shop.type === "Больница" ? "за приём" : "за час";
@@ -265,7 +282,9 @@ export default function BookingPage({
       setShowExtrasModal(false);
       setStep(3);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Не удалось создать бронь");
+      alert(
+        error instanceof Error ? error.message : "Не удалось создать бронь",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -299,28 +318,86 @@ export default function BookingPage({
 
   function renderTopCard() {
     const gallery = getShopGallery(shop);
-    const previewImage = gallery[0] ?? shop.img;
+    const safeIndex = gallery.length > 0 ? imageIndex % gallery.length : 0;
+    const previewImage = gallery[safeIndex] ?? shop.img;
+
+    function goPrevImage(event: React.MouseEvent) {
+      event.stopPropagation();
+      setImageIndex((prev) => (prev - 1 + gallery.length) % gallery.length);
+    }
+
+    function goNextImage(event: React.MouseEvent) {
+      event.stopPropagation();
+      setImageIndex((prev) => (prev + 1) % gallery.length);
+    }
 
     return (
       <section className={s.topCard}>
-        <div className={s.imageWrap}>
-          {isRemoteShopImage(previewImage) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              className={s.image}
-              src={previewImage}
-              alt={shop.title}
-            />
-          ) : (
-            <Image
-              className={s.image}
-              src={previewImage}
-              alt={shop.title}
-              sizes="(max-width: 1024px) 100vw, 420px"
-              priority
-            />
-          )}
-          <span className={s.slideCounter}>1/{gallery.length}</span>
+        <div className={s.leftCol}>
+          <div className={s.imageWrap}>
+            {isRemoteShopImage(previewImage) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className={s.image} src={previewImage} alt={shop.title} />
+            ) : (
+              <Image
+                className={s.image}
+                src={previewImage}
+                alt={shop.title}
+                sizes="(max-width: 1024px) 100vw, 420px"
+                priority
+              />
+            )}
+
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={`${s.imageNavBtn} ${s.imageNavPrev}`}
+                  onClick={goPrevImage}
+                  aria-label="Предыдущее фото"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className={`${s.imageNavBtn} ${s.imageNavNext}`}
+                  onClick={goNextImage}
+                  aria-label="Следующее фото"
+                >
+                  ›
+                </button>
+              </>
+            )}
+
+            <span className={s.slideCounter}>
+              {safeIndex + 1}/{gallery.length}
+            </span>
+          </div>
+
+          <div className={s.stats}>
+            <div className={s.statBox}>
+              <span className={s.statLabel}>Открыто</span>
+              <span className={s.statValue}>{shop.hours}</span>
+            </div>
+            <div className={s.statBox}>
+              <span className={s.statLabel}>Своб.Мест</span>
+              <span className={`${s.statValue} ${s.statValueRow}`}>
+                <Image
+                  src={assets.booking.guestsIcon}
+                  alt=""
+                  width={16}
+                  height={16}
+                />
+                {maxGuests}
+              </span>
+            </div>
+            <div className={s.statBox}>
+              <span className={s.statLabel}>{priceLabel}</span>
+              <span className={`${s.statValue} ${s.statValueMuted}`}>
+                {priceSubLabel}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className={s.topBody}>
@@ -329,7 +406,12 @@ export default function BookingPage({
               <span className={s.tag}>{shop.type}</span>
               <h1 className={s.title}>{shop.title}</h1>
               <div className={s.rating}>
-                <Image src={assets.popular.starRating} alt="" width={18} height={18} />
+                <Image
+                  src={assets.popular.starRating}
+                  alt=""
+                  width={21}
+                  height={21}
+                />
                 <span>{formatRating(shop.rating)}</span>
                 <span className={s.ratingMuted}>
                   ({shop.reviews} {pluralizeReviews(shop.reviews)})
@@ -346,33 +428,36 @@ export default function BookingPage({
               </button>
             ) : (
               <button type="button" className={s.backBtn} onClick={onBack}>
-                Назад
+                Назад к карте
               </button>
             )}
           </div>
 
           <div className={s.contactRow}>
             <div className={s.contactItem}>
-              <Image src={assets.map.geoMark} alt="" width={20} height={20} />
+              <Image
+                src={assets.map.geoMark}
+                alt=""
+                width={20}
+                height={20}
+                className={s.addressIcon}
+              />
               <div className={s.contactText}>
-                <span>{shop.address}</span>
+                <span className={s.addressText}>{shop.address}</span>
                 <span className={s.contactSub}>{shop.district}</span>
               </div>
             </div>
-            <div className={s.contactItem}>
-              <Image src={assets.map.phoneIcon} alt="" width={20} height={20} />
+            <div
+              className={`${s.contactItem} ${s.phoneBox} ${s.contactItemCentered}`}
+            >
+              <Image
+                src={assets.map.phoneIcon}
+                alt=""
+                width={20}
+                height={20}
+                className={s.contactIcon}
+              />
               <a href={`tel:${shop.phone.replace(/\s/g, "")}`}>{shop.phone}</a>
-            </div>
-          </div>
-
-          <div className={s.stats}>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>Открыто</span>
-              <span className={s.statValue}>{shop.hours}</span>
-            </div>
-            <div className={s.statBox}>
-              <span className={s.statLabel}>{priceLabel}</span>
-              <span className={s.statValue}>{priceSubLabel}</span>
             </div>
           </div>
         </div>
@@ -399,24 +484,58 @@ export default function BookingPage({
             disabledSlots={disabledTimeSlots}
           />
         </section>
-
+        
         <div className={s.stepFooter}>
-          <div className={s.stepFooterInfo}>
-            <span>
-              Вы выбрали <strong>{formatDateRu(selectedDate)}, {selectedTime}</strong>
+          <div className={s.stepFooterCol}>
+            <span className="opacity-70 mb-[4px]">Вы выбрали</span>
+            <strong className="mr-[117px]">
+              {formatDateRu(selectedDate).replace(/\s*г\.\s*$/, "")}
+            </strong>
+            <span className={s.stepFooterTime}>
+              <Image
+                src={assets.popular.timeIcon}
+                alt=""
+                width={26}
+                height={26}
+              />
+              {selectedTime}
             </span>
-            <span className={s.stepFooterMuted}>Продолжительность {durationLabel}</span>
           </div>
-          <div className={s.stepFooterActions}>
-            <span className={s.stepFooterPrice}>
-              Итог за {durationLabel} {formatPrice(bookingPrice)} сум
+
+          <div className="w-[3px] self-stretch bg-[#FAFAFF] mr-[18px] -my-[22px]" />
+
+          <div className={s.stepFooterCol}>
+            <span className="opacity-70 mb-[4px] mr-[37px]">
+              Продолжительность
             </span>
+            <strong>{durationLabel}</strong>
+          </div>
+
+          <div className="w-[3px] self-stretch bg-[#FAFAFF] mr-[18px] -my-[22px]" />
+
+          <div className={s.stepFooterCol}>
+            <span className="opacity-70 mb-[4px] mr-[26px]">
+              Итог за {durationLabel}
+            </span>
+            <strong>{formatPrice(bookingPrice)} сум</strong>
+          </div>
+
+          <div className={s.stepFooterActions}>
             <Button
               text="Продолжить"
               className={s.continueBtn}
               onClick={() => setStep(2)}
             />
-            <span className={s.footerHint}>Ваши данные защищены</span>
+            <div className="flex gap-[2px] items-center justify-center ml-auto mr-auto">
+              <Image
+                src={assets.support.securityIcon}
+                alt=""
+                width={12}
+                height={12}
+                className="opacity-60"
+              />
+              <span className={s.footerHint}>Ваши данные защищены</span>
+            </div>
           </div>
         </div>
       </>
@@ -448,16 +567,29 @@ export default function BookingPage({
         </div>
 
         {!paid && (
-          <div className={s.payMethods} role="radiogroup" aria-label="Способ оплаты">
+          <div
+            className={s.payMethods}
+            role="radiogroup"
+            aria-label="Способ оплаты"
+          >
             {[
-              { id: "card", title: "Банковская карта", sub: "Visa, MasterCard, Uzcard" },
+              {
+                id: "card",
+                title: "Банковская карта",
+                sub: "Visa, MasterCard, Uzcard",
+              },
               { id: "click", title: "Click / Payme", sub: "Мгновенная оплата" },
-              { id: "other", title: "Другие способы", sub: "Apple Pay, Google Pay" },
+              {
+                id: "other",
+                title: "Другие способы",
+                sub: "Apple Pay, Google Pay",
+              },
             ].map((method) => (
               <label
                 key={method.id}
-                className={`${s.payOption} ${paymentMethod === method.id ? s.payOptionSelected : ""
-                  }`}
+                className={`${s.payOption} ${
+                  paymentMethod === method.id ? s.payOptionSelected : ""
+                }`}
               >
                 <input
                   type="radio"
@@ -490,7 +622,9 @@ export default function BookingPage({
       <div className={s.columns}>
         <section className={s.formCard}>
           <h2 className={s.formTitle}>Ваши данные</h2>
-          <p className={s.formSubtitle}>Заполните информацию для бронирования</p>
+          <p className={s.formSubtitle}>
+            Заполните информацию для бронирования
+          </p>
 
           <label className={s.field}>
             <span className={s.label}>
@@ -502,12 +636,15 @@ export default function BookingPage({
               value={form.name}
               onChange={(e) => {
                 setForm((prev) => ({ ...prev, name: e.target.value }));
-                if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: undefined }));
+                if (formErrors.name)
+                  setFormErrors((prev) => ({ ...prev, name: undefined }));
               }}
               placeholder="Иван Иванов"
               required
             />
-            {formErrors.name && <span className={s.fieldError}>{formErrors.name}</span>}
+            {formErrors.name && (
+              <span className={s.fieldError}>{formErrors.name}</span>
+            )}
           </label>
 
           <label className={s.field}>
@@ -520,12 +657,15 @@ export default function BookingPage({
               value={form.phone}
               onChange={(e) => {
                 setForm((prev) => ({ ...prev, phone: e.target.value }));
-                if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }));
+                if (formErrors.phone)
+                  setFormErrors((prev) => ({ ...prev, phone: undefined }));
               }}
               placeholder="+998 90 000 00 00"
               required
             />
-            {formErrors.phone && <span className={s.fieldError}>{formErrors.phone}</span>}
+            {formErrors.phone && (
+              <span className={s.fieldError}>{formErrors.phone}</span>
+            )}
           </label>
 
           <label className={s.field}>
@@ -534,7 +674,9 @@ export default function BookingPage({
               className={s.input}
               type="email"
               value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, email: e.target.value }))
+              }
               placeholder="email@example.com"
             />
           </label>
@@ -569,7 +711,14 @@ export default function BookingPage({
           </div>
         </section>
 
-        {renderPaymentSummary(baseLineItems, bookingPrice, "Оплатить", handlePay, false, !isFormValid)}
+        {renderPaymentSummary(
+          baseLineItems,
+          bookingPrice,
+          "Оплатить",
+          handlePay,
+          false,
+          !isFormValid,
+        )}
       </div>
     );
   }
@@ -583,21 +732,31 @@ export default function BookingPage({
           </div>
           <h2 className={s.confirmTitle}>Бронирование подтверждено!</h2>
           <p className={s.confirmSub}>
-            Мы отправили подтверждение на вашу почту{" "} <br />
+            Мы отправили подтверждение на вашу почту <br />
             <span className={s.confirmEmail}>{displayEmail}</span>
           </p>
 
           <div className={s.whatsNext}>
             <h3 className={`${s.whatsNextTitle} flex gap-[9px]`}>
-              <Image src={assets.header.notification} alt="" className={s.whatsNextNotificationIcon} />
+              <Image
+                src={assets.header.notification}
+                alt=""
+                className={s.whatsNextNotificationIcon}
+              />
               Что дальше?
             </h3>
             <ul className={s.whatsNextList}>
               <li className="flex gap-[5px]">
-                <Image src={assets.popular.timeIcon} alt="" className={s.whatsNextTimeIcon} />
+                <Image
+                  src={assets.popular.timeIcon}
+                  alt=""
+                  className={s.whatsNextTimeIcon}
+                />
                 Приходите за 10–15 минут до начала бронирования.
               </li>
-              <li className="ml-[26px]">Отмена возможна не позднее чем за 2 часа до визита.</li>
+              <li className="ml-[26px]">
+                Отмена возможна не позднее чем за 2 часа до визита.
+              </li>
             </ul>
             <Button
               className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]"
@@ -611,7 +770,11 @@ export default function BookingPage({
               Посмотреть бронь
             </Link>
             <Link href={routes.home} className={`${s.primaryLink}`}>
-              <Button text="На главную" className={s.primaryLinkBtn} as="span" />
+              <Button
+                text="На главную"
+                className={s.primaryLinkBtn}
+                as="span"
+              />
             </Link>
           </div>
         </section>
@@ -623,12 +786,6 @@ export default function BookingPage({
 
   return (
     <div className={s.page}>
-      <div className={s.pageTop}>
-        <button type="button" className={s.backToMap} onClick={onBack}>
-          Назад к карте
-        </button>
-      </div>
-
       {renderTopCard()}
       {renderStepper()}
 
@@ -642,7 +799,8 @@ export default function BookingPage({
           <div>
             <p className={s.securityTitle}>Ваши данные защищены</p>
             <p className={s.securityText}>
-              Мы используем шифрование для защиты ваших персональных данных и платежей.
+              Мы используем шифрование для защиты ваших персональных данных и
+              платежей.
             </p>
           </div>
         </div>

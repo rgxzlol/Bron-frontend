@@ -1,6 +1,7 @@
 "use client";
 
 import { FC, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
 import { Category } from '@/types/category';
@@ -19,7 +20,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
     const [price, setPrice] = useState<string>("");
     const [currency, setCurrency] = useState<string>("sum");
 
-    const handleSubmit = (e: React.SubmitEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         console.log("Applied filters (demo):", {
             location: selectedLocation,
@@ -30,9 +31,9 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
         handleClose();
     };
 
-    return (
+    return createPortal(
         <div
-            className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-[4px] p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-[9999] flex justify-center items-center bg-black/50 backdrop-blur-[4px] p-4 animate-in fade-in duration-200"
             onClick={handleClose}
         >
             <section
@@ -105,6 +106,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                     </button>
                 </form>
             </section>
-        </div>
+        </div>,
+        document.body
     );
 };

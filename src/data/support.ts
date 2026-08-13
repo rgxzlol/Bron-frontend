@@ -8,84 +8,59 @@ export const supportContacts = {
 } as const;
 
 export type SupportContact = {
-  id: string;
-  title: string;
-  description: string;
-  buttonText: string;
+  id: "phone" | "telegram" | "email";
   icon: StaticImageData;
   href: string;
   external?: boolean;
+  /** Displayed as-is when set (e.g. phone number). */
+  buttonText?: string;
 };
 
 export const supportContactCards: SupportContact[] = [
   {
     id: "phone",
-    title: "Позвонить",
-    description: "Позвоните нам по горячей линии",
-    buttonText: supportContacts.phone,
     icon: assets.support.phone,
     href: `tel:${supportContacts.phone.replace(/\s/g, "")}`,
+    buttonText: supportContacts.phone,
   },
   {
     id: "telegram",
-    title: "Telegram",
-    description: "Свяжитесь с нами и опишите свою проблему",
-    buttonText: "Telegram",
     icon: assets.support.tg,
     href: `https://t.me/${supportContacts.telegram}`,
     external: true,
+    buttonText: "Telegram",
   },
   {
     id: "email",
-    title: "Email",
-    description: "Отправьте нам письмо и мы ответим",
-    buttonText: "Написать письмо",
     icon: assets.support.email,
-    href: `mailto:${supportContacts.email}?subject=${encodeURIComponent("Обращение в поддержку Bron")}`,
+    href: `mailto:${supportContacts.email}`,
   },
 ];
 
 export type FaqItem = {
-  id: string;
-  question: string;
-  answer: string;
+  id: "change-booking" | "payment-methods" | "view-bookings" | "how-booking-works" | "security";
   icon: StaticImageData;
 };
 
 export const faqItems: FaqItem[] = [
   {
     id: "change-booking",
-    question: "Как изменить бронь или отменить?",
-    answer:
-      "Перейдите в раздел «Мои брони», выберите нужную запись и нажмите «Изменить» или «Отменить». Отмена возможна не позднее чем за 2 часа до начала услуги.",
     icon: assets.support.book,
   },
   {
     id: "payment-methods",
-    question: "Какие способы оплаты доступны?",
-    answer:
-      "Мы принимаем банковские карты Visa и Mastercard, а также оплату через Payme и Click. В некоторых заведениях доступна оплата на месте.",
     icon: assets.support.cardSupport,
   },
   {
     id: "view-bookings",
-    question: "Где я могу посмотреть свои брони?",
-    answer:
-      "Все ваши бронирования отображаются в разделе «Мои брони» в боковом меню. Там вы увидите предстоящие и прошедшие записи.",
     icon: assets.support.bookandpen,
   },
   {
     id: "how-booking-works",
-    question: "Как работает система бронирования?",
-    answer:
-      "Выберите заведение на карте или главной странице, укажите услугу и удобное время, оплатите онлайн — и получите подтверждение брони.",
     icon: assets.support.clock,
   },
   {
     id: "security",
-    question: "Безопасность и конфиденциальность",
-    answer:
-      "Ваши данные защищены шифрованием. Мы не передаём личную информацию третьим лицам и используем её только для обработки бронирований.",
     icon: assets.support.securityIcon,
   },
 ];

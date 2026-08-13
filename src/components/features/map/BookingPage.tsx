@@ -26,6 +26,13 @@ import { branchesApi } from "@/lib/api";
 import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  DEMO_SERVICE_KEYS,
+  SHOP_CATEGORY_KEYS,
+  SHOP_TYPE_KEYS,
+  translateLabel,
+} from "@/lib/i18n/labels";
 import s from "./bookingPage.module.css";
 
 type BookingPageProps = {
@@ -41,6 +48,7 @@ export default function BookingPage({
   selectedServiceIds = [],
   onBack,
 }: BookingPageProps) {
+  const { t, locale, language } = useTranslation();
   const [step, setStep] = useState<BookingStep>(1);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -136,8 +144,10 @@ export default function BookingPage({
       );
       return `${mins} мин`;
     }
-    return shop.type === "Больница" ? `${shop.time} мин` : "1 час";
-  }, [selectedServices, shop]);
+    return shop.type === "Больница"
+      ? t("booking.durationMinutes", { mins: shop.time })
+      : t("booking.durationOneHour");
+  }, [selectedServices, shop, t]);
 
   const maxGuests = 20;
 
@@ -148,11 +158,13 @@ export default function BookingPage({
       {
         id: "booking-base",
         name:
-          guests > 1 ? `${baseBookingName} (${guests} гост.)` : baseBookingName,
+          guests > 1
+            ? t("booking.guestSuffix", { name: baseBookingName, guests })
+            : baseBookingName,
         price: bookingPrice,
       },
     ],
-    [baseBookingName, bookingPrice, guests],
+    [baseBookingName, bookingPrice, guests, t],
   );
 
   const extraLineItems = useMemo(
@@ -218,10 +230,10 @@ export default function BookingPage({
     const phoneDigits = form.phone.replace(/\D/g, "");
 
     if (name.length < 2) {
-      errors.name = "Введите имя и фамилию";
+      errors.name = t("booking.errorName");
     }
     if (phoneDigits.length < 9) {
-      errors.phone = "Введите корректный номер телефона";
+      errors.phone = t("booking.errorPhone");
     }
 
     setFormErrors(errors);
@@ -235,7 +247,7 @@ export default function BookingPage({
 
   async function finishExtras() {
     if (!token) {
-      alert("Войдите в аккаунт, чтобы оформить бронь");
+      alert(t("booking.errorLoginRequired"));
       return;
     }
 
@@ -247,7 +259,7 @@ export default function BookingPage({
 
     const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
     if (!serviceId || !/^\d+$/.test(serviceId)) {
-      alert("Для этого места не выбрана услуга из API");
+      alert(t("booking.errorNoService"));
       return;
     }
 
@@ -261,7 +273,7 @@ export default function BookingPage({
       }
 
       if (!branchId) {
-        throw new Error("У бизнеса нет доступного филиала");
+        throw new Error(t("booking.errorNoBranch"));
       }
 
       const durationMin =
@@ -292,13 +304,13 @@ export default function BookingPage({
 
   function renderStepper() {
     const steps = [
-      { num: 1, label: "Выбор времени" },
-      { num: 2, label: "Ваши данные" },
-      { num: 3, label: "Подтверждение" },
+      { num: 1, label: t("booking.stepTime") },
+      { num: 2, label: t("booking.stepDetails") },
+      { num: 3, label: t("booking.stepConfirm") },
     ];
 
     return (
-      <nav className={s.stepper} aria-label="Шаги бронирования">
+      <nav className={s.stepper} aria-label={t("booking.stepsAria")}>
         {steps.map(({ num, label }) => {
           const isDone = step > num;
           const isActive = step === num;
@@ -403,7 +415,9 @@ export default function BookingPage({
         <div className={s.topBody}>
           <div className={s.topHead}>
             <div>
-              <span className={s.tag}>{shop.type}</span>
+              <span className={s.tag}>
+                {translateLabel(t, shop.type, SHOP_TYPE_KEYS)}
+              </span>
               <h1 className={s.title}>{shop.title}</h1>
               <div className={s.rating}>
                 <Image
@@ -414,7 +428,7 @@ export default function BookingPage({
                 />
                 <span>{formatRating(shop.rating)}</span>
                 <span className={s.ratingMuted}>
-                  ({shop.reviews} {pluralizeReviews(shop.reviews)})
+                  ({shop.reviews} {pluralizeReviews(shop.reviews, language)})
                 </span>
               </div>
             </div>
@@ -424,7 +438,7 @@ export default function BookingPage({
                 className={s.backBtn}
                 onClick={() => setStep((st) => (st - 1) as BookingStep)}
               >
-                Назад
+                {t("booking.back")}
               </button>
             ) : (
               <button type="button" className={s.backBtn} onClick={onBack}>
@@ -522,7 +536,7 @@ export default function BookingPage({
 
           <div className={s.stepFooterActions}>
             <Button
-              text="Продолжить"
+              text={t("booking.continue")}
               className={s.continueBtn}
               onClick={() => setStep(2)}
             />
@@ -552,18 +566,24 @@ export default function BookingPage({
   ) {
     return (
       <aside className={s.payCard}>
-        <h2 className={s.payTitle}>Оплата</h2>
+        <h2 className={s.payTitle}>{t("booking.paymentTitle")}</h2>
 
         {items.map((item) => (
           <div key={item.id} className={s.lineItem}>
             <span className={s.lineName}>{item.name}</span>
-            <span className={s.linePrice}>{formatPrice(item.price)} сум</span>
+            <span className={s.linePrice}>
+              {t("booking.priceSum", { price: formatPrice(item.price, locale) })}
+            </span>
           </div>
         ))}
 
         <div className={s.total}>
-          <span>Итого:</span>
-          <span className={s.totalAmount}>{formatPrice(itemsTotal)} сум</span>
+          <span>{t("booking.total")}</span>
+          <span className={s.totalAmount}>
+            {t("booking.priceSum", {
+              price: formatPrice(itemsTotal, locale),
+            })}
+          </span>
         </div>
 
         {!paid && (
@@ -628,7 +648,7 @@ export default function BookingPage({
 
           <label className={s.field}>
             <span className={s.label}>
-              Имя и фамилия <span className={s.required}>*</span>
+              {t("booking.nameLabel")} <span className={s.required}>*</span>
             </span>
             <input
               className={`${s.input} ${formErrors.name ? s.inputError : ""}`}
@@ -639,7 +659,7 @@ export default function BookingPage({
                 if (formErrors.name)
                   setFormErrors((prev) => ({ ...prev, name: undefined }));
               }}
-              placeholder="Иван Иванов"
+              placeholder={t("booking.namePlaceholder")}
               required
             />
             {formErrors.name && (
@@ -649,7 +669,7 @@ export default function BookingPage({
 
           <label className={s.field}>
             <span className={s.label}>
-              Номер телефона <span className={s.required}>*</span>
+              {t("booking.phoneLabel")} <span className={s.required}>*</span>
             </span>
             <input
               className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
@@ -669,7 +689,7 @@ export default function BookingPage({
           </label>
 
           <label className={s.field}>
-            <span className={s.label}>Электроная почта (необязательно)</span>
+            <span className={s.label}>{t("booking.emailLabel")}</span>
             <input
               className={s.input}
               type="email"
@@ -684,7 +704,7 @@ export default function BookingPage({
           <div className={s.guests}>
             <div className={s.guestsRow}>
               <div>
-                <span className={s.label}>Количество гостей</span>
+                <span className={s.label}>{t("booking.guestsLabel")}</span>
               </div>
               <div className={s.counter}>
                 <button
@@ -692,7 +712,7 @@ export default function BookingPage({
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.max(1, n - 1))}
                   disabled={guests <= 1}
-                  aria-label="Уменьшить"
+                  aria-label={t("booking.guestsDecrease")}
                 >
                   −
                 </button>
@@ -702,7 +722,7 @@ export default function BookingPage({
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.min(maxGuests, n + 1))}
                   disabled={guests >= maxGuests}
-                  aria-label="Увеличить"
+                  aria-label={t("booking.guestsIncrease")}
                 >
                   +
                 </button>
@@ -730,7 +750,7 @@ export default function BookingPage({
           <div className={s.successIcon} aria-hidden>
             ✓
           </div>
-          <h2 className={s.confirmTitle}>Бронирование подтверждено!</h2>
+          <h2 className={s.confirmTitle}>{t("booking.confirmTitle")}</h2>
           <p className={s.confirmSub}>
             Мы отправили подтверждение на вашу почту <br />
             <span className={s.confirmEmail}>{displayEmail}</span>
@@ -760,14 +780,14 @@ export default function BookingPage({
             </ul>
             <Button
               className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]"
-              text="Оставить отзыв"
+              text={t("booking.leaveReview")}
               onClick={() => setShowReviewModal(true)}
             />
           </div>
 
           <div className={s.confirmActions}>
             <Link href={routes.bookings} className={s.secondaryBtn}>
-              Посмотреть бронь
+              {t("booking.viewBooking")}
             </Link>
             <Link href={routes.home} className={`${s.primaryLink}`}>
               <Button
@@ -779,7 +799,7 @@ export default function BookingPage({
           </div>
         </section>
 
-        {renderPaymentSummary(allLineItems, total, "Оплачено", undefined, true)}
+        {renderPaymentSummary(allLineItems, total, t("booking.paid"), undefined, true)}
       </div>
     );
   }

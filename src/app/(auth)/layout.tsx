@@ -1,12 +1,15 @@
+"use client";
+
 import { Logo } from "@/components/shared/Logo";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { NavLink } from "@/components/shared/Navlink";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function AuthLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
     return (
         <main className="bg-white min-h-screen">
@@ -50,6 +53,11 @@ export default function AuthLayout({
 
                 </div>
             </div>
-        </main>
-    )
+
+            {children}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }

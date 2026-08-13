@@ -1,3 +1,5 @@
+"use client";
+
 import { popularPlaces } from "@/data/popular";
 import { assets } from "@/lib/assets";
 import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
@@ -5,12 +7,21 @@ import { routes } from "@/config/routes";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
+const POPULAR_TITLE_KEYS: Record<number, string> = {
+  1: "categories.beautySalon",
+  2: "categories.gym",
+  3: "categories.clinic",
+};
 
 export default function Popular() {
+  const { t, language } = useTranslation();
+
   return (
     <section>
       <h2 className="mb-[20px] text-[24px] font-semibold">
-        Популярные места
+        {t("home.popular")}
       </h2>
 
       <div className="flex flex-nowrap gap-[35px] items-center">
@@ -23,7 +34,7 @@ export default function Popular() {
             <Image
               className=" w-full object-cover transition-transform duration-300 group-hover:scale-105"
               src={place.img}
-              alt={place.title}
+              alt={title}
               width={274}
               height={169}
             />
@@ -31,7 +42,7 @@ export default function Popular() {
             <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[6px] items-center">
               <div className="flex flex-col gap-[4px]">
                 <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
-                  {place.title}
+                  {title}
                 </span>
 
                 <div className="flex flex-wrap items-center gap-[15px]">
@@ -49,7 +60,7 @@ export default function Popular() {
 
                     <p className="text-[15px] font-semibold opacity-75">
                       ({place.reviews}{" "}
-                      {pluralizeReviews(place.reviews)})
+                      {pluralizeReviews(place.reviews, language)})
                     </p>
                   </div>
 
@@ -62,20 +73,21 @@ export default function Popular() {
                     />
 
                     <p className="text-[15px] font-semibold">
-                      {formatDurationMinutes(place.time)}
+                      {formatDurationMinutes(place.time, language)}
                     </p>
                   </div>
                 </div>
 
                 <p className="opacity-70 justify-start text-black text-[13px] font-semibold">
-                  {place.desc}
+                  {t("map.popularDesc")}
                 </p>
               </div>
 
               <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3] leading-[19px]  " />
             </div>
           </Link>
-        ))}
+          );
+        })}
 
         <Link
           href={routes.home}

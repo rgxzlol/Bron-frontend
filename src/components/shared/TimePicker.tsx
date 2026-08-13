@@ -5,7 +5,9 @@ import {
   buildTimeGroupsFromHours,
   groupTimeSlots,
   type TimeGroup,
+  type TimePeriodKey,
 } from "@/lib/booking/timeSlots";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface TimePickerProps {
   selectedTime: string;
@@ -17,6 +19,12 @@ interface TimePickerProps {
 
 const DEFAULT_TIME_GROUPS = buildTimeGroupsFromHours("09:00 - 20:00");
 
+const TIME_PERIOD_KEYS: Record<TimePeriodKey, string> = {
+  morning: "timePicker.morning",
+  day: "timePicker.day",
+  evening: "timePicker.evening",
+};
+
 export default function TimePicker({
   selectedTime,
   onSelectedTimeChange,
@@ -24,6 +32,7 @@ export default function TimePicker({
   timeGroups = DEFAULT_TIME_GROUPS,
   disabledSlots = new Set(),
 }: TimePickerProps) {
+  const { t } = useTranslation();
   const hasSlots = timeGroups.some((group) => group.slots.length > 0);
 
   return (

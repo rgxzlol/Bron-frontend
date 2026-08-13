@@ -9,7 +9,9 @@ export type DayKey =
 
 export type DaySchedule = {
   key: DayKey;
+  /** Legacy field; UI should translate via SCHEDULE_DAY_KEYS[day.key]. */
   label: string;
+  /** Legacy field; UI should translate via SCHEDULE_DAY_KEYS[day.key]. */
   shortLabel: string;
   isOpen: boolean;
   openTime: string;
@@ -17,13 +19,13 @@ export type DaySchedule = {
 };
 
 export const DEFAULT_SCHEDULE: DaySchedule[] = [
-  { key: "mon", label: "Понедельник", shortLabel: "Пн", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "tue", label: "Вторник", shortLabel: "Вт", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "wed", label: "Среда", shortLabel: "Ср", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "thu", label: "Четверг", shortLabel: "Чт", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "fri", label: "Пятница", shortLabel: "Пт", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "sat", label: "Суббота", shortLabel: "Сб", isOpen: true, openTime: "09:00", closeTime: "20:00" },
-  { key: "sun", label: "Воскресенье", shortLabel: "Вс", isOpen: false, openTime: "00:00", closeTime: "00:00" },
+  { key: "mon", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "tue", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "wed", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "thu", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "fri", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "sat", label: "", shortLabel: "", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  { key: "sun", label: "", shortLabel: "", isOpen: false, openTime: "00:00", closeTime: "00:00" },
 ];
 
 export const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {

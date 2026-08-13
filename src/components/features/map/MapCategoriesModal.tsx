@@ -10,12 +10,17 @@ import {
   type MapLocationFilter,
   useMapFilterStore,
 } from "@/store/mapFilter.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  BUSINESS_CATEGORY_KEYS,
+  translateLabel,
+} from "@/lib/i18n/labels";
 import s from "./mapCategoriesModal.module.css";
 
-const LOCATION_OPTIONS: { id: MapLocationFilter; label: string }[] = [
-  { id: "nearby", label: "По близости" },
-  { id: "3-7", label: "3-7км от меня" },
-  { id: "10-15", label: "10-15км от меня" },
+const LOCATION_OPTIONS: { id: MapLocationFilter; labelKey: string }[] = [
+  { id: "nearby", labelKey: "header.nearby" },
+  { id: "3-7", labelKey: "map.range3to7" },
+  { id: "10-15", labelKey: "map.range10to15" },
 ];
 
 type MapCategoriesModalProps = {
@@ -29,6 +34,7 @@ export default function MapCategoriesModal({
   onClose,
   onApply,
 }: MapCategoriesModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [categoryError, setCategoryError] = useState(false);
 
@@ -86,18 +92,23 @@ export default function MapCategoriesModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Категории"
+      aria-label={t("map.categories")}
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
         <div className={s.header}>
-          <h2 className={s.title}>Категории</h2>
-          <button type="button" className={s.closeBtn} onClick={onClose} aria-label="Закрыть">
+          <h2 className={s.title}>{t("map.categories")}</h2>
+          <button
+            type="button"
+            className={s.closeBtn}
+            onClick={onClose}
+            aria-label={t("common.close")}
+          >
             ×
           </button>
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Месторасположение</span>
+          <span className={s.sectionTitle}>{t("map.location")}</span>
           <div className={s.locationList}>
             {LOCATION_OPTIONS.map((option) => (
               <button
@@ -111,14 +122,14 @@ export default function MapCategoriesModal({
                 }
               >
                 <Image src={assets.map.geoMark} alt="" width={18} height={18} />
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Категория бизнеса</span>
+          <span className={s.sectionTitle}>{t("map.businessCategory")}</span>
           <select
             className={`${s.select} ${categoryError ? s.selectError : ""}`}
             value={draftCategory}
@@ -127,39 +138,43 @@ export default function MapCategoriesModal({
               setCategoryError(false);
             }}
           >
-            <option value="">Обязательно</option>
+            <option value="">{t("map.required")}</option>
             {BUSINESS_CATEGORIES.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {translateLabel(t, category, BUSINESS_CATEGORY_KEYS)}
               </option>
             ))}
           </select>
           {categoryError && (
-            <p className={s.errorText}>Выберите категорию бизнеса</p>
+            <p className={s.errorText}>{t("map.categoryRequiredError")}</p>
           )}
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Введите приблизительную ценну</span>
+          <span className={s.sectionTitle}>{t("map.approxPrice")}</span>
           <div className={s.priceRow}>
             <input
               className={s.priceInput}
               type="text"
               inputMode="numeric"
-              placeholder="Введите ценну"
+              placeholder={t("map.pricePlaceholder")}
               value={draftMaxPrice}
               onChange={(event) =>
                 setDraftMaxPrice(formatPriceInputOnChange(event.target.value))
               }
             />
-            <select className={s.currencySelect} defaultValue="sum" aria-label="Валюта">
-              <option value="sum">Сум</option>
+            <select
+              className={s.currencySelect}
+              defaultValue="sum"
+              aria-label={t("header.currency")}
+            >
+              <option value="sum">{t("map.currencySum")}</option>
             </select>
           </div>
         </div>
 
         <button type="button" className={s.applyBtn} onClick={handleApply}>
-          Применить
+          {t("map.apply")}
         </button>
       </div>
     </div>,

@@ -1,7 +1,9 @@
 import { TIME_OPTIONS } from "@/lib/business/schedule";
 
+export type TimePeriodKey = "morning" | "day" | "evening";
+
 export type TimeGroup = {
-  label: string;
+  periodKey: TimePeriodKey;
   slots: string[];
 };
 
@@ -51,9 +53,9 @@ export function groupTimeSlots(slots: string[]): TimeGroup[] {
   const evening = slots.filter((slot) => timeToMinutes(slot) >= 17 * 60);
 
   return [
-    morning.length ? { label: "Утро", slots: morning } : null,
-    day.length ? { label: "День", slots: day } : null,
-    evening.length ? { label: "Вечер", slots: evening } : null,
+    morning.length ? { periodKey: "morning" as const, slots: morning } : null,
+    day.length ? { periodKey: "day" as const, slots: day } : null,
+    evening.length ? { periodKey: "evening" as const, slots: evening } : null,
   ].filter((group): group is TimeGroup => group != null);
 }
 

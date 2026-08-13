@@ -7,8 +7,11 @@ import NotificationDropdown from "@/components/layout/Header/NotificationDropdow
 import SearchBar from "./SearchBar";
 import { routes } from "@/config/routes";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function Header() {
+  const { t } = useTranslation();
+
   return (
     <header className="mt-[49px] mb-[45px] flex gap-[22px] items-center">
       <div className="flex-1 min-w-0">

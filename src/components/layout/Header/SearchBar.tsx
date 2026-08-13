@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { CategoryModal } from "./CategoryModal";
 
 export default function SearchBar() {

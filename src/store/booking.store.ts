@@ -29,7 +29,7 @@ export const useBookingStore = create<BookingStore>((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : "Не удалось загрузить брони",
+        error: error instanceof Error ? error.message : "bookings.loadFailed",
       });
     }
   },

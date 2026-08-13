@@ -28,7 +28,7 @@ async function proxyRequest(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { detail: "Не удалось подключиться к API серверу" },
+      { detail: "errors.backendProxy" },
       { status: 502 },
     );
   }

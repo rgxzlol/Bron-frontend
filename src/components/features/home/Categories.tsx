@@ -1,4 +1,5 @@
 "use client";
+
 import { categories } from "@/data/categories";
 import { assets } from "@/lib/assets";
 import { pluralizeServices } from "@/lib/pluralize";
@@ -7,9 +8,17 @@ import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { HOME_CATEGORY_KEYS } from "@/lib/i18n/labels";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t, language } = useTranslation();
+
+  const categoryTitle = (category: Category) =>
+    HOME_CATEGORY_KEYS[category.id]
+      ? t(HOME_CATEGORY_KEYS[category.id])
+      : category.title;
 
   const renderCategoryCard = (category: Category) => (
     <Link
@@ -56,7 +65,7 @@ export default function Categories() {
             <div className="flex h-18.75 w-18.75 items-center justify-center rounded-full bg-[#ffebd3]">
               <Image
                 src={assets.categories.more}
-                alt="Все категории"
+                alt={t("home.allCategories")}
                 width={32}
                 height={32}
               />
@@ -67,7 +76,7 @@ export default function Categories() {
             </span>
 
             <span className="text-[14px] opacity-75">
-              {isExpanded ? 'Вернуться обратно' : 'Посмотреть все'}
+              {isExpanded ? t("common.collapseHint") : t("common.viewAllHint")}
             </span>
           </button>
         </div>

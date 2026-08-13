@@ -8,6 +8,7 @@ import { routes } from "@/config/routes";
 import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportModal } from "./SupportModal";
 
 type AuthMode = "login" | "register";
@@ -95,6 +96,7 @@ export default function AuthForm({ mode }: Props) {
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
+  const { t } = useTranslation();
 
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
@@ -147,7 +149,7 @@ export default function AuthForm({ mode }: Props) {
     setError(null);
 
     if (!username.trim() || !password.trim()) {
-      setError("Заполните имя пользователя и пароль");
+      setError(t("auth.fillUsernamePassword"));
       return;
     }
 
@@ -190,8 +192,8 @@ export default function AuthForm({ mode }: Props) {
         submitError instanceof ApiError
           ? submitError.message
           : mode === "login"
-            ? "Не удалось выполнить вход"
-            : "Не удалось создать аккаунт",
+            ? t("auth.loginFailed")
+            : t("auth.registerFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -220,7 +222,7 @@ export default function AuthForm({ mode }: Props) {
               <input
                 id="username-input"
                 type="text"
-                placeholder="Иван"
+                placeholder={t("auth.usernamePlaceholderShort")}
                 value={username}
                 onChange={handleUsernameChange}
                 className="w-full bg-transparent text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
@@ -351,10 +353,10 @@ export default function AuthForm({ mode }: Props) {
             className="w-full h-[70px] rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-[#0A6AF7] p-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98] disabled:opacity-60"
           >
             {isSubmitting
-              ? "Загрузка..."
+              ? t("common.loading")
               : mode === "login"
-                ? "Войти"
-                : "Регистрация"}
+                ? t("auth.login")
+                : t("auth.register")}
           </button>
 
           <button

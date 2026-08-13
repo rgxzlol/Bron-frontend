@@ -65,8 +65,27 @@ export default function DatePicker({
   today = new Date(),
   minDate,
 }: DatePickerProps) {
+  const { t, locale } = useTranslation();
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
   const minSelectableDate = startOfDay(minDate ?? today);
+
+  const weekdays = useMemo(
+    () => [
+      t("datePicker.mon"),
+      t("datePicker.tue"),
+      t("datePicker.wed"),
+      t("datePicker.thu"),
+      t("datePicker.fri"),
+      t("datePicker.sat"),
+      t("datePicker.sun"),
+    ],
+    [t],
+  );
+
+  const monthLabel = viewMonth.toLocaleDateString(locale, {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <>

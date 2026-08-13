@@ -1,36 +1,23 @@
+"use client";
+
 import { assets } from "@/lib/assets";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
-import Link from "next/link";
-import { routes } from "@/config/routes";
+import { useBusinessFormStore } from "@/store/businessForm.store";
 
 const steps = [
-  {
-    step: 1,
-    title: "Выбираете сервис",
-    description: "Выбираете сервис, который вам нужен",
-  },
-  {
-    step: 2,
-    title: "Подбираете время",
-    description: "Выбираете время и дату",
-  },
-  {
-    step: 3,
-    title: "Оплачиваете",
-    description: "Оплачиваете выбранный сервис",
-  },
-  {
-    step: 4,
-    title: "Получаете услугу",
-    description: "Получайте услугу от профессионалов",
-  },
+  { step: 1, title: "Выбираете сервис", description: "Выбираете сервис, который вам нужен" },
+  { step: 2, title: "Подбираете время", description: "Выбираете время и дату" },
+  { step: 3, title: "Оплачиваете", description: "Оплачиваете выбранный сервис" },
+  { step: 4, title: "Получаете услугу", description: "Получайте услугу от профессионалов" },
 ] as const;
 
 export default function WhyUs() {
+  const openForm = useBusinessFormStore((state) => state.openForm);
+
   return (
     <section className="my-[36px] mb-[243px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold h-[29px] ">
+      <h2 className="mb-[16px] text-[24px] font-semibold h-[29px]">
         Как это работает?
       </h2>
 
@@ -44,9 +31,7 @@ export default function WhyUs() {
               {step}
             </p>
             <div className="flex flex-col gap-[7px]">
-              <p className="max-w-[130px] max-h-[44px] font-semibold">
-                {title}
-              </p>
+              <p className="max-w-[130px] max-h-[44px] font-semibold">{title}</p>
               <p className="max-w-[144px] max-h-[34px] text-[14px] font-semibold opacity-70">
                 {description}
               </p>
@@ -65,17 +50,15 @@ export default function WhyUs() {
               Заходи в Bron и развивай свой бизнес
             </p>
           </div>
-          <Link href={routes.business}>
-            <Button
-              text="Начать"
-              as="span"
-              paddingTop="pt-[16px]"
-              paddingRight="pr-[82px]"
-              paddingBottom="pb-[16px]"
-              paddingLeft="pl-[82px]"
-              className="leading-[24px] cursor-pointer inline-block text-[20px]"
-            />
-          </Link>
+          <Button
+            text="Начать"
+            onClick={openForm}
+            paddingTop="pt-[16px]"
+            paddingRight="pr-[82px]"
+            paddingBottom="pb-[16px]"
+            paddingLeft="pl-[82px]"
+            className="leading-[24px] cursor-pointer inline-block text-[20px]"
+          />
         </div>
         <Image
           className="absolute right-0 top-[-155px]"

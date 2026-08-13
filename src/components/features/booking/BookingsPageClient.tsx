@@ -29,7 +29,7 @@ export default function BookingsPageClient({ currentTab }: BookingsPageClientPro
 
   if (!token) {
     return (
-      <p className="text-[var(--text-secondary)] font-semibold">
+      <p className="text-[var(--text-secondary)] font-semibold text-[20px] text-center mt-[75px]">
         Войдите в аккаунт, чтобы увидеть свои брони.
       </p>
     );

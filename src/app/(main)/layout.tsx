@@ -1,5 +1,6 @@
 import Sidebar from "@/components/layout/Sidebar/Sidebar";
 import Header from "@/components/layout/Header/Header";
+import BusinessStatusModal from "@/components/features/home/BusinessStatusModal";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <div className="container">{children}</div>
         </main>
       </div>
+
+      <BusinessStatusModal />
     </div>
   );
-}
+} 

@@ -1,18 +1,29 @@
+"use client";
+
 import { mainNavItems } from "@/config/navigation";
 import { Logo } from "@/components/shared/Logo";
 import { NavLink } from "@/components/shared/Navlink";
+import { routes } from "@/config/routes";
+import { useBusinessFormStore } from "@/store/businessForm.store";
 
 export default function Sidebar() {
+  const closeForm = useBusinessFormStore((state) => state.closeForm);
+
   return (
     <aside className="sticky top-0 h-screen flex w-[350px] shrink-0 flex-col pt-[41px] mr-[93px]">
-      <Logo className="pl-[60px]" />
+      <div onClick={closeForm}>
+        <Logo className="pl-[60px]" />
+      </div>
 
       <ul className="list-none w-full mt-[25px]">
         {mainNavItems.map((item) => {
+          const isHome = item.href === routes.home;
+
           return (
             <li key={item.href} className="w-full">
               <NavLink
                 href={item.href}
+                onClick={isHome ? closeForm : undefined}
                 className="group relative flex w-full items-center gap-4.5 pl-15 pt-5.5 pb-4 transition-colors duration-500 hover:bg-[#e4e8ff] 
       after:absolute after:-right-[10px] after:top-0 after:h-full after:w-[9px] after:rounded-[9px] after:bg-[#0a6af7] after:opacity-0 after:transition-all after:duration-500 hover:after:right-0 hover:after:opacity-100"
                 activeClassName="!text-[#0a6af7] bg-[#e4e8ff] [&_.icon]:bg-[#0a6af7] after:right-0 after:opacity-100"

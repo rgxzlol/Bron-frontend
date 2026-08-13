@@ -8,7 +8,7 @@ export default function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <section className="flex flex-nowrap items-center gap-[42px] rounded-[34px] bg-white px-[32px] py-[38px]">
+    <section className="flex flex-nowrap items-center gap-[42px] rounded-[34px] bg-white px-[32px] pt-[45px] pb-[33px]">
       <div className="flex max-w-[471px] flex-col">
         <h1 className="max-w-[350px] text-[36px] font-semibold mb-[15px] ">
           {t("home.heroTitle")}
@@ -17,7 +17,14 @@ export default function HeroSection() {
           {t("home.heroSubtitle")}
         </p>
         <a href="#categories">
-          <Button text={t("home.findPlace")} />
+          <Button
+            text="Найти местечко"
+            paddingTop="pt-[15px]"
+            paddingRight="pr-[16px]"
+            paddingBottom="pb-[14px]"
+            paddingLeft="pl-[26px]"
+            className="text-[20px] font-semibold leading-[24px]"
+          />
         </a>
       </div>
       <HeroPhotoCarousel />

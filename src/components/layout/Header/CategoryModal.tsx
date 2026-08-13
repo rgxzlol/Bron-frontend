@@ -1,13 +1,13 @@
 "use client";
 
-import { FC, useState } from "react";
-import Image from "next/image";
-import { assets } from "@/lib/assets";
-import { Category } from "@/types/category";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { LocationSelector } from "./LocationSelector";
-import { CategoryDropdown } from "./CategoryDropdown";
-import { CurrencyDropdown } from "./CurrencyDropdown";
+import { FC, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
+import { assets } from '@/lib/assets';
+import { Category } from '@/types/category';
+import { LocationSelector } from './LocationSelector';
+import { CategoryDropdown } from './CategoryDropdown';
+import { CurrencyDropdown } from './CurrencyDropdown';
 
 interface CategoryModalProps {
   handleClose(): void;
@@ -20,33 +20,20 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
   const [price, setPrice] = useState<string>("");
   const [currency, setCurrency] = useState<string>("sum");
 
-  const handleSubmit = (e: React.SubmitEvent) => {
-    e.preventDefault();
-    console.log("Applied filters (demo):", {
-      location: selectedLocation,
-      category: selectedCategory,
-      price,
-      currency,
-    });
-    handleClose();
-  };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log("Applied filters (demo):", {
+            location: selectedLocation,
+            category: selectedCategory,
+            price,
+            currency
+        });
+        handleClose();
+    };
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex justify-center items-center bg-black/50 backdrop-blur-[4px] p-4 animate-in fade-in duration-200"
-      onClick={handleClose}
-    >
-      <section
-        className="relative max-w-[659px] w-full p-6 rounded-[23px] flex flex-col bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-        aria-modal="true"
-        role="dialog"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative flex items-center justify-center w-full mb-6">
-          <h2 className="text-[24px] font-medium text-black">
-            {t("home.categories")}
-          </h2>
-          <button
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[9999] flex justify-center items-center bg-black/50 backdrop-blur-[4px] p-4 animate-in fade-in duration-200"
             onClick={handleClose}
             className="absolute right-0 w-8 h-8 flex items-center justify-center bg-[#FAFAFF] hover:bg-[#EAEAEF] text-black  rounded-full transition-all duration-200 group"
             aria-label={t("common.close")}
@@ -103,14 +90,15 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="w-full py-[20px] rounded-[23px] bg-[#0A6AF7] hover:bg-[#0859d4] active:scale-[0.98] text-white font-semibold text-[20px] transition-all duration-200 shadow-md hover:shadow-lg mt-4 cursor-pointer"
-          >
-            {t("headerFilters.apply")}
-          </button>
-        </form>
-      </section>
-    </div>
-  );
+                    <button
+                        type="submit"
+                        className="w-full py-[20px] rounded-[23px] bg-[#0A6AF7] hover:bg-[#0859d4] active:scale-[0.98] text-white font-semibold text-[20px] transition-all duration-200 shadow-md hover:shadow-lg mt-4 cursor-pointer"
+                    >
+                        Применить
+                    </button>
+                </form>
+            </section>
+        </div>,
+        document.body
+    );
 };

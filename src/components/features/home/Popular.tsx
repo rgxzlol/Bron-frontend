@@ -24,10 +24,8 @@ export default function Popular() {
         {t("home.popular")}
       </h2>
 
-      <div className="flex flex-nowrap gap-[20px] items-center">
-        {popularPlaces.map((place) => {
-          const title = t(POPULAR_TITLE_KEYS[place.id] ?? "categories.other");
-          return (
+      <div className="flex flex-nowrap gap-[35px] items-center">
+        {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={`${routes.map}?shopId=${place.shopId || 1}`}
@@ -41,7 +39,7 @@ export default function Popular() {
               height={169}
             />
 
-            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[4px] items-center">
+            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[6px] items-center">
               <div className="flex flex-col gap-[4px]">
                 <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
                   {title}
@@ -51,7 +49,9 @@ export default function Popular() {
                   <div className="flex items-center gap-[6px]">
                     <Image
                       src={assets.popular.starRating}
-                      alt={t("home.rating")}
+                      alt="Рейтинг"
+                      width={21}
+                      height={21}
                     />
 
                     <p className="text-[15px] font-semibold">
@@ -67,7 +67,9 @@ export default function Popular() {
                   <div className="flex items-center gap-[6px]">
                     <Image
                       src={assets.popular.timeIcon}
-                      alt={t("home.time")}
+                      alt="Время"
+                      width={18}
+                      height={18}
                     />
 
                     <p className="text-[15px] font-semibold">
@@ -81,7 +83,7 @@ export default function Popular() {
                 </p>
               </div>
 
-              <Button text={t("home.book")} as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3]" />
+              <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3] leading-[19px]  " />
             </div>
           </Link>
           );
@@ -89,17 +91,17 @@ export default function Popular() {
 
         <Link
           href={routes.home}
-          className="max-h-max flex flex-col items-center gap-2.5 rounded-[18px] bg-white pb-11 pt-14 pl-7 pr-6 group transition-all duration-300 hover:shadow-lg"
+          className="max-h-max flex flex-col items-center gap-1.75 rounded-[18px] bg-white pb-11 pt-14 pl-6.5  pr-6 group transition-all duration-300 hover:shadow-lg"
         >
           <Image
             src={assets.popular.blueMore}
-            alt={t("common.viewAll")}
-            height={23}
-            width={23}
+            alt="Смотреть все"
+            height={24}
+            width={24}
           />
 
-          <span className="text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
-            {t("common.viewAll")}
+          <span className="h-[24px] text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
+            Смотреть все
           </span>
         </Link>
       </div>

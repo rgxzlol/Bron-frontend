@@ -7,6 +7,7 @@ import NotificationDropdown from "@/components/layout/Header/NotificationDropdow
 import SearchBar from "./SearchBar";
 import { routes } from "@/config/routes";
 import Link from "next/link";
+import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 
 export default function Header() {
   return (
@@ -16,7 +17,7 @@ export default function Header() {
       </div>
       <div className="flex gap-[10px] shrink-0 items-center">
         <LanguageSelector />
-        
+        <ThemeSwitcher />
         <NotificationDropdown />
         <Link
           href={routes.profile}

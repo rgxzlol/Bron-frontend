@@ -58,7 +58,7 @@ async function readImageFile(file: File): Promise<string | null> {
 
 function CameraIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M9 4h6l2 3h4a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2h4l2-3z"
         stroke="white"
@@ -195,9 +195,9 @@ function SectionCard({
         className={`flex items-start justify-between gap-[16px] ${headerMargin}`}
       >
         <div>
-          <h3 className="text-[24px] font-semibold">{title}</h3>
+          <h3 className="text-[36px] font-semibold">{title}</h3>
           {subtitle && (
-            <p className="mt-[6px] w-[194px] h-[38px] text-[16px] font-semibold opacity-60">
+            <p className="mt-[6px] w-[360px] h-[38px] text-[16px] font-semibold opacity-60">
               {subtitle}
             </p>
           )}
@@ -368,7 +368,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[12px] border border-[#e0e0e8] px-[18px] py-[10px] text-[15px] font-semibold hover:bg-[#f4f4f8]"
+              className="rounded-[12px] border border-[#e0e0e8] px-[58px] py-[16px] text-[20px] font-semibold hover:bg-[#f4f4f8]"
             >
               Вернуться назад
             </button>
@@ -376,7 +376,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         >
           <div className="flex flex-wrap items-center gap-[32px]">
             <div className="relative">
-              <div className="flex h-[160px] w-[160px] items-center justify-center overflow-hidden rounded-full bg-[#f4f4f8]">
+              <div className="flex h-[190px] w-[190px] items-center justify-center overflow-hidden rounded-full bg-[#f4f4f8]">
                 {draft.profilePhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -388,8 +388,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   <Image
                     src={assets.header.profileIcon}
                     alt=""
-                    width={64}
-                    height={64}
+                    width={66}
+                    height={66}
                     className="opacity-40"
                   />
                 )}
@@ -397,7 +397,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               <button
                 type="button"
                 onClick={() => profileInputRef.current?.click()}
-                className="absolute bottom-[4px] right-[4px] flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#0a6af7]"
+                className="absolute bottom-[4px] right-[4px] flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#0a6af7]"
                 aria-label="Загрузить фото профиля"
               >
                 <CameraIcon />
@@ -415,9 +415,12 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               />
             </div>
 
-            <div className="flex flex-col gap-[14px]">
-              <p className="text-[14px] opacity-60">
-                Требования: размер 800x800px JPG, PNG, до 2MB
+            <div className="flex flex-col">
+              <p className="text-[16px] font-semibold opacity-70">
+                Требования: размер 800x800px
+              </p>
+              <p className="text-[16px] font-semibold opacity-70 mb-[24px]">
+                JPG, PNG, до 2MB
               </p>
               <button
                 type="button"
@@ -725,23 +728,23 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         </SectionCard>
 
         <div className="flex gap-[34px] pb-[40px] mt-[28px]">
-  <button
-    type="button"
-    onClick={handleDelete}
-    className="flex-1 h-[56px] rounded-[14px] border border-[#e0e0e8] bg-white text-[20px] font-semibold hover:bg-[#f4f4f8]"
-  >
-    Удалить
-  </button>
-  <Button
-    text={saving ? "Сохранение..." : "Сохранить изменение"}
-    onClick={handleSave}
-    paddingTop="pt-0"
-    paddingBottom="pb-0"
-    paddingLeft="pl-0"
-    paddingRight="pr-0"
-    className="flex-1 h-[56px] flex items-center justify-center text-center text-[20px]"
-  />
-</div>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex-1 h-[56px] rounded-[14px] border border-[#e0e0e8] bg-white text-[20px] font-semibold hover:bg-[#f4f4f8]"
+          >
+            Удалить
+          </button>
+          <Button
+            text={saving ? "Сохранение..." : "Сохранить изменение"}
+            onClick={handleSave}
+            paddingTop="pt-0"
+            paddingBottom="pb-0"
+            paddingLeft="pl-0"
+            paddingRight="pr-0"
+            className="flex-1 h-[56px] flex items-center justify-center text-center text-[20px]"
+          />
+        </div>
       </div>
     </div>,
     document.body,

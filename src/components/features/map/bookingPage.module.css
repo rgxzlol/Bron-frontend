@@ -124,8 +124,8 @@
 
 .backBtn {
   flex-shrink: 0;
-  padding: 12px 20px;
-  border-radius: 10px;
+  padding: 14px 66px;
+  border-radius: 18px;
   background: var(--bg-page);
   font-size: 20px;
   font-weight: 600;
@@ -391,45 +391,52 @@
   align-items: start;
 }
 
-.formCard,
+.formCard {
+  background: var(--bg-surface);
+  border-radius: 26px;
+  padding: 22px 30px 26px 34px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
 .payCard {
   background: var(--bg-surface);
   border-radius: 26px;
-  padding: 24px;
+  padding: 22px 18px 26px 22px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
 .formTitle {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
 .formSubtitle {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-muted);
-  margin-bottom: 20px;
+  font-weight: 600;
+  margin-bottom: 28px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .label {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 26px 20px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: var(--bg-surface);
-  font-size: 14px;
+  background: var(--bg-page);
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .input:focus {
@@ -444,15 +451,16 @@
 
 .guestsRow {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px;
 }
 
 .counter {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: 12px;
 }
 
 .inputError {
@@ -472,21 +480,23 @@
 }
 
 .guestsHint {
-  margin-top: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   font-weight: 600;
 }
 
 .counterBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
   border: 1px solid #e5e7eb;
-  font-size: 20px;
+  background: var(--bg-page);
+  font-size: 28px;
+  font-weight: 600;
   line-height: 1;
   display: grid;
   place-items: center;
+  opacity: 0.7;
 }
 
 .counterBtn:disabled {
@@ -497,8 +507,11 @@
 .counterValue {
   min-width: 24px;
   text-align: center;
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 600;
+  font-size: 25px;
+  padding: 12px 36px;
+  border-radius: 18px;
+  background: var(--bg-page);
 }
 
 .payTitle {

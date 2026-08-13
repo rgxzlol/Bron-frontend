@@ -55,7 +55,7 @@ export default function NotificationDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-[58px] h-[58px] grid place-items-center rounded-full p-[18px] hover:bg-[var(--bg-hover)] transition-colors border border-transparent bg-[# FFFFFF] "
+        className="w-[58px] h-[58px] grid place-items-center rounded-full p-[18px] hover:bg-[var(--bg-hover)] transition-colors border border-transparent bg-[#FFFFFF]"
         aria-label="Уведомления"
         aria-expanded={isOpen}
       >
@@ -64,21 +64,22 @@ export default function NotificationDropdown() {
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-[2px] z-50 min-w-[650px] rounded-[18px] bg-[var(--bg-surface)] px-5 py-4 shadow-lg border border-[var(--border-default)]">
-          <div className="flex pb-[19px] justify-between border-b-3 border-[var(--border-default)]">
+          <div className="flex pb-[18px] justify-between ">
             <h1 className="font-semibold text-[20px] text-[var(--text-primary)]">Уведомления</h1>
             <button
               type="button"
-              className="grid place-items-center rounded-full p-[5px] bg-[var(--bg-surface-muted)] hover:bg-[var(--bg-hover)] active:scale-95 transition-all duration-200"
+              className="grid place-items-center rounded-full p-[8px_9px] bg-[var(--bg-surface-muted)] hover:bg-[var(--bg-hover)] active:scale-95 transition-all duration-200"
               onClick={() => setIsOpen(false)}
             >
               <Image src={assets.header.close} alt="close" />
             </button>
           </div>
+          <div className="h-[3px] bg-[#FAFAFF] -mx-[20px]" />
           {
             notifications.length > 0 ?
               <div className="mt-3">
                 <span className="block font-semibold text-[13px] text-black opacity-60 mb-[14px]">Сегодня</span>
-                <ul className="flex flex-col my-[14px] gap-3">
+                <ul className="flex flex-col mt-[14px] mb-[92px] gap-3">
                   {notifications.map((notif, index) => (
                     <NotificationCard
                       key={index}
@@ -92,9 +93,9 @@ export default function NotificationDropdown() {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="mx-auto bg-[#FAFAFF] rounded-[14px] px-[42px] py-[15px] flex gap-[15px] hover:bg-[#eaeaff] hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                  className="mx-auto bg-[#FAFAFF] rounded-[14px] px-[42px] py-[15px] flex gap-[12px] hover:bg-[#eaeaff] hover:scale-[1.02] active:scale-95 transition-all duration-200"
                 >
-                  <Image src={assets.notification.trash} alt="trash" />
+                  <Image src={assets.notification.trash} alt="trash" width={20} height={24} />
                   <span className="font-semibold text-[16px] text-[#0A6AF7]">Удалить все прочитаные</span>
                 </button>
               </div> :

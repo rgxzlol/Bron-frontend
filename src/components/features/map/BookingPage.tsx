@@ -669,7 +669,7 @@ export default function BookingPage({
           </label>
 
           <label className={s.field}>
-            <span className={s.label}>Электроная почта (необязательно)</span>
+            <span className={s.label}>Электроная почта <span className="opacity-49 text-[14px]" >(необязательно)</span> </span>
             <input
               className={s.input}
               type="email"
@@ -685,6 +685,9 @@ export default function BookingPage({
             <div className={s.guestsRow}>
               <div>
                 <span className={s.label}>Количество гостей</span>
+              </div>
+              <div>
+                <span className={s.guestsHint}>Сколько человек будут пользоваться бронью</span>
               </div>
               <div className={s.counter}>
                 <button

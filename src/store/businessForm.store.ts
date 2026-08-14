@@ -34,6 +34,7 @@ interface BusinessFormState {
   formData: BusinessFormData;
   hasHydrated: boolean;
   applicationStatus: BusinessApplicationStatus;
+  hasApprovedBusiness: boolean;
   openForm: () => void;
   closeForm: () => void;
   setFormField: (field: keyof BusinessFormData, value: string) => void;
@@ -51,6 +52,7 @@ export const useBusinessFormStore = create<BusinessFormState>()(
       formData: emptyForm,
       hasHydrated: false,
       applicationStatus: "idle",
+      hasApprovedBusiness: false,
 
       openForm: () => set({ isFormOpen: true }),
       closeForm: () => set({ isFormOpen: false, formData: emptyForm }),
@@ -69,7 +71,9 @@ export const useBusinessFormStore = create<BusinessFormState>()(
           formData: emptyForm,
         }),
 
-      approveApplication: () => set({ applicationStatus: "approved" }),
+      approveApplication: () =>
+        set({ applicationStatus: "approved", hasApprovedBusiness: true }),
+
       rejectApplication: () => set({ applicationStatus: "rejected" }),
 
       dismissResult: () =>

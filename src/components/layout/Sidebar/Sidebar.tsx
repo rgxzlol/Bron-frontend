@@ -8,6 +8,16 @@ import { useBusinessFormStore } from "@/store/businessForm.store";
 
 export default function Sidebar() {
   const closeForm = useBusinessFormStore((state) => state.closeForm);
+  const hasApprovedBusiness = useBusinessFormStore(
+    (state) => state.hasApprovedBusiness,
+  );
+
+  const visibleNavItems = mainNavItems.filter((item) => {
+    if (item.href === routes.business) {
+      return hasApprovedBusiness;
+    }
+    return true;
+  });
 
   return (
     <aside className="sticky top-0 h-screen flex w-[350px] shrink-0 flex-col pt-[41px] mr-[93px]">
@@ -16,7 +26,7 @@ export default function Sidebar() {
       </div>
 
       <ul className="list-none w-full mt-[25px]">
-        {mainNavItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isHome = item.href === routes.home;
 
           return (

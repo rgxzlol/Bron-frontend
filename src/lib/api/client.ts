@@ -39,8 +39,8 @@ function parseResponseBody(text: string, status: number, contentType: string | n
     throw new ApiError(
       status,
       preview.includes("<!DOCTYPE") || preview.includes("<html")
-        ? `Сервер вернул HTML вместо JSON (${status}). Проверьте прокси API.`
-        : `Сервер вернул некорректный ответ (${status}): ${preview}`,
+        ? `Server returned HTML instead of JSON (${status}). Check the API proxy / upstream.`
+        : `Server returned an invalid response (${status}): ${preview}`,
       text,
     );
   }
@@ -48,7 +48,7 @@ function parseResponseBody(text: string, status: number, contentType: string | n
   try {
     return JSON.parse(text) as unknown;
   } catch {
-    throw new ApiError(status, "Не удалось разобрать JSON-ответ сервера", text);
+    throw new ApiError(status, "Failed to parse JSON response from server", text);
   }
 }
 
@@ -104,7 +104,7 @@ export async function apiRequest<T>(
   } catch {
     throw new ApiError(
       0,
-      "Не удалось подключиться к серверу. Проверьте интернет и попробуйте снова.",
+      "Failed to connect to the server. Check your internet connection and try again.",
     );
   }
 
@@ -114,7 +114,7 @@ export async function apiRequest<T>(
   if (!response.ok) {
     throw new ApiError(
       response.status,
-      extractErrorMessage(data, response.statusText || "Ошибка запроса"),
+      extractErrorMessage(data, response.statusText || "Request failed"),
       data,
     );
   }

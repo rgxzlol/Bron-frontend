@@ -7,11 +7,8 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { formatPrice } from "@/lib/formatPrice";
 import { readImageFile } from "@/lib/readImageFile";
-import { ApiError } from "@/lib/api/client";
-import { useAuthStore } from "@/store/auth.store";
 import {
   type ProfileLanguage,
-  type ProfileTheme,
   useProfileStore,
 } from "@/store/profile.store";
 import s from "./profilePage.module.css";
@@ -22,8 +19,7 @@ type ProfileSection =
   | "payments"
   | "appSettings"
   | "notifications"
-  | "theme"
-  | "logout";
+  | "theme";
 
 type ProfilePageContentProps = {
   onClose?: () => void;
@@ -43,7 +39,6 @@ const sectionTitles: Record<ProfileSection, string> = {
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
-  logout: "Выйти из аккаунта",
 };
 
 export default function ProfilePageContent({
@@ -51,8 +46,6 @@ export default function ProfilePageContent({
   onSectionChange,
 }: ProfilePageContentProps) {
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
-  const clearToken = useAuthStore((state) => state.clearToken);
   const {
     fullName,
     phone,
@@ -66,10 +59,7 @@ export default function ProfilePageContent({
     setLanguage,
     setTheme,
     toggleNotification,
-    hydrateFromApi,
-    savePersonalInfoToApi,
-    changePasswordToApi,
-    deleteAccountFromApi,
+    savePersonalInfo,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -77,41 +67,28 @@ export default function ProfilePageContent({
   const [section, setSection] = useState<ProfileSection>("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
+  const [fullNameDraft, setFullNameDraft] = useState(fullName);
   const [phoneDraft, setPhoneDraft] = useState(phone);
   const [emailDraft, setEmailDraft] = useState(email);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  useEffect(() => {
-    if (token) {
-      void hydrateFromApi();
-    }
-  }, [token, hydrateFromApi]);
 
   useEffect(() => {
     onSectionChange?.(section);
   }, [section, onSectionChange]);
 
   useEffect(() => {
+    setFullNameDraft(fullName);
     setPhoneDraft(phone);
     setEmailDraft(email);
-  }, [phone, email]);
+  }, [fullName, phone, email]);
 
   const isPersonalDirty = useMemo(
-    () => phoneDraft.trim() !== phone || emailDraft.trim() !== email,
-    [phoneDraft, phone, emailDraft, email],
+    () =>
+      fullNameDraft.trim() !== fullName ||
+      phoneDraft.trim() !== phone ||
+      emailDraft.trim() !== email,
+    [fullNameDraft, fullName, phoneDraft, phone, emailDraft, email],
   );
-
-  const canChangePassword =
-    oldPassword.trim().length > 0 &&
-    newPassword.trim().length > 0 &&
-    confirmPassword.trim().length > 0;
 
   const visibleHistory = showAllHistory ? paymentHistory : paymentHistory.slice(0, 2);
 
@@ -119,84 +96,17 @@ export default function ProfilePageContent({
     setSection(next);
   }
 
-  async function handleSavePersonalInfo() {
-    if (!phoneDraft.trim() || !emailDraft.trim()) return;
+  function handleSavePersonalInfo() {
+    if (!fullNameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim()) return;
 
     setSaving(true);
-    setSaveError(null);
-
-    try {
-      await savePersonalInfoToApi({
-        phone: phoneDraft,
-        email: emailDraft,
-      });
-      goTo("main");
-    } catch (error) {
-      setSaveError(
-        error instanceof ApiError
-          ? error.message
-          : "Не удалось сохранить данные",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleChangePassword() {
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Пароли не совпадают");
-      return;
-    }
-
-    setSaving(true);
-    setPasswordError(null);
-    setPasswordSuccess(false);
-
-    try {
-      await changePasswordToApi({
-        oldPassword,
-        newPassword,
-      });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordSuccess(true);
-    } catch (error) {
-      setPasswordError(
-        error instanceof ApiError
-          ? error.message
-          : "Не удалось сменить пароль",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    if (!confirm("Удалить аккаунт без возможности восстановления?")) return;
-
-    setDeleting(true);
-
-    try {
-      await deleteAccountFromApi();
-      clearToken();
-      onClose?.();
-      router.push(routes.home);
-    } catch (error) {
-      alert(
-        error instanceof ApiError
-          ? error.message
-          : "Не удалось удалить аккаунт",
-      );
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  function handleLogout() {
-    clearToken();
-    onClose?.();
-    router.push(routes.home);
+    savePersonalInfo({
+      fullName: fullNameDraft,
+      phone: phoneDraft,
+      email: emailDraft,
+    });
+    setSaving(false);
+    goTo("main");
   }
 
   function handleBookingsClick() {
@@ -286,11 +196,6 @@ export default function ProfilePageContent({
               onClick={() => goTo("appSettings")}
             />
           </div>
-
-          <button type="button" className={s.logoutBtn} onClick={() => goTo("logout")}>
-            <Image src={assets.profile.quit} alt="" width={17} height={21} />
-            Выйти из аккаунта
-          </button>
         </div>
       )}
 
@@ -323,7 +228,10 @@ export default function ProfilePageContent({
 
           <label className={s.field}>
             <span>Имя пользователя</span>
-            <input value={fullName} readOnly className={s.readOnlyInput} />
+            <input
+              value={fullNameDraft}
+              onChange={(e) => setFullNameDraft(e.target.value)}
+            />
           </label>
           <label className={s.field}>
             <span>Номер телефона</span>
@@ -334,56 +242,14 @@ export default function ProfilePageContent({
             <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
           </label>
 
-          {saveError && <p className={s.errorText}>{saveError}</p>}
-
           <button
             type="button"
             className={s.primaryBtn}
-            onClick={() => void handleSavePersonalInfo()}
+            onClick={handleSavePersonalInfo}
             disabled={!isPersonalDirty || saving}
           >
             {saving ? "Сохранение..." : "Сохранить изменения"}
           </button>
-
-          <div className={s.passwordBlock}>
-            <h3 className={s.blockTitle}>Смена пароля</h3>
-            <label className={s.field}>
-              <span>Текущий пароль</span>
-              <input
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-            </label>
-            <label className={s.field}>
-              <span>Новый пароль</span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </label>
-            <label className={s.field}>
-              <span>Повторите новый пароль</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </label>
-            {passwordError && <p className={s.errorText}>{passwordError}</p>}
-            {passwordSuccess && (
-              <p className={s.successText}>Пароль успешно изменён</p>
-            )}
-            <button
-              type="button"
-              className={s.secondaryBtn}
-              onClick={() => void handleChangePassword()}
-              disabled={!canChangePassword || saving || !token}
-            >
-              {saving ? "Сохранение..." : "Сменить пароль"}
-            </button>
-          </div>
         </div>
       )}
 
@@ -542,39 +408,6 @@ export default function ProfilePageContent({
               className={s.themePreviewDark}
             />
           </div>
-        </div>
-      )}
-
-      {section === "logout" && (
-        <div className={s.logoutSection}>
-          <Image
-            src={assets.profile.quitIllustration}
-            alt=""
-            width={200}
-            height={160}
-            className={s.logoutImage}
-          />
-          <p className={s.logoutTitle}>Вы уверены что хотите выйти из аккаунта?</p>
-          <small>Вы выйдете из аккаунта с этого устройства</small>
-          <button type="button" className={s.logoutConfirmBtn} onClick={handleLogout}>
-            <span className={s.logoutConfirmIcon}>
-              <Image src={assets.profile.quit} alt="" width={18} height={18} />
-            </span>
-            Выйти из аккаунта
-          </button>
-          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
-            Отменить
-          </button>
-          {token && (
-            <button
-              type="button"
-              className={s.deleteAccountBtn}
-              onClick={() => void handleDeleteAccount()}
-              disabled={deleting}
-            >
-              {deleting ? "Удаление..." : "Удалить аккаунт"}
-            </button>
-          )}
         </div>
       )}
       <input

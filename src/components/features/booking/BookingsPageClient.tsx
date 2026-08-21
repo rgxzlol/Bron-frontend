@@ -1,30 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
+import { BookingNav } from "@/components/features/booking/BookingNav";
 import { BookingCard } from "@/components/features/booking/BookingCard";
 import { useBookingStore } from "@/store/booking.store";
 import { useAuthStore } from "@/store/auth.store";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { translateErrorMessage } from "@/lib/i18n/labels";
 
 type BookingsPageClientProps = {
   currentTab: string;
 };
 
-export function BookingsPageHeading() {
-  const { t } = useTranslation();
-
-  return (
-    <h1 className="font-semibold text-[32px] text-[var(--text-primary)] mb-[22px]">
-      {t("meta.bookings")}
-    </h1>
-  );
-}
-
 export default function BookingsPageClient({ currentTab }: BookingsPageClientProps) {
   const token = useAuthStore((state) => state.token);
   const { bookings, isLoading, error, fetchMyBookings } = useBookingStore();
-  const { t } = useTranslation();
 
   useEffect(() => {
     if (token) {
@@ -42,27 +30,23 @@ export default function BookingsPageClient({ currentTab }: BookingsPageClientPro
   if (!token) {
     return (
       <p className="text-[var(--text-secondary)] font-semibold">
-        {t("bookings.loginRequired")}
+        Войдите в аккаунт, чтобы увидеть свои брони.
       </p>
     );
   }
 
   if (isLoading) {
-    return <p className="text-[var(--text-secondary)] font-semibold">{t("bookings.loading")}</p>;
+    return <p className="text-[var(--text-secondary)] font-semibold">Загрузка броней...</p>;
   }
 
   if (error) {
-    return (
-      <p className="text-[#e92026] font-semibold">
-        {translateErrorMessage(t, error)}
-      </p>
-    );
+    return <p className="text-[#e92026] font-semibold">{error}</p>;
   }
 
   if (filtered.length === 0) {
     return (
       <p className="text-[var(--text-secondary)] font-semibold">
-        {currentTab === "finished" ? t("bookings.emptyFinished") : t("bookings.emptyUpcoming")}
+        {currentTab === "finished" ? "Завершённых броней пока нет." : "Предстоящих броней пока нет."}
       </p>
     );
   }

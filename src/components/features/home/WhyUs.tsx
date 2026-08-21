@@ -1,43 +1,36 @@
-"use client";
-
 import { assets } from "@/lib/assets";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
-import { useTranslation } from "@/lib/i18n/useTranslation";
+
+const steps = [
+  {
+    step: 1,
+    title: "Выбираете сервис",
+    description: "Выбираете сервис, который вам нужен",
+  },
+  {
+    step: 2,
+    title: "Подбираете время",
+    description: "Выбираете время и дату",
+  },
+  {
+    step: 3,
+    title: "Оплачиваете",
+    description: "Оплачиваете выбранный сервис",
+  },
+  {
+    step: 4,
+    title: "Получаете услугу",
+    description: "Получайте услугу от профессионалов",
+  },
+] as const;
 
 export default function WhyUs() {
-  const { t } = useTranslation();
-
-  const steps = [
-    {
-      step: 1,
-      title: t("home.step1Title"),
-      description: t("home.step1Desc"),
-    },
-    {
-      step: 2,
-      title: t("home.step2Title"),
-      description: t("home.step2Desc"),
-    },
-    {
-      step: 3,
-      title: t("home.step3Title"),
-      description: t("home.step3Desc"),
-    },
-    {
-      step: 4,
-      title: t("home.step4Title"),
-      description: t("home.step4Desc"),
-    },
-  ] as const;
-
   return (
-    <section className="my-[36px] mb-[243px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold h-[29px] ">
-        Как это работает?
-      </h2>
+    <section className="my-[36px] mb-[100px]">
+      <h2 className="mb-[16px] text-[24px] font-semibold">Как это работает?</h2>
 
       <div className="flex gap-[22px]">
         {steps.map(({ step, title, description }) => (
@@ -49,10 +42,8 @@ export default function WhyUs() {
               {step}
             </p>
             <div className="flex flex-col gap-[7px]">
-              <p className="max-w-[130px] max-h-[44px] font-semibold">
-                {title}
-              </p>
-              <p className="max-w-[144px] max-h-[34px] text-[14px] font-semibold opacity-70">
+              <p className="max-w-[90px] font-semibold">{title}</p>
+              <p className="max-w-[144px] text-[14px] font-semibold opacity-75">
                 {description}
               </p>
             </div>
@@ -62,30 +53,22 @@ export default function WhyUs() {
 
       <div className="relative mt-[70px] flex bg-white py-[27px] px-[32px] rounded-[24px]">
         <div>
-          <div className="mb-[68px] flex flex-col gap-[9px]">
-            <p className="max-w-[458px] text-[32px] font-semibold">
+          <div className="mb-[70px] flex flex-col gap-[9px]">
+            <p className="max-w-[400px] text-[32px] font-semibold">
               Для крупных бизнесов и предпринимателей
             </p>
             <p className="max-w-[210px] font-semibold opacity-75">
-              {t("home.businessSubtitle")}
+              Заходи в Bron и развивай свой бизнес
             </p>
           </div>
           <Link href={routes.business}>
-            <Button
-              text="Начать"
-              as="span"
-              paddingTop="pt-[16px]"
-              paddingRight="pr-[82px]"
-              paddingBottom="pb-[16px]"
-              paddingLeft="pl-[82px]"
-              className="leading-[24px] cursor-pointer inline-block text-[20px]"
-            />
+            <Button text="Начать" as="span" className="cursor-pointer inline-block" />
           </Link>
         </div>
         <Image
           className="absolute right-0 top-[-155px]"
           src={assets.marketing.homePng}
-          alt={t("home.businessAlt")}
+          alt="Bron для бизнеса"
           width={493}
           height={442}
         />

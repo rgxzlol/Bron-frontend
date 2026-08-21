@@ -15,6 +15,7 @@
   --bg-input: #fafaff;
   --bg-inactive: #eceef6;
   --bg-hover: #e4e8ff;
+  --bg-profile-img: #E8EFFE;
   --bg-active-soft: #e8f1ff;
 
   --text-primary: #000000;
@@ -263,4 +264,3 @@
 [data-theme="dark"] .text-\[\#d1d5db\] {
   color: var(--text-muted) !important;
 }
-

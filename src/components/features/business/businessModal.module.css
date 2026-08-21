@@ -1,15 +1,15 @@
 .backdrop {
   position: fixed;
-  top: 110px;
+  top: 138px;
   right: 0;
   bottom: 0;
   left: 380px;
-  z-index: 60;
+  z-index: 50;
   display: flex;
   justify-content: center;
   overflow: auto;
   padding: 20px;
-  background: var(--backdrop);
+  background: var(--bg-page);
 }
 
 .panel {
@@ -20,7 +20,7 @@
   height: min(90dvh, 100%);
   max-height: 100%;
   flex-direction: column;
-  gap: 40px;
+  gap: 20px;
   overflow-y: auto;
   border-radius: 24px;
   background: var(--bg-surface-soft);

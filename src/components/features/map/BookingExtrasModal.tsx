@@ -5,12 +5,6 @@ import { useMemo, useRef } from "react";
 import { bookingExtras, type BookingExtra } from "@/data/bookingExtras";
 import { formatPrice } from "@/lib/formatPrice";
 import Button from "@/components/shared/Button";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import {
-  EXTRAS_DESC_KEYS,
-  EXTRAS_NAME_KEYS,
-  translateLabel,
-} from "@/lib/i18n/labels";
 import s from "./bookingExtrasModal.module.css";
 
 export type OrderLineItem = {
@@ -40,16 +34,7 @@ export default function BookingExtrasModal({
   onContinue,
   onClose,
 }: BookingExtrasModalProps) {
-  const { t, locale } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  function extraName(id: string, fallback: string) {
-    return translateLabel(t, id, EXTRAS_NAME_KEYS) || fallback;
-  }
-
-  function extraDesc(id: string, fallback: string) {
-    return translateLabel(t, id, EXTRAS_DESC_KEYS) || fallback;
-  }
 
   const orderItems = useMemo(() => {
     const extras: OrderLineItem[] = Object.entries(extraQuantities).flatMap(
@@ -58,13 +43,11 @@ export default function BookingExtrasModal({
         const extra = bookingExtras.find((item) => item.id === id);
         if (!extra) return [];
 
-        const name = extraName(id, extra.name);
-
         return [
           {
             id: `extra-${id}`,
             sourceId: id,
-            name: quantity > 1 ? `${name} × ${quantity}` : name,
+            name: quantity > 1 ? `${extra.name} × ${quantity}` : extra.name,
             price: extra.price * quantity,
             removable: true,
           },
@@ -73,7 +56,7 @@ export default function BookingExtrasModal({
     );
 
     return [...baseItems, ...extras];
-  }, [baseItems, extraQuantities, t]);
+  }, [baseItems, extraQuantities]);
 
   const total = orderItems.reduce((sum, item) => sum + item.price, 0);
 
@@ -85,27 +68,19 @@ export default function BookingExtrasModal({
   }
 
   return (
-    <div
-      className={s.backdrop}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("booking.extrasDialog")}
-    >
+    <div className={s.backdrop} role="dialog" aria-modal="true" aria-label="Дополнительные услуги">
       <div className={s.modal}>
         <div className={s.header}>
           <div className={s.headerIcon} aria-hidden>
             🛍
           </div>
           <div className={s.headerText}>
-            <h2 className={s.title}>{t("booking.extrasTitle")}</h2>
-            <p className={s.subtitle}>{t("booking.extrasSubtitle")}</p>
+            <h2 className={s.title}>Добавить что-нибудь к вашему бронированию</h2>
+            <p className={s.subtitle}>
+              Во время посещения вы можете приобрести напитки или доп услугу.
+            </p>
           </div>
-          <button
-            type="button"
-            className={s.close}
-            onClick={onClose}
-            aria-label={t("common.close")}
-          >
+          <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
             ×
           </button>
         </div>
@@ -115,7 +90,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(-1)}
-            aria-label={t("booking.back")}
+            aria-label="Назад"
           >
             ‹
           </button>
@@ -123,31 +98,27 @@ export default function BookingExtrasModal({
           <div className={s.carousel} ref={scrollRef}>
             {bookingExtras.map((extra: BookingExtra) => {
               const quantity = extraQuantities[extra.id] ?? 0;
-              const name = extraName(extra.id, extra.name);
-              const description = extraDesc(extra.id, extra.description);
               return (
                 <article key={extra.id} className={s.productCard}>
                   <div className={s.productImageWrap}>
                     <Image
                       src={extra.image}
-                      alt={name}
+                      alt={extra.name}
                       fill
                       sizes="160px"
                       className={s.productImage}
                     />
                   </div>
-                  <h3 className={s.productName}>{name}</h3>
-                  <p className={s.productDesc}>{description}</p>
-                  <p className={s.productPrice}>
-                    {formatPrice(extra.price, locale)} {t("common.sum")}
-                  </p>
+                  <h3 className={s.productName}>{extra.name}</h3>
+                  <p className={s.productDesc}>{extra.description}</p>
+                  <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
                   {quantity > 0 ? (
                     <div className={s.qtyControls}>
                       <button
                         type="button"
                         className={s.qtyBtn}
                         onClick={() => onRemoveExtra(extra.id)}
-                        aria-label={t("booking.decreaseAria", { name })}
+                        aria-label={`Уменьшить ${extra.name}`}
                       >
                         −
                       </button>
@@ -156,7 +127,7 @@ export default function BookingExtrasModal({
                         type="button"
                         className={s.qtyBtn}
                         onClick={() => onAddExtra(extra.id)}
-                        aria-label={t("booking.addAria", { name })}
+                        aria-label={`Добавить ${extra.name}`}
                       >
                         +
                       </button>
@@ -167,7 +138,7 @@ export default function BookingExtrasModal({
                       className={s.addBtn}
                       onClick={() => onAddExtra(extra.id)}
                     >
-                      {t("booking.add")}
+                      Добавить
                     </button>
                   )}
                 </article>
@@ -179,7 +150,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(1)}
-            aria-label={t("booking.forward")}
+            aria-label="Вперёд"
           >
             ›
           </button>
@@ -187,20 +158,18 @@ export default function BookingExtrasModal({
 
         <div className={s.summaryRow}>
           <div className={s.orderBlock}>
-            <h3 className={s.orderTitle}>{t("booking.yourOrder")}</h3>
+            <h3 className={s.orderTitle}>Ваш заказ</h3>
             {orderItems.map((item) => (
               <div key={item.id} className={s.orderLine}>
                 <span className={s.orderName}>{item.name}</span>
                 <span className={s.orderPriceWrap}>
-                  <span className={s.orderPrice}>
-                    {formatPrice(item.price, locale)} {t("common.sum")}
-                  </span>
+                  <span className={s.orderPrice}>{formatPrice(item.price)} сум</span>
                   {item.removable && item.sourceId && (
                     <button
                       type="button"
                       className={s.removeBtn}
                       onClick={() => onRemoveExtra(item.sourceId!)}
-                      aria-label={t("booking.removeAria", { name: item.name })}
+                      aria-label={`Удалить ${item.name}`}
                     >
                       ×
                     </button>
@@ -211,23 +180,17 @@ export default function BookingExtrasModal({
           </div>
 
           <div className={s.totalBlock}>
-            <span className={s.totalLabel}>{t("booking.extrasTotal")}</span>
-            <span className={s.totalAmount}>
-              {formatPrice(total, locale)} {t("common.sum")}
-            </span>
-            <p className={s.totalHint}>{t("booking.payNowHint")}</p>
+            <span className={s.totalLabel}>Итого</span>
+            <span className={s.totalAmount}>{formatPrice(total)} сум</span>
+            <p className={s.totalHint}>✓ Экономия времени — оплатить сейчас</p>
           </div>
         </div>
 
         <div className={s.footer}>
           <button type="button" className={s.skipBtn} onClick={onSkip}>
-            {t("booking.skip")}
+            Пропустить
           </button>
-          <Button
-            text={t("booking.continue")}
-            className={s.continueBtn}
-            onClick={onContinue}
-          />
+          <Button text="Продолжить" className={s.continueBtn} onClick={onContinue} />
         </div>
       </div>
     </div>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/providers/ThemeProvider";
-import LangProvider from "@/components/providers/LangProvider";
 import ApiProvider from "@/components/providers/ApiProvider";
 import { siteConfig, siteMetadata } from "@/config/site";
 
@@ -22,9 +21,7 @@ export default function RootLayout({
     <html lang={siteConfig.locale} className={manrope.variable} data-theme="light" suppressHydrationWarning>
       <body className={`${manrope.className} min-h-screen antialiased font-sans`}>
         <ThemeProvider>
-          <LangProvider>
-            <ApiProvider>{children}</ApiProvider>
-          </LangProvider>
+          <ApiProvider>{children}</ApiProvider>
         </ThemeProvider>
       </body>
     </html>

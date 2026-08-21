@@ -13,13 +13,6 @@ import {
 } from "@/lib/business/shopImages";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import {
-  DEMO_SERVICE_KEYS,
-  DEMO_SHOP_DESC_KEYS,
-  SHOP_CATEGORY_KEYS,
-  translateLabel,
-} from "@/lib/i18n/labels";
 import s from "./fullMap.module.css";
 
 type ShopDetailPanelProps = {
@@ -33,13 +26,10 @@ export default function ShopDetailPanel({
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
-  const { t, language, locale } = useTranslation();
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
-  const descKey = DEMO_SHOP_DESC_KEYS[shop.id];
-  const shopDesc = descKey ? t(descKey) : shop.desc;
 
   useEffect(() => {
     setImageIndex(0);
@@ -83,7 +73,7 @@ export default function ShopDetailPanel({
             type="button"
             className={s.closeBtn}
             onClick={onClose}
-            aria-label={t("common.close")}
+            aria-label="Закрыть"
           >
             <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
           </button>
@@ -93,7 +83,7 @@ export default function ShopDetailPanel({
                 type="button"
                 className={`${s.galleryNav} ${s.galleryNavPrev}`}
                 onClick={showPrevImage}
-                aria-label={t("map.prevPhoto")}
+                aria-label="Предыдущее фото"
               >
                 ‹
               </button>
@@ -101,7 +91,7 @@ export default function ShopDetailPanel({
                 type="button"
                 className={`${s.galleryNav} ${s.galleryNavNext}`}
                 onClick={showNextImage}
-                aria-label={t("map.nextPhoto")}
+                aria-label="Следующее фото"
               >
                 ›
               </button>
@@ -122,21 +112,19 @@ export default function ShopDetailPanel({
                 width={18}
                 height={18}
               />
-              <span className={s.ratingValue}>{formatRating(shop.rating, locale)}</span>
+              <span className={s.ratingValue}>{formatRating(shop.rating)}</span>
               <span className={s.ratingMuted}>
-                ({shop.reviews} {pluralizeReviews(shop.reviews, language)})
+                ({shop.reviews} {pluralizeReviews(shop.reviews)})
               </span>
             </div>
           </div>
 
-          <p className={s.category}>
-            {translateLabel(t, shop.category, SHOP_CATEGORY_KEYS)}
-          </p>
-          <p className={s.desc}>{shopDesc}</p>
+          <p className={s.category}>{shop.category}</p>
+          <p className={s.desc}>{shop.desc}</p>
 
           <div className={s.stats}>
             <div className={s.statBox}>
-              <span className={s.statLabel}>{t("map.open")}</span>
+              <span className={s.statLabel}>Открыто</span>
               <span className={s.statValue}>{shop.hours}</span>
             </div>
           </div>
@@ -193,33 +181,25 @@ export default function ShopDetailPanel({
 
           {activeServices.length > 0 && (
             <div className="flex flex-col gap-[8px]">
-              <h3 className={s.pricingTitle}>{t("map.services")}</h3>
-              {activeServices.map((service) => {
-                const demoKeys = DEMO_SERVICE_KEYS[service.id];
-                const title = demoKeys ? t(demoKeys.title) : service.title;
-                const description = demoKeys
-                  ? t(demoKeys.description)
-                  : service.description;
-
-                return (
-                  <div key={service.id} className={s.priceItem}>
-                    <div className={s.priceInfo}>
-                      <span className={s.priceName}>{title}</span>
-                      {description && (
-                        <span className={s.priceDuration}>{description}</span>
-                      )}
-                    </div>
-                    <span className={s.priceAmount}>
-                      {formatPrice(service.priceFrom, locale)} {t("common.sum")}
-                    </span>
+              <h3 className={s.pricingTitle}>Услуги</h3>
+              {activeServices.map((service) => (
+                <div key={service.id} className={s.priceItem}>
+                  <div className={s.priceInfo}>
+                    <span className={s.priceName}>{service.title}</span>
+                    {service.description && (
+                      <span className={s.priceDuration}>{service.description}</span>
+                    )}
                   </div>
-                );
-              })}
+                  <span className={s.priceAmount}>
+                    {formatPrice(service.priceFrom)} сум
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 
           <Button
-            text={t("map.bookPlace")}
+            text="Забронировать место"
             className={s.bookBtn}
             onClick={onBook}
           />

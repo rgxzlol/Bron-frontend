@@ -274,7 +274,7 @@ async function resolveCreatedBusinessId(
   if (byName) return byName.id;
 
   if (mine.length === 0) {
-    throw new Error("errors.businessCreatedNotFound");
+    throw new Error("Бизнес создан, но не найден в списке");
   }
 
   return mine.sort(
@@ -288,7 +288,7 @@ export async function saveBusinessDraftToApi(
 ) {
   const token = getAuthToken();
   if (!token) {
-    throw new Error("errors.loginToSaveBusiness");
+    throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
   }
 
   if (editingId && /^\d+$/.test(editingId)) {
@@ -312,7 +312,7 @@ export async function saveBusinessDraftToApi(
 
   const userId = await getCurrentUserId();
   if (!userId) {
-    throw new Error("errors.userUnknown");
+    throw new Error("Не удалось определить пользователя");
   }
 
   const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));

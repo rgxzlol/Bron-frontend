@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { REMOTE_API_URL } from "@/config/api";
 
+function looksLikeHtml(text: string, contentType: string | null) {
+  const type = contentType?.toLowerCase() ?? "";
+  if (type.includes("text/html")) return true;
+
+  const trimmed = text.trimStart().slice(0, 32).toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
 async function proxyRequest(request: NextRequest) {
   const apiPath = request.nextUrl.pathname.replace(/^\/backend\/?/, "");
   const targetUrl = `${REMOTE_API_URL}/${apiPath}${request.nextUrl.search}`;
@@ -28,17 +36,27 @@ async function proxyRequest(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { detail: "errors.backendProxy" },
+      { detail: "Failed to connect to the API server" },
       { status: 502 },
     );
   }
 
   const text = await response.text();
+  const upstreamType = response.headers.get("content-type");
+
+  if (looksLikeHtml(text, upstreamType)) {
+    return NextResponse.json(
+      {
+        detail: `Upstream API returned HTML instead of JSON (${response.status}). Check that the remote API is running.`,
+      },
+      { status: response.status === 404 ? 502 : response.status },
+    );
+  }
 
   return new NextResponse(text, {
     status: response.status,
     headers: {
-      "Content-Type": response.headers.get("content-type") ?? "application/json",
+      "Content-Type": upstreamType ?? "application/json",
     },
   });
 }

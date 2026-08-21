@@ -1,8 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { usersApi } from "@/lib/api";
-import { mapApiLanguage, mapProfileLanguage } from "@/lib/api/mappers";
-import { getAuthToken } from "@/lib/api/token";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -40,16 +37,11 @@ type ProfileState = {
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
   toggleNotification: (key: keyof NotificationSettings) => void;
-  hydrateFromApi: () => Promise<void>;
-  savePersonalInfoToApi: (payload: {
+  savePersonalInfo: (payload: {
+    fullName: string;
     phone: string;
     email: string;
-  }) => Promise<void>;
-  changePasswordToApi: (payload: {
-    oldPassword: string;
-    newPassword: string;
-  }) => Promise<void>;
-  deleteAccountFromApi: () => Promise<void>;
+  }) => void;
 };
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
@@ -65,14 +57,14 @@ const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
     title: "Оплата бронирования",
     reference: "123123",
     amount: 80000,
-    date: "2026-05-12",
+    date: "12 мая 2026",
   },
   {
     id: "2",
     title: "Оплата бронирования",
     reference: "123124",
     amount: 80000,
-    date: "2026-05-10",
+    date: "10 мая 2026",
   },
 ];
 
@@ -97,12 +89,7 @@ export const useProfileStore = create<ProfileState>()(
 
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
 
-      setLanguage: (language) => {
-        set({ language });
-        const token = getAuthToken();
-        if (!token) return;
-        void usersApi.updateProfile({ language: mapProfileLanguage(language) }, token);
-      },
+      setLanguage: (language) => set({ language }),
 
       setTheme: (theme) => set({ theme }),
 
@@ -114,71 +101,12 @@ export const useProfileStore = create<ProfileState>()(
           },
         })),
 
-      hydrateFromApi: async () => {
-        const token = getAuthToken();
-        if (!token) return;
-
-        try {
-          const profile = await usersApi.getProfile(token);
-          set({
-            fullName: profile.username,
-            phone: profile.phone,
-            email: profile.email,
-            language: mapApiLanguage(profile.language),
-          });
-        } catch (error) {
-          console.error("Не удалось загрузить профиль:", error);
-        }
-      },
-
-      savePersonalInfoToApi: async ({ phone, email }) => {
-        const token = getAuthToken();
-        if (!token) {
-          set({
-            phone: phone.trim(),
-            email: email.trim(),
-          });
-          return;
-        }
-
-        const profile = await usersApi.updateProfile(
-          {
-            phone: phone.trim(),
-            email: email.trim(),
-          },
-          token,
-        );
-
+      savePersonalInfo: ({ fullName, phone, email }) =>
         set({
-          fullName: profile.username,
-          phone: profile.phone,
-          email: profile.email,
-        });
-      },
-
-      changePasswordToApi: async ({ oldPassword, newPassword }) => {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error("profile.loginToChangePassword");
-        }
-
-        await usersApi.changePassword(
-          {
-            old_password: oldPassword,
-            new_password: newPassword,
-          },
-          token,
-        );
-      },
-
-      deleteAccountFromApi: async () => {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error("profile.loginRequired");
-        }
-
-        await usersApi.deleteProfile(token);
-      },
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+        }),
     }),
     {
       name: "profile-storage",

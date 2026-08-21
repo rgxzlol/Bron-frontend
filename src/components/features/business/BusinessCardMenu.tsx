@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Props = {
   onEdit: () => void;
@@ -36,7 +35,6 @@ function CloseIcon() {
 }
 
 export default function BusinessCardMenu({ onEdit, onDelete, onClose }: Props) {
-  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +70,7 @@ export default function BusinessCardMenu({ onEdit, onDelete, onClose }: Props) {
         className="flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[#f4f4f8]"
       >
         <PencilIcon />
-        {t("businessCardMenu.editProfile")}
+        Изменить профиль
       </button>
       <button
         type="button"
@@ -83,7 +81,7 @@ export default function BusinessCardMenu({ onEdit, onDelete, onClose }: Props) {
         className="mt-[6px] flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[#f4f4f8]"
       >
         <CloseIcon />
-        {t("businessCardMenu.deleteBusiness")}
+        Удалить бизнес
       </button>
     </div>
   );

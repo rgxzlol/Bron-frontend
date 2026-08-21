@@ -27,8 +27,6 @@ import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
 import { onStoreHydrated } from "@/lib/store/persist"
 import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
-import { useTranslation } from "@/lib/i18n/useTranslation"
-import { MAP_FILTER_KEYS, translateLabel } from "@/lib/i18n/labels"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 const mapboxToken = getMapboxToken()
@@ -135,7 +133,6 @@ function matchesDistanceFilter(
 }
 
 export default function FullMap({ onStartBooking }: FullMapProps) {
-  const { t } = useTranslation()
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
@@ -224,16 +221,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const userLocation = userLocationRef.current
     if (!userLocation) return shop
 
-    const km = getDistanceKm(
-      userLocation.lat,
-      userLocation.lng,
-      shop.lat,
-      shop.lng,
-    )
-
     return {
       ...shop,
-      distance: t("map.distanceKm", { km }),
+      distance: `${getDistanceKm(userLocation.lat, userLocation.lng, shop.lat, shop.lng)} км`,
     }
   }
 
@@ -367,9 +357,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       const coords = normalizeCoords(business.lat, business.lng)
       if (!coords) return
 
-      const el = createUserBusinessMarkerElement(
-        business.name || t("map.myBusinessFallback"),
-      )
+      const el = createUserBusinessMarkerElement(business.name || "Мой бизнес")
 
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([coords.lng, coords.lat])
@@ -389,7 +377,6 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     appliedMaxPrice,
     appliedLocation,
     apiShops,
-    t,
   ])
 
   const syncMarkersRef = useRef(syncMarkers)
@@ -564,7 +551,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       (error) => {
         console.error(error)
         locationFilterReadyRef.current = false
-        alert(t("map.geolocationDenied"))
+        alert("Не удалось определить ваше местоположение. Разрешите доступ к геолокации.")
       },
       {
         enableHighAccuracy: true,
@@ -655,7 +642,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               }
             `}
           >
-            {translateLabel(t, filter, MAP_FILTER_KEYS)}
+            {filter}
           </button>
         ))}
       </div>
@@ -666,7 +653,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
       >
         <Image src={assets.header.filter} alt="" width={18} height={18} />
-        {t("map.categories")}
+        Категории
       </button>
 
       <button
@@ -692,13 +679,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         >
           <div className="max-w-md">
             <p className="text-[18px] font-semibold text-[var(--text-primary)]">
-              {t("map.mapUnavailable")}
+              Карта недоступна
             </p>
             <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
-              {t("map.mapboxTokenHint", { file: ".env.local" })}
+              Укажите реальный токен Mapbox в файле{" "}
+              <code className="rounded bg-[var(--bg-surface)] px-1 py-0.5">.env.local</code>:
             </p>
             <pre className="mt-3 overflow-x-auto rounded-[12px] bg-[var(--bg-surface)] p-3 text-left text-[13px] text-[var(--text-primary)]">
-              {t("map.mapboxTokenExample")}
+              NEXT_PUBLIC_MAPBOX_TOKEN=pk.ваш_токен
             </pre>
           </div>
         </div>

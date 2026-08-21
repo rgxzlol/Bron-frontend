@@ -1,12 +1,13 @@
 "use client";
 
+import Button from "@/components/shared/Button";
+import { assets } from "@/lib/assets";
 import { useBusinessStore } from "@/store/business.store";
 import { useAuthStore } from "@/store/auth.store";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import BusinessModal from "./BusinessModal";
 import BusinessDashboard from "./BusinessDashboard";
-import BusinessEmptyPromo from "./BusinessEmptyPromo";
-import BusinessPanelOverlay from "./BusinessPanelOverlay";
 import MyBusiness from "./MyBusiness";
 
 const Business = () => {
@@ -69,38 +70,56 @@ const Business = () => {
     openEditModal(dashboardId);
   }
 
-  function handleOverlayClose() {
-    if (dashboardId) {
-      closeDashboard();
-      return;
-    }
+  if (dashboardId) {
+    return (
+      <BusinessDashboard
+        businessId={dashboardId}
+        onClose={closeDashboard}
+        onEditProfile={handleEditFromDashboard}
+      />
+    );
+  }
 
-    if (showList && hasBusinesses) {
-      setShowMyBusiness(false);
-    }
+  if (showList) {
+    return (
+      <>
+        <MyBusiness
+          onAddBusiness={openModal}
+          onEditBusiness={openEditModal}
+          onOpenStatistics={openDashboard}
+        />
+        {modalOpen && (
+          <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
+        )}
+      </>
+    );
   }
 
   return (
     <>
-      <BusinessPanelOverlay
-        onClose={dashboardId || (showList && hasBusinesses) ? handleOverlayClose : undefined}
-      >
-        {dashboardId ? (
-          <BusinessDashboard
-            businessId={dashboardId}
-            onClose={closeDashboard}
-            onEditProfile={handleEditFromDashboard}
+      <div className="flex justify-between rounded-[34px] bg-white px-[23px] py-[26px]">
+        <div className="flex flex-col gap-[8px]">
+          <h3 className="max-w-[450px] text-[36px] font-semibold">
+            Добавьте свой бизнес на карту для больших активов
+          </h3>
+
+          <p className="text-[20px] font-semibold opacity-75">
+            Увеличь активы с помощью бронирования!
+          </p>
+
+          <Button
+            onClick={openModal}
+            className="mt-[25px] py-[15px] text-[20px] !px-[30px]"
+            text="Добавить бизнес"
           />
-        ) : showList ? (
-          <MyBusiness
-            onAddBusiness={openModal}
-            onEditBusiness={openEditModal}
-            onOpenStatistics={openDashboard}
-          />
-        ) : (
-          <BusinessEmptyPromo onAddBusiness={openModal} />
-        )}
-      </BusinessPanelOverlay>
+        </div>
+
+        <Image
+          className="mr-[70px] max-w-[392px] object-cover"
+          src={assets.bussines.photo1}
+          alt=""
+        />
+      </div>
 
       {modalOpen && (
         <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />

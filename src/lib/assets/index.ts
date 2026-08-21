@@ -6,6 +6,7 @@ import support from "@/assets/images/support.svg";
 import profileIcon from "@/assets/images/ProfileIcon.svg";
 import filter from "@/assets/images/filter.svg";
 import notification from "@/assets/images/notification.svg";
+import notificationIcon from "@/assets/images/notificationIcon.svg";
 import ruLang from "@/assets/images/languages/ruLang.png";
 import uzLang from "@/assets/images/languages/uzLang.png";
 import enLang from "@/assets/images/languages/enLang.png";
@@ -110,6 +111,7 @@ export const assets = {
     search,
     filter,
     notification,
+    notificationIcon,
     ruLang,
     uzLang,
     enLang,

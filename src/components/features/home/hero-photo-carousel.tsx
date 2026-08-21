@@ -3,7 +3,6 @@
 import { assets } from "@/lib/assets";
 import Image, { StaticImageData } from "next/image";
 import { useEffect, useState } from "react";
-import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const photos: StaticImageData[] = [
   assets.hero.photo1,
@@ -34,7 +33,6 @@ const AUTO_PLAY_MS = 5000;
 export default function HeroPhotoCarousel() {
   const [centerIndex, setCenterIndex] = useState(1);
   const [isHovered, setIsHovered] = useState(false);
-  const { t } = useTranslation();
 
   useEffect(() => {
     if (isHovered) return;
@@ -67,7 +65,7 @@ export default function HeroPhotoCarousel() {
           >
             <Image
               src={src}
-              alt={t("home.serviceExample", { index: index + 1 })}
+              alt={`Пример сервиса ${index + 1}`}
               width={157}
               height={242}
               priority

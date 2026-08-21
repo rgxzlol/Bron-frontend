@@ -6,56 +6,19 @@
 
 .topCard {
   display: grid;
-  grid-template-columns: minmax(280px, 432px) 1fr;
+  grid-template-columns: minmax(280px, 420px) 1fr;
   gap: 24px;
   background: var(--bg-surface);
   border-radius: 26px;
-  padding: 20px 22px 26px 24px;
+  padding: 20px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
-}
-
-.leftCol {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
 }
 
 .imageWrap {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  aspect-ratio: 432 / 234;
-}
-
-.imageNavBtn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  color: #111827;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: background 0.2s;
-}
-
-.imageNavBtn:hover {
-  background: #fff;
-}
-
-.imageNavPrev {
-  left: 12px;
-}
-
-.imageNavNext {
-  right: 12px;
+  aspect-ratio: 16 / 10;
 }
 
 .image {
@@ -79,7 +42,7 @@
 .topBody {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -93,41 +56,38 @@
 .tag {
   display: inline-flex;
   width: fit-content;
-  padding: 6px 22px;
+  padding: 6px 12px;
   border-radius: 999px;
   background: var(--bg-active-soft);
   color: #0a6af7;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 12px;
 }
 
 .title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.2;
-  margin-bottom: 2px;
 }
 
 .rating {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: 600;
-  
+  gap: 6px;
+  font-size: 14px;
 }
 
 .ratingMuted {
-  color: var(--text-muted);  
+  color: var(--text-muted);
 }
 
 .backBtn {
   flex-shrink: 0;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 10px;
-  background: var(--bg-page);
-  font-size: 20px;
+  border: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -138,93 +98,53 @@
 
 .contactRow {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   font-size: 14px;
 }
 
 .contactItem {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-}
-
-.contactItemCentered {
-  align-items: center;
-}
-
-.contactIcon {
-  display: block;
-  flex-shrink: 0;
-}
-
-.addressIcon {
-  display: block;
-  flex-shrink: 0;
-  margin-top: 3px;
 }
 
 .contactText {
   display: flex;
   flex-direction: column;
-  }
-
-.addressText {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
+  gap: 2px;
 }
 
 .contactSub {
-  font-size: 16px;
+  font-size: 13px;
   color: var(--text-muted);
-  font-weight: 600;
-  
-}
-
-.phoneBox {
-  width: fit-content;
-  background: #f0f4fa;
-  border-radius: 16px;
-  padding: 12px 22px;
-}
-
-.phoneBox a {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  margin-top: 4px;
 }
 
 .statBox {
-  padding: 10px 12px 10px 12px;
+  padding: 12px;
   border-radius: 12px;
   background: #f0f4fa;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .statLabel {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
-  color: #111827;
 }
 
 .statValue {
-  font-weight: 600;
-  font-size: 16px;
-  color: #111827;
-}
-
-.statValueMuted {
-  color: var(--text-muted);
+  font-size: 13px;
+  color: #4b5563;
 }
 
 .statValueRow {
@@ -235,155 +155,74 @@
 }
 
 .stepper {
-  margin: 28px 0 48px;
-  padding: 0;
-
-  width: 100%;
-
+  margin: 28px 0 24px;
   display: flex;
   align-items: center;
-
-  gap: 10px;
+  justify-content: center;
+  gap: 0;
 }
-
-
-/* =========================
-   ШАГ
-========================= */
 
 .step {
-  position: relative;
-
   display: flex;
+  flex-direction: column;
   align-items: center;
-
+  gap: 8px;
   flex: 1;
-  min-width: 0;
-
-  height: 59px;
-
-  gap: 12px;
+  max-width: 200px;
+  position: relative;
 }
-
-
-/* =========================
-   ПОСЛЕДНИЙ ШАГ
-   прижат к правому краю
-========================= */
-
-.step:last-child {
-  flex: 0 0 auto;
-
-  margin-left: 0;
-}
-
-
-/* =========================
-   ЛИНИЯ
-========================= */
 
 .step:not(:last-child)::after {
   content: "";
-
-  flex: 1;
-
-  min-width: 20px;
-
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 20px);
+  width: calc(100% - 40px);
   height: 2px;
-
   background: #e5e7eb;
-
   z-index: 0;
 }
 
-
-/* Синяя линия */
 .stepDone:not(:last-child)::after {
   background: #0a6af7;
 }
 
-
-/* Первая линия изначально синяя */
-.step:first-child:not(:last-child)::after {
-  background: #0a6af7;
-}
-
-
-/* =========================
-   КРУГ
-========================= */
-
 .stepCircle {
-  position: relative;
-  z-index: 2;
-
-  width: 59px;
-  height: 59px;
-
-  flex: 0 0 59px;
-
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-
   display: grid;
   place-items: center;
-
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1;
-
-  background: #ffffff;
-  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  background: #e5e7eb;
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
 }
 
-
-/* Активный круг */
 .stepActive .stepCircle {
   background: #0a6af7;
   color: #fff;
 }
 
-
-/* Выполненный круг */
 .stepDone .stepCircle {
   background: #0a6af7;
   color: #fff;
 }
 
-
-/* Первый круг изначально синий */
-.step:first-child .stepCircle {
-  background: #0a6af7;
-  color: #fff;
-}
-
-
-/* =========================
-   ТЕКСТ
-========================= */
-
 .stepLabel {
-  position: relative;
-  z-index: 2;
-
-  margin: 0;
-
-  min-width: max-content;
-
-  font-size: 16px;
-  line-height: 19px;
+  font-size: 13px;
   font-weight: 600;
-  opacity: 0.7;
-  white-space: nowrap;
-
-  color: var(--text-primary);
+  text-align: center;
+  color: var(--text-muted);
 }
 
-
-/* Активный / выполненный текст */
 .stepActive .stepLabel,
 .stepDone .stepLabel {
-  color: var(--text-primary);
+  color: #111827;
 }
+
 .columns {
   display: grid;
   grid-template-columns: 1fr minmax(300px, 380px);
@@ -637,44 +476,23 @@
 }
 
 .timeCard {
-  background: transparent;
+  background: var(--bg-surface);
   border-radius: 26px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 900px) {
-  .timeCard {
-    grid-template-columns: 1fr;
-  }
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
 .stepFooter {
-  margin-top: 40px;
-  width: 90.4%;
+  margin-top: 24px;
   display: flex;
-  align-items: flex-start;
-  padding: 22px 28px 22px 46px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
   background: var(--bg-surface);
-  border: 1px solid var(--bg-surface);
   border-radius: 20px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
-  flex-wrap: wrap;
-}
-
-.stepFooterCol {
-  display: flex;
-  flex-direction: column;
-  font-size: 20px;
-}
-
-.stepFooterTime {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  
 }
 
 .stepFooterInfo {
@@ -702,15 +520,13 @@
 }
 
 .continueBtn {
+  min-width: 220px;
   justify-content: center;
-  align-items: center;
-  padding: 16px 100px;
 }
 
 .footerHint {
   font-size: 12px;
   color: var(--text-muted);
-  font-weight: 600;
 }
 
 .confirmColumns {

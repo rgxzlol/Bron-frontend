@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { assets } from "@/lib/assets";
-import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type DeleteBusinessModalProps = {
   businessName: string;
@@ -17,8 +16,6 @@ export default function DeleteBusinessModal({
   onClose,
   onConfirm,
 }: DeleteBusinessModalProps) {
-  const { t } = useTranslation();
-
   if (!isOpen) return null;
 
   return (
@@ -35,25 +32,24 @@ export default function DeleteBusinessModal({
             <span className="flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#fde8e8]">
               <Image src={assets.notification.trash} alt="" width={22} height={22} />
             </span>
-            <h3 className="text-[20px] font-semibold text-black">
-              {t("businessDeleteModal.title")}
-            </h3>
+            <h3 className="text-[20px] font-semibold text-black">Удалить бизнес?</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="flex h-[55px] w-[71px] items-center justify-center rounded-[12px] bg-[#FAFAFF] transition hover:bg-[#EAEAEF]"
-            aria-label={t("common.close")}
+            aria-label="Закрыть"
           >
             <Image src={assets.map.quitIcon} alt="" width={24} height={24} />
           </button>
         </div>
 
         <p className="text-[16px] font-semibold leading-relaxed text-[#585858]">
-          {t("businessDeleteModal.confirm", { name: businessName })}
+          Вы уверены что хотите удалить бизнес{" "}
+          <strong className="text-black">{businessName}</strong>?
         </p>
         <p className="mt-[8px] text-[16px] font-semibold text-[#585858]">
-          {t("businessDeleteModal.warning")}
+          Все данные, бронирования и статистика будут удалены без возможности восстановления
         </p>
 
         <aside className="mb-[22px] mt-[22px] flex items-center gap-[13px] rounded-[5px] bg-[#fde8e8] p-[23px_19px]">
@@ -64,7 +60,7 @@ export default function DeleteBusinessModal({
             !
           </span>
           <p className="text-[15px] font-semibold text-black">
-            {t("businessDeleteModal.irreversible")}
+            Это действие нельзя будет отменить пожалуйста убедитесь, что вы сохранили важные данные
           </p>
         </aside>
 
@@ -74,14 +70,14 @@ export default function DeleteBusinessModal({
             onClick={onClose}
             className="flex h-[75px] w-full max-w-[380px] items-center justify-center rounded-[11px] bg-[#0A6AF7] text-[20px] font-semibold text-white transition hover:bg-[#0856c6]"
           >
-            {t("businessDeleteModal.cancel")}
+            Отмена
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="flex h-[75px] w-full max-w-[380px] items-center justify-center rounded-[11px] bg-[#e53935] text-[20px] font-semibold text-white transition hover:bg-[#c62828]"
           >
-            {t("businessDeleteModal.delete")}
+            Удалить бизнес
           </button>
         </div>
       </section>

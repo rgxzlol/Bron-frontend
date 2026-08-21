@@ -7,23 +7,8 @@
   justify-content: center;
   padding: 16px;
   background: var(--backdrop);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  overflow: hidden;
-}
-
-.backdrop::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 45%;
-  z-index: 0;
-  background: rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
-  pointer-events: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .modal {
@@ -31,12 +16,11 @@
   max-height: min(92vh, 860px);
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface-soft);
+  background: var(--bg-surface);
   border-radius: 18px;
   box-shadow: var(--shadow-modal);
   overflow: hidden;
   position: relative;
-  z-index: 1;
 }
 
 .modalHead {
@@ -50,7 +34,7 @@
 
 .modalBody {
   overflow-y: auto;
-  padding: 20px 24px 24px;
+  padding: 12px 15px 32px 15px;
 }
 
 .content {
@@ -60,32 +44,34 @@
 }
 
 .title {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.1;
   color: var(--text-primary);
 }
 
 .closeBtn {
-  width: 55px;
-  height: 55px;
-  border-radius: 12px;
-  background: var(--bg-surface);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--bg-surface-soft);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  opacity: 0.7;
 }
 
 .closeBtnFloating {
   position: absolute;
-  top: 20px;
+  top: 14px;
   right: 20px;
-  width: 55px;
-  height: 55px;
-  border-radius: 12px;
-  background: var(--bg-surface);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--bg-surface-soft);
   display: grid;
   place-items: center;
+  opacity: 0.8;
   z-index: 2;
 }
 
@@ -115,8 +101,8 @@
 }
 
 .avatarImage {
-  width: 88px;
-  height: 88px;
+  width: 100px;
+  height: 100px;
 }
 
 .avatarImageLarge {
@@ -136,8 +122,8 @@
 }
 
 .cameraBtn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
 }
 
 .cameraBtnLarge {
@@ -156,21 +142,23 @@
 }
 
 .nameRow h2 {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 19px;
 }
 
 .headInfo p {
   margin-top: 4px;
   color: var(--text-secondary);
   font-size: 16px;
+  line-height: 19px;
   font-weight: 600;
 }
 
 .menu {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .menuItem {
@@ -179,10 +167,9 @@
   gap: 12px;
   width: 100%;
   text-align: left;
-  border: 1px solid var(--border-default);
   border-radius: 12px;
-  padding: 14px 12px;
-  background: var(--bg-surface);
+  padding: 10px 14px 10px 8px ;
+  background: var(--bg-surface-soft);
 }
 
 .menuText {
@@ -193,7 +180,8 @@
 .menuText strong {
   display: block;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 19px;
   color: var(--text-primary);
 }
 
@@ -203,18 +191,18 @@
   font-size: 14px;
   color: var(--text-secondary);
   font-weight: 600;
+  line-height: 14px;
 }
 
 .arrowRight {
   transform: rotate(-90deg);
-  opacity: 0.45;
   flex-shrink: 0;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .sectionHead {
@@ -230,49 +218,50 @@
 .backBtn {
   position: absolute;
   left: 0;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--bg-surface-muted);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  padding-right: 2px;
 }
 
 .arrowLeft {
   transform: rotate(90deg);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .sectionHead h2 {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
 }
 
 .avatarBlock {
   display: flex;
   justify-content: center;
-  margin: 8px 0 12px;
+  margin: 8px 0 6px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .field span {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .field input {
   border: none;
-  border-radius: 10px;
-  height: 52px;
-  padding: 0 16px;
+  border-radius: 14px;
+  height: 56px;
+  padding: 0 14px;
   background: var(--bg-input);
   color: var(--text-primary);
   font-weight: 600;
@@ -291,7 +280,9 @@
 .primaryBtn {
   background: var(--primary);
   color: #fff;
-  margin-top: 8px;
+  font-weight: 600;
+  border-radius: 14px;
+  height: 68px;
 }
 
 .primaryBtn:disabled {
@@ -326,6 +317,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 190px;
 }
 
 .historyList {
@@ -338,21 +330,35 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 13px 14px;
   border-radius: 14px;
-  background: var(--bg-surface-muted);
+  background: var(--bg-surface-soft);
 }
 
-.historyItem strong {
+.historyTitle {
   display: block;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.historyItem p {
+.historyPriceText {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.historyReference {
   margin-top: 2px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.historyDate {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -382,16 +388,16 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 192px;
 }
 
 .switchRow {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--border-default);
   border-radius: 12px;
-  padding: 14px 12px;
-  background: var(--bg-surface);
+  padding: 10px 20px 10px 8px;
+  background: var(--bg-surface-soft);
 }
 
 .switchText {
@@ -407,15 +413,15 @@
 
 .switchText p {
   margin-top: 2px;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .toggleOn,
 .toggleOff {
-  width: 48px;
-  height: 28px;
+  width: 68px;
+  height: 30px;
   border-radius: 999px;
   position: relative;
   flex-shrink: 0;
@@ -432,17 +438,17 @@
 
 .toggleOn span,
 .toggleOff span {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   background: var(--bg-surface);
   border-radius: 50%;
   position: absolute;
-  top: 3px;
+  top: 2px;
   transition: left 0.2s ease;
 }
 
 .toggleOn span {
-  left: 23px;
+  left: 38px;
 }
 
 .toggleOff span {
@@ -456,13 +462,13 @@
   width: 100%;
   text-align: left;
   border-radius: 14px;
-  background: var(--bg-surface-muted);
-  padding: 14px;
+  background: var(--bg-surface-soft);
+  padding: 10px 12px 10px 8px;
 }
 
 .settingsIconWrap {
-  width: 44px;
-  height: 44px;
+  width: 50px;
+  height: 50px;
   border-radius: 12px;
   background: var(--bg-active-soft);
   display: grid;
@@ -484,7 +490,7 @@
 
 .settingsCardText p {
   margin-top: 2px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 600;
   line-height: 1.35;
@@ -513,13 +519,13 @@
 
 .segmentBtn,
 .segmentActive {
-  height: 32px;
-  min-width: 40px;
+  height: 46px;
+  min-width: 50px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -535,9 +541,15 @@
 .aboutBlock {
   display: flex;
   align-items: flex-start;
+  justify-content: start;
   gap: 10px;
   margin-top: 4px;
   padding: 4px 2px;
+}
+
+.aboutBlock img {
+  margin-top: 10px;
+  margin-left: 20px;
 }
 
 .aboutBlock strong {
@@ -549,6 +561,7 @@
 
 .aboutBlock p {
   margin-top: 2px;
+  margin-bottom: 160px;
   font-size: 13px;
   color: var(--text-secondary);
   font-weight: 600;
@@ -561,8 +574,9 @@
   gap: 12px;
   text-align: left;
   border-radius: 14px;
-  background: var(--bg-surface-muted);
-  padding: 14px;
+  background: var(--bg-surface-soft);
+  padding: 10px 12px 10px 8px; 
+  
 }
 
 .themeOptionText {
@@ -585,8 +599,8 @@
 
 .radio,
 .radioActive {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid #c5cad8;
   flex-shrink: 0;
@@ -594,17 +608,28 @@
 
 .radioActive {
   border-color: #0a6af7;
-  background: radial-gradient(circle, #0a6af7 0 5px, transparent 6px);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #0a6af7;
+  background: radial-gradient(
+    circle,
+    #fff 0 5px,
+    #0a6af7 6px 100%
+  );
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .themePreviewWrap {
   position: relative;
   margin-top: 8px;
-  padding: 20px 16px;
+  padding: 26px 14px 24px 14px;
   border-radius: 16px;
-  background: var(--bg-surface-muted);
+  background: var(--bg-surface-soft);
   min-height: 180px;
   overflow: hidden;
+  
 }
 
 .themePreviewLight,

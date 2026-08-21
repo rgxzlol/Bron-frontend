@@ -1,5 +1,3 @@
-"use client";
-
 import { popularPlaces } from "@/data/popular";
 import { assets } from "@/lib/assets";
 import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
@@ -7,24 +5,15 @@ import { routes } from "@/config/routes";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-
-const POPULAR_TITLE_KEYS: Record<number, string> = {
-  1: "categories.beautySalon",
-  2: "categories.gym",
-  3: "categories.clinic",
-};
 
 export default function Popular() {
-  const { t, language } = useTranslation();
-
   return (
     <section>
       <h2 className="mb-[20px] text-[24px] font-semibold">
-        {t("home.popular")}
+        Популярные места
       </h2>
 
-      <div className="flex flex-nowrap gap-[35px] items-center">
+      <div className="flex flex-nowrap gap-[20px] items-center">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
@@ -34,15 +23,15 @@ export default function Popular() {
             <Image
               className=" w-full object-cover transition-transform duration-300 group-hover:scale-105"
               src={place.img}
-              alt={title}
+              alt={place.title}
               width={274}
               height={169}
             />
 
-            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[6px] items-center">
+            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[4px] items-center">
               <div className="flex flex-col gap-[4px]">
                 <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
-                  {title}
+                  {place.title}
                 </span>
 
                 <div className="flex flex-wrap items-center gap-[15px]">
@@ -50,8 +39,6 @@ export default function Popular() {
                     <Image
                       src={assets.popular.starRating}
                       alt="Рейтинг"
-                      width={21}
-                      height={21}
                     />
 
                     <p className="text-[15px] font-semibold">
@@ -60,7 +47,7 @@ export default function Popular() {
 
                     <p className="text-[15px] font-semibold opacity-75">
                       ({place.reviews}{" "}
-                      {pluralizeReviews(place.reviews, language)})
+                      {pluralizeReviews(place.reviews)})
                     </p>
                   </div>
 
@@ -68,39 +55,36 @@ export default function Popular() {
                     <Image
                       src={assets.popular.timeIcon}
                       alt="Время"
-                      width={18}
-                      height={18}
                     />
 
                     <p className="text-[15px] font-semibold">
-                      {formatDurationMinutes(place.time, language)}
+                      {formatDurationMinutes(place.time)}
                     </p>
                   </div>
                 </div>
 
                 <p className="opacity-70 justify-start text-black text-[13px] font-semibold">
-                  {t("map.popularDesc")}
+                  {place.desc}
                 </p>
               </div>
 
-              <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3] leading-[19px]  " />
+              <Button text="Забронировать" as="span" className="transition-colors duration-300 group-hover:bg-[#0859d3]" />
             </div>
           </Link>
-          );
-        })}
+        ))}
 
         <Link
           href={routes.home}
-          className="max-h-max flex flex-col items-center gap-1.75 rounded-[18px] bg-white pb-11 pt-14 pl-6.5  pr-6 group transition-all duration-300 hover:shadow-lg"
+          className="max-h-max flex flex-col items-center gap-2.5 rounded-[18px] bg-white pb-11 pt-14 pl-7 pr-6 group transition-all duration-300 hover:shadow-lg"
         >
           <Image
             src={assets.popular.blueMore}
             alt="Смотреть все"
-            height={24}
-            width={24}
+            height={23}
+            width={23}
           />
 
-          <span className="h-[24px] text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
+          <span className="text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
             Смотреть все
           </span>
         </Link>

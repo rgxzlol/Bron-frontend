@@ -10,8 +10,6 @@ import { routes } from "@/config/routes";
 import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import s from "./authPage.module.css";
 
@@ -22,7 +20,6 @@ export default function AuthPageContent() {
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
-  const { t } = useTranslation();
 
   const [tab, setTab] = useState<AuthTab>("login");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,12 +40,12 @@ export default function AuthPageContent() {
     setError(null);
 
     if (!username.trim() || !password.trim()) {
-      setError(t("auth.fillNamePassword"));
+      setError("Заполните имя и пароль");
       return;
     }
 
     if (tab === "register" && (!email.trim() || !phone.trim())) {
-      setError(t("auth.fillEmailPhone"));
+      setError("Для регистрации укажите email и телефон");
       return;
     }
 
@@ -86,7 +83,7 @@ export default function AuthPageContent() {
       setError(
         submitError instanceof ApiError
           ? submitError.message
-          : t("auth.loginFailed"),
+          : "Не удалось выполнить вход",
       );
     } finally {
       setIsSubmitting(false);
@@ -101,7 +98,10 @@ export default function AuthPageContent() {
         </Link>
 
         <div className={s.topActions}>
-          <LanguageSelector />
+          <button type="button" className={s.langBtn}>
+            <Image src={assets.header.ruLang} alt="" width={22} height={22} />
+            RU
+          </button>
           <ThemeToggle />
         </div>
       </div>
@@ -114,32 +114,32 @@ export default function AuthPageContent() {
               className={tab === "login" ? s.tabActive : s.tab}
               onClick={() => setTab("login")}
             >
-              {t("auth.loginTab")}
+              Войти в аккаунт
             </button>
             <button
               type="button"
               className={tab === "register" ? s.tabActive : s.tab}
               onClick={() => setTab("register")}
             >
-              {t("auth.registerTab")}
+              Создать аккаунт
             </button>
           </div>
 
           <label className={s.field}>
-            <span className={s.label}>{t("auth.username")}</span>
+            <span className={s.label}>Имя пользователя</span>
             <input
               className={s.input}
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder={t("auth.usernamePlaceholder")}
+              placeholder="Введите имя"
             />
           </label>
 
           {tab === "register" && (
             <>
               <label className={s.field}>
-                <span className={s.label}>{t("auth.email")}</span>
+                <span className={s.label}>Email</span>
                 <input
                   className={s.input}
                   type="email"
@@ -150,7 +150,7 @@ export default function AuthPageContent() {
               </label>
 
               <label className={s.field}>
-                <span className={s.label}>{t("auth.phone")}</span>
+                <span className={s.label}>Телефон</span>
                 <input
                   className={s.input}
                   type="tel"
@@ -163,20 +163,20 @@ export default function AuthPageContent() {
           )}
 
           <label className={s.field}>
-            <span className={s.label}>{t("auth.password")}</span>
+            <span className={s.label}>Пароль</span>
             <div className={s.inputWrap}>
               <input
                 className={s.input}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder={t("auth.passwordPlaceholder")}
+                placeholder="Введите пароль"
               />
               <button
                 type="button"
                 className={s.eyeBtn}
                 onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
               >
                 {showPassword ? "◉" : "◎"}
               </button>
@@ -192,10 +192,10 @@ export default function AuthPageContent() {
             disabled={isSubmitting}
           >
             {isSubmitting
-              ? t("common.loading")
+              ? "Загрузка..."
               : tab === "login"
-                ? t("auth.login")
-                : t("auth.createAccount")}
+                ? "Войти"
+                : "Создать аккаунт"}
           </button>
 
           <button type="button" className={s.socialBtn}>
@@ -205,7 +205,7 @@ export default function AuthPageContent() {
 
           <div className={s.footerActions}>
             <Link href={routes.support} className={s.supportBtn}>
-              {t("auth.support")}
+              Тех.поддержка
             </Link>
             <a
               href="https://t.me/"

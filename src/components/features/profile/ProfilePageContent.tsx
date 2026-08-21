@@ -7,14 +7,7 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { formatPrice } from "@/lib/formatPrice";
 import { readImageFile } from "@/lib/readImageFile";
-import { useTranslation } from "@/lib/i18n/useTranslation";
-import { PAYMENT_TITLE_KEYS, translateErrorMessage, translateLabel } from "@/lib/i18n/labels";
-import { formatDateRu } from "@/lib/formatDate";
-import { useAuthStore } from "@/store/auth.store";
-import {
-  type ProfileLanguage,
-  useProfileStore,
-} from "@/store/profile.store";
+import { type ProfileLanguage, useProfileStore } from "@/store/profile.store";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -23,8 +16,7 @@ type ProfileSection =
   | "payments"
   | "appSettings"
   | "notifications"
-  | "theme"
-  | "logout";
+  | "theme";
 
 type ProfilePageContentProps = {
   onClose?: () => void;
@@ -37,14 +29,20 @@ const langOptions: { id: ProfileLanguage; label: string }[] = [
   { id: "en", label: "EN" },
 ];
 
+const sectionTitles: Record<ProfileSection, string> = {
+  main: "Настройки профиля",
+  personal: "Персональные данные",
+  payments: "Платежи",
+  appSettings: "Настройки",
+  notifications: "Уведомления",
+  theme: "Тема",
+};
+
 export default function ProfilePageContent({
   onClose,
   onSectionChange,
 }: ProfilePageContentProps) {
   const router = useRouter();
-  const { t, locale } = useTranslation();
-  const token = useAuthStore((state) => state.token);
-  const clearToken = useAuthStore((state) => state.clearToken);
   const {
     fullName,
     phone,
@@ -58,10 +56,7 @@ export default function ProfilePageContent({
     setLanguage,
     setTheme,
     toggleNotification,
-    hydrateFromApi,
-    savePersonalInfoToApi,
-    changePasswordToApi,
-    deleteAccountFromApi,
+    savePersonalInfo,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -69,136 +64,49 @@ export default function ProfilePageContent({
   const [section, setSection] = useState<ProfileSection>("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
+  const [fullNameDraft, setFullNameDraft] = useState(fullName);
   const [phoneDraft, setPhoneDraft] = useState(phone);
   const [emailDraft, setEmailDraft] = useState(email);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const sectionTitles: Record<ProfileSection, string> = {
-    main: t("profile.sectionMain"),
-    personal: t("profile.sectionPersonal"),
-    payments: t("profile.sectionPayments"),
-    appSettings: t("profile.sectionAppSettings"),
-    notifications: t("profile.sectionNotifications"),
-    theme: t("profile.sectionTheme"),
-    logout: t("profile.sectionLogout"),
-  };
-
-  useEffect(() => {
-    if (token) {
-      void hydrateFromApi();
-    }
-  }, [token, hydrateFromApi]);
 
   useEffect(() => {
     onSectionChange?.(section);
   }, [section, onSectionChange]);
 
   useEffect(() => {
+    setFullNameDraft(fullName);
     setPhoneDraft(phone);
     setEmailDraft(email);
-  }, [phone, email]);
+  }, [fullName, phone, email]);
 
   const isPersonalDirty = useMemo(
-    () => phoneDraft.trim() !== phone || emailDraft.trim() !== email,
-    [phoneDraft, phone, emailDraft, email],
+    () =>
+      fullNameDraft.trim() !== fullName ||
+      phoneDraft.trim() !== phone ||
+      emailDraft.trim() !== email,
+    [fullNameDraft, fullName, phoneDraft, phone, emailDraft, email],
   );
 
-  const canChangePassword =
-    oldPassword.trim().length > 0 &&
-    newPassword.trim().length > 0 &&
-    confirmPassword.trim().length > 0;
-
-  const visibleHistory = showAllHistory ? paymentHistory : paymentHistory.slice(0, 2);
+  const visibleHistory = showAllHistory
+    ? paymentHistory
+    : paymentHistory.slice(0, 2);
 
   function goTo(next: ProfileSection) {
     setSection(next);
   }
 
-  async function handleSavePersonalInfo() {
-    if (!phoneDraft.trim() || !emailDraft.trim()) return;
-
-    setSaving(true);
-    setSaveError(null);
-
-    try {
-      await savePersonalInfoToApi({
-        phone: phoneDraft,
-        email: emailDraft,
-      });
-      goTo("main");
-    } catch (error) {
-      setSaveError(
-        error instanceof Error
-          ? translateErrorMessage(t, error.message)
-          : t("profile.saveFailed"),
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleChangePassword() {
-    if (newPassword !== confirmPassword) {
-      setPasswordError(t("profile.passwordMismatch"));
+  function handleSavePersonalInfo() {
+    if (!fullNameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim())
       return;
-    }
 
     setSaving(true);
-    setPasswordError(null);
-    setPasswordSuccess(false);
-
-    try {
-      await changePasswordToApi({
-        oldPassword,
-        newPassword,
-      });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordSuccess(true);
-    } catch (error) {
-      setPasswordError(
-        error instanceof Error
-          ? translateErrorMessage(t, error.message)
-          : t("profile.passwordChangeFailed"),
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    if (!confirm(t("profile.deleteAccountConfirm"))) return;
-
-    setDeleting(true);
-
-    try {
-      await deleteAccountFromApi();
-      clearToken();
-      onClose?.();
-      router.push(routes.home);
-    } catch (error) {
-      alert(
-        error instanceof Error
-          ? translateErrorMessage(t, error.message)
-          : t("profile.deleteFailed"),
-      );
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  function handleLogout() {
-    clearToken();
-    onClose?.();
-    router.push(routes.home);
+    savePersonalInfo({
+      fullName: fullNameDraft,
+      phone: phoneDraft,
+      email: emailDraft,
+    });
+    setSaving(false);
+    goTo("main");
   }
 
   function handleBookingsClick() {
@@ -212,7 +120,8 @@ export default function ProfilePageContent({
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
-    if (current === "theme" || current === "notifications") return "appSettings";
+    if (current === "theme" || current === "notifications")
+      return "appSettings";
     return "main";
   }
 
@@ -222,7 +131,6 @@ export default function ProfilePageContent({
         <SectionHeader
           title={sectionTitles[section]}
           onBack={() => goTo(getBackSection(section))}
-          backLabel={t("common.back")}
         />
       )}
 
@@ -234,29 +142,45 @@ export default function ProfilePageContent({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt="" className={s.avatarImage} />
               ) : (
-                <Image
-                  src={assets.profile.avatar}
-                  alt=""
-                  width={88}
-                  height={88}
-                  className={s.avatarImage}
-                />
+                // <Image
+                //   src={assets.profile.avatar}
+                //   alt=""
+                //   width={100}
+                //   height={100}
+                //   className={s.avatarImage}
+                // />
+                <div className="bg-[#D9D9D9] w-[100px] h-[100px] rounded-full"></div>
               )}
               <button
                 type="button"
                 className={s.cameraBtn}
-                aria-label={t("profile.changePhoto")}
+                aria-label="Изменить фото"
                 onClick={() => avatarInputRef.current?.click()}
               >
-                <Image src={assets.profile.camera} alt="" width={16} height={16} />
+                <Image
+                  src={assets.profile.camera}
+                  alt=""
+                  width={20}
+                  height={18}
+                />
               </button>
             </div>
 
             <div className={s.headInfo}>
               <div className={s.nameRow}>
                 <h2>{fullName}</h2>
-                <button type="button" onClick={() => goTo("personal")} aria-label={t("common.edit")}>
-                  <Image src={assets.profile.edit} alt="" width={18} height={18} />
+                <button
+                  type="button"
+                  onClick={() => goTo("personal")}
+                  aria-label="Редактировать"
+                  className=" bg-[var(--bg-page)] p-[6px] rounded-[999px] opacity-60"
+                >
+                  <Image
+                    src={assets.profile.edit}
+                    alt=""
+                    width={10}
+                    height={10}
+                  />
                 </button>
               </div>
               <p>{phone}</p>
@@ -266,34 +190,29 @@ export default function ProfilePageContent({
           <div className={s.menu}>
             <MenuItem
               icon={assets.profile.profileData}
-              title={t("profile.personalData")}
-              subtitle={t("profile.personalDataSubtitle")}
+              title="Персональные данные"
+              subtitle="Редактирование данных"
               onClick={() => goTo("personal")}
             />
             <MenuItem
               icon={assets.profile.myBookings}
-              title={t("profile.myBookings")}
-              subtitle={t("profile.myBookingsSubtitle")}
+              title="Мои брони"
+              subtitle="Все ваши брони"
               onClick={handleBookingsClick}
             />
             <MenuItem
               icon={assets.profile.card}
-              title={t("profile.payments")}
-              subtitle={t("profile.paymentsSubtitle")}
+              title="Платежи"
+              subtitle="История транзакций"
               onClick={() => goTo("payments")}
             />
             <MenuItem
               icon={assets.profile.settings}
-              title={t("profile.settings")}
-              subtitle={t("profile.settingsSubtitle")}
+              title="Настройки"
+              subtitle="Язык и тема"
               onClick={() => goTo("appSettings")}
             />
           </div>
-
-          <button type="button" className={s.logoutBtn} onClick={() => goTo("logout")}>
-            <Image src={assets.profile.quit} alt="" width={17} height={21} />
-            {t("profile.logout")}
-          </button>
         </div>
       )}
 
@@ -305,120 +224,91 @@ export default function ProfilePageContent({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt="" className={s.avatarImageLarge} />
               ) : (
-                <Image
-                  src={assets.profile.avatar}
-                  alt=""
-                  width={120}
-                  height={120}
-                  className={s.avatarImageLarge}
-                />
+                // <Image
+                //   src={assets.profile.avatar}
+                //   alt=""
+                //   width={120}
+                //   height={120}
+                //   className={s.avatarImageLarge}
+                // />
+                <div className="bg-[#D9D9D9] w-[100px] h-[100px] rounded-full"></div>
               )}
               <button
                 type="button"
                 className={s.cameraBtnLarge}
-                aria-label={t("profile.changePhoto")}
+                aria-label="Изменить фото"
                 onClick={() => avatarInputRef.current?.click()}
               >
-                <Image src={assets.profile.camera} alt="" width={18} height={18} />
+                <Image
+                  src={assets.profile.camera}
+                  alt=""
+                  width={18}
+                  height={18}
+                />
               </button>
             </div>
           </div>
 
           <label className={s.field}>
-            <span>{t("profile.username")}</span>
-            <input value={fullName} readOnly className={s.readOnlyInput} />
+            <span>Имя</span>
+            <input
+              value={fullNameDraft}
+              onChange={(e) => setFullNameDraft(e.target.value)}
+            />
           </label>
           <label className={s.field}>
-            <span>{t("profile.phone")}</span>
-            <input value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} />
+            <span>Номер телефона</span>
+            <input
+              value={phoneDraft}
+              onChange={(e) => setPhoneDraft(e.target.value)}
+            />
           </label>
           <label className={s.field}>
-            <span>{t("profile.email")}</span>
-            <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
+            <span>Электронная почта</span>
+            <input
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+            />
           </label>
-
-          {saveError && <p className={s.errorText}>{saveError}</p>}
-
+          <p className=" text-[var(--text-primary)] text-[12px] leading-[14px] opacity-60 ml-auto mr-auto font-[600] mt-[8px]">
+            Измените свои данные и нажмите сохранить
+          </p>
           <button
             type="button"
             className={s.primaryBtn}
-            onClick={() => void handleSavePersonalInfo()}
+            onClick={handleSavePersonalInfo}
             disabled={!isPersonalDirty || saving}
           >
-            {saving ? t("common.saving") : t("common.saveChanges")}
+            {saving ? "Сохранение..." : "Сохранить изменения"}
           </button>
-
-          <div className={s.passwordBlock}>
-            <h3 className={s.blockTitle}>{t("profile.changePassword")}</h3>
-            <label className={s.field}>
-              <span>{t("profile.currentPassword")}</span>
-              <input
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-            </label>
-            <label className={s.field}>
-              <span>{t("profile.newPassword")}</span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </label>
-            <label className={s.field}>
-              <span>{t("profile.confirmNewPassword")}</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </label>
-            {passwordError && <p className={s.errorText}>{passwordError}</p>}
-            {passwordSuccess && (
-              <p className={s.successText}>{t("profile.passwordChanged")}</p>
-            )}
-            <button
-              type="button"
-              className={s.secondaryBtn}
-              onClick={() => void handleChangePassword()}
-              disabled={!canChangePassword || saving || !token}
-            >
-              {saving ? t("common.saving") : t("profile.changePasswordBtn")}
-            </button>
-          </div>
         </div>
       )}
 
       {section === "payments" && (
         <div className={s.section}>
           <div className={s.historyBlock}>
-            <h3 className={s.blockTitle}>{t("profile.paymentHistory")}</h3>
+            <h3 className={s.blockTitle}>История платежей</h3>
             <div className={s.historyList}>
               {visibleHistory.map((item) => (
                 <div className={s.historyItem} key={item.id}>
                   <div>
-                    <strong>
-                      {translateLabel(t, item.title, PAYMENT_TITLE_KEYS)}
-                    </strong>
-                    <p>№{item.reference}</p>
+                    <strong className={s.historyTitle}>{item.title}</strong>
+                    <p className={s.historyReference}>№{item.reference}</p>
                   </div>
                   <div className={s.historyPrice}>
-                    <strong>
-                      {formatPrice(item.amount, locale)} {t("common.sum")}
-                    </strong>
-                    <p>
-                      {/^\d{4}-\d{2}-\d{2}/.test(item.date)
-                        ? formatDateRu(new Date(`${item.date}T12:00:00`), locale)
-                        : item.date}
-                    </p>
+                    <strong className={s.historyPriceText}>{formatPrice(item.amount)} сум</strong>
+                    <p className={s.historyDate}>{item.date}</p>
                   </div>
                 </div>
               ))}
             </div>
             {!showAllHistory && paymentHistory.length > 2 && (
-              <button type="button" className={s.viewAllBtn} onClick={() => setShowAllHistory(true)}>
-                {t("common.viewAll")}
+              <button
+                type="button"
+                className={s.viewAllBtn}
+                onClick={() => setShowAllHistory(true)}
+              >
+                Смотреть все
               </button>
             )}
           </div>
@@ -432,15 +322,17 @@ export default function ProfilePageContent({
               <Image src={assets.profile.lang} alt="" width={20} height={20} />
             </div>
             <div className={s.settingsCardText}>
-              <strong>{t("profile.language")}</strong>
-              <p>{t("profile.languageHint")}</p>
+              <strong>Язык</strong>
+              <p>Выберите удобный язык</p>
             </div>
             <div className={s.segment}>
               {langOptions.map((lang) => (
                 <button
                   type="button"
                   key={lang.id}
-                  className={language === lang.id ? s.segmentActive : s.segmentBtn}
+                  className={
+                    language === lang.id ? s.segmentActive : s.segmentBtn
+                  }
                   onClick={() => setLanguage(lang.id)}
                 >
                   {lang.label}
@@ -449,37 +341,69 @@ export default function ProfilePageContent({
             </div>
           </div>
 
-          <button type="button" className={s.settingsCard} onClick={() => goTo("theme")}>
+          <button
+            type="button"
+            className={s.settingsCard}
+            onClick={() => goTo("theme")}
+          >
             <div className={s.settingsIconWrap}>
-              <Image src={assets.profile.lightTheme} alt="" width={20} height={20} />
+              <Image
+                src={assets.profile.lightTheme}
+                alt=""
+                width={24}
+                height={24}
+              />
             </div>
             <div className={s.settingsCardText}>
-              <strong>{t("profile.theme")}</strong>
-              <p>{t("profile.themeHint")}</p>
+              <strong>Тема</strong>
+              <p>Можно выбрать любую тему</p>
             </div>
             <span className={s.navArrowBtn} aria-hidden>
-              <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+              <Image
+                src={assets.profile.arrow}
+                alt=""
+                width={12}
+                height={12}
+                className={s.arrowRight}
+              />
             </span>
           </button>
 
-          <button type="button" className={s.settingsCard} onClick={() => goTo("notifications")}>
+          <button
+            type="button"
+            className={s.settingsCard}
+            onClick={() => goTo("notifications")}
+          >
             <div className={s.settingsIconWrap}>
-              <Image src={assets.header.notification} alt="" width={20} height={20} />
+              <Image
+                src={assets.header.notificationIcon}
+                alt=""
+                width={24}
+                height={24}
+              />
             </div>
             <div className={s.settingsCardText}>
-              <strong>{t("profile.notifications")}</strong>
-              <p>{t("profile.notificationsHint")}</p>
+              <strong>Уведомления</strong>
+              <p>Настройте, какие уведомления вы хотите получать</p>
             </div>
             <span className={s.navArrowBtn} aria-hidden>
-              <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+              <Image
+                src={assets.profile.arrow}
+                alt=""
+                width={12}
+                height={12}
+                className={s.arrowRight}
+              />
             </span>
           </button>
-
+              
+                <div className="h-[3px] bg-[var(--bg-surface-soft)] mt-[11px] mb-[1px] "></div>
+                
           <div className={s.aboutBlock}>
             <Image src={assets.profile.alert} alt="" width={24} height={24} />
             <div>
-              <strong>{t("profile.aboutApp")}</strong>
-              <p>{t("profile.version", { version: "1.0.0" })}</p>
+              <strong>О приложении</strong>
+              <p>Версия 1.0.0</p>
             </div>
           </div>
         </div>
@@ -490,29 +414,29 @@ export default function ProfilePageContent({
           <div className={s.switchList}>
             <SwitchRow
               icon={assets.profile.push}
-              title={t("profile.pushTitle")}
-              subtitle={t("profile.pushSubtitle")}
+              title="Push-уведомления"
+              subtitle="Получать push-уведомления"
               value={notifications.push}
               onToggle={() => toggleNotification("push")}
             />
             <SwitchRow
               icon={assets.profile.email}
-              title={t("profile.emailTitle")}
-              subtitle={t("profile.emailSubtitle")}
+              title="Email уведомления"
+              subtitle="Получать письма на Email"
               value={notifications.email}
               onToggle={() => toggleNotification("email")}
             />
             <SwitchRow
               icon={assets.profile.booking}
-              title={t("profile.bookingReminderTitle")}
-              subtitle={t("profile.bookingReminderSubtitle")}
+              title="Напоминать о брони"
+              subtitle="Уведомлять о будущих визитах"
               value={notifications.bookingReminder}
               onToggle={() => toggleNotification("bookingReminder")}
             />
             <SwitchRow
               icon={assets.profile.sales}
-              title={t("profile.promotionsTitle")}
-              subtitle={t("profile.promotionsSubtitle")}
+              title="Акции и предложения"
+              subtitle="Получать акции и новости"
               value={notifications.promotions}
               onToggle={() => toggleNotification("promotions")}
             />
@@ -523,15 +447,15 @@ export default function ProfilePageContent({
       {section === "theme" && (
         <div className={s.section}>
           <ThemeOption
-            title={t("profile.lightTheme")}
-            description={t("profile.lightThemeDesc")}
+            title="Светлая тема"
+            description="Светлый интерфейс приложения"
             icon={assets.profile.lightTheme}
             selected={theme === "light"}
             onSelect={() => setTheme("light")}
           />
           <ThemeOption
-            title={t("profile.darkTheme")}
-            description={t("profile.darkThemeDesc")}
+            title="Темная тема"
+            description="Темный интерфейс приложения"
             icon={assets.profile.nightTheme}
             selected={theme === "dark"}
             onSelect={() => setTheme("dark")}
@@ -541,51 +465,18 @@ export default function ProfilePageContent({
             <Image
               src={assets.profile.lightThemePreview}
               alt=""
-              width={220}
-              height={160}
+              width={190}
+              height={200}
               className={s.themePreviewLight}
             />
             <Image
               src={assets.profile.nightThemePreview}
               alt=""
-              width={220}
-              height={160}
+              width={190}
+              height={200}
               className={s.themePreviewDark}
             />
           </div>
-        </div>
-      )}
-
-      {section === "logout" && (
-        <div className={s.logoutSection}>
-          <Image
-            src={assets.profile.quitIllustration}
-            alt=""
-            width={200}
-            height={160}
-            className={s.logoutImage}
-          />
-          <p className={s.logoutTitle}>{t("profile.logoutConfirm")}</p>
-          <small>{t("profile.logoutHint")}</small>
-          <button type="button" className={s.logoutConfirmBtn} onClick={handleLogout}>
-            <span className={s.logoutConfirmIcon}>
-              <Image src={assets.profile.quit} alt="" width={18} height={18} />
-            </span>
-            {t("profile.logout")}
-          </button>
-          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
-            {t("common.cancel")}
-          </button>
-          {token && (
-            <button
-              type="button"
-              className={s.deleteAccountBtn}
-              onClick={() => void handleDeleteAccount()}
-              disabled={deleting}
-            >
-              {deleting ? t("common.deleting") : t("profile.deleteAccount")}
-            </button>
-          )}
         </div>
       )}
       <input
@@ -606,16 +497,25 @@ export default function ProfilePageContent({
 function SectionHeader({
   title,
   onBack,
-  backLabel,
 }: {
   title: string;
   onBack: () => void;
-  backLabel: string;
 }) {
   return (
     <div className={s.sectionHead}>
-      <button type="button" className={s.backBtn} onClick={onBack} aria-label={backLabel}>
-        <Image src={assets.profile.arrow} alt="" width={14} height={14} className={s.arrowLeft} />
+      <button
+        type="button"
+        className={s.backBtn}
+        onClick={onBack}
+        aria-label="Назад"
+      >
+        <Image
+          src={assets.profile.arrow}
+          alt=""
+          width={14}
+          height={14}
+          className={s.arrowLeft}
+        />
       </button>
       <h2>{title}</h2>
     </div>
@@ -635,12 +535,22 @@ function MenuItem({
 }) {
   return (
     <button type="button" className={s.menuItem} onClick={onClick}>
-      <Image src={icon} alt="" width={24} height={24} />
+      <div className="bg-[var(--bg-profile-img)] p-[12px_12px_13px_14px] rounded-[11px]">
+        <Image src={icon} alt="" width={24} height={24} />
+      </div>
       <div className={s.menuText}>
         <strong>{title}</strong>
         <span>{subtitle}</span>
       </div>
-      <Image src={assets.profile.arrow} alt="" width={12} height={12} className={s.arrowRight} />
+      <div className="bg-[var(--bg-surface)] rounded-[999px] w-[28px] h-[28px] flex items-center justify-center">
+        <Image
+          src={assets.profile.arrow}
+          alt=""
+          width={12}
+          height={14}
+          className={s.arrowRight}
+        />
+      </div>
     </button>
   );
 }
@@ -660,7 +570,10 @@ function SwitchRow({
 }) {
   return (
     <div className={s.switchRow}>
-      <Image src={icon} alt="" width={24} height={24} />
+      <div className={s.settingsIconWrap}>
+        <Image src={icon} alt="" width={24} height={24} />
+      </div>
+      
       <div className={s.switchText}>
         <strong>{title}</strong>
         <p>{subtitle}</p>
@@ -693,7 +606,7 @@ function ThemeOption({
   return (
     <button type="button" className={s.themeOption} onClick={onSelect}>
       <div className={s.settingsIconWrap}>
-        <Image src={icon} alt="" width={20} height={20} />
+        <Image src={icon} alt="" width={24} height={24} />
       </div>
       <div className={s.themeOptionText}>
         <strong>{title}</strong>

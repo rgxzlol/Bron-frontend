@@ -7,190 +7,237 @@ import { BookingCancelModal } from './BookingCancelModal';
 import { BookingEditModal } from './BookingEditModal';
 
 interface BookingCardProps {
-    status?: 'upcoming' | 'finished';
+    status?: 'upcoming' | 'past';
+    bookingId?: number;
     bookingDate?: string;
     bookingTime?: string;
     totalPrice?: number;
+    guestsCount?: number;
 }
+
+const ORDER_ITEMS = [
+    { name: 'Бронирование зала', price: '80 000 сум', qty: 'X1', icon: 'hall' },
+    { name: 'Протеиновый батончик', price: '10 000 сум', qty: 'X1', icon: 'bar' },
+    { name: 'Бронирование зала', price: '80 000 сум', qty: 'X1', icon: 'bottle' },
+] as const;
+
+function formatBookingDate(value?: string) {
+    if (!value) return '12 июля 2026';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date
+        .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+        .replace(' г.', '');
+}
+
+function formatPrice(value?: number) {
+    return value != null ? `${value.toLocaleString('ru-RU')}сум` : '98 000сум';
+}
+
+const CalendarIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="3" />
+        <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+);
+
+const ClockIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+    </svg>
+);
+
+const GuestsIcon = () => (
+    <svg width="16" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" />
+        <path d="M16 5.2a3.5 3.5 0 0 1 0 5.6M18.5 15.5c1.7.7 2.7 2.2 3 4.5" />
+    </svg>
+);
+
+const ChevronIcon = ({ className = '' }: { className?: string }) => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+        <path d="M6 9l6 6 6-6" />
+    </svg>
+);
+
+const OrderItemIcon = ({ kind }: { kind: string }) => {
+    if (kind === 'bar') {
+        return (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2.5" y="8.5" width="19" height="7" rx="2" transform="rotate(-12 12 12)" />
+                <path d="M8.2 9.6l1 4.6M12 8.8l1 4.6M15.8 8l1 4.6" />
+            </svg>
+        );
+    }
+    if (kind === 'bottle') {
+        return (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 2.5h4M10.5 2.5v3M13.5 2.5v3M9 5.5h6c1 1.5 1.5 2.8 1.5 4.5v9a2.5 2.5 0 0 1-2.5 2.5h-4A2.5 2.5 0 0 1 7.5 19v-9c0-1.7.5-3 1.5-4.5Z" />
+                <path d="M7.5 12h9M7.5 16h9" />
+            </svg>
+        );
+    }
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M8 8.5a4.5 4.5 0 1 1 8 0" />
+            <path d="M6.5 8.5h11l1 11a2 2 0 0 1-2 2.2h-9a2 2 0 0 1-2-2.2l1-11Z" />
+        </svg>
+    );
+};
 
 export const BookingCard = ({
     status = 'upcoming',
+    bookingId,
     bookingDate,
     bookingTime,
     totalPrice,
+    guestsCount = 12,
 }: BookingCardProps) => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const UpcomingCardContent = () => (
-        <article className="flex flex-col max-w-[1525px] w-full rounded-[18px] bg-white overflow-hidden pr-[18px] pb-[18px]">
-            <div className="flex flex-row mb-[18px]">
-                <div className="shrink-0 w-[468px] relative">
+    const [isOrderOpen, setIsOrderOpen] = useState(false);
+
+    const isPast = status === 'past';
+    const displayDate = formatBookingDate(bookingDate);
+    const displayTime = bookingTime ?? '12:00-13:00';
+    const displayPrice = formatPrice(totalPrice);
+
+    return (
+        <>
+            <article className="flex w-full flex-col rounded-[18px] bg-[var(--bg-surface)] p-[10px]">
+                <div className="relative h-[180px] w-full overflow-hidden rounded-[12px] md:h-[210px]">
                     <Image
                         src={assets.map.photo1}
                         alt="BronFitness Club"
                         fill
-                        className="object-cover block"
+                        className="object-cover"
                     />
-                    <span className="rounded-[16px] w-[51px] h-[31px] bg-black/50 text-white text-[14px] font-semibold grid place-items-center absolute left-[12px] bottom-[10px]">
+                    <span className="absolute left-[10px] top-[10px] rounded-full bg-[#e7ebfd] px-[12px] py-[6px] text-[13px] font-semibold text-[#4a58fe]">
+                        Спорт зал
+                    </span>
+                    <div className="absolute right-[10px] top-[10px] flex items-center gap-[8px]">
+                        {isPast ? (
+                            <span className="rounded-full bg-white px-[12px] py-[6px] text-[13px] font-semibold text-[#6b7280]">
+                                Завершено
+                            </span>
+                        ) : (
+                            <>
+                                <span className="rounded-full bg-[#e7f8ef] px-[12px] py-[6px] text-[13px] font-semibold text-[#00bd08]">
+                                    Подтверждено
+                                </span>
+                                <BookingDropdown
+                                    onCancelClick={() => setIsCancelModalOpen(true)}
+                                    onEditClick={() => setIsEditModalOpen(true)}
+                                />
+                            </>
+                        )}
+                    </div>
+                    <span className="absolute bottom-[10px] left-[10px] rounded-[10px] bg-black/60 px-[10px] py-[4px] text-[12px] font-semibold text-white">
                         1/3
                     </span>
                 </div>
 
-                <div className="grow flex flex-col px-[24px] py-[20px] gap-[12px]">
-                    <div className="flex items-start justify-between gap-[16px]">
-                        <span className="rounded-[17px] py-[6px] px-[16px] bg-[#e7ebfd] font-semibold text-[16px] text-[#4a58fe] whitespace-nowrap">
-                            Спорт зал
+                <div className="flex flex-col px-[6px] pt-[12px]">
+                    <h2 className="text-[20px] font-bold text-[var(--text-primary)]">BronFitness Club</h2>
+                    <p className="mt-[2px] text-[13px] font-medium text-[var(--text-secondary)]">
+                        ул. Сайрам 123, Ташкент
+                    </p>
+
+                    <div className="mt-[12px] flex flex-wrap gap-[8px]">
+                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                            <CalendarIcon />
+                            {displayDate}
                         </span>
-                        <div className="flex items-center gap-[10px]">
-                            <span className="rounded-[18px] py-[7px] px-[22px] font-semibold text-[16px] text-[#00bd08] bg-[#e7f8ef] whitespace-nowrap">
-                                • Подтверждено
-                            </span>
-                            <BookingDropdown onCancelClick={() => setIsCancelModalOpen(true)} onEditClick={() => setIsEditModalOpen(true)} />
-                        </div>
+                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                            <ClockIcon />
+                            {displayTime}
+                        </span>
+                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                            <GuestsIcon />
+                            {guestsCount} гостей
+                        </span>
                     </div>
 
-                    <div className="flex flex-row justify-between gap-[16px]">
-                        <div className="flex justify-start flex-col gap-0">
-                            <h2 className="font-bold text-[32px] text-black mb-[4px]">
-                                BronFitness Club
-                            </h2>
-                            <p className="font-semibold text-[20px] text-black flex items-center gap-[7px] mb-[20px]">
-                                <Image src={assets.booking.gpsIcon} alt='gps' />
-                                ул. Сайрам 123, Ташкент
+                    <div className="mt-[14px] flex items-center justify-between gap-[12px]">
+                        {isPast ? (
+                            <p className="flex items-baseline gap-[10px] text-[15px] font-medium text-[var(--text-primary)]">
+                                Итого
+                                <strong className="text-[18px] font-bold">{displayPrice}</strong>
                             </p>
-                            <div className="flex gap-[11px]">
-                                <div className="rounded-[12px] bg-[#FAFAFF] py-[10px] px-[12px] flex flex-col gap-[2px]">
-                                    <span className="font-semibold text-[16px] text-black">Время</span>
-                                    <span className="font-semibold text-[14px] text-black flex items-center gap-[6px]">
-                                        12 июня 2026, ЧТ
-                                    </span>
+                        ) : (
+                            <>
+                                <div className="flex flex-col">
+                                    <span className="text-[14px] font-medium text-[var(--text-primary)]">Итого</span>
+                                    <strong className="text-[18px] font-bold text-[var(--text-primary)]">
+                                        {displayPrice}
+                                    </strong>
                                 </div>
-                                <div className="rounded-[12px] bg-[#FAFAFF] py-[10px] px-[12px] flex flex-col gap-[2px]">
-                                    <span className="font-semibold text-[16px] text-black">Время</span>
-                                    <span className="font-semibold text-[14px] text-black flex items-center gap-[6px]">
-                                        12:00 – 13:00
-                                    </span>
-                                </div>
-                                <div className="rounded-[12px] bg-[#FAFAFF] py-[10px] px-[12px] flex flex-col gap-[2px]">
-                                    <span className="font-semibold text-[16px] text-black">Гости</span>
-                                    <span className="font-semibold text-[14px] text-black flex items-center gap-[6px]">
-                                        <Image src={assets.booking.guestsIcon} alt='guests' /> 1
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col justify-end">
-                            <div className="flex flex-col gap-[2px] shrink-0">
-                                <span className="font-semibold text-[20px] text-black opacity-60">Итог</span>
-                                <strong className="font-bold text-[36px] text-black whitespace-nowrap">
-                                    {totalPrice != null ? `${totalPrice.toLocaleString("ru-RU")} сум` : "98 000 сум"}
-                                </strong>
-                            </div>
-                            <button
-                                onClick={() => setIsCancelModalOpen(true)}
-                                className="rounded-[12px] bg-[#FAFAFF] font-semibold text-[20px] text-black py-[16px] px-[28px] whitespace-nowrap mt-[38px] transition-all duration-200 hover:bg-gray-200 hover:shadow-sm active:scale-95"
-                            >
-                                Отменить бронь
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCancelModalOpen(true)}
+                                    className="rounded-[12px] border border-[var(--border-default)] px-[16px] py-[12px] text-[14px] font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-95"
+                                >
+                                    Отменить бронь
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
-            </div>
 
-            <button
-                type="button"
-                className="group flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] ml-[18px] rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] active:scale-[0.99]"
-            >
-                <div className="flex items-center gap-[19px]">
-                    <Image src={assets.booking.bagIcon} alt='bag' className="transition-transform duration-200 group-hover:-translate-y-1" />
-                    <span className="font-semibold text-[20px] text-black">Состав заказа</span>
-                    <span className="font-semibold text-[16px] text-[#0A6AF7]">3 товара</span>
-                </div>
-                <span className="rounded-full w-[26px] h-[26px] bg-white grid place-items-center">
-                    <Image src={assets.booking.arrowDown} alt='arrow' />
-                </span>
-            </button>
-        </article>
-    );
-
-    const FinishedCardContent = () => (
-        <article className="flex flex-col max-w-[1525px] w-full rounded-[18px] bg-white overflow-hidden p-[20px] gap-[16px]">
-            <div className="flex flex-row items-center gap-[24px]">
-                <div className="shrink-0 w-[276px] h-[148px] rounded-[18px] overflow-hidden relative">
-                    <Image
-                        src={assets.map.photo1}
-                        alt="BronFitness Club"
-                        fill
-                        className="object-cover block"
-                    />
-                </div>
-
-                <div className="grow flex flex-row justify-between items-center gap-[16px]">
-                    <div className="flex flex-col gap-[12px]">
-                        <span className="w-fit rounded-[17px] py-[6px] px-[16px] bg-[#e7ebfd] font-semibold text-[16px] text-[#4a58fe] whitespace-nowrap">
-                            Спорт зал
+                <div className="mt-[14px] overflow-hidden rounded-[12px] bg-[var(--bg-surface-muted)]">
+                    <button
+                        type="button"
+                        onClick={() => setIsOrderOpen((prev) => !prev)}
+                        aria-expanded={isOrderOpen}
+                        className="flex w-full items-center justify-between px-[14px] py-[16px] transition-colors duration-200 hover:bg-[var(--bg-hover,rgba(0,0,0,0.03))]"
+                    >
+                        <span className="flex items-center gap-[10px]">
+                            <Image src={assets.booking.bagIcon} alt="" width={20} height={20} />
+                            <span className="text-[15px] font-bold text-[var(--text-primary)]">Состав заказа</span>
+                            <span className="text-[14px] font-semibold text-[#0a6af7]">3 товара</span>
                         </span>
-                        <h2 className="font-bold text-[32px] text-black">
-                            BronFitness Club
-                        </h2>
-                        <p className="font-semibold text-[20px] text-black flex items-center gap-[7px]">
-                            <Image src={assets.booking.gpsIcon} alt='gps' />
-                            ул. Сайрам 123, Ташкент
-                        </p>
-                    </div>
-
-                    <div className="flex gap-[16px]">
-                        <div className="rounded-[12px] bg-[#FAFAFF] py-[14px] px-[20px] flex flex-col gap-[4px] min-w-[200px]">
-                            <span className="font-semibold text-[18px] text-black">Время</span>
-                            <span className="font-semibold text-[16px] text-[#6F6F6F]">
-                                12 июня 2026, ЧТ
-                            </span>
-                        </div>
-                        <div className="rounded-[12px] bg-[#FAFAFF] py-[14px] px-[20px] flex flex-col gap-[4px] min-w-[150px]">
-                            <span className="font-semibold text-[18px] text-black">Время</span>
-                            <span className="font-semibold text-[16px] text-[#6F6F6F]">
-                                12:00 – 13:00
-                            </span>
-                        </div>
-                        <div className="rounded-[12px] bg-[#FAFAFF] py-[14px] px-[20px] flex flex-col gap-[4px]">
-                            <span className="font-semibold text-[18px] text-black">Гости</span>
-                            <span className="font-semibold text-[16px] text-[#6F6F6F] flex items-center gap-[6px]">
-                                <Image src={assets.booking.guestsIcon} alt='guests' /> 1
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-[16px]">
-                        <span className="rounded-[18px] py-[7px] px-[22px] font-semibold text-[16px] text-[#4b4b4d] bg-black/5 whitespace-nowrap">
-                            • Завершено
+                        <span className="text-[var(--text-secondary)]">
+                            <ChevronIcon className={`transition-transform duration-200 ${isOrderOpen ? 'rotate-180' : ''}`} />
                         </span>
-                        <strong className="font-bold text-[36px] text-black whitespace-nowrap">98 000 сум</strong>
-                    </div>
-                </div>
-            </div>
+                    </button>
 
-            <button
-                type="button"
-                className="flex justify-between items-center py-[25px] px-[14px] bg-[#FAFAFF] rounded-[6px] transition-all duration-200 hover:bg-[#f0f0f5] shadow-inner"
-            >
-                <div className="flex items-center gap-[19px]">
-                    <Image src={assets.booking.bagIcon} alt='bag' />
-                    <span className="font-semibold text-[20px] text-black">Состав заказа</span>
-                    <span className="font-semibold text-[16px] text-[#0A6AF7]">3 товара</span>
+                    {isOrderOpen && (
+                        <ul className="flex flex-col gap-[8px] px-[8px] pb-[10px]">
+                            {ORDER_ITEMS.map((item, index) => (
+                                <li
+                                    key={index}
+                                    className="flex items-center gap-[12px] rounded-[12px] bg-[var(--bg-surface)] p-[10px]"
+                                >
+                                    <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[10px] bg-[var(--bg-surface-muted)] text-[var(--text-primary)]">
+                                        <OrderItemIcon kind={item.icon} />
+                                    </span>
+                                    <span className="flex grow flex-col">
+                                        <span className="text-[14px] font-bold text-[var(--text-primary)]">{item.name}</span>
+                                        <span className="text-[13px] font-medium text-[var(--text-secondary)]">{item.price}</span>
+                                    </span>
+                                    <span className="text-[14px] font-semibold text-[var(--text-primary)]">{item.qty}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
-                <span className="rounded-full w-[26px] h-[26px] bg-white grid place-items-center">
-                    <Image src={assets.booking.arrowDown} alt='arrow' />
-                </span>
-            </button>
-        </article>
-    );
+            </article>
 
-    return (
-        <>
-            {status === 'finished' ? <FinishedCardContent /> : <UpcomingCardContent />}
-            <BookingCancelModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} />
-            <BookingEditModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} />
+            <BookingCancelModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                bookingId={bookingId}
+                bookingDate={bookingDate}
+            />
+            <BookingEditModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                bookingId={bookingId}
+                bookingDate={bookingDate}
+                bookingTime={bookingTime}
+            />
         </>
     );
 };

@@ -32,11 +32,11 @@ export default function WhyUs() {
     <section className="my-[36px] mb-[100px]">
       <h2 className="mb-[16px] text-[24px] font-semibold">Как это работает?</h2>
 
-      <div className="flex gap-[22px]">
+      <div className="flex flex-col gap-[22px] sm:flex-row sm:flex-wrap xl:flex-nowrap">
         {steps.map(({ step, title, description }) => (
           <div
             key={step}
-            className="flex items-center gap-[13px] bg-white pt-3.5 pb-4.5 pl-3 pr-5 rounded-[24px]"
+            className="flex flex-1 items-center gap-[13px] bg-white pt-3.5 pb-4.5 pl-3 pr-5 rounded-[24px]"
           >
             <p className="w-[74px] h-[74px] flex items-center justify-center rounded-full bg-[#f9f9fd] text-blue-600 text-[32px] font-semibold">
               {step}
@@ -51,10 +51,10 @@ export default function WhyUs() {
         ))}
       </div>
 
-      <div className="relative mt-[70px] flex bg-white py-[27px] px-[32px] rounded-[24px]">
-        <div>
-          <div className="mb-[70px] flex flex-col gap-[9px]">
-            <p className="max-w-[400px] text-[32px] font-semibold">
+      <div className="relative mt-[70px] flex flex-col gap-4 overflow-hidden rounded-[24px] bg-white px-6 py-[27px] xl:flex-row xl:overflow-visible xl:px-[32px]">
+        <div className="xl:flex-1">
+          <div className="mb-8 flex flex-col gap-[9px] xl:mb-[70px]">
+            <p className="max-w-[400px] text-[24px] font-semibold xl:text-[32px]">
               Для крупных бизнесов и предпринимателей
             </p>
             <p className="max-w-[210px] font-semibold opacity-75">
@@ -66,7 +66,7 @@ export default function WhyUs() {
           </Link>
         </div>
         <Image
-          className="absolute right-0 top-[-155px]"
+          className="mx-auto h-auto w-[220px] xl:absolute xl:right-0 xl:top-[-155px] xl:mx-0 xl:w-[493px]"
           src={assets.marketing.homePng}
           alt="Bron для бизнеса"
           width={493}

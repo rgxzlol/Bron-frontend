@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import AuthPageContent from "@/components/features/auth/AuthPageContent";
+import AuthFlow from "@/components/features/auth/AuthFlow";
 
 export const metadata: Metadata = {
   title: "Вход",
 };
 
 export default function AuthPage() {
-  return <AuthPageContent />;
+  return <AuthFlow initialScreen="welcome" />;
 }

@@ -15,7 +15,6 @@
   --bg-input: #fafaff;
   --bg-inactive: #eceef6;
   --bg-hover: #e4e8ff;
-  --bg-profile-img: #E8EFFE;
   --bg-active-soft: #e8f1ff;
 
   --text-primary: #000000;
@@ -33,6 +32,9 @@
   --backdrop: rgba(0, 0, 0, 0.45);
 
   --icon-default: #000000;
+
+  /* Auth flow input/box fill (light-blue on white) */
+  --auth-box: #f0f4ff;
 }
 
 [data-theme="dark"] {
@@ -62,6 +64,8 @@
   --backdrop: rgba(0, 0, 0, 0.65);
 
   --icon-default: #ffffff;
+
+  --auth-box: #2a2e37;
 }
 
 @layer base {

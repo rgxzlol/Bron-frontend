@@ -5,7 +5,7 @@ import WhyUs from "@/components/features/home/WhyUs";
 
 export default function Home() {
   return (
-    <div className="ml-[50px]">
+    <div>
       <HeroSection />
       <Categories />
       <Popular />

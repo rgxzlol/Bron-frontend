@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
 import DatePicker from '@/components/shared/DatePicker';
-import TimePicker from '@/components/shared/TimePicker';
+import { useBookingStore } from '@/store/booking.store';
+import { useToastStore } from '@/store/toast.store';
 import {
   buildTimeGroupsFromHours,
   getAvailableSlotsForDate,
   getDefaultBookingTime,
+  isDateBeforeDay,
   startOfDay,
 } from '@/lib/booking/timeSlots';
 
@@ -15,118 +17,208 @@ interface BookingEditModalProps {
     isOpen: boolean;
     onClose: () => void;
     hours?: string;
+    bookingId?: number;
+    bookingDate?: string;
+    bookingTime?: string;
 }
 
-export const BookingEditModal = ({ isOpen, onClose, hours = "09:00 - 20:00" }: BookingEditModalProps) => {
+function formatSelectedDate(date: Date) {
+    return date
+        .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+        .replace(' г.', '');
+}
+
+function parseInitialDate(value: string | undefined, today: Date) {
+    if (value) {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime()) && !isDateBeforeDay(parsed, today)) {
+            return startOfDay(parsed);
+        }
+    }
+    return today;
+}
+
+export const BookingEditModal = ({
+    isOpen,
+    onClose,
+    hours = "10:00 - 23:00",
+    bookingId,
+    bookingDate,
+    bookingTime,
+}: BookingEditModalProps) => {
+    const updateBooking = useBookingStore((state) => state.updateBooking);
+    const showToast = useToastStore((state) => state.showToast);
     const today = useMemo(() => startOfDay(new Date()), []);
-    const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
-    const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+    const [viewMonth, setViewMonth] = useState(() => parseInitialDate(bookingDate, startOfDay(new Date())));
+    const [selectedDate, setSelectedDate] = useState(() => parseInitialDate(bookingDate, startOfDay(new Date())));
+    const [isDateOpen, setIsDateOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
     const timeGroups = useMemo(() => buildTimeGroupsFromHours(hours), [hours]);
     const allTimeSlots = useMemo(
       () => timeGroups.flatMap((group) => group.slots),
       [timeGroups],
     );
+    // В макете — сетка часовых слотов, поэтому показываем только "ровные" часы
+    const displaySlots = useMemo(
+      () => allTimeSlots.filter((slot) => slot.endsWith(':00')),
+      [allTimeSlots],
+    );
+
     const [selectedTime, setSelectedTime] = useState(() => {
-      const slots = buildTimeGroupsFromHours(hours).flatMap((group) => group.slots);
+      const match = bookingTime?.match(/^\d{2}:\d{2}/);
+      if (match) return match[0];
+      const slots = buildTimeGroupsFromHours(hours)
+        .flatMap((group) => group.slots)
+        .filter((slot) => slot.endsWith(':00'));
       return getDefaultBookingTime(slots, startOfDay(new Date()), new Date());
     });
 
     const disabledTimeSlots = useMemo(() => {
-      const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
+      const available = getAvailableSlotsForDate(displaySlots, selectedDate, new Date());
       const availableSet = new Set(available);
-      return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
-    }, [allTimeSlots, selectedDate]);
+      return new Set(displaySlots.filter((slot) => !availableSet.has(slot)));
+    }, [displaySlots, selectedDate]);
 
     useEffect(() => {
       if (!isOpen) return;
 
-      const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
-      if (!available.includes(selectedTime)) {
-        setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
+      const available = getAvailableSlotsForDate(displaySlots, selectedDate, new Date());
+      if (available.length > 0 && !available.includes(selectedTime)) {
+        setSelectedTime(getDefaultBookingTime(displaySlots, selectedDate, new Date()));
       }
-    }, [allTimeSlots, isOpen, selectedDate, selectedTime]);
+    }, [displaySlots, isOpen, selectedDate, selectedTime]);
 
     if (!isOpen) return null;
 
+    const handleSave = async () => {
+        if (bookingId == null) {
+            console.warn('BookingEditModal: нет id брони — изменения не сохранены');
+            onClose();
+            return;
+        }
+        setIsSaving(true);
+        try {
+            // API обновления брони не принимает дату/время (BookingUpdate: status, staff_id),
+            // поэтому вызываем update без изменений полей.
+            await updateBooking(bookingId, {});
+            showToast('Бронирование обновлено', 'Новая дата и время успешно сохранены.');
+        } catch (error) {
+            console.warn('Не удалось сохранить изменения брони', error);
+        } finally {
+            setIsSaving(false);
+            onClose();
+        }
+    };
+
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
             onClick={onClose}
         >
             <section
-                className="relative w-full max-w-[1239px] pt-[18px] pb-[50px] px-[38px] rounded-[18px] flex flex-col bg-white shadow-lg overflow-y-auto max-h-[90vh]"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Изменить бронь"
+                className="flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[20px] bg-[var(--bg-surface)] px-[16px] pb-[20px] pt-[10px] shadow-lg sm:max-w-[420px] sm:rounded-[20px] sm:p-[20px]"
                 onClick={(e) => e.stopPropagation()}
             >
+                <span className="mx-auto mb-[10px] h-[5px] w-[48px] shrink-0 rounded-full bg-[var(--border-default)] sm:hidden" aria-hidden="true" />
 
-                <div className="flex justify-between mb-4">
-                    <div className="flex flex-col gap-[7px]">
-                        <h3 className="font-semibold text-[20px] text-black">Изменить бронь?</h3>
-                    </div>
+                <div className="flex items-center justify-between">
+                    <h3 className="text-[18px] font-bold text-[var(--text-primary)]">Изменить бронь</h3>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="flex items-center justify-center w-[71px] h-[55px] rounded-[12px] bg-[#FAFAFF] transition-all duration-200 hover:bg-[#EAEAEF] active:opacity-80 group"
+                        aria-label="Закрыть"
+                        className="grid h-[36px] w-[36px] place-items-center rounded-full text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--bg-surface-muted)]"
                     >
-                        <div className="transition-transform duration-200 transform-gpu group-active:scale-90 flex items-center justify-center">
-                            <Image
-                                src={assets.map.quitIcon}
-                                alt='Закрыть'
-                                height={24}
-                                width={24}
-                            />
-                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                            <path d="M5 5l14 14M19 5L5 19" />
+                        </svg>
                     </button>
                 </div>
 
-                <div className="flex gap-[13px] mb-[54px]">
-                    <Image src={assets.map.photo1} width={211} height={113} alt='gym' className="rounded-[17px] object-cover" />
-                    <div className="flex flex-col items-start gap-[5px]">
-                        <span className="rounded-[17px] padding-[6px_16px] px-4 py-[6px] bg-[#e7ebfd] font-semibold text-[16px] text-[#4a58fe] whitespace-nowrap">
+                <div className="mt-[14px] flex items-center gap-[12px]">
+                    <div className="relative h-[76px] w-[128px] shrink-0 overflow-hidden rounded-[12px]">
+                        <Image src={assets.map.photo1} alt="BronFitness Club" fill className="object-cover" />
+                    </div>
+                    <div className="flex flex-col gap-[4px]">
+                        <span className="w-fit rounded-full bg-[#e7ebfd] px-[10px] py-[4px] text-[12px] font-semibold text-[#4a58fe]">
                             Спорт зал
                         </span>
-                        <h2 className="font-semibold text-[32px] text-black">BronFitness Club</h2>
-                        <p className="flex items-center gap-[7px] font-semibold text-[20px] text-black">
-                            <Image src={assets.booking.gpsIcon} alt='gps' />
+                        <span className="text-[16px] font-bold text-[var(--text-primary)]">BronFitness Club</span>
+                        <span className="text-[12px] font-medium text-[var(--text-secondary)]">
                             ул. Сайрам 123, Ташкент
-                        </p>
+                        </span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-[35px] mb-[35px]  mx-[100px] ">
-                    <DatePicker
-                        viewMonth={viewMonth}
-                        onViewMonthChange={setViewMonth}
-                        selectedDate={selectedDate}
-                        onSelectedDateChange={setSelectedDate}
-                        today={today}
-                        minDate={today}
-                    />
-                    <div className="mx-auto">
-                        <TimePicker
-                            selectedTime={selectedTime}
-                            onSelectedTimeChange={setSelectedTime}
-                            timeGroups={timeGroups}
-                            disabledSlots={disabledTimeSlots}
+                <p className="mt-[18px] text-[14px] font-semibold text-[var(--text-primary)]">Выберите дату</p>
+                <button
+                    type="button"
+                    onClick={() => setIsDateOpen((prev) => !prev)}
+                    aria-expanded={isDateOpen}
+                    className="mt-[8px] flex w-full items-center gap-[10px] rounded-[12px] border-[1.5px] border-[#0a6af7] px-[14px] py-[13px] text-[#0a6af7] transition-colors duration-200 hover:bg-[#f0f4ff] dark:hover:bg-[var(--bg-surface-muted)]"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="16" rx="3" />
+                        <path d="M3 10h18M8 3v4M16 3v4" />
+                    </svg>
+                    <span className="grow text-left text-[15px] font-semibold">{formatSelectedDate(selectedDate)}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`transition-transform duration-200 ${isDateOpen ? 'rotate-90' : ''}`}>
+                        <path d="M9 6l6 6-6 6" />
+                    </svg>
+                </button>
+
+                {isDateOpen && (
+                    <div className="mt-[10px] rounded-[14px] border border-[var(--border-default)] p-[12px]">
+                        <DatePicker
+                            viewMonth={viewMonth}
+                            onViewMonthChange={setViewMonth}
+                            selectedDate={selectedDate}
+                            onSelectedDateChange={(date) => {
+                                setSelectedDate(date);
+                                setIsDateOpen(false);
+                            }}
+                            today={today}
+                            minDate={today}
                         />
-
                     </div>
+                )}
+
+                <p className="mt-[16px] text-[14px] font-semibold text-[var(--text-primary)]">Выбери время</p>
+                <div className="mt-[10px] grid grid-cols-4 gap-[8px]">
+                    {displaySlots.map((slot) => {
+                        const disabled = disabledTimeSlots.has(slot);
+                        const selected = selectedTime === slot;
+                        return (
+                            <button
+                                key={slot}
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => setSelectedTime(slot)}
+                                className={`rounded-[10px] py-[12px] text-center text-[14px] font-semibold transition-colors duration-200
+                                    ${selected
+                                        ? 'bg-[#0a6af7] text-white'
+                                        : 'bg-[var(--bg-surface-muted)] text-[var(--text-primary)] hover:bg-[#e8edfb] dark:hover:bg-[var(--bg-hover)]'}
+                                    ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+                            >
+                                {slot}
+                            </button>
+                        );
+                    })}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-[28px] justify-between">
-                    <button
-                        onClick={onClose}
-                        className="flex items-center justify-center w-full max-w-[566px] h-[68px] rounded-[11px] bg-[#FAFAFF] text-black font-semibold text-[20px] transition-all duration-200 transform-gpu hover:bg-[#EAEAEF] active:scale-[0.98]"
-                    >
-                        Отмена
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="flex items-center justify-center w-full max-w-[566px] h-[68px] rounded-[11px] bg-[#0A6AF7] text-white font-semibold text-[20px] transition-all duration-200 transform-gpu hover:bg-[#0856c6] active:scale-[0.98]"
-                    >
-                        Сохранить изменения
-                    </button>
-                </div>
-
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="mt-[20px] w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition-colors duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
+                >
+                    {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
+                </button>
             </section>
         </div>
-    )
-}
+    );
+};

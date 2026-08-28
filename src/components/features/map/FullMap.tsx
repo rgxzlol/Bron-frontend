@@ -38,7 +38,14 @@ type FullMapProps = {
   onStartBooking: (shop: ShopsType, serviceIds?: string[]) => void
 }
 
-const filters = ["Все", "Кофейня", "Спортзал", "Больница", "Ресторан"]
+const filters = ["Ресторан", "Спортзал", "Кофейня", "Больница"]
+
+const filterLabels: Record<string, string> = {
+  Ресторан: "Рестораны",
+  Спортзал: "Спорт зал",
+  Кофейня: "Кофетерии",
+  Больница: "Больницы",
+}
 const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
@@ -514,7 +521,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   }
 
   function handleFilterSelect(filter: string) {
-    setActiveFilter(filter)
+    setActiveFilter((prev) => (prev === filter ? "Все" : filter))
     resetMapToInitialView()
   }
 
@@ -627,30 +634,73 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   return (
     <div className="relative">
-      <div className="absolute top-4 left-4 z-10 flex max-w-[90%] gap-2 overflow-x-auto">
+      <div className="absolute top-4 left-4 z-10 flex max-w-[calc(100%-32px)] gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:max-w-[70%]">
         {filters.map((filter) => (
           <button
             key={filter}
             type="button"
             onClick={() => handleFilterSelect(filter)}
             className={`
-              px-4 py-2 rounded-full whitespace-nowrap border transition font-semibold
+              px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
               ${
                 activeFilter === filter
-                  ? "bg-[var(--primary)] text-white border-[var(--text-primary)]"
-                  : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--primary)]"
+                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                  : "bg-[var(--bg-surface)] text-[var(--primary)] border-[var(--primary)]"
               }
             `}
           >
-            {filter}
+            {filterLabels[filter] ?? filter}
           </button>
         ))}
+      </div>
+
+      <div className="absolute top-[72px] right-4 z-10 flex flex-col gap-3 lg:hidden">
+        <button
+          type="button"
+          onClick={handleOpenCategories}
+          aria-label="Фильтры"
+          className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)]"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 7h9M18.5 7H20M4 17h1.5M11 17h9" />
+            <circle cx="15.5" cy="7" r="2.3" />
+            <circle cx="7.5" cy="17" r="2.3" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={goToMyLocation}
+          aria-label="Моё местоположение"
+          className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)]"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 3 10.7 13.3M21 3l-6.6 18-3.7-7.7L3 9.6 21 3z" />
+          </svg>
+        </button>
       </div>
 
       <button
         type="button"
         onClick={handleOpenCategories}
-        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
+        className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
       >
         <Image src={assets.header.filter} alt="" width={18} height={18} />
         Категории
@@ -658,7 +708,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       <button
         onClick={goToMyLocation}
-        className="absolute bottom-4 right-4 z-10 bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-3 rounded-full shadow-lg border border-[var(--primary)] font-semibold"
+        className="absolute bottom-4 right-4 z-10 hidden lg:block bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-3 rounded-full shadow-lg border border-[var(--primary)] font-semibold"
       >
         📍
       </button>

@@ -18,14 +18,14 @@ export default function SearchBar() {
     }
 
     return (
-        <div className="flex items-center rounded-[38px] bg-[#f4f4f8] px-5 py-[6px]">
-            <label className="relative flex items-center pb-1">
-                <Image className="mr-4" src={assets.header.search} alt="Поиск" width={22} height={22} />
+        <div className="flex w-full items-center rounded-[38px] bg-[#f4f4f8] px-5 py-[6px] lg:max-w-[720px]">
+            <label className="relative flex flex-1 items-center pb-1 min-w-0">
+                <Image className="mr-4 shrink-0" src={assets.header.search} alt="Поиск" width={22} height={22} />
                 <input
-                    className="mr-1 h-[25px] w-[600px] p-2 
-                   focus:outline-none 
+                    className="mr-1 h-[25px] w-full min-w-0 p-2
+                   focus:outline-none
                    [&::-webkit-search-cancel-button]:appearance-none"
-                    placeholder="Поиск..."
+                    placeholder="Поиск услуг, мастеров и мест"
                     type="search"
                     name="search"
                     value={searchValue}

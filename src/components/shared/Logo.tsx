@@ -5,9 +5,9 @@ interface LogoProps {
     className?: string;
 }
 
-export const Logo = ({ className = '' }: LogoProps) => {
+export const Logo = ({ className = 'text-[70px]' }: LogoProps) => {
     return (
-        <Link href="/" className={`text-[70px] font-semibold ${className}`.trim()}>
+        <Link href="/" className={`font-semibold ${className}`.trim()}>
             {siteConfig.name}
         </Link>
     )

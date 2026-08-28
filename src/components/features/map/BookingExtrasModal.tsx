@@ -68,16 +68,17 @@ export default function BookingExtrasModal({
   }
 
   return (
-    <div className={s.backdrop} role="dialog" aria-modal="true" aria-label="Дополнительные услуги">
+    <div className={s.backdrop} role="dialog" aria-modal="true" aria-label="Дополнительные товары">
       <div className={s.modal}>
+        <div className={s.handle} aria-hidden="true">
+          <span className={s.handleBar} />
+        </div>
+
         <div className={s.header}>
-          <div className={s.headerIcon} aria-hidden>
-            🛍
-          </div>
           <div className={s.headerText}>
-            <h2 className={s.title}>Добавить что-нибудь к вашему бронированию</h2>
+            <h2 className={s.title}>Дополнительные товары</h2>
             <p className={s.subtitle}>
-              Во время посещения вы можете приобрести напитки или доп услугу.
+              Добавьте доп.товар и получите максимум пользы.
             </p>
           </div>
           <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
@@ -99,7 +100,10 @@ export default function BookingExtrasModal({
             {bookingExtras.map((extra: BookingExtra) => {
               const quantity = extraQuantities[extra.id] ?? 0;
               return (
-                <article key={extra.id} className={s.productCard}>
+                <article
+                  key={extra.id}
+                  className={`${s.productCard} ${quantity > 0 ? s.productSelected : ""}`}
+                >
                   <div className={s.productImageWrap}>
                     <Image
                       src={extra.image}
@@ -111,34 +115,24 @@ export default function BookingExtrasModal({
                   </div>
                   <h3 className={s.productName}>{extra.name}</h3>
                   <p className={s.productDesc}>{extra.description}</p>
-                  <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
+                  <p className={s.productPrice}>{formatPrice(extra.price)}сум</p>
                   {quantity > 0 ? (
-                    <div className={s.qtyControls}>
-                      <button
-                        type="button"
-                        className={s.qtyBtn}
-                        onClick={() => onRemoveExtra(extra.id)}
-                        aria-label={`Уменьшить ${extra.name}`}
-                      >
-                        −
-                      </button>
-                      <span className={s.qtyValue}>{quantity}</span>
-                      <button
-                        type="button"
-                        className={s.qtyBtn}
-                        onClick={() => onAddExtra(extra.id)}
-                        aria-label={`Добавить ${extra.name}`}
-                      >
-                        +
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className={s.qtyCircle}
+                      onClick={() => onAddExtra(extra.id)}
+                      aria-label={`Добавить ещё ${extra.name}`}
+                    >
+                      {quantity}
+                    </button>
                   ) : (
                     <button
                       type="button"
-                      className={s.addBtn}
+                      className={s.plusBtn}
                       onClick={() => onAddExtra(extra.id)}
+                      aria-label={`Добавить ${extra.name}`}
                     >
-                      Добавить
+                      +
                     </button>
                   )}
                 </article>
@@ -156,33 +150,30 @@ export default function BookingExtrasModal({
           </button>
         </div>
 
-        <div className={s.summaryRow}>
-          <div className={s.orderBlock}>
-            <h3 className={s.orderTitle}>Ваш заказ</h3>
-            {orderItems.map((item) => (
-              <div key={item.id} className={s.orderLine}>
-                <span className={s.orderName}>{item.name}</span>
-                <span className={s.orderPriceWrap}>
-                  <span className={s.orderPrice}>{formatPrice(item.price)} сум</span>
-                  {item.removable && item.sourceId && (
-                    <button
-                      type="button"
-                      className={s.removeBtn}
-                      onClick={() => onRemoveExtra(item.sourceId!)}
-                      aria-label={`Удалить ${item.name}`}
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className={s.orderBlock}>
+          <h3 className={s.orderTitle}>Ваш заказ</h3>
+          {orderItems.map((item) => (
+            <div key={item.id} className={s.orderLine}>
+              <span className={s.orderName}>{item.name}</span>
+              <span className={s.orderPriceWrap}>
+                <span className={s.orderPrice}>{formatPrice(item.price)}сум</span>
+                {item.removable && item.sourceId && (
+                  <button
+                    type="button"
+                    className={s.removeBtn}
+                    onClick={() => onRemoveExtra(item.sourceId!)}
+                    aria-label={`Удалить ${item.name}`}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            </div>
+          ))}
 
-          <div className={s.totalBlock}>
+          <div className={s.totalRow}>
             <span className={s.totalLabel}>Итого</span>
-            <span className={s.totalAmount}>{formatPrice(total)} сум</span>
-            <p className={s.totalHint}>✓ Экономия времени — оплатить сейчас</p>
+            <span className={s.totalAmount}>{formatPrice(total)}сум</span>
           </div>
         </div>
 

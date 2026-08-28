@@ -21,6 +21,7 @@ import {
   startOfDay,
 } from "@/lib/booking/timeSlots";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
+import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { branchesApi } from "@/lib/api";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/lib/api/mappers";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
+import { useToastStore } from "@/store/toast.store";
 import s from "./bookingPage.module.css";
 
 type BookingPageProps = {
@@ -39,7 +41,24 @@ type BookingPageProps = {
 
 type BookingStep = 1 | 2 | 3;
 
+const RU_MONTHS_GENITIVE = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
+];
 
+function formatDateShortRu(date: Date) {
+  return `${date.getDate()} ${RU_MONTHS_GENITIVE[date.getMonth()]} ${date.getFullYear()}`;
+}
 
 export default function BookingPage({
   shop,
@@ -47,7 +66,9 @@ export default function BookingPage({
   onBack,
 }: BookingPageProps) {
   const [step, setStep] = useState<BookingStep>(1);
+  const [showMobileCalendar, setShowMobileCalendar] = useState(false);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
@@ -68,6 +89,7 @@ export default function BookingPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
+  const showToast = useToastStore((state) => state.showToast);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -86,6 +108,11 @@ export default function BookingPage({
     const availableSet = new Set(available);
     return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
   }, [allTimeSlots, selectedDate]);
+
+  const hourlyTimeSlots = useMemo(
+    () => allTimeSlots.filter((slot) => slot.endsWith(":00")),
+    [allTimeSlots],
+  );
 
   useEffect(() => {
     const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
@@ -216,6 +243,18 @@ export default function BookingPage({
     setShowExtrasModal(true);
   }
 
+  function proceedToPayment() {
+    if (paymentMethod === "card") {
+      setShowCardModal(true);
+    } else {
+      setStep(3);
+      showToast(
+        "Бронирование прошло успешно",
+        "Бронирование прошло успешно, приходите за 10 мин до бронирования.",
+      );
+    }
+  }
+
   async function finishExtras() {
     if (!token) {
       alert("Войдите в аккаунт, чтобы оформить бронь");
@@ -224,7 +263,7 @@ export default function BookingPage({
 
     if (!shop.apiBusinessId) {
       setShowExtrasModal(false);
-      setStep(3);
+      proceedToPayment();
       return;
     }
 
@@ -263,7 +302,7 @@ export default function BookingPage({
       });
 
       setShowExtrasModal(false);
-      setStep(3);
+      proceedToPayment();
     } catch (error) {
       alert(error instanceof Error ? error.message : "Не удалось создать бронь");
     } finally {
@@ -320,13 +359,14 @@ export default function BookingPage({
               priority
             />
           )}
+          <span className={`${s.tag} ${s.imageTag}`}>{shop.type}</span>
           <span className={s.slideCounter}>1/{gallery.length}</span>
         </div>
 
         <div className={s.topBody}>
           <div className={s.topHead}>
             <div>
-              <span className={s.tag}>{shop.type}</span>
+              <span className={`${s.tag} ${s.bodyTag}`}>{shop.type}</span>
               <h1 className={s.title}>{shop.title}</h1>
               <div className={s.rating}>
                 <Image src={assets.popular.starRating} alt="" width={18} height={18} />
@@ -384,20 +424,94 @@ export default function BookingPage({
     return (
       <>
         <section className={s.timeCard}>
-          <DatePicker
-            viewMonth={viewMonth}
-            onViewMonthChange={setViewMonth}
-            selectedDate={selectedDate}
-            onSelectedDateChange={setSelectedDate}
-            today={today}
-            minDate={today}
-          />
-          <TimePicker
-            selectedTime={selectedTime}
-            onSelectedTimeChange={setSelectedTime}
-            timeGroups={timeGroups}
-            disabledSlots={disabledTimeSlots}
-          />
+          <div className={s.desktopPickers}>
+            <DatePicker
+              viewMonth={viewMonth}
+              onViewMonthChange={setViewMonth}
+              selectedDate={selectedDate}
+              onSelectedDateChange={setSelectedDate}
+              today={today}
+              minDate={today}
+            />
+            <TimePicker
+              selectedTime={selectedTime}
+              onSelectedTimeChange={setSelectedTime}
+              timeGroups={timeGroups}
+              disabledSlots={disabledTimeSlots}
+            />
+          </div>
+
+          <div className={s.mobilePickers}>
+            <h2 className={s.pickTitle}>Выбери дату</h2>
+            <button
+              type="button"
+              className={s.dateField}
+              onClick={() => setShowMobileCalendar((value) => !value)}
+              aria-expanded={showMobileCalendar}
+            >
+              <span className={s.dateFieldLeft}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+                  <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+                </svg>
+                {formatDateShortRu(selectedDate)}
+              </span>
+              <svg
+                className={`${s.dateChevron} ${showMobileCalendar ? s.dateChevronOpen : ""}`}
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M8 4.5 19 12 8 19.5v-15z" />
+              </svg>
+            </button>
+
+            {showMobileCalendar && (
+              <div className={s.mobileCalendar}>
+                <DatePicker
+                  viewMonth={viewMonth}
+                  onViewMonthChange={setViewMonth}
+                  selectedDate={selectedDate}
+                  onSelectedDateChange={(date) => {
+                    setSelectedDate(date);
+                    setShowMobileCalendar(false);
+                  }}
+                  today={today}
+                  minDate={today}
+                />
+              </div>
+            )}
+
+            <h2 className={s.pickTitle}>Выбери время</h2>
+            <div className={s.timeGrid}>
+              {hourlyTimeSlots.map((slot) => {
+                const disabled = disabledTimeSlots.has(slot);
+                const selected = selectedTime === slot;
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    disabled={disabled}
+                    className={`${s.timeChip} ${selected ? s.timeChipActive : ""}`}
+                    onClick={() => setSelectedTime(slot)}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         <div className={s.stepFooter}>
@@ -418,6 +532,15 @@ export default function BookingPage({
             />
             <span className={s.footerHint}>Ваши данные защищены</span>
           </div>
+        </div>
+
+        <div className={s.mobileFooter}>
+          <p className={s.mobileTotal}>Итог: {formatPrice(bookingPrice)}сум</p>
+          <Button
+            text="Продолжить"
+            className={s.mobileContinue}
+            onClick={() => setStep(2)}
+          />
         </div>
       </>
     );
@@ -576,61 +699,90 @@ export default function BookingPage({
 
   function renderStep3() {
     return (
-      <div className={s.confirmColumns}>
-        <section className={s.confirmCard}>
-          <div className={s.successIcon} aria-hidden>
-            ✓
-          </div>
-          <h2 className={s.confirmTitle}>Бронирование подтверждено!</h2>
-          <p className={s.confirmSub}>
-            Мы отправили подтверждение на вашу почту{" "} <br />
-            <span className={s.confirmEmail}>{displayEmail}</span>
-          </p>
+      <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center py-8 text-center">
+        <div className="relative flex h-[150px] w-[150px] items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-[#16a34a]/10" />
+          <span className="absolute inset-5 rounded-full bg-[#16a34a]/20" />
+          <span className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#16a34a] shadow-[0_12px_28px_-6px_rgba(22,163,74,0.6)]">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </div>
 
-          <div className={s.whatsNext}>
-            <h3 className={`${s.whatsNextTitle} flex gap-[9px]`}>
-              <Image src={assets.header.notification} alt="" className={s.whatsNextNotificationIcon} />
-              Что дальше?
-            </h3>
-            <ul className={s.whatsNextList}>
-              <li className="flex gap-[5px]">
-                <Image src={assets.popular.timeIcon} alt="" className={s.whatsNextTimeIcon} />
-                Приходите за 10–15 минут до начала бронирования.
-              </li>
-              <li className="ml-[26px]">Отмена возможна не позднее чем за 2 часа до визита.</li>
-            </ul>
-            <Button
-              className="bg-transparent border-2 border-[#0A6AF7] w-full mt-[42px] !text-black border-[]"
-              text="Оставить отзыв"
-              onClick={() => setShowReviewModal(true)}
-            />
-          </div>
+        <h2 className="mt-6 text-[24px] font-semibold text-[var(--text-primary)]">
+          Бронирование подтверждено!
+        </h2>
+        <p className="mt-2 text-[15px] font-semibold text-[var(--text-secondary)]">
+          Мы отправили детали на вашу почту
+        </p>
+        <span className="mt-3 rounded-full bg-[var(--bg-surface-muted)] px-4 py-1.5 text-[14px] font-semibold text-[var(--text-primary)]">
+          {displayEmail}
+        </span>
 
-          <div className={s.confirmActions}>
-            <Link href={routes.bookings} className={s.secondaryBtn}>
-              Посмотреть бронь
-            </Link>
-            <Link href={routes.home} className={`${s.primaryLink}`}>
-              <Button text="На главную" className={s.primaryLinkBtn} as="span" />
-            </Link>
-          </div>
-        </section>
-
-        {renderPaymentSummary(allLineItems, total, "Оплачено", undefined, true)}
+        <div className="mt-10 flex w-full flex-col gap-3">
+          <Link
+            href={routes.home}
+            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-center text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+          >
+            На главную
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowReviewModal(true)}
+            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+          >
+            Оставить отзыв
+          </button>
+          <Link
+            href={routes.bookings}
+            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-center text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+          >
+            Мои брони
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className={s.page}>
-      <div className={s.pageTop}>
-        <button type="button" className={s.backToMap} onClick={onBack}>
-          Назад к карте
-        </button>
-      </div>
+      {step < 3 && (
+        <div className={s.pageTop}>
+          <button
+            type="button"
+            className={s.backCircle}
+            onClick={() => {
+              if (step > 1) {
+                setStep((st) => (st - 1) as BookingStep);
+              } else {
+                onBack();
+              }
+            }}
+            aria-label="Назад"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14.5 6 8.5 12l6 6" />
+            </svg>
+          </button>
+          <button type="button" className={s.backToMap} onClick={onBack}>
+            Назад к карте
+          </button>
+        </div>
+      )}
 
-      {renderTopCard()}
-      {renderStepper()}
+      {step < 3 && renderTopCard()}
+      {step < 3 && renderStepper()}
 
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
@@ -657,6 +809,21 @@ export default function BookingPage({
           onSkip={finishExtras}
           onContinue={finishExtras}
           onClose={() => setShowExtrasModal(false)}
+        />
+      )}
+
+      {showCardModal && (
+        <CardPaymentModal
+          amountText={formatPrice(total)}
+          onClose={() => setShowCardModal(false)}
+          onPay={() => {
+            setShowCardModal(false);
+            setStep(3);
+            showToast(
+              "Оплата прошла успешно",
+              "Оплата прошла успешно. Ожидайте подтверждения бронирования.",
+            );
+          }}
         />
       )}
 

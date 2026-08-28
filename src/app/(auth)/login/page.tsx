@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import AuthForm from "@/components/features/auth/AuthForm";
+import AuthFlow from "@/components/features/auth/AuthFlow";
 
 export const metadata: Metadata = {
   title: "Вход",
 };
 
 export default function LoginPage() {
-  return <AuthForm mode="login" />;
+  return <AuthFlow initialScreen="login" />;
 }

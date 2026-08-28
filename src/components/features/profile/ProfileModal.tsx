@@ -11,9 +11,11 @@ type ProfileSection =
   | "main"
   | "personal"
   | "payments"
+  | "addCard"
   | "appSettings"
   | "notifications"
-  | "theme";
+  | "theme"
+  | "logout";
 
 type ProfileModalProps = {
   isOpen: boolean;
@@ -24,9 +26,11 @@ const sectionTitles: Record<ProfileSection, string> = {
   main: "Настройки профиля",
   personal: "Персональные данные",
   payments: "Платежи",
+  addCard: "Добавить карту",
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
+  logout: "Выйти из аккаунта",
 };
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
@@ -81,7 +85,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
               onClick={onClose}
               aria-label="Закрыть"
             >
-              <Image src={assets.header.close} alt="" width={14} height={14} />
+              <Image src={assets.header.close} alt="" width={18} height={18} />
             </button>
           </div>
         ) : (
@@ -91,7 +95,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             onClick={onClose}
             aria-label="Закрыть"
           >
-            <Image src={assets.header.close} alt="" width={14} height={14} />
+            <Image src={assets.header.close} alt="" width={18} height={18} />
           </button>
         )}
 

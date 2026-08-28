@@ -9,13 +9,15 @@ interface NavLinkProps {
     children: ReactNode;
     activeClassName?: string;
     className?: string;
+    onClick?: () => void;
 }
 
 export function NavLink({
     href,
     children,
     activeClassName = 'active',
-    className = ''
+    className = '',
+    onClick
 }: NavLinkProps) {
     const pathname = usePathname();
 
@@ -24,7 +26,7 @@ export function NavLink({
     const computedClassName = `${className} ${isActive ? activeClassName : ''}`.trim();
 
     return (
-        <Link href={href} className={computedClassName}>
+        <Link href={href} className={computedClassName} onClick={onClick}>
             {children}
         </Link>
     );

@@ -22,15 +22,15 @@ export const supportContactCards: SupportContact[] = [
     id: "phone",
     title: "Позвонить",
     description: "Позвоните нам по горячей линии",
-    buttonText: supportContacts.phone,
+    buttonText: "Позвонить",
     icon: assets.support.phone,
     href: `tel:${supportContacts.phone.replace(/\s/g, "")}`,
   },
   {
     id: "telegram",
     title: "Telegram",
-    description: "Свяжитесь с нами и опишите свою проблему",
-    buttonText: "Telegram",
+    description: "Свяжитесь с нами в telegram",
+    buttonText: "Открыть",
     icon: assets.support.tg,
     href: `https://t.me/${supportContacts.telegram}`,
     external: true,
@@ -39,7 +39,7 @@ export const supportContactCards: SupportContact[] = [
     id: "email",
     title: "Email",
     description: "Отправьте нам письмо и мы ответим",
-    buttonText: "Написать письмо",
+    buttonText: "Написать",
     icon: assets.support.email,
     href: `mailto:${supportContacts.email}?subject=${encodeURIComponent("Обращение в поддержку Bron")}`,
   },
@@ -55,7 +55,7 @@ export type FaqItem = {
 export const faqItems: FaqItem[] = [
   {
     id: "change-booking",
-    question: "Как изменить бронь или отменить?",
+    question: "Как изменить или отменить бронь?",
     answer:
       "Перейдите в раздел «Мои брони», выберите нужную запись и нажмите «Изменить» или «Отменить». Отмена возможна не позднее чем за 2 часа до начала услуги.",
     icon: assets.support.book,
@@ -73,13 +73,6 @@ export const faqItems: FaqItem[] = [
     answer:
       "Все ваши бронирования отображаются в разделе «Мои брони» в боковом меню. Там вы увидите предстоящие и прошедшие записи.",
     icon: assets.support.bookandpen,
-  },
-  {
-    id: "how-booking-works",
-    question: "Как работает система бронирования?",
-    answer:
-      "Выберите заведение на карте или главной странице, укажите услугу и удобное время, оплатите онлайн — и получите подтверждение брони.",
-    icon: assets.support.clock,
   },
   {
     id: "security",

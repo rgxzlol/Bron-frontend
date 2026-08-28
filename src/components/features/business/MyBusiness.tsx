@@ -1,6 +1,5 @@
 "use client";
 
-import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { useBusinessStore } from "@/store/business.store";
 import Image from "next/image";
@@ -28,117 +27,123 @@ export default function MyBusiness({
   const deleteTarget = businesses.find((business) => business.id === deleteTargetId);
 
   return (
-    <div className="rounded-[34px] bg-white px-[23px] py-[26px]">
-      <div className="mb-[24px] flex items-center justify-between">
-        <h2 className="text-[36px] font-semibold">Мой бизнес</h2>
-        <Button
-          text="Добавить новый бизнес"
+    <div className="lg:rounded-[34px] lg:bg-[var(--bg-surface)] lg:px-[23px] lg:py-[26px]">
+      <div className="mb-[16px] flex items-center justify-between gap-[12px] lg:mb-[24px]">
+        <h2 className="text-[22px] font-bold lg:text-[36px] lg:font-semibold">
+          Мой бизнес
+        </h2>
+        <button
+          type="button"
           onClick={onAddBusiness}
-          className="text-[18px] !px-[28px] py-[14px]"
-        />
+          className="rounded-[10px] bg-[#0a6af7] px-[16px] py-[10px] text-[13px] font-semibold text-white transition hover:bg-[#0858ce] lg:px-[28px] lg:py-[14px] lg:text-[18px]"
+        >
+          Добавить бизнес
+        </button>
       </div>
 
-      <div className="flex flex-col gap-[20px]">
+      <div className="grid gap-[16px] lg:grid-cols-2 lg:gap-[20px] xl:grid-cols-3">
         {businesses.map((business) => {
-          const logoImage = business.profilePhoto ?? assets.map.photo1;
-          const isDataUrl = typeof logoImage === "string";
+          const galleryPhotos = business.gallery.filter(
+            (photo): photo is string => Boolean(photo),
+          );
+          const coverPhoto = galleryPhotos[0] ?? business.profilePhoto;
+          const photoCount = Math.max(galleryPhotos.length, 1);
           const isMenuOpen = openMenuId === business.id;
 
           return (
             <article
               key={business.id}
-              className="flex gap-[24px] rounded-[24px] border border-[#ececf2] p-[20px]"
+              className="flex flex-col rounded-[20px] bg-[var(--bg-surface)] p-[10px] pb-[16px] shadow-[0_2px_14px_rgba(15,23,42,0.05)]"
             >
-              <div className="relative flex h-[200px] w-[280px] shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f4f8]">
-                {isDataUrl ? (
+              <div className="relative h-[190px] w-full overflow-hidden rounded-[14px] bg-[var(--bg-surface-muted)]">
+                {coverPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={logoImage}
+                    src={coverPhoto}
                     alt={business.name}
-                    className="max-h-full max-w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <Image
-                    src={logoImage}
+                    src={assets.map.photo1}
                     alt={business.name}
                     fill
-                    className="object-contain p-[16px]"
+                    className="object-contain p-[24px]"
                   />
                 )}
+
+                <div className="absolute right-[10px] top-[10px] flex items-center gap-[8px]">
+                  {business.category && (
+                    <span className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[#0a6af7]">
+                      {business.category}
+                    </span>
+                  )}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-[18px] font-bold leading-none text-black transition hover:bg-[#f4f4f8]"
+                      aria-label="Меню"
+                      aria-expanded={isMenuOpen}
+                      onClick={() => setOpenMenuId(isMenuOpen ? null : business.id)}
+                    >
+                      ⋮
+                    </button>
+                    {isMenuOpen && (
+                      <BusinessCardMenu
+                        onEdit={() => onEditBusiness(business.id)}
+                        onDelete={() => {
+                          setOpenMenuId(null);
+                          setDeleteTargetId(business.id);
+                        }}
+                        onClose={() => setOpenMenuId(null)}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <span className="absolute bottom-[10px] left-[12px] text-[13px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                  1/{photoCount}
+                </span>
               </div>
 
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-start justify-between gap-[12px]">
-                  <div className="flex flex-col gap-[8px]">
-                    {business.category && (
-                      <span className="w-fit rounded-full bg-[#ede8ff] px-[14px] py-[5px] text-[14px] font-semibold text-[#6b4ee6]">
-                        {business.category}
-                      </span>
-                    )}
-                    <h3 className="text-[24px] font-semibold">
-                      {business.name || "Без названия"}
-                    </h3>
-                    {business.address && (
-                      <p className="flex items-center gap-[8px] text-[16px] opacity-75">
-                        <Image src={assets.map.geoMark} alt="" width={16} height={16} />
-                        {business.address}
-                      </p>
-                    )}
-                  </div>
+              <div className="flex flex-1 flex-col px-[6px] pt-[12px]">
+                <div className="flex items-center justify-between gap-[10px]">
+                  <h3 className="truncate text-[18px] font-bold">
+                    {business.name || "Без названия"}
+                  </h3>
+                  <span className="shrink-0 rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]">
+                    Подтверждено
+                  </span>
+                </div>
 
-                  <div className="flex items-center gap-[10px]">
-                    <span className="flex items-center gap-[6px] rounded-full bg-[#e8f8ee] px-[12px] py-[6px] text-[14px] font-semibold text-[#1a9b4a]">
-                      <span className="h-[8px] w-[8px] rounded-full bg-[#1a9b4a]" />
-                      Подтверждено
-                    </span>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        className={`flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[#f4f4f8] text-[22px] leading-none transition hover:bg-[#ececf2] ${
-                          isMenuOpen ? "ring-2 ring-[#0a6af7]/20" : ""
-                        }`}
-                        aria-label="Меню"
-                        aria-expanded={isMenuOpen}
-                        onClick={() =>
-                          setOpenMenuId(isMenuOpen ? null : business.id)
-                        }
-                      >
-                        ⋮
-                      </button>
-                      {isMenuOpen && (
-                        <BusinessCardMenu
-                          onEdit={() => onEditBusiness(business.id)}
-                          onDelete={() => {
-                            setOpenMenuId(null);
-                            setDeleteTargetId(business.id);
-                          }}
-                          onClose={() => setOpenMenuId(null)}
-                        />
-                      )}
-                    </div>
+                {business.address && (
+                  <p className="mt-[4px] truncate text-[14px] text-[var(--text-secondary)]">
+                    {business.address}
+                  </p>
+                )}
+
+                <div className="mt-[12px] grid grid-cols-2 gap-[10px]">
+                  <div className="rounded-[10px] bg-[var(--bg-surface-muted)] px-[12px] py-[9px]">
+                    <p className="text-[13px] font-semibold">Бронирований</p>
+                    <p className="mt-[2px] text-[14px] text-[var(--text-secondary)]">
+                      {business.bookings}
+                    </p>
+                  </div>
+                  <div className="rounded-[10px] bg-[var(--bg-surface-muted)] px-[12px] py-[9px]">
+                    <p className="text-[13px] font-semibold">Просмотров</p>
+                    <p className="mt-[2px] text-[14px] text-[var(--text-secondary)]">
+                      {business.views.toLocaleString("ru-RU")}
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-auto flex items-end justify-between gap-[16px] pt-[20px]">
-                  <div className="flex gap-[12px]">
-                    <div className="rounded-[12px] bg-[#f4f4f8] px-[16px] py-[10px]">
-                      <p className="text-[13px] opacity-60">Бронирования</p>
-                      <p className="text-[20px] font-semibold">{business.bookings}</p>
-                    </div>
-                    <div className="rounded-[12px] bg-[#f4f4f8] px-[16px] py-[10px]">
-                      <p className="text-[13px] opacity-60">Просмотров</p>
-                      <p className="text-[20px] font-semibold">
-                        {business.views.toLocaleString("ru-RU")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    text="Панель управления"
-                    className="text-[18px] !px-[40px] py-[14px]"
-                    onClick={() => onOpenStatistics(business.id)}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenStatistics(business.id)}
+                  className="mt-[14px] w-full rounded-[14px] bg-[#0a6af7] py-[15px] text-[15px] font-semibold text-white transition hover:bg-[#0858ce]"
+                >
+                  Статистика
+                </button>
               </div>
             </article>
           );

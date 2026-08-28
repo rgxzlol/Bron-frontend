@@ -13,12 +13,12 @@ export default function Popular() {
         Популярные места
       </h2>
 
-      <div className="flex flex-nowrap gap-[20px] items-center">
+      <div className="flex flex-wrap gap-[20px] items-stretch">
         {popularPlaces.map((place) => (
           <Link
             key={place.id}
             href={`${routes.map}?shopId=${place.shopId || 1}`}
-            className="group flex w-full max-w-[274px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg"
+            className="group flex w-full min-w-[240px] max-w-[274px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg"
           >
             <Image
               className=" w-full object-cover transition-transform duration-300 group-hover:scale-105"

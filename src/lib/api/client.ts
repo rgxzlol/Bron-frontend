@@ -36,11 +36,12 @@ function parseResponseBody(text: string, status: number, contentType: string | n
 
   if (!isJson) {
     const preview = text.replace(/\s+/g, " ").slice(0, 120);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`API вернул не-JSON (${status}):`, preview);
+    }
     throw new ApiError(
       status,
-      preview.includes("<!DOCTYPE") || preview.includes("<html")
-        ? `Server returned HTML instead of JSON (${status}). Check the API proxy / upstream.`
-        : `Server returned an invalid response (${status}): ${preview}`,
+      "Сервер временно недоступен. Попробуйте позже.",
       text,
     );
   }
@@ -75,6 +76,13 @@ function extractErrorMessage(data: unknown, fallback: string) {
   return fallback;
 }
 
+/** Бэкенд недоступен (сетевая ошибка или заглушка хостинга вместо API). */
+function isBackendUnavailable(error: unknown): error is ApiError {
+  if (!(error instanceof ApiError)) return false;
+  if (error.status === 0) return true;
+  return typeof error.data === "string" && error.data.trimStart().startsWith("<");
+}
+
 export async function apiRequest<T>(
   path: string,
   { method = "GET", body, auth = false, token }: RequestOptions = {},
@@ -92,32 +100,44 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  let response: Response;
-
   try {
-    response = await fetch(buildUrl(path), {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-    });
-  } catch {
-    throw new ApiError(
-      0,
-      "Failed to connect to the server. Check your internet connection and try again.",
-    );
+    let response: Response;
+
+    try {
+      response = await fetch(buildUrl(path), {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        cache: "no-store",
+      });
+    } catch {
+      throw new ApiError(
+        0,
+        "Не удалось подключиться к серверу. Проверьте интернет и попробуйте снова.",
+      );
+    }
+
+    const text = await response.text();
+    const data = parseResponseBody(text, response.status, response.headers.get("content-type"));
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        extractErrorMessage(data, response.statusText || "Ошибка запроса"),
+        data,
+      );
+    }
+
+    return data as T;
+  } catch (error) {
+    if (isBackendUnavailable(error)) {
+      const { getDemoResponse } = await import("./demo");
+      const demo = getDemoResponse(path, method, body);
+      if (demo !== undefined) {
+        console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
+        return demo as T;
+      }
+    }
+    throw error;
   }
-
-  const text = await response.text();
-  const data = parseResponseBody(text, response.status, response.headers.get("content-type"));
-
-  if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      extractErrorMessage(data, response.statusText || "Request failed"),
-      data,
-    );
-  }
-
-  return data as T;
 }

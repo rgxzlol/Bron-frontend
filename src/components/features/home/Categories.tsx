@@ -46,7 +46,7 @@ export default function Categories() {
       </h2>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-nowrap gap-4">
+        <div className="flex flex-wrap gap-4">
           {categories.slice(0, 5).map(renderCategoryCard)}
 
           <button
@@ -73,7 +73,7 @@ export default function Categories() {
         </div>
 
         {isExpanded && (
-          <div className="flex flex-nowrap gap-4">
+          <div className="flex flex-wrap gap-4">
             {categories.slice(5).map(renderCategoryCard)}
           </div>
         )}

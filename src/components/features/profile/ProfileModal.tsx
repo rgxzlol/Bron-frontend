@@ -11,6 +11,7 @@ type ProfileSection =
   | "main"
   | "personal"
   | "payments"
+  | "addCard"
   | "appSettings"
   | "notifications"
   | "theme";
@@ -22,8 +23,9 @@ type ProfileModalProps = {
 
 const sectionTitles: Record<ProfileSection, string> = {
   main: "Настройки профиля",
-  personal: "Личные данные",
+  personal: "Персональные данные",
   payments: "Платежи",
+  addCard: "Добавить карту",
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",

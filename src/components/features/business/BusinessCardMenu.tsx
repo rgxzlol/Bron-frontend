@@ -3,9 +3,11 @@
 import { useEffect, useRef } from "react";
 
 type Props = {
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
   onClose: () => void;
+  editLabel?: string;
+  deleteLabel?: string;
 };
 
 function PencilIcon() {
@@ -34,7 +36,13 @@ function CloseIcon() {
   );
 }
 
-export default function BusinessCardMenu({ onEdit, onDelete, onClose }: Props) {
+export default function BusinessCardMenu({
+  onEdit,
+  onDelete,
+  onClose,
+  editLabel = "Изменить профиль",
+  deleteLabel = "Удалить бизнес",
+}: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,29 +67,31 @@ export default function BusinessCardMenu({ onEdit, onDelete, onClose }: Props) {
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[220px] rounded-[18px] bg-white p-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+      className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[210px] rounded-[18px] bg-[var(--bg-surface)] p-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
     >
-      <button
-        type="button"
-        onClick={() => {
-          onEdit();
-          onClose();
-        }}
-        className="flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[#f4f4f8]"
-      >
-        <PencilIcon />
-        Изменить профиль
-      </button>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={() => {
+            onEdit();
+            onClose();
+          }}
+          className="flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[var(--bg-surface-muted)]"
+        >
+          <PencilIcon />
+          {editLabel}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {
           onDelete();
           onClose();
         }}
-        className="mt-[6px] flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[#f4f4f8]"
+        className={`${onEdit ? "mt-[6px] " : ""}flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[var(--bg-surface-muted)]`}
       >
         <CloseIcon />
-        Удалить бизнес
+        {deleteLabel}
       </button>
     </div>
   );

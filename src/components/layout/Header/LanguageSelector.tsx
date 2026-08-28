@@ -28,13 +28,13 @@ export default function LanguageSelector() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-[18px] rounded-[27px] bg-[var(--bg-surface)] p-[7px] hover:bg-[var(--bg-surface-muted)] transition-colors border border-[var(--border-default)]"
+        className="flex h-11 items-center gap-2 rounded-full bg-[var(--bg-surface)] px-3.5 hover:bg-[var(--bg-surface-muted)] transition-colors border border-[var(--border-default)]"
         aria-label="Выбрать язык"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <Image src={assets.header.ruLang} alt="" />
-        <span className="pr-[27px] text-[24px] font-semibold">RU</span>
+        <Image src={assets.header.ruLang} alt="" className="w-6" />
+        <span className="text-[18px] font-semibold">RU</span>
       </button>
 
       {isOpen && (

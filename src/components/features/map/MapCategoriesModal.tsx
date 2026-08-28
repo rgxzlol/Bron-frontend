@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { createPortal } from "react-dom";
-import { assets } from "@/lib/assets";
 import { formatPriceInputOnChange } from "@/lib/formatPrice";
 import { BUSINESS_CATEGORIES } from "@/store/business.store";
 import {
@@ -89,6 +87,10 @@ export default function MapCategoriesModal({
       aria-label="Категории"
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
+        <div className={s.handle} aria-hidden="true">
+          <span className={s.handleBar} />
+        </div>
+
         <div className={s.header}>
           <h2 className={s.title}>Категории</h2>
           <button type="button" className={s.closeBtn} onClick={onClose} aria-label="Закрыть">
@@ -110,7 +112,19 @@ export default function MapCategoriesModal({
                   setDraftLocation(draftLocation === option.id ? null : option.id)
                 }
               >
-                <Image src={assets.map.geoMark} alt="" width={18} height={18} />
+                <span className={s.locationIcon} aria-hidden="true">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path d="M12 21s-6.5-5.1-6.5-10a6.5 6.5 0 0 1 13 0c0 4.9-6.5 10-6.5 10z" />
+                    <circle cx="12" cy="11" r="2.3" />
+                  </svg>
+                </span>
                 {option.label}
               </button>
             ))}
@@ -119,42 +133,56 @@ export default function MapCategoriesModal({
 
         <div className={s.section}>
           <span className={s.sectionTitle}>Категория бизнеса</span>
-          <select
-            className={`${s.select} ${categoryError ? s.selectError : ""}`}
-            value={draftCategory}
-            onChange={(event) => {
-              setDraftCategory(event.target.value);
-              setCategoryError(false);
-            }}
-          >
-            <option value="">Обязательно</option>
-            {BUSINESS_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+          <div className={s.selectWrap}>
+            <select
+              className={`${s.select} ${categoryError ? s.selectError : ""}`}
+              value={draftCategory}
+              onChange={(event) => {
+                setDraftCategory(event.target.value);
+                setCategoryError(false);
+              }}
+            >
+              <option value="">Обязательно</option>
+              {BUSINESS_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <span className={s.selectChevron} aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4.5 8.5 12 16l7.5-7.5h-15z" />
+              </svg>
+            </span>
+          </div>
           {categoryError && (
             <p className={s.errorText}>Выберите категорию бизнеса</p>
           )}
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Введите приблизительную ценну</span>
+          <span className={s.sectionTitle}>Введите приблизительную цену</span>
           <div className={s.priceRow}>
             <input
               className={s.priceInput}
               type="text"
               inputMode="numeric"
-              placeholder="Введите ценну"
+              placeholder="Введите цену"
               value={draftMaxPrice}
               onChange={(event) =>
                 setDraftMaxPrice(formatPriceInputOnChange(event.target.value))
               }
             />
-            <select className={s.currencySelect} defaultValue="sum" aria-label="Валюта">
-              <option value="sum">Сум</option>
-            </select>
+            <div className={s.selectWrap}>
+              <select className={s.currencySelect} defaultValue="sum" aria-label="Валюта">
+                <option value="sum">Сум</option>
+              </select>
+              <span className={s.selectChevron} aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4.5 8.5 12 16l7.5-7.5h-15z" />
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
 

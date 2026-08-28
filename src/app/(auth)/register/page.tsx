@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import AuthForm from "@/components/features/auth/AuthForm";
+import AuthFlow from "@/components/features/auth/AuthFlow";
 
 export const metadata: Metadata = {
   title: "Регистрация",
 };
 
 export default function RegisterPage() {
-  return <AuthForm mode="register" />;
+  return <AuthFlow initialScreen="register-personal" />;
 }

@@ -97,13 +97,13 @@ const Business = () => {
 
   return (
     <>
-      <div className="flex justify-between rounded-[34px] bg-white px-[23px] py-[26px]">
+      <div className="flex flex-col gap-6 rounded-[34px] bg-white px-5 py-6 md:flex-row md:items-center md:justify-between md:px-[23px] md:py-[26px]">
         <div className="flex flex-col gap-[8px]">
-          <h3 className="max-w-[450px] text-[36px] font-semibold">
+          <h3 className="max-w-[450px] text-[26px] font-semibold md:text-[36px]">
             Добавьте свой бизнес на карту для больших активов
           </h3>
 
-          <p className="text-[20px] font-semibold opacity-75">
+          <p className="text-[18px] font-semibold opacity-75 md:text-[20px]">
             Увеличь активы с помощью бронирования!
           </p>
 
@@ -115,7 +115,7 @@ const Business = () => {
         </div>
 
         <Image
-          className="mr-[70px] max-w-[392px] object-cover"
+          className="mx-auto h-auto w-full max-w-[280px] object-cover md:mx-0 md:mr-[70px] md:max-w-[392px]"
           src={assets.bussines.photo1}
           alt=""
         />

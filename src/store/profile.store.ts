@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { usersApi } from "@/lib/api";
-import { mapApiLanguage, mapProfileLanguage } from "@/lib/api/mappers";
-import { getAuthToken } from "@/lib/api/token";
+import { usersApi } from "@/lib/api/users";
+import type { UserProfile } from "@/lib/api/types";
+import { useAuthStore } from "@/store/auth.store";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -22,6 +22,20 @@ export type PaymentHistoryItem = {
   date: string;
 };
 
+function mapApiLanguage(language: string): ProfileLanguage {
+  if (language === "uz" || language === "en") return language;
+  return "ru";
+}
+
+function applyProfileToState(profile: UserProfile) {
+  return {
+    fullName: profile.username,
+    phone: profile.phone,
+    email: profile.email,
+    language: mapApiLanguage(profile.language),
+  };
+}
+
 type ProfileState = {
   fullName: string;
   phone: string;
@@ -31,25 +45,18 @@ type ProfileState = {
   theme: ProfileTheme;
   notifications: NotificationSettings;
   paymentHistory: PaymentHistoryItem[];
-  updatePersonalInfo: (payload: {
-    fullName: string;
-    phone: string;
-    email: string;
-  }) => void;
+  isProfileLoading: boolean;
+  profileError: string | null;
+  fetchProfile: () => Promise<void>;
   setAvatarUrl: (avatarUrl: string | null) => void;
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
   toggleNotification: (key: keyof NotificationSettings) => void;
-  hydrateFromApi: () => Promise<void>;
-  savePersonalInfoToApi: (payload: {
+  savePersonalInfo: (payload: {
     phone: string;
     email: string;
   }) => Promise<void>;
-  changePasswordToApi: (payload: {
-    oldPassword: string;
-    newPassword: string;
-  }) => Promise<void>;
-  deleteAccountFromApi: () => Promise<void>;
+  resetProfile: () => void;
 };
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = {
@@ -78,31 +85,44 @@ const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
 
 export const useProfileStore = create<ProfileState>()(
   persist(
-    (set) => ({
-      fullName: "Иван Иванович",
-      phone: "+998 99 999 99 99",
-      email: "bron@gmail.com",
+    (set, get) => ({
+      fullName: "",
+      phone: "",
+      email: "",
       avatarUrl: null,
       language: "ru",
       theme: "light",
       notifications: DEFAULT_NOTIFICATIONS,
       paymentHistory: DEFAULT_PAYMENT_HISTORY,
+      isProfileLoading: false,
+      profileError: null,
 
-      updatePersonalInfo: ({ fullName, phone, email }) =>
-        set({
-          fullName: fullName.trim(),
-          phone: phone.trim(),
-          email: email.trim(),
-        }),
+      fetchProfile: async () => {
+        const token = useAuthStore.getState().token;
+        if (!token) return;
+
+        set({ isProfileLoading: true, profileError: null });
+
+        try {
+          const profile = await usersApi.getProfile(token);
+          set({
+            ...applyProfileToState(profile),
+            isProfileLoading: false,
+          });
+        } catch (error) {
+          set({
+            isProfileLoading: false,
+            profileError:
+              error instanceof Error
+                ? error.message
+                : "Не удалось загрузить профиль",
+          });
+        }
+      },
 
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
 
-      setLanguage: (language) => {
-        set({ language });
-        const token = getAuthToken();
-        if (!token) return;
-        void usersApi.updateProfile({ language: mapProfileLanguage(language) }, token);
-      },
+      setLanguage: (language) => set({ language }),
 
       setTheme: (theme) => set({ theme }),
 
@@ -114,75 +134,43 @@ export const useProfileStore = create<ProfileState>()(
           },
         })),
 
-      hydrateFromApi: async () => {
-        const token = getAuthToken();
-        if (!token) return;
-
-        try {
-          const profile = await usersApi.getProfile(token);
-          set({
-            fullName: profile.username,
-            phone: profile.phone,
-            email: profile.email,
-            language: mapApiLanguage(profile.language),
-          });
-        } catch (error) {
-          console.error("Не удалось загрузить профиль:", error);
-        }
-      },
-
-      savePersonalInfoToApi: async ({ phone, email }) => {
-        const token = getAuthToken();
+      savePersonalInfo: async ({ phone, email }) => {
+        const token = useAuthStore.getState().token;
         if (!token) {
-          set({
-            phone: phone.trim(),
-            email: email.trim(),
-          });
-          return;
+          throw new Error("Требуется авторизация");
         }
 
-        const profile = await usersApi.updateProfile(
+        const updated = await usersApi.updateProfile(
           {
             phone: phone.trim(),
             email: email.trim(),
+            language: get().language,
           },
           token,
         );
 
+        set(applyProfileToState(updated));
+      },
+
+      resetProfile: () =>
         set({
-          fullName: profile.username,
-          phone: profile.phone,
-          email: profile.email,
-        });
-      },
-
-      changePasswordToApi: async ({ oldPassword, newPassword }) => {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error("Войдите в аккаунт, чтобы сменить пароль");
-        }
-
-        await usersApi.changePassword(
-          {
-            old_password: oldPassword,
-            new_password: newPassword,
-          },
-          token,
-        );
-      },
-
-      deleteAccountFromApi: async () => {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error("Войдите в аккаунт");
-        }
-
-        await usersApi.deleteProfile(token);
-      },
+          fullName: "",
+          phone: "",
+          email: "",
+          isProfileLoading: false,
+          profileError: null,
+        }),
     }),
     {
       name: "profile-storage",
-      version: 3,
+      version: 4,
+      partialize: (state) => ({
+        avatarUrl: state.avatarUrl,
+        language: state.language,
+        theme: state.theme,
+        notifications: state.notifications,
+        paymentHistory: state.paymentHistory,
+      }),
       migrate: (persisted) => {
         const state = persisted as Record<string, unknown>;
         const { cards: _cards, ...rest } = state;

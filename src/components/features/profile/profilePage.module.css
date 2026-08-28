@@ -201,6 +201,13 @@
   font-weight: 600;
 }
 
+.emailText {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .menu {
   display: flex;
   flex-direction: column;

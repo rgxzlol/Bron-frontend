@@ -49,7 +49,7 @@ function parseResponseBody(text: string, status: number, contentType: string | n
   try {
     return JSON.parse(text) as unknown;
   } catch {
-    throw new ApiError(status, "Не удалось разобрать JSON-ответ сервера", text);
+    throw new ApiError(status, "Failed to parse JSON response from server", text);
   }
 }
 

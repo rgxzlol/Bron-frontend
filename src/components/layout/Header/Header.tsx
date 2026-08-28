@@ -8,9 +8,15 @@ import SearchBar from "./SearchBar";
 import { Logo } from "@/components/shared/Logo";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { routes } from "@/config/routes";
+import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
 
 export default function Header() {
+  const hydrated = useAuthHydrated();
+  const token = useAuthStore((state) => state.token);
+  const profileHref = hydrated && token ? routes.profile : routes.login;
+
   return (
     <header className="my-6 flex flex-wrap items-center gap-3 lg:my-[45px] lg:flex-nowrap lg:gap-4">
       {/* Mobile / tablet: logo (nav lives in the bottom navbar) */}

@@ -3,18 +3,19 @@
 import { useEffect } from "react";
 import { onStoreHydrated } from "@/lib/store/persist";
 import { setTokenGetter } from "@/lib/api/token";
-import { setAuthCookie } from "@/lib/auth/session";
+import { clearAuthCookie, setAuthCookie } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/auth.store";
-import { useProfileStore } from "@/store/profile.store";
 import { useBusinessStore } from "@/store/business.store";
 import { useBookingStore } from "@/store/booking.store";
+import { useProfileStore } from "@/store/profile.store";
 
 export default function ApiProvider({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
-  const hydrateProfile = useProfileStore((state) => state.hydrateFromApi);
   const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
   const clearBusinesses = useBusinessStore((state) => state.clearBusinesses);
   const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
+  const fetchProfile = useProfileStore((state) => state.fetchProfile);
+  const resetProfile = useProfileStore((state) => state.resetProfile);
 
   useEffect(() => {
     setTokenGetter(() => useAuthStore.getState().token);
@@ -23,7 +24,10 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       const currentToken = useAuthStore.getState().token;
       if (currentToken) {
         setAuthCookie(currentToken);
+        return;
       }
+
+      clearAuthCookie();
     }
 
     return onStoreHydrated(useAuthStore, syncAuthCookie);
@@ -32,13 +36,21 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!token) {
       clearBusinesses();
+      resetProfile();
       return;
     }
 
-    void hydrateProfile();
     void fetchBusinessesFromApi();
     void fetchMyBookings();
-  }, [token, hydrateProfile, fetchBusinessesFromApi, clearBusinesses, fetchMyBookings]);
+    void fetchProfile();
+  }, [
+    token,
+    fetchBusinessesFromApi,
+    clearBusinesses,
+    fetchMyBookings,
+    fetchProfile,
+    resetProfile,
+  ]);
 
   return children;
 }

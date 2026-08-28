@@ -41,7 +41,7 @@ const sectionTitles: Record<ProfileSection, string> = {
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
-  logout: "Выйти из аккаунта",
+  logout: "Выход из аккаунта",
 };
 
 const staticCards = [
@@ -60,7 +60,8 @@ export default function ProfilePageContent({
   onSectionChange,
 }: ProfilePageContentProps) {
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
+  const hydrated = useAuthHydrated();
+  const authUsername = useAuthStore((state) => state.username);
   const clearToken = useAuthStore((state) => state.clearToken);
   const showToast = useToastStore((state) => state.showToast);
   const {
@@ -76,10 +77,8 @@ export default function ProfilePageContent({
     setLanguage,
     setTheme,
     toggleNotification,
-    hydrateFromApi,
-    savePersonalInfoToApi,
-    changePasswordToApi,
-    deleteAccountFromApi,
+    savePersonalInfo,
+    resetProfile,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -145,7 +144,7 @@ export default function ProfilePageContent({
     });
 
     try {
-      await savePersonalInfoToApi({
+      await savePersonalInfo({
         phone: phoneDraft,
         email: emailDraft,
       });
@@ -155,73 +154,25 @@ export default function ProfilePageContent({
       setSaveError(
         error instanceof ApiError
           ? error.message
-          : "Не удалось сохранить данные",
+          : error instanceof Error
+            ? error.message
+            : "Не удалось сохранить изменения",
       );
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleChangePassword() {
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Пароли не совпадают");
-      return;
-    }
-
-    setSaving(true);
-    setPasswordError(null);
-    setPasswordSuccess(false);
-
-    try {
-      await changePasswordToApi({
-        oldPassword,
-        newPassword,
-      });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordSuccess(true);
-    } catch (error) {
-      setPasswordError(
-        error instanceof ApiError
-          ? error.message
-          : "Не удалось сменить пароль",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    if (!confirm("Удалить аккаунт без возможности восстановления?")) return;
-
-    setDeleting(true);
-
-    try {
-      await deleteAccountFromApi();
-      clearToken();
-      onClose?.();
-      router.push(routes.home);
-    } catch (error) {
-      alert(
-        error instanceof ApiError
-          ? error.message
-          : "Не удалось удалить аккаунт",
-      );
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  function handleLogout() {
-    clearToken();
-    onClose?.();
-    router.push(routes.home);
   }
 
   function handleBookingsClick() {
     onClose?.();
     router.push(routes.bookings);
+  }
+
+  function handleLogout() {
+    clearToken();
+    resetProfile();
+    onClose?.();
+    router.push(routes.login);
   }
 
   async function handleAvatarUpload(file: File) {
@@ -230,6 +181,7 @@ export default function ProfilePageContent({
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
+    if (current === "logout") return "main";
     if (current === "theme" || current === "notifications") return "appSettings";
     if (current === "addCard") return "payments";
     return "main";
@@ -315,6 +267,9 @@ export default function ProfilePageContent({
             </span>
             Выйти из аккаунта
           </button>
+          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
+            Отмена
+          </button>
         </div>
       )}
 
@@ -358,7 +313,7 @@ export default function ProfilePageContent({
             <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
           </label>
 
-          {saveError && <p className={s.errorText}>{saveError}</p>}
+          {saveError ? <p className={s.errorText}>{saveError}</p> : null}
 
           <div className={s.spacer} aria-hidden />
 
@@ -367,7 +322,7 @@ export default function ProfilePageContent({
           <button
             type="button"
             className={s.primaryBtn}
-            onClick={() => void handleSavePersonalInfo()}
+            onClick={handleSavePersonalInfo}
             disabled={!isPersonalDirty || saving}
           >
             {saving ? "Сохранение..." : "Сохранить изменения"}

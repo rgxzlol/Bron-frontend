@@ -151,6 +151,13 @@
   font-weight: 600;
 }
 
+.emailText {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .menu {
   display: flex;
   flex-direction: column;
@@ -661,6 +668,21 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
+}
+
+.logoutMenuBtn {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: #fff2f4;
+  color: #e92026;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
 }
 
 .cancelBtn {

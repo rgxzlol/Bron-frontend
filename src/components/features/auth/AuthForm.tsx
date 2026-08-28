@@ -9,6 +9,7 @@ import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { SupportModal } from "./SupportModal";
+import PasswordInput from "@/components/shared/PasswordInput";
 
 type AuthMode = "login" | "register";
 
@@ -22,8 +23,6 @@ export default function AuthForm({ mode }: Props) {
   const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -61,18 +60,12 @@ export default function AuthForm({ mode }: Props) {
 
     try {
       if (mode === "register") {
-        try {
-          await authApi.register({
-            username: username.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            password,
-          });
-        } catch (registerError) {
-          if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-            throw registerError;
-          }
-        }
+        await authApi.register({
+          username: username.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          password,
+        });
       }
 
       const session = await authApi.login({
@@ -100,9 +93,15 @@ export default function AuthForm({ mode }: Props) {
     }
   }
 
+  if (hydrated && token) {
+    return (
+      <section className="mt-9.5 w-full text-center text-[18px] font-semibold text-black/60">
+        Перенаправление в профиль...
+      </section>
+    );
+  }
+
   return (
-    <>
-      {hydrated && token ? null : (
       <section className="mt-9.5 w-full">
         <form
           className="flex flex-col gap-3.25"
@@ -179,24 +178,15 @@ export default function AuthForm({ mode }: Props) {
             >
               Пароль
             </label>
-            <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
-              <input
-                id="password-input"
-                type={showPassword ? "text" : "password"}
-                placeholder="Введите пароль"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full bg-transparent pr-10 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-5 top-5 transition-all duration-200 hover:opacity-70 active:scale-90"
-                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
-              >
-                <Image src={assets.auth.eyeIcon} alt="" />
-              </button>
-            </div>
+            <PasswordInput
+              id="password-input"
+              value={password}
+              onChange={setPassword}
+              placeholder="Введите пароль"
+              wrapClassName="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]"
+              inputClassName="w-full bg-transparent pr-12 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
+              toggleClassName="absolute right-5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-black/50 transition-opacity hover:text-black/80"
+            />
           </div>
 
           {mode === "register" && (
@@ -207,26 +197,15 @@ export default function AuthForm({ mode }: Props) {
               >
                 Повторите пароль
               </label>
-              <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
-                <input
-                  id="confirm-password-input"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Повторите пароль"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="w-full bg-transparent pr-10 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-5 top-5 transition-all duration-200 hover:opacity-70 active:scale-90"
-                  aria-label={
-                    showConfirmPassword ? "Скрыть пароль" : "Показать пароль"
-                  }
-                >
-                  <Image src={assets.auth.eyeIcon} alt="" />
-                </button>
-              </div>
+              <PasswordInput
+                id="confirm-password-input"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                placeholder="Повторите пароль"
+                wrapClassName="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]"
+                inputClassName="w-full bg-transparent pr-12 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
+                toggleClassName="absolute right-5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-black/50 transition-opacity hover:text-black/80"
+              />
             </div>
           )}
 
@@ -235,43 +214,40 @@ export default function AuthForm({ mode }: Props) {
               {error}
             </p>
           )}
-        </form>
 
-        <div className="mt-10.5 flex flex-col gap-6.5">
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={isSubmitting}
-            className="w-full rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-[#0A6AF7] p-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98] disabled:opacity-60"
-          >
-            {isSubmitting
-              ? "Загрузка..."
-              : mode === "login"
-                ? "Войти"
-                : "Регистрация"}
-          </button>
+          <div className="mt-7.25 flex flex-col gap-6.5">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-[#0A6AF7] p-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98] disabled:opacity-60"
+            >
+              {isSubmitting
+                ? "Загрузка..."
+                : mode === "login"
+                  ? "Войти"
+                  : "Регистрация"}
+            </button>
 
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-1.25 rounded-[41px] bg-white p-4 text-[24px] font-semibold text-black transition-all duration-200 hover:bg-[#f2f2f7] active:scale-[0.98]"
-          >
-            <Image src={assets.auth.googleIcon} alt="google" />
-            Google
-          </button>
-
-          <div className="flex gap-4.75">
-            <SupportModal />
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-1.25 rounded-3xl bg-[#0A6AF7] p-4 text-[20px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-1.25 rounded-[41px] bg-white p-4 text-[24px] font-semibold text-black transition-all duration-200 hover:bg-[#f2f2f7] active:scale-[0.98]"
             >
-              Telegram
-              <Image src={assets.auth.telegramIcon} alt="telegram" />
+              <Image src={assets.auth.googleIcon} alt="google" />
+              Google
             </button>
+
+            <div className="flex gap-4.75">
+              <SupportModal />
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-1.25 rounded-3xl bg-[#0A6AF7] p-4 text-[20px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
+              >
+                Telegram
+                <Image src={assets.auth.telegramIcon} alt="telegram" />
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       </section>
-      )}
-    </>
   );
 }

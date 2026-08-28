@@ -11,6 +11,7 @@ import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import ThemeToggle from "@/components/shared/ThemeToggle";
+import PasswordInput from "@/components/shared/PasswordInput";
 import s from "./authPage.module.css";
 
 type AuthTab = "login" | "register";
@@ -22,7 +23,6 @@ export default function AuthPageContent() {
   const setSession = useAuthStore((state) => state.setSession);
 
   const [tab, setTab] = useState<AuthTab>("login");
-  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -53,18 +53,12 @@ export default function AuthPageContent() {
 
     try {
       if (tab === "register") {
-        try {
-          await authApi.register({
-            username: username.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-            password,
-          });
-        } catch (registerError) {
-          if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-            throw registerError;
-          }
-        }
+        await authApi.register({
+          username: username.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          password,
+        });
       }
 
       const session = await authApi.login({
@@ -88,6 +82,16 @@ export default function AuthPageContent() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (hydrated && token) {
+    return (
+      <div className={s.authPage}>
+        <p className={s.errorText} style={{ color: "rgba(0,0,0,0.6)" }}>
+          Перенаправление в профиль...
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -125,78 +129,76 @@ export default function AuthPageContent() {
             </button>
           </div>
 
-          <label className={s.field}>
-            <span className={s.label}>Имя пользователя</span>
-            <input
-              className={s.input}
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Введите имя"
-            />
-          </label>
-
-          {tab === "register" && (
-            <>
-              <label className={s.field}>
-                <span className={s.label}>Email</span>
-                <input
-                  className={s.input}
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="email@example.com"
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Телефон</span>
-                <input
-                  className={s.input}
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="+998 90 000 00 00"
-                />
-              </label>
-            </>
-          )}
-
-          <label className={s.field}>
-            <span className={s.label}>Пароль</span>
-            <div className={s.inputWrap}>
+          <form
+            className={s.form}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
+            <label className={s.field}>
+              <span className={s.label}>Имя пользователя</span>
               <input
                 className={s.input}
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Введите пароль"
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Введите имя"
               />
-              <button
-                type="button"
-                className={s.eyeBtn}
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
-              >
-                {showPassword ? "◉" : "◎"}
-              </button>
-            </div>
-          </label>
+            </label>
 
-          {error && <p className={s.errorText}>{error}</p>}
+            {tab === "register" && (
+              <>
+                <label className={s.field}>
+                  <span className={s.label}>Email</span>
+                  <input
+                    className={s.input}
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </label>
 
-          <button
-            type="button"
-            className={s.submitBtn}
-            onClick={() => void handleSubmit()}
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? "Загрузка..."
-              : tab === "login"
-                ? "Войти"
-                : "Создать аккаунт"}
-          </button>
+                <label className={s.field}>
+                  <span className={s.label}>Телефон</span>
+                  <input
+                    className={s.input}
+                    type="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="+998 90 000 00 00"
+                  />
+                </label>
+              </>
+            )}
+
+            <label className={s.field}>
+              <span className={s.label}>Пароль</span>
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                placeholder="Введите пароль"
+                wrapClassName={s.inputWrap}
+                inputClassName={s.input}
+                toggleClassName={s.eyeBtn}
+              />
+            </label>
+
+            {error && <p className={s.errorText}>{error}</p>}
+
+            <button
+              type="submit"
+              className={s.submitBtn}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Загрузка..."
+                : tab === "login"
+                  ? "Войти"
+                  : "Создать аккаунт"}
+            </button>
+          </form>
 
           <button type="button" className={s.socialBtn}>
             <span className={s.googleIcon}>G</span>

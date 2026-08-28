@@ -11,6 +11,9 @@ import {
   type ProfileLanguage,
   useProfileStore,
 } from "@/store/profile.store";
+import { useAuthStore } from "@/store/auth.store";
+import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { ApiError } from "@/lib/api";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -19,7 +22,8 @@ type ProfileSection =
   | "payments"
   | "appSettings"
   | "notifications"
-  | "theme";
+  | "theme"
+  | "logout";
 
 type ProfilePageContentProps = {
   onClose?: () => void;
@@ -39,6 +43,7 @@ const sectionTitles: Record<ProfileSection, string> = {
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
+  logout: "Выход из аккаунта",
 };
 
 export default function ProfilePageContent({
@@ -46,6 +51,9 @@ export default function ProfilePageContent({
   onSectionChange,
 }: ProfilePageContentProps) {
   const router = useRouter();
+  const hydrated = useAuthHydrated();
+  const authUsername = useAuthStore((state) => state.username);
+  const clearToken = useAuthStore((state) => state.clearToken);
   const {
     fullName,
     phone,
@@ -55,11 +63,15 @@ export default function ProfilePageContent({
     theme,
     notifications,
     paymentHistory,
+    isProfileLoading,
+    profileError,
+    fetchProfile,
     setAvatarUrl,
     setLanguage,
     setTheme,
     toggleNotification,
     savePersonalInfo,
+    resetProfile,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -67,8 +79,10 @@ export default function ProfilePageContent({
   const [section, setSection] = useState<ProfileSection>("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [fullNameDraft, setFullNameDraft] = useState(fullName);
+  const displayName = fullName || authUsername || "Пользователь";
+
   const [phoneDraft, setPhoneDraft] = useState(phone);
   const [emailDraft, setEmailDraft] = useState(email);
 
@@ -77,17 +91,19 @@ export default function ProfilePageContent({
   }, [section, onSectionChange]);
 
   useEffect(() => {
-    setFullNameDraft(fullName);
+    if (hydrated && useAuthStore.getState().token) {
+      void fetchProfile();
+    }
+  }, [hydrated, fetchProfile]);
+
+  useEffect(() => {
     setPhoneDraft(phone);
     setEmailDraft(email);
-  }, [fullName, phone, email]);
+  }, [phone, email]);
 
   const isPersonalDirty = useMemo(
-    () =>
-      fullNameDraft.trim() !== fullName ||
-      phoneDraft.trim() !== phone ||
-      emailDraft.trim() !== email,
-    [fullNameDraft, fullName, phoneDraft, phone, emailDraft, email],
+    () => phoneDraft.trim() !== phone || emailDraft.trim() !== email,
+    [phoneDraft, phone, emailDraft, email],
   );
 
   const visibleHistory = showAllHistory ? paymentHistory : paymentHistory.slice(0, 2);
@@ -96,22 +112,41 @@ export default function ProfilePageContent({
     setSection(next);
   }
 
-  function handleSavePersonalInfo() {
-    if (!fullNameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim()) return;
+  async function handleSavePersonalInfo() {
+    if (!phoneDraft.trim() || !emailDraft.trim()) return;
 
     setSaving(true);
-    savePersonalInfo({
-      fullName: fullNameDraft,
-      phone: phoneDraft,
-      email: emailDraft,
-    });
-    setSaving(false);
-    goTo("main");
+    setSaveError(null);
+
+    try {
+      await savePersonalInfo({
+        phone: phoneDraft,
+        email: emailDraft,
+      });
+      goTo("main");
+    } catch (error) {
+      setSaveError(
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Не удалось сохранить изменения",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleBookingsClick() {
     onClose?.();
     router.push(routes.bookings);
+  }
+
+  function handleLogout() {
+    clearToken();
+    resetProfile();
+    onClose?.();
+    router.push(routes.login);
   }
 
   async function handleAvatarUpload(file: File) {
@@ -120,6 +155,7 @@ export default function ProfilePageContent({
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
+    if (current === "logout") return "main";
     if (current === "theme" || current === "notifications") return "appSettings";
     return "main";
   }
@@ -161,12 +197,14 @@ export default function ProfilePageContent({
 
             <div className={s.headInfo}>
               <div className={s.nameRow}>
-                <h2>{fullName}</h2>
+                <h2>{isProfileLoading ? "Загрузка..." : displayName}</h2>
                 <button type="button" onClick={() => goTo("personal")} aria-label="Редактировать">
                   <Image src={assets.profile.edit} alt="" width={18} height={18} />
                 </button>
               </div>
-              <p>{phone}</p>
+              <p>{phone || "—"}</p>
+              {email ? <p className={s.emailText}>{email}</p> : null}
+              {profileError ? <p className={s.errorText}>{profileError}</p> : null}
             </div>
           </div>
 
@@ -196,6 +234,38 @@ export default function ProfilePageContent({
               onClick={() => goTo("appSettings")}
             />
           </div>
+
+          <button
+            type="button"
+            className={s.logoutMenuBtn}
+            onClick={() => goTo("logout")}
+          >
+            <span className={s.logoutConfirmIcon}>
+              <Image src={assets.profile.quit} alt="" width={20} height={20} />
+            </span>
+            Выйти из аккаунта
+          </button>
+        </div>
+      )}
+
+      {section === "logout" && (
+        <div className={s.logoutSection}>
+          <Image
+            src={assets.profile.quitIllustration}
+            alt=""
+            width={220}
+            height={180}
+            className={s.logoutImage}
+          />
+          <h3 className={s.logoutTitle}>Вы уверены, что хотите выйти из аккаунта?</h3>
+          <small>Для доступа к бронированиям потребуется снова войти</small>
+          <button type="button" className={s.logoutBtn} onClick={handleLogout}>
+            <Image src={assets.profile.quit} alt="" width={20} height={20} />
+            Выйти из аккаунта
+          </button>
+          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
+            Отмена
+          </button>
         </div>
       )}
 
@@ -228,10 +298,7 @@ export default function ProfilePageContent({
 
           <label className={s.field}>
             <span>Имя пользователя</span>
-            <input
-              value={fullNameDraft}
-              onChange={(e) => setFullNameDraft(e.target.value)}
-            />
+            <input value={displayName} readOnly className={s.readOnlyInput} />
           </label>
           <label className={s.field}>
             <span>Номер телефона</span>
@@ -241,6 +308,8 @@ export default function ProfilePageContent({
             <span>Электронная почта</span>
             <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
           </label>
+
+          {saveError ? <p className={s.errorText}>{saveError}</p> : null}
 
           <button
             type="button"

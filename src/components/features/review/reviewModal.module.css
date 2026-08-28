@@ -129,6 +129,18 @@
   color: var(--text-secondary);
 }
 
+.counterLimit {
+  color: #e02424;
+  font-weight: 700;
+}
+
+.limitWarning {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e02424;
+}
+
 .uploadArea {
   width: 100%;
   min-height: 120px;
@@ -225,6 +237,35 @@
   color: var(--text-on-primary);
   font-size: 18px;
   font-weight: 700;
+}
+
+.fieldError {
+  outline: 1.5px solid #e02424;
+  outline-offset: -1.5px;
+}
+
+.starsError {
+  padding: 4px;
+  border-radius: 12px;
+  outline: 1.5px solid #e02424;
+}
+
+.errorMessage {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e02424;
+}
+
+.validationSummary {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fde8e8;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e02424;
+  grid-column: 1 / -1;
 }
 
 .submitBtn:disabled {

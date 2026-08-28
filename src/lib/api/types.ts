@@ -24,6 +24,22 @@ export type UserOut = {
   role?: string;
 };
 
+export type UserNotificationSettings = {
+  push: boolean;
+  email: boolean;
+  bookingReminder: boolean;
+  promotions: boolean;
+};
+
+export type InAppNotificationType = "booking" | "payment" | "promotion";
+
+export type InAppNotification = {
+  id: string;
+  type: InAppNotificationType;
+  time: string;
+  read: boolean;
+};
+
 export type UserProfile = {
   id: number;
   username: string;
@@ -33,9 +49,11 @@ export type UserProfile = {
   role: string;
   language: string;
   is_verified: boolean;
+  notification_settings?: UserNotificationSettings;
 };
 
 export type UserProfileUpdate = {
+  username?: string | null;
   email?: string | null;
   phone?: string | null;
   language?: string | null;
@@ -271,8 +289,11 @@ export type BookingListItem = {
   id: number;
   booking_date: string;
   start_time: string;
+  end_time?: string;
   status: string;
   total_price: number;
+  business_id?: number;
+  guest_count?: number;
 };
 
 export type BookingCreate = {
@@ -290,4 +311,7 @@ export type BookingCreate = {
 export type BookingUpdate = {
   status?: string | null;
   staff_id?: number | null;
+  booking_date?: string;
+  start_time?: string;
+  end_time?: string;
 };

@@ -6,7 +6,11 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtectedPage = pathname.startsWith("/profile");
+  const isProtectedPage =
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/book") ||
+    pathname.startsWith("/bookings") ||
+    pathname.startsWith("/business");
 
   if (!token && isProtectedPage) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -16,5 +20,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile"],
+  matcher: ["/profile/:path*", "/book/:path*", "/bookings/:path*", "/business/:path*"],
 };

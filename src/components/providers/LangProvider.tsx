@@ -26,6 +26,8 @@ function resolveDocumentTitle(pathname: string, t: Translator): string {
     pageTitle = t("meta.profile");
   } else if (pathname.startsWith(routes.support)) {
     pageTitle = t("meta.support");
+  } else if (pathname.startsWith(routes.businessApplication)) {
+    pageTitle = t("meta.businessApplication");
   } else if (pathname.startsWith(routes.business)) {
     pageTitle = t("meta.business");
   } else if (

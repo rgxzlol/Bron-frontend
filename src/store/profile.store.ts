@@ -1,18 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { usersApi } from "@/lib/api/users";
-import type { UserProfile } from "@/lib/api/types";
+import type { UserNotificationSettings, UserProfile } from "@/lib/api/types";
 import { useAuthStore } from "@/store/auth.store";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
-
-export type NotificationSettings = {
-  push: boolean;
-  email: boolean;
-  bookingReminder: boolean;
-  promotions: boolean;
-};
+export type NotificationSettings = UserNotificationSettings;
 
 export type PaymentHistoryItem = {
   id: string;
@@ -33,6 +27,9 @@ function applyProfileToState(profile: UserProfile) {
     phone: profile.phone,
     email: profile.email,
     language: mapApiLanguage(profile.language),
+    ...(profile.notification_settings
+      ? { notifications: profile.notification_settings }
+      : {}),
   };
 }
 
@@ -48,14 +45,28 @@ type ProfileState = {
   isProfileLoading: boolean;
   profileError: string | null;
   fetchProfile: () => Promise<void>;
+  fetchNotificationSettings: () => Promise<void>;
   setAvatarUrl: (avatarUrl: string | null) => void;
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
   toggleNotification: (key: keyof NotificationSettings) => void;
+  saveNotificationSettings: () => Promise<void>;
   savePersonalInfo: (payload: {
+    fullName: string;
     phone: string;
     email: string;
   }) => Promise<void>;
+  updatePersonalInfo: (payload: {
+    fullName?: string;
+    phone?: string;
+    email?: string;
+  }) => void;
+  applyAuthProfile: (payload: {
+    fullName?: string;
+    phone?: string;
+    email?: string;
+    avatarUrl?: string | null;
+  }) => void;
   resetProfile: () => void;
 };
 
@@ -104,11 +115,21 @@ export const useProfileStore = create<ProfileState>()(
         set({ isProfileLoading: true, profileError: null });
 
         try {
-          const profile = await usersApi.getProfile(token);
-          set({
+          const [profile, notificationSettings] = await Promise.all([
+            usersApi.getProfile(token),
+            usersApi.getNotificationSettings(token).catch(() => null),
+          ]);
+
+          set((state) => ({
             ...applyProfileToState(profile),
+            fullName: profile.username || state.fullName,
+            avatarUrl: state.avatarUrl,
+            notifications:
+              notificationSettings ??
+              profile.notification_settings ??
+              state.notifications,
             isProfileLoading: false,
-          });
+          }));
         } catch (error) {
           set({
             isProfileLoading: false,
@@ -120,43 +141,118 @@ export const useProfileStore = create<ProfileState>()(
         }
       },
 
+      fetchNotificationSettings: async () => {
+        const token = useAuthStore.getState().token;
+        if (!token) return;
+
+        try {
+          const saved = await usersApi.getNotificationSettings(token);
+          set({ notifications: saved });
+        } catch {
+          // Keep the last known local/server state when the request fails.
+        }
+      },
+
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
 
-      setLanguage: (language) => set({ language }),
+      setLanguage: (language) => {
+        set({ language });
+
+        const token = useAuthStore.getState().token;
+        if (!token) return;
+
+        void usersApi.updateProfile({ language }, token).catch(() => {
+          // Local persisted language remains the source of truth offline.
+        });
+      },
 
       setTheme: (theme) => set({ theme }),
 
-      toggleNotification: (key) =>
-        set((state) => ({
-          notifications: {
-            ...state.notifications,
-            [key]: !state.notifications[key],
-          },
-        })),
+      saveNotificationSettings: async () => {
+        const token = useAuthStore.getState().token;
+        if (!token) return;
 
-      savePersonalInfo: async ({ phone, email }) => {
+        const notifications = get().notifications;
+
+        try {
+          const saved = await usersApi.updateNotificationSettings(notifications, token);
+          set({ notifications: saved });
+        } catch {
+          // Local persisted state remains the source of truth offline.
+        }
+      },
+
+      toggleNotification: (key) => {
+        const token = useAuthStore.getState().token;
+        const previous = get().notifications;
+        const next = {
+          ...previous,
+          [key]: !previous[key],
+        };
+
+        set({ notifications: next });
+
+        if (!token) return;
+
+        void usersApi
+          .updateNotificationSettings(next, token)
+          .then((saved) => {
+            set({ notifications: saved });
+          })
+          .catch(() => {
+            set({ notifications: previous });
+          });
+      },
+
+      savePersonalInfo: async ({ fullName, phone, email }) => {
         const token = useAuthStore.getState().token;
         if (!token) {
           throw new Error("Требуется авторизация");
         }
 
+        const trimmedName = fullName.trim();
+        const trimmedPhone = phone.trim();
+        const trimmedEmail = email.trim();
+
         const updated = await usersApi.updateProfile(
           {
-            phone: phone.trim(),
-            email: email.trim(),
+            username: trimmedName,
+            phone: trimmedPhone,
+            email: trimmedEmail,
             language: get().language,
           },
           token,
         );
 
-        set(applyProfileToState(updated));
+        set({
+          ...applyProfileToState(updated),
+          fullName: trimmedName || updated.username,
+          phone: trimmedPhone || updated.phone,
+          email: trimmedEmail || updated.email,
+        });
       },
+
+      updatePersonalInfo: ({ fullName, phone, email }) =>
+        set((state) => ({
+          fullName: fullName ?? state.fullName,
+          phone: phone ?? state.phone,
+          email: email ?? state.email,
+        })),
+
+      applyAuthProfile: ({ fullName, phone, email, avatarUrl }) =>
+        set((state) => ({
+          fullName: fullName ?? state.fullName,
+          phone: phone ?? state.phone,
+          email: email ?? state.email,
+          avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
+        })),
 
       resetProfile: () =>
         set({
           fullName: "",
           phone: "",
           email: "",
+          avatarUrl: null,
           isProfileLoading: false,
           profileError: null,
         }),

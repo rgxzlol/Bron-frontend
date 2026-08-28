@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 type ButtonProps = {
   text: string;
   as?: "button" | "span";
+  "data-testid"?: string;
 } & Pick<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "type" | "className" | "onClick" | "disabled"
@@ -18,6 +19,7 @@ export default function Button({
   className,
   onClick,
   disabled,
+  "data-testid": dataTestId,
 }: ButtonProps) {
   const classes = className ? `${buttonClassName} ${className}` : buttonClassName;
 
@@ -26,7 +28,13 @@ export default function Button({
   }
 
   return (
-    <button type={type} className={classes} onClick={onClick} disabled={disabled}>
+    <button
+      type={type}
+      className={classes}
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={dataTestId}
+    >
       {text}
     </button>
   );

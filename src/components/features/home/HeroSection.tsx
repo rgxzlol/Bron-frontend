@@ -1,5 +1,5 @@
-import Button from "@/components/shared/Button";
 import HeroPhotoCarousel from "@/components/features/home/hero-photo-carousel";
+import FindSpotButton from "@/components/features/home/FindSpotButton";
 
 export default function HeroSection() {
   return (
@@ -12,9 +12,7 @@ export default function HeroSection() {
           Салон красоты, здоровье, спа, фитнес клуб, образование и многое другое
           в твоем распоряжении
         </p>
-        <a href="#categories">
-          <Button text="Найти местечко" />
-        </a>
+        <FindSpotButton />
       </div>
       <HeroPhotoCarousel />
     </section>

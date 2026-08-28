@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useEffect, useRef } from "react";
 
 type Props = {
@@ -40,10 +41,13 @@ export default function BusinessCardMenu({
   onEdit,
   onDelete,
   onClose,
-  editLabel = "Изменить профиль",
-  deleteLabel = "Удалить бизнес",
+  editLabel,
+  deleteLabel,
 }: Props) {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
+  const resolvedEditLabel = editLabel ?? t("businessCardMenu.editProfile");
+  const resolvedDeleteLabel = deleteLabel ?? t("businessCardMenu.deleteBusiness");
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -68,10 +72,12 @@ export default function BusinessCardMenu({
     <div
       ref={menuRef}
       className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[210px] rounded-[18px] bg-[var(--bg-surface)] p-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
+      data-testid="business-card-menu"
     >
       {onEdit && (
         <button
           type="button"
+          data-testid="business-card-menu-edit"
           onClick={() => {
             onEdit();
             onClose();
@@ -79,11 +85,12 @@ export default function BusinessCardMenu({
           className="flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[var(--bg-surface-muted)]"
         >
           <PencilIcon />
-          {editLabel}
+          {resolvedEditLabel}
         </button>
       )}
       <button
         type="button"
+        data-testid="business-card-menu-delete"
         onClick={() => {
           onDelete();
           onClose();
@@ -91,7 +98,7 @@ export default function BusinessCardMenu({
         className={`${onEdit ? "mt-[6px] " : ""}flex w-full items-center gap-[12px] rounded-[14px] px-[14px] py-[12px] text-left text-[15px] font-semibold transition hover:bg-[var(--bg-surface-muted)]`}
       >
         <CloseIcon />
-        {deleteLabel}
+        {resolvedDeleteLabel}
       </button>
     </div>
   );

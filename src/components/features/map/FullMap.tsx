@@ -27,6 +27,7 @@ import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
 import { onStoreHydrated } from "@/lib/store/persist"
 import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
+import { useTranslation } from "@/lib/i18n/useTranslation"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 const mapboxToken = getMapboxToken()
@@ -121,6 +122,77 @@ function shopHasActiveServices(shop: ShopsType) {
   return (shop.services?.length ?? 0) > 0
 }
 
+function getShopMinPrice(shop: ShopsType) {
+  if (shop.services?.length) {
+    return Math.min(...shop.services.map((service) => service.priceFrom))
+  }
+
+  return shop.price
+}
+
+function getBusinessMinPrice(business: SavedBusiness) {
+  const activeServices = business.services.filter((service) => service.active)
+  if (activeServices.length > 0) {
+    return Math.min(...activeServices.map((service) => service.price))
+  }
+  return 50000
+}
+
+function getUserLocationForDistanceFilter(
+  userLocation: { lat: number; lng: number } | null,
+): { lat: number; lng: number } {
+  return (
+    userLocation ?? {
+      lat: INITIAL_MAP_CENTER[1],
+      lng: INITIAL_MAP_CENTER[0],
+    }
+  )
+}
+
+type MapViewportMode = "idle" | "user" | "fit-markers"
+
+function centerMapOnUser(map: mapboxgl.Map, lat: number, lng: number) {
+  map.flyTo({
+    center: [lng, lat],
+    zoom: 14,
+    speed: 1.2,
+  })
+}
+
+function fitMapToCoordinates(
+  map: mapboxgl.Map,
+  coordinates: [number, number][],
+) {
+  if (coordinates.length === 0) {
+    map.flyTo({
+      center: INITIAL_MAP_CENTER,
+      zoom: INITIAL_MAP_ZOOM,
+      speed: 1.2,
+    })
+    return
+  }
+
+  if (coordinates.length === 1) {
+    map.flyTo({
+      center: coordinates[0],
+      zoom: 14,
+      speed: 1.2,
+    })
+    return
+  }
+
+  const bounds = coordinates.reduce(
+    (nextBounds, coordinate) => nextBounds.extend(coordinate),
+    new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]),
+  )
+
+  map.fitBounds(bounds, {
+    padding: 72,
+    maxZoom: 15,
+    duration: 1200,
+  })
+}
+
 function matchesDistanceFilter(
   userLat: number,
   userLng: number,
@@ -140,12 +212,14 @@ function matchesDistanceFilter(
 }
 
 export default function FullMap({ onStartBooking }: FullMapProps) {
+  const { t } = useTranslation()
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
   const locationFilterReadyRef = useRef(false)
+  const mapViewportModeRef = useRef<MapViewportMode>("idle")
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
   const [serviceSelectionShop, setServiceSelectionShop] =
@@ -171,6 +245,33 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const appliedCategory = useMapFilterStore((s) => s.appliedCategory)
   const appliedMaxPrice = useMapFilterStore((s) => s.appliedMaxPrice)
   const appliedLocation = useMapFilterStore((s) => s.appliedLocation)
+  const filtersAppliedCount = useMapFilterStore((s) => s.filtersAppliedCount)
+  const applyCategoryFromNavigation = useMapFilterStore(
+    (s) => s.applyCategoryFromNavigation,
+  )
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const category = params.get("category")
+    const filter = params.get("filter")
+
+    if (category) {
+      applyCategoryFromNavigation(category)
+      mapViewportModeRef.current = "fit-markers"
+    }
+
+    if (filter) {
+      setActiveFilter(filter)
+      mapViewportModeRef.current = "fit-markers"
+    }
+
+    if (category || filter) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete("category")
+      url.searchParams.delete("filter")
+      window.history.replaceState({}, "", url.pathname + url.search)
+    }
+  }, [applyCategoryFromNavigation])
 
   useEffect(() => {
     const localById = new Map(businesses.map((business) => [business.id, business]))
@@ -192,6 +293,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   function createUserMarkerElement() {
     const el = document.createElement("div")
+    el.setAttribute("data-testid", "map-user-location-marker")
     el.style.cssText = [
       "width:20px",
       "height:20px",
@@ -234,40 +336,45 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     }
   }
 
-  function matchesShopFilters(shop: ShopsType): boolean {
+  function matchesShopFilters(
+    shop: ShopsType,
+    categoryFilter = appliedCategory,
+    maxPriceFilter = appliedMaxPrice,
+    locationFilter = appliedLocation,
+  ): boolean {
     if (!hasValidCoords(shop)) return false
 
     const matchesPill =
       activeFilter === "Все"
         ? true
         : activeFilter === "Спортзал"
-          ? shop.title.toLowerCase().includes("bronfitness") || shop.type === "Спортзал"
+          ? shop.title.toLowerCase().includes("bronfitness") ||
+            shop.type === "Спортзал" ||
+            shop.type === "Спорт зал"
           : shop.type === activeFilter
 
     if (!matchesPill) return false
 
     if (
-      appliedCategory &&
-      !shopMatchesBusinessCategory(shop.type, shop.category, appliedCategory)
+      categoryFilter &&
+      !shopMatchesBusinessCategory(shop.type, shop.category, categoryFilter)
     ) {
       return false
     }
 
-    if (appliedMaxPrice != null && shop.price > appliedMaxPrice) {
+    if (maxPriceFilter != null && getShopMinPrice(shop) > maxPriceFilter) {
       return false
     }
 
-    const userLocation = userLocationRef.current
+    const userLocation = getUserLocationForDistanceFilter(userLocationRef.current)
     if (
-      locationFilterReadyRef.current &&
-      userLocation &&
-      appliedLocation &&
+      locationFilter &&
       !matchesDistanceFilter(
         userLocation.lat,
         userLocation.lng,
         shop.lat,
         shop.lng,
-        appliedLocation,
+        locationFilter,
       )
     ) {
       return false
@@ -277,22 +384,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   }
 
   function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
-    const coords = normalizeCoords(shop.lat, shop.lng)
-    if (!coords) return
-
-    if (shouldOpenServiceSelection(shop)) {
-      setSelectedShop(null)
-      setServiceSelectionShop(enrichShopWithDistance(shop))
-    } else {
-      openShop(shop, map)
-      return
-    }
-
-    map.flyTo({
-      center: [coords.lng, coords.lat],
-      zoom: 15,
-      speed: 1.2,
-    })
+    openShop(shop, map)
   }
 
   function openShop(shop: ShopsType, map: mapboxgl.Map) {
@@ -313,6 +405,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const map = mapRef.current
     if (!map || !map.isStyleLoaded()) return
 
+    const {
+      appliedCategory: currentAppliedCategory,
+      appliedMaxPrice: currentAppliedMaxPrice,
+      appliedLocation: currentAppliedLocation,
+    } = useMapFilterStore.getState()
+
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
@@ -330,7 +428,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         return false
       }
 
-      return matchesShopFilters(shop)
+      return matchesShopFilters(
+        shop,
+        currentAppliedCategory,
+        currentAppliedMaxPrice,
+        currentAppliedLocation,
+      )
     })
 
     const filteredUserBusinesses = businesses.filter((business) => {
@@ -339,22 +442,67 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       if (!businessMatchesMapFilter(business.category || "Другое", activeFilter)) {
         return false
       }
+      if (
+        currentAppliedCategory &&
+        !businessMatchesBusinessCategory(business.category || "Другое", currentAppliedCategory)
+      ) {
+        return false
+      }
+
+      if (
+        currentAppliedMaxPrice != null &&
+        getBusinessMinPrice(business) > currentAppliedMaxPrice
+      ) {
+        return false
+      }
+
+      const userLocation = getUserLocationForDistanceFilter(userLocationRef.current)
+      if (
+        currentAppliedLocation &&
+        !matchesDistanceFilter(
+          userLocation.lat,
+          userLocation.lng,
+          business.lat,
+          business.lng,
+          currentAppliedLocation,
+        )
+      ) {
+        return false
+      }
+
       return true
     })
+
+    const markerCoordinates: [number, number][] = []
 
     filteredShops.forEach((shop) => {
       const coords = normalizeCoords(shop.lat, shop.lng)
       if (!coords) return
 
+      markerCoordinates.push([coords.lng, coords.lat])
+
       const isHospital = shop.type === "Больница"
       const el = createShopMarkerElement(shop.title, isHospital)
+      el.setAttribute("data-testid", `map-shop-marker-${shop.id}`)
+      el.setAttribute("role", "button")
+      el.setAttribute("tabindex", "0")
+      el.setAttribute("aria-label", shop.title)
 
       const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([coords.lng, coords.lat])
         .addTo(map)
 
-      marker.getElement().addEventListener("click", () => {
-        openShopOrServiceSelection(shop, map)
+      const openMarkerShop = () => openShopOrServiceSelection(shop, map)
+
+      marker.getElement().addEventListener("click", (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        openMarkerShop()
+      })
+      marker.getElement().addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return
+        event.preventDefault()
+        openMarkerShop()
       })
 
       markersRef.current.push(marker)
@@ -363,6 +511,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     filteredUserBusinesses.forEach((business) => {
       const coords = normalizeCoords(business.lat, business.lng)
       if (!coords) return
+
+      markerCoordinates.push([coords.lng, coords.lat])
 
       const el = createUserBusinessMarkerElement(business.name || "Мой бизнес")
 
@@ -377,6 +527,16 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markersRef.current.push(marker)
     })
+
+    const viewportMode = mapViewportModeRef.current
+    if (viewportMode === "user" && userLocationRef.current) {
+      const { lat, lng } = userLocationRef.current
+      centerMapOnUser(map, lat, lng)
+      mapViewportModeRef.current = "idle"
+    } else if (viewportMode === "fit-markers") {
+      fitMapToCoordinates(map, markerCoordinates)
+      mapViewportModeRef.current = "idle"
+    }
   }, [
     activeFilter,
     businesses,
@@ -427,19 +587,23 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
             if (persistedLocation) {
               locationFilterReadyRef.current = true
+              mapViewportModeRef.current = "fit-markers"
               syncMarkersRef.current()
+              return
             }
 
-            map.flyTo({
-              center: [lng, lat],
-              zoom: 14,
-              speed: 1.2,
-            })
+            mapViewportModeRef.current = "user"
+            syncMarkersRef.current()
           })
         },
         (error) => {
           console.error(error)
-          locationFilterReadyRef.current = false
+          locationFilterReadyRef.current = Boolean(
+            useMapFilterStore.getState().appliedLocation,
+          )
+          whenMapReady(map, () => {
+            syncMarkersRef.current()
+          })
         },
         {
           enableHighAccuracy: true,
@@ -462,6 +626,18 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const sync = () => syncMarkersRef.current()
 
     return onStoreHydrated(useBusinessStore, sync)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => {
+      if (useMapFilterStore.getState().appliedLocation) {
+        locationFilterReadyRef.current = true
+        mapViewportModeRef.current = "fit-markers"
+      }
+      syncMarkersRef.current()
+    }
+
+    return onStoreHydrated(useMapFilterStore, sync)
   }, [])
 
   useEffect(() => {
@@ -509,20 +685,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     whenMapReady(map, () => syncMarkersRef.current())
   }, [syncMarkers])
 
-  function resetMapToInitialView() {
-    const map = mapRef.current
-    if (!map) return
-
-    map.flyTo({
-      center: INITIAL_MAP_CENTER,
-      zoom: INITIAL_MAP_ZOOM,
-      speed: 1.2,
-    })
-  }
-
   function handleFilterSelect(filter: string) {
+    mapViewportModeRef.current = "fit-markers"
     setActiveFilter((prev) => (prev === filter ? "Все" : filter))
-    resetMapToInitialView()
   }
 
   function handleOpenCategories() {
@@ -557,8 +722,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       },
       (error) => {
         console.error(error)
-        locationFilterReadyRef.current = false
+        locationFilterReadyRef.current = Boolean(
+          useMapFilterStore.getState().appliedLocation,
+        )
         alert("Не удалось определить ваше местоположение. Разрешите доступ к геолокации.")
+        syncMarkersRef.current()
       },
       {
         enableHighAccuracy: true,
@@ -568,25 +736,26 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   function handleCategoriesApply() {
     const location = useMapFilterStore.getState().appliedLocation
+    mapViewportModeRef.current = "fit-markers"
+
     if (location) {
+      locationFilterReadyRef.current = true
+      syncMarkersRef.current()
+
       requestUserLocation(() => {
-        const map = mapRef.current
-        const userLocation = userLocationRef.current
-        if (map && userLocation) {
-          map.flyTo({
-            center: [userLocation.lng, userLocation.lat],
-            zoom: 14,
-            speed: 1.2,
-          })
-        }
+        syncMarkersRef.current()
       }, true)
       return
     }
 
     locationFilterReadyRef.current = false
     syncMarkersRef.current()
-    resetMapToInitialView()
   }
+
+  useEffect(() => {
+    if (filtersAppliedCount === 0) return
+    handleCategoriesApply()
+  }, [filtersAppliedCount])
 
   function goToMyLocation() {
     const map = mapRef.current
@@ -596,11 +765,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       const userLocation = userLocationRef.current
       if (!userLocation) return
 
-      map.flyTo({
-        center: [userLocation.lng, userLocation.lat],
-        zoom: 15,
-        speed: 1.2,
-      })
+      mapViewportModeRef.current = "user"
+      syncMarkersRef.current()
     })
   }
 
@@ -619,13 +785,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const shop = selectedShop
     const services = shop.services ?? []
 
-    if (services.length > 1) {
-      setSelectedShop(null)
-      setServiceSelectionShop(shop)
-      return
-    }
-
     setSelectedShop(null)
+    setServiceSelectionShop(null)
     onStartBooking(
       shop,
       services.length === 1 ? [services[0].id] : undefined,
@@ -639,6 +800,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           <button
             key={filter}
             type="button"
+            data-testid={`map-filter-${filter}`}
             onClick={() => handleFilterSelect(filter)}
             className={`
               px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
@@ -658,7 +820,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         <button
           type="button"
           onClick={handleOpenCategories}
-          aria-label="Фильтры"
+          aria-label={t("map.categories")}
+          data-testid="map-categories-open"
           className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)]"
         >
           <svg
@@ -700,10 +863,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       <button
         type="button"
         onClick={handleOpenCategories}
+        data-testid="map-categories-open-desktop"
         className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
       >
         <Image src={assets.header.filter} alt="" width={18} height={18} />
-        Категории
+        {t("map.categories")}
       </button>
 
       <button
@@ -715,6 +879,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       <div
         ref={mapContainer}
+        data-testid="interactive-map"
         style={{
           width: "100%",
           height: "80dvh",

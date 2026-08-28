@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { isDateBeforeDay, isSameDay, startOfDay } from "@/lib/booking/timeSlots";
+import { toBookingDateTestId } from "@/lib/formatDate";
 
 interface DatePickerProps {
   viewMonth: Date;
@@ -113,6 +114,9 @@ export default function DatePicker({
               `}
               onClick={() => !isDisabled && onSelectedDateChange(date)}
               disabled={isDisabled}
+              data-testid={
+                inMonth && !isDisabled ? toBookingDateTestId(date) : undefined
+              }
             >
               {date.getDate()}
             </button>

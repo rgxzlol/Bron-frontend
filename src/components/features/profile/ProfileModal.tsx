@@ -14,7 +14,8 @@ type ProfileSection =
   | "addCard"
   | "appSettings"
   | "notifications"
-  | "theme";
+  | "theme"
+  | "logout";
 
 type ProfileModalProps = {
   isOpen: boolean;
@@ -29,6 +30,7 @@ const sectionTitles: Record<ProfileSection, string> = {
   appSettings: "Настройки",
   notifications: "Уведомления",
   theme: "Тема",
+  logout: "Выход из аккаунта",
 };
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {

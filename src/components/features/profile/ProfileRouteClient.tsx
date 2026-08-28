@@ -18,9 +18,7 @@ export default function ProfileRouteClient() {
     }
   }, [hydrated, token, router]);
 
-  if (!hydrated || !token) {
-    return null;
-  }
+  if (!token) return null;
 
   return (
     <ProfileModal

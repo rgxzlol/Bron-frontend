@@ -2,48 +2,12 @@ import { assets } from "@/lib/assets";
 import type { StaticImageData } from "next/image";
 
 export const supportContacts = {
-  phone: "+998 77 960 89 07",
-  email: "maverick902207@gmail.com",
-  telegram: "maverick_hunter_ML",
+  phone: "+998 99 999 99 99",
+  phoneHref: "tel:+99899999999",
+  email: "Bron_Suport@gmail.com",
+  telegram: "Bron_Suport",
+  telegramHref: "https://t.me/Bron_Suport",
 } as const;
-
-export type SupportContact = {
-  id: string;
-  title: string;
-  description: string;
-  buttonText: string;
-  icon: StaticImageData;
-  href: string;
-  external?: boolean;
-};
-
-export const supportContactCards: SupportContact[] = [
-  {
-    id: "phone",
-    title: "Позвонить",
-    description: "Позвоните нам по горячей линии",
-    buttonText: "Позвонить",
-    icon: assets.support.phone,
-    href: `tel:${supportContacts.phone.replace(/\s/g, "")}`,
-  },
-  {
-    id: "telegram",
-    title: "Telegram",
-    description: "Свяжитесь с нами в telegram",
-    buttonText: "Открыть",
-    icon: assets.support.tg,
-    href: `https://t.me/${supportContacts.telegram}`,
-    external: true,
-  },
-  {
-    id: "email",
-    title: "Email",
-    description: "Отправьте нам письмо и мы ответим",
-    buttonText: "Написать",
-    icon: assets.support.email,
-    href: `mailto:${supportContacts.email}?subject=${encodeURIComponent("Обращение в поддержку Bron")}`,
-  },
-];
 
 export type FaqItem = {
   id: string;

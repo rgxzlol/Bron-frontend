@@ -12,8 +12,11 @@ import {
   type BusinessService,
   useBusinessStore,
 } from "@/store/business.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { validateGalleryImageFile } from "@/lib/business/photos";
+import { useToastStore } from "@/store/toast.store";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 
@@ -24,9 +27,7 @@ type Props = {
 };
 
 type View =
-  | "dashboard"
-  | "services"
-  | "products"
+  | "servicesStaff"
   | "bookings"
   | "addService"
   | "addProduct";
@@ -53,6 +54,8 @@ const TIME_SLOTS = [
   "22:00",
 ];
 
+const SERVICE_DURATION_OPTIONS = [30, 60, 90, 120] as const;
+
 const RU_MONTHS = [
   "Январь",
   "Февраль",
@@ -68,6 +71,8 @@ const RU_MONTHS = [
   "Декабрь",
 ];
 
+const RU_WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"];
+
 const RU_MONTHS_GEN = [
   "января",
   "февраля",
@@ -82,8 +87,6 @@ const RU_MONTHS_GEN = [
   "ноября",
   "декабря",
 ];
-
-const RU_WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"];
 
 /* ---------- icons ---------- */
 
@@ -263,6 +266,56 @@ function ChevronDownIcon() {
 
 /* ---------- small shared pieces ---------- */
 
+function WorkspaceTabs({
+  active,
+  onServicesStaff,
+  onBookings,
+  servicesLabel,
+  bookingsLabel,
+}: {
+  active: "servicesStaff" | "bookings";
+  onServicesStaff: () => void;
+  onBookings: () => void;
+  servicesLabel: string;
+  bookingsLabel: string;
+}) {
+  const tabClass = (isActive: boolean) =>
+    `flex-1 rounded-[12px] px-[14px] py-[12px] text-[14px] font-semibold transition ${
+      isActive
+        ? "bg-[#0a6af7] text-white"
+        : "bg-[var(--bg-surface)] text-[var(--text-primary)]"
+    }`;
+
+  return (
+    <div
+      className="mb-[16px] flex gap-[8px] rounded-[16px] bg-[var(--bg-surface-muted)] p-[6px]"
+      data-testid="business-dashboard-tabs"
+      role="tablist"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === "servicesStaff"}
+        data-testid="business-dashboard-tab-services-staff"
+        className={tabClass(active === "servicesStaff")}
+        onClick={onServicesStaff}
+      >
+        {servicesLabel}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active === "bookings"}
+        data-testid="business-dashboard-tab-bookings"
+        className={tabClass(active === "bookings")}
+        onClick={onBookings}
+      >
+        {bookingsLabel}
+      </button>
+    </div>
+  );
+}
+
 function ScreenHeader({
   title,
   onBack,
@@ -289,14 +342,49 @@ function ScreenHeader({
 }
 
 function ActiveBadge({ active }: { active: boolean }) {
+  const { t } = useTranslation();
+
   return active ? (
     <span className="rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]">
-      Активна
+      {t("businessDashboard.activeStatus")}
     </span>
   ) : (
     <span className="rounded-full bg-[var(--bg-surface-muted)] px-[12px] py-[5px] text-[12px] font-semibold text-[var(--text-muted)]">
-      Неактивна
+      {t("businessDashboard.inactiveStatus")}
     </span>
+  );
+}
+
+function ServiceStatusToggle({
+  active,
+  ariaLabel,
+  testId,
+  onToggle,
+}: {
+  active: boolean;
+  ariaLabel: string;
+  testId: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      aria-label={ariaLabel}
+      data-testid={testId}
+      data-active={active ? "true" : "false"}
+      onClick={onToggle}
+      className={`relative h-[28px] w-[48px] shrink-0 rounded-full transition-colors ${
+        active ? "bg-[#0a6af7]" : "bg-[var(--bg-inactive)]"
+      }`}
+    >
+      <span
+        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-transform ${
+          active ? "translate-x-[23px]" : "translate-x-[3px]"
+        }`}
+      />
+    </button>
   );
 }
 
@@ -325,17 +413,6 @@ function ItemPhoto({
   );
 }
 
-async function readImageFile(file: File): Promise<string | null> {
-  if (!file.type.startsWith("image/")) return null;
-  if (file.size > 2 * 1024 * 1024) return null;
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
-}
-
 /* ---------- add service / product form ---------- */
 
 type ServiceFormData = {
@@ -344,6 +421,8 @@ type ServiceFormData = {
   category: string;
   description: string;
   photo: string | null;
+  guestCapacity: number | null;
+  quantity: number | null;
 };
 
 const emptyServiceForm = (): ServiceFormData => ({
@@ -352,35 +431,67 @@ const emptyServiceForm = (): ServiceFormData => ({
   category: "",
   description: "",
   photo: null,
+  guestCapacity: null,
+  quantity: null,
 });
 
 type FormFieldErrors = {
   name?: boolean;
   price?: boolean;
+  category?: boolean;
+  guestCapacity?: boolean;
+  quantity?: boolean;
 };
 
-function getFormFieldErrors(form: ServiceFormData): FormFieldErrors {
+function getFormFieldErrors(
+  form: ServiceFormData,
+  options?: { requireGuestCapacity?: boolean; requireProductQuantity?: boolean },
+): FormFieldErrors {
   return {
     name: !form.name.trim(),
     price: parsePrice(form.price) <= 0,
+    category: !form.category.trim(),
+    guestCapacity: options?.requireGuestCapacity
+      ? form.guestCapacity == null || form.guestCapacity <= 0
+      : undefined,
+    quantity: options?.requireProductQuantity
+      ? form.quantity == null || form.quantity <= 0
+      : undefined,
   };
 }
 
 function hasFormFieldErrors(errors: FormFieldErrors): boolean {
-  return Boolean(errors.name || errors.price);
+  return Object.values(errors).some(Boolean);
 }
 
-function FieldError({ show }: { show?: boolean }) {
+function FieldError({
+  show,
+  message,
+  testId,
+}: {
+  show?: boolean;
+  message: string;
+  testId?: string;
+}) {
   if (!show) return null;
-  return <span className="text-[13px] text-[#e02424]">Обязательное поле</span>;
+  return (
+    <span className="text-[13px] text-[#e02424]" data-testid={testId} role="alert">
+      {message}
+    </span>
+  );
 }
 
-function useRequiredFormSubmit(form: ServiceFormData) {
+function useRequiredFormSubmit(
+  form: ServiceFormData,
+  options?: { requireGuestCapacity?: boolean; requireProductQuantity?: boolean },
+) {
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   function validate(): boolean {
-    const errors = getFormFieldErrors(form);
+    const errors = getFormFieldErrors(form, options);
     setFieldErrors(errors);
+    setSubmitAttempted(true);
     return !hasFormFieldErrors(errors);
   }
 
@@ -393,24 +504,32 @@ function useRequiredFormSubmit(form: ServiceFormData) {
     });
   }
 
-  return { fieldErrors, validate, clearFieldError };
+  return { fieldErrors, submitAttempted, validate, clearFieldError };
 }
 
 function CategorySelect({
   value,
   onChange,
+  error,
+  placeholder,
+  testId,
 }: {
   value: string;
   onChange: (value: string) => void;
+  error?: boolean;
+  placeholder: string;
+  testId?: string;
 }) {
   return (
     <div className="relative">
       <select
-        className={`${inputClass} appearance-none pr-[36px]`}
+        className={`${inputClass} appearance-none pr-[36px] ${error ? "border-[#e02424]" : ""}`}
         value={value}
+        data-testid={testId}
+        aria-invalid={error || undefined}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Выберите категорию</option>
+        <option value="">{placeholder}</option>
         {SERVICE_CATEGORIES.map((cat) => (
           <option key={cat} value={cat}>
             {cat}
@@ -429,11 +548,19 @@ function PriceField({
   value,
   onChange,
   error,
+  errorMessage,
+  placeholder,
+  testId,
+  errorTestId,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   error?: boolean;
+  errorMessage: string;
+  placeholder: string;
+  testId?: string;
+  errorTestId: string;
 }) {
   return (
     <div className="flex flex-col gap-[8px]">
@@ -441,74 +568,107 @@ function PriceField({
       <div className="flex items-stretch gap-[8px]">
         <input
           type="text"
-          className={`${inputClass} min-w-0 flex-1`}
-          placeholder="Введите цену"
+          className={`${inputClass} min-w-0 flex-1 ${error ? "border-[#e02424]" : ""}`}
+          placeholder={placeholder}
           inputMode="numeric"
           autoComplete="off"
           value={value}
+          data-testid={testId}
+          aria-invalid={error || undefined}
           onChange={(e) => onChange(formatPriceInputOnChange(e.target.value))}
         />
         <div className="relative w-[96px] shrink-0">
           <select
             className="h-full w-full appearance-none rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[14px] pl-[16px] pr-[32px] text-[15px] font-semibold text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
             defaultValue="sum"
-            aria-label="Валюта"
+            aria-label="Currency"
           >
-            <option value="sum">Сум</option>
+            <option value="sum">UZS</option>
           </select>
           <span className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[var(--text-primary)]">
             <ChevronDownIcon />
           </span>
         </div>
       </div>
-      <FieldError show={error} />
+      <FieldError show={error} message={errorMessage} testId={errorTestId} />
     </div>
   );
 }
 
-function PhotoUploadField({
+function QuantityStepperField({
   label,
-  photo,
-  onPhotoChange,
+  value,
+  onChange,
+  decreaseLabel,
+  increaseLabel,
+  error,
+  errorMessage,
+  placeholder,
+  testId,
+  decreaseTestId,
+  increaseTestId,
+  countTestId,
+  errorTestId,
+  max = 99,
 }: {
   label: string;
-  photo: string | null;
-  onPhotoChange: (photo: string | null) => void;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  decreaseLabel: string;
+  increaseLabel: string;
+  error?: boolean;
+  errorMessage: string;
+  placeholder: string;
+  testId: string;
+  decreaseTestId: string;
+  increaseTestId: string;
+  countTestId: string;
+  errorTestId: string;
+  max?: number;
 }) {
-  const inputId = `photo-upload-${label.length}`;
-
   return (
-    <div className="flex flex-col gap-[8px]">
+    <div className="flex flex-col gap-[8px]" data-testid={testId}>
       <span className="text-[14px] font-semibold">{label}</span>
-      <label
-        htmlFor={inputId}
-        className="flex h-[150px] cursor-pointer flex-col items-center justify-center gap-[10px] overflow-hidden rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)]"
+      <div
+        className={`flex items-center justify-between rounded-[14px] border bg-[var(--bg-surface)] px-[16px] py-[12px] ${
+          error ? "border-[#e02424]" : "border-[var(--border-default)]"
+        }`}
+        aria-invalid={error || undefined}
       >
-        <input
-          id={inputId}
-          type="file"
-          accept="image/jpeg,image/png"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const url = await readImageFile(file);
-            if (url) onPhotoChange(url);
-            e.target.value = "";
+        <button
+          type="button"
+          aria-label={decreaseLabel}
+          data-testid={decreaseTestId}
+          disabled={value == null}
+          onClick={() => {
+            if (value == null) return;
+            onChange(value <= 1 ? null : value - 1);
           }}
-        />
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <>
-            <PhotoIcon />
-            <span className="text-[15px] font-semibold text-[#0a6af7] underline">
-              Загрузить фото
-            </span>
-          </>
-        )}
-      </label>
+          className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[20px] font-bold transition hover:bg-[var(--bg-surface-muted)] disabled:opacity-40"
+        >
+          −
+        </button>
+        <span
+          className={`text-[18px] font-bold ${
+            value == null ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]"
+          }`}
+          data-testid={countTestId}
+          data-empty={value == null ? "true" : "false"}
+        >
+          {value ?? placeholder}
+        </span>
+        <button
+          type="button"
+          aria-label={increaseLabel}
+          data-testid={increaseTestId}
+          disabled={value != null && value >= max}
+          onClick={() => onChange(value == null ? 1 : Math.min(max, value + 1))}
+          className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[20px] font-bold transition hover:bg-[var(--bg-surface-muted)] disabled:opacity-40"
+        >
+          +
+        </button>
+      </div>
+      <FieldError show={error} message={errorMessage} testId={errorTestId} />
     </div>
   );
 }
@@ -516,9 +676,13 @@ function PhotoUploadField({
 function CalendarField({
   value,
   onChange,
+  prevMonthLabel,
+  nextMonthLabel,
 }: {
   value: Date;
   onChange: (date: Date) => void;
+  prevMonthLabel: string;
+  nextMonthLabel: string;
 }) {
   const [month, setMonth] = useState(
     () => new Date(value.getFullYear(), value.getMonth(), 1),
@@ -535,7 +699,10 @@ function CalendarField({
     value.getDate() === day;
 
   return (
-    <div className="rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[16px]">
+    <div
+      className="rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[16px]"
+      data-testid="business-service-calendar"
+    >
       <div className="flex items-center justify-between">
         <span className="text-[17px] font-bold">
           {RU_MONTHS[monthIndex]} {year}
@@ -543,7 +710,8 @@ function CalendarField({
         <div className="flex items-center gap-[4px]">
           <button
             type="button"
-            aria-label="Предыдущий месяц"
+            aria-label={prevMonthLabel}
+            data-testid="business-service-calendar-prev"
             onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
             className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
           >
@@ -551,7 +719,8 @@ function CalendarField({
           </button>
           <button
             type="button"
-            aria-label="Следующий месяц"
+            aria-label={nextMonthLabel}
+            data-testid="business-service-calendar-next"
             onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
             className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
           >
@@ -583,6 +752,9 @@ function CalendarField({
             <button
               key={day}
               type="button"
+              data-testid={`business-service-calendar-day-${day}`}
+              data-selected={selected ? "true" : "false"}
+              aria-pressed={selected}
               onClick={() => onChange(new Date(year, monthIndex, day))}
               className={`mx-auto my-[3px] flex h-[36px] w-[36px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
                 selected
@@ -599,6 +771,78 @@ function CalendarField({
   );
 }
 
+function PhotoUploadField({
+  label,
+  photo,
+  onPhotoChange,
+  uploadLabel,
+  testIdPrefix,
+  onUploadError,
+}: {
+  label: string;
+  photo: string | null;
+  onPhotoChange: (photo: string | null) => void;
+  uploadLabel: string;
+  testIdPrefix: string;
+  onUploadError: (message: string) => void;
+}) {
+  const inputId = useId();
+
+  async function handleFileChange(file: File | undefined) {
+    if (!file) return;
+    const result = await validateGalleryImageFile(file);
+    if (!result.ok) {
+      onUploadError(`businessErrors.${result.errorKey}`);
+      return;
+    }
+    onPhotoChange(result.dataUrl);
+  }
+
+  return (
+    <div
+      className="flex flex-col gap-[8px]"
+      data-testid={`${testIdPrefix}-photo-section`}
+    >
+      <span className="text-[14px] font-semibold">{label}</span>
+      <input
+        id={inputId}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+        className="sr-only"
+        data-testid={`${testIdPrefix}-photo-input`}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFileChange(file);
+          e.target.value = "";
+        }}
+      />
+      <label
+        htmlFor={inputId}
+        data-testid={`${testIdPrefix}-photo-upload`}
+        data-has-photo={photo ? "true" : "false"}
+        className="flex h-[150px] w-full cursor-pointer flex-col items-center justify-center gap-[10px] overflow-hidden rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)]"
+      >
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo}
+            alt=""
+            className="h-full w-full object-cover"
+            data-testid={`${testIdPrefix}-photo-preview`}
+          />
+        ) : (
+          <>
+            <PhotoIcon />
+            <span className="text-[15px] font-semibold text-[#0a6af7] underline">
+              {uploadLabel}
+            </span>
+          </>
+        )}
+      </label>
+    </div>
+  );
+}
+
 function AddItemScreen({
   kind,
   onBack,
@@ -608,79 +852,246 @@ function AddItemScreen({
   onBack: () => void;
   onSave: (data: ServiceFormData) => void;
 }) {
+  const { t } = useTranslation();
+  const showToast = useToastStore((s) => s.showToast);
   const isService = kind === "service";
-  const noun = isService ? "услуги" : "товара";
+  const formTestId = isService ? "business-add-service-form" : "business-add-product-form";
+  const fieldPrefix = isService ? "business-service" : "business-product";
 
   const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
-  const { fieldErrors, validate, clearFieldError } = useRequiredFormSubmit(form);
+  const { fieldErrors, submitAttempted, validate, clearFieldError } =
+    useRequiredFormSubmit(form, {
+      requireGuestCapacity: isService,
+      requireProductQuantity: !isService,
+    });
+  const [descriptionLimitHit, setDescriptionLimitHit] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [date, setDate] = useState<Date>(() => new Date());
+  const [durationMin, setDurationMin] = useState<number | null>(null);
 
   function toggleTime(slot: string) {
     setTimes((prev) =>
-      prev.includes(slot) ? prev.filter((t) => t !== slot) : [...prev, slot],
+      prev.includes(slot) ? prev.filter((value) => value !== slot) : [...prev, slot],
     );
   }
 
+  function formatDurationLabel(minutes: number): string {
+    if (minutes === 60) return t("businessForms.duration60");
+    if (minutes === 90) return t("businessForms.duration90");
+    if (minutes === 120) return t("businessForms.duration120");
+    return t("businessForms.duration30");
+  }
+
+  function updateDescription(nextValue: string) {
+    const truncated = nextValue.slice(0, MAX_DESC);
+    setDescriptionLimitHit(nextValue.length > MAX_DESC);
+    setForm((current) => ({ ...current, description: truncated }));
+  }
+
+  function handleDescriptionPaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const pasted = event.clipboardData.getData("text");
+    const target = event.currentTarget;
+    const start = target.selectionStart ?? form.description.length;
+    const end = target.selectionEnd ?? form.description.length;
+    const merged =
+      form.description.slice(0, start) + pasted + form.description.slice(end);
+
+    if (merged.length > MAX_DESC) {
+      event.preventDefault();
+      updateDescription(merged);
+    }
+  }
+
   return (
-    <div>
+    <div data-testid={formTestId}>
       <ScreenHeader
-        title={isService ? "Добавить услугу" : "Добавить товар"}
+        title={
+          isService
+            ? t("businessForms.addServiceTitle")
+            : t("businessForms.addProductTitle")
+        }
         onBack={onBack}
       />
 
+      <p className="mb-[16px] text-[14px] text-[var(--text-secondary)]">
+        {isService
+          ? t("businessForms.addServiceSubtitle")
+          : t("businessForms.addProductSubtitle")}
+      </p>
+
       <div className="flex flex-col gap-[18px]">
+        {submitAttempted && hasFormFieldErrors(fieldErrors) ? (
+          <div
+            role="alert"
+            className="rounded-[12px] border border-[#e02424]/30 bg-[#fff1f1] px-4 py-3 text-[14px] font-semibold text-[#e02424]"
+            data-testid={`${fieldPrefix}-form-errors`}
+          >
+            {t("businessForms.formValidationSummary")}
+          </div>
+        ) : null}
+
         <label className="flex flex-col gap-[8px]">
-          <span className="text-[14px] font-semibold">Название {noun}</span>
+          <span className="text-[14px] font-semibold">
+            {isService
+              ? t("businessForms.serviceName")
+              : t("businessForms.productName")}
+          </span>
           <input
-            className={inputClass}
-            placeholder="Введите название"
+            className={`${inputClass} ${fieldErrors.name ? "border-[#e02424]" : ""}`}
+            placeholder={
+              isService
+                ? t("businessForms.serviceNamePlaceholder")
+                : t("businessForms.productNamePlaceholder")
+            }
             value={form.name}
+            data-testid={`${fieldPrefix}-name-input`}
+            aria-invalid={fieldErrors.name || undefined}
             onChange={(e) => {
               const name = e.target.value;
-              setForm((f) => ({ ...f, name }));
+              setForm((current) => ({ ...current, name }));
               if (name.trim()) clearFieldError("name");
             }}
           />
-          <FieldError show={fieldErrors.name} />
+          <FieldError
+            show={fieldErrors.name}
+            message={t("businessForms.required")}
+            testId={`${fieldPrefix}-name-error`}
+          />
         </label>
 
         <PriceField
-          label={`Цена ${noun}`}
+          label={
+            isService ? t("businessForms.servicePrice") : t("businessForms.price")
+          }
           value={form.price}
           error={fieldErrors.price}
+          errorMessage={t("businessForms.required")}
+          placeholder={t("businessForms.pricePlaceholder")}
+          testId={`${fieldPrefix}-price-input`}
+          errorTestId={`${fieldPrefix}-price-error`}
           onChange={(price) => {
-            setForm((f) => ({ ...f, price }));
+            setForm((current) => ({ ...current, price }));
             if (parsePrice(price) > 0) clearFieldError("price");
           }}
         />
 
         <label className="flex flex-col gap-[8px]">
-          <span className="text-[14px] font-semibold">Категория {noun}</span>
+          <span className="text-[14px] font-semibold">
+            {t("businessForms.category")}
+          </span>
           <CategorySelect
             value={form.category}
-            onChange={(category) => setForm((f) => ({ ...f, category }))}
+            error={fieldErrors.category}
+            placeholder={t("businessForms.selectCategory")}
+            testId={`${fieldPrefix}-category-select`}
+            onChange={(category) => {
+              setForm((current) => ({ ...current, category }));
+              if (category.trim()) clearFieldError("category");
+            }}
+          />
+          <FieldError
+            show={fieldErrors.category}
+            message={t("businessForms.required")}
+            testId={`${fieldPrefix}-category-error`}
           />
         </label>
+
+        {isService ? (
+          <QuantityStepperField
+            label={t("businessForms.guestCapacity")}
+            value={form.guestCapacity}
+            error={fieldErrors.guestCapacity}
+            errorMessage={t("businessForms.required")}
+            placeholder={t("businessForms.guestCapacityPlaceholder")}
+            decreaseLabel={t("businessForms.guestCapacityDecrease")}
+            increaseLabel={t("businessForms.guestCapacityIncrease")}
+            testId="business-service-guest-capacity"
+            decreaseTestId="business-service-guest-decrease"
+            increaseTestId="business-service-guest-increase"
+            countTestId="business-service-guest-count"
+            errorTestId="business-service-guest-capacity-error"
+            onChange={(guestCapacity) => {
+              setForm((current) => ({ ...current, guestCapacity }));
+              if (guestCapacity != null && guestCapacity > 0) {
+                clearFieldError("guestCapacity");
+              }
+            }}
+          />
+        ) : (
+          <QuantityStepperField
+            label={t("businessForms.productQuantity")}
+            value={form.quantity}
+            error={fieldErrors.quantity}
+            errorMessage={t("businessForms.required")}
+            placeholder={t("businessForms.productQuantityPlaceholder")}
+            decreaseLabel={t("businessForms.productQuantityDecrease")}
+            increaseLabel={t("businessForms.productQuantityIncrease")}
+            testId="business-product-quantity"
+            decreaseTestId="business-product-quantity-decrease"
+            increaseTestId="business-product-quantity-increase"
+            countTestId="business-product-quantity-count"
+            errorTestId="business-product-quantity-error"
+            max={999}
+            onChange={(quantity) => {
+              setForm((current) => ({ ...current, quantity }));
+              if (quantity != null && quantity > 0) {
+                clearFieldError("quantity");
+              }
+            }}
+          />
+        )}
 
         <label className="flex flex-col gap-[8px]">
-          <span className="text-[14px] font-semibold">Описание {noun}</span>
+          <span className="text-[14px] font-semibold">
+            {isService
+              ? t("businessForms.serviceDescription")
+              : t("businessForms.description")}
+          </span>
           <textarea
-            className={`${inputClass} min-h-[90px] resize-none`}
-            placeholder={isService ? "Опишите услугу" : "Опишите товар"}
+            className={`${inputClass} min-h-[90px] resize-none ${
+              descriptionLimitHit ? "border-[#e02424]" : ""
+            }`}
+            placeholder={
+              isService
+                ? t("businessForms.serviceDescriptionPlaceholder")
+                : t("businessForms.productDescriptionPlaceholder")
+            }
             maxLength={MAX_DESC}
             value={form.description}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, description: e.target.value }))
-            }
+            data-testid={`${fieldPrefix}-description-input`}
+            aria-invalid={descriptionLimitHit || undefined}
+            aria-describedby={`${fieldPrefix}-description-counter`}
+            onPaste={handleDescriptionPaste}
+            onChange={(e) => updateDescription(e.target.value)}
           />
+          <div className="flex items-center justify-between gap-[12px]">
+            <FieldError
+              show={descriptionLimitHit}
+              message={t("businessForms.descriptionLimitReached", { max: MAX_DESC })}
+              testId={`${fieldPrefix}-description-error`}
+            />
+            <span
+              id={`${fieldPrefix}-description-counter`}
+              className={`ml-auto text-[12px] font-semibold ${
+                form.description.length >= MAX_DESC
+                  ? "text-[#e02424]"
+                  : "text-[var(--text-muted)]"
+              }`}
+              data-testid={`${fieldPrefix}-description-counter`}
+            >
+              {t("businessForms.descriptionCounter", {
+                count: form.description.length,
+                max: MAX_DESC,
+              })}
+            </span>
+          </div>
         </label>
 
-        {isService && (
+        {isService ? (
           <>
-            <div className="flex flex-col gap-[12px]">
+            <div className="flex flex-col gap-[12px]" data-testid="business-service-time-slots">
               <span className="text-[14px] font-semibold">
-                Выбери свободное время
+                {t("businessForms.freeTimeLabel")}
               </span>
               <div className="grid grid-cols-4 gap-[10px]">
                 {TIME_SLOTS.map((slot) => {
@@ -689,6 +1100,9 @@ function AddItemScreen({
                     <button
                       key={slot}
                       type="button"
+                      data-testid={`business-service-time-slot-${slot.replace(":", "-")}`}
+                      data-selected={selected ? "true" : "false"}
+                      aria-pressed={selected}
                       onClick={() => toggleTime(slot)}
                       className={`rounded-[12px] py-[11px] text-center text-[14px] font-semibold transition ${
                         selected
@@ -704,35 +1118,87 @@ function AddItemScreen({
             </div>
 
             <div className="flex flex-col gap-[8px]">
-              <span className="text-[14px] font-semibold">Дата</span>
-              <CalendarField value={date} onChange={setDate} />
+              <span className="text-[14px] font-semibold">
+                {t("businessForms.dateLabel")}
+              </span>
+              <CalendarField
+                value={date}
+                onChange={setDate}
+                prevMonthLabel={t("businessForms.prevMonthAria")}
+                nextMonthLabel={t("businessForms.nextMonthAria")}
+              />
             </div>
+
+            <label className="flex flex-col gap-[8px]">
+              <span className="text-[14px] font-semibold">
+                {t("businessForms.bookingDuration")}
+              </span>
+              <div className="relative">
+                <select
+                  className={`${inputClass} appearance-none pr-[36px]`}
+                  value={durationMin ?? ""}
+                  data-testid="business-service-duration-select"
+                  data-selected={durationMin != null ? "true" : "false"}
+                  onChange={(e) => {
+                    const next = e.target.value ? Number(e.target.value) : null;
+                    setDurationMin(next);
+                  }}
+                >
+                  <option value="">{t("businessForms.selectDuration")}</option>
+                  {SERVICE_DURATION_OPTIONS.map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {formatDurationLabel(minutes)}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-[16px] top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                  <ChevronDownIcon />
+                </span>
+              </div>
+            </label>
           </>
-        )}
+        ) : null}
 
         <PhotoUploadField
-          label={isService ? "Добавить фото" : "Добавить фото товара"}
+          label={
+            isService
+              ? t("businessForms.photo")
+              : t("businessForms.photoServiceOrProduct")
+          }
+          uploadLabel={t("businessForms.uploadPhoto")}
+          testIdPrefix={fieldPrefix}
           photo={form.photo}
-          onPhotoChange={(photo) => setForm((f) => ({ ...f, photo }))}
+          onPhotoChange={(photo) => setForm((current) => ({ ...current, photo }))}
+          onUploadError={(messageKey) => {
+            showToast(t("businessForms.uploadPhoto"), t(messageKey));
+          }}
         />
 
         <div className="mt-[10px] flex flex-col gap-[10px]">
           <button
             type="button"
+            data-testid={`${fieldPrefix}-save-button`}
             onClick={() => {
               if (!validate()) return;
-              onSave({ ...form, price: String(parsePrice(form.price)) });
+              onSave({
+                ...form,
+                price: String(parsePrice(form.price)),
+                guestCapacity: form.guestCapacity ?? 1,
+                quantity: form.quantity ?? 1,
+              });
             }}
             className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
           >
-            {isService ? "Сохранить услугу" : "Сохранить товар"}
+            {isService
+              ? t("businessForms.saveService")
+              : t("businessForms.saveServiceOrProduct")}
           </button>
           <button
             type="button"
             onClick={onBack}
             className="w-full rounded-[14px] bg-[var(--bg-surface)] py-4 text-[16px] font-semibold text-[var(--text-primary)]"
           >
-            Назад
+            {t("businessForms.back")}
           </button>
         </div>
       </div>
@@ -751,13 +1217,15 @@ function DeleteItemModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   const isProduct = item.type === "product";
-  const nounAcc = isProduct ? "товар" : "услугу";
-  const nounPrep = isProduct ? "о товаре" : "об услуге";
 
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-[var(--backdrop)] p-[20px]"
+      data-testid={
+        isProduct ? "business-delete-product-modal" : "business-delete-item-modal"
+      }
       onClick={onCancel}
     >
       <div
@@ -770,42 +1238,71 @@ function DeleteItemModal({
               <TrashIcon />
             </span>
             <h3 className="text-[18px] font-bold">
-              Удалить {nounAcc}?
+              {t(
+                isProduct
+                  ? "businessDashboard.deleteProductTitle"
+                  : "businessDashboard.deleteTitle",
+              )}
             </h3>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Закрыть"
+            aria-label={t("businessForms.closeAria")}
+            data-testid="business-delete-item-close"
             className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
           >
             <CloseModalIcon />
           </button>
         </div>
 
-        <p className="mt-[16px] text-[15px] font-semibold leading-snug">
-          Вы уверены, что хотите удалить {nounAcc}{" "}
-          <strong>{item.name}</strong>
+        <p
+          className="mt-[16px] text-[15px] font-semibold leading-snug"
+          data-testid={
+            isProduct
+              ? "business-delete-product-confirm"
+              : "business-delete-item-confirm"
+          }
+        >
+          {t(
+            isProduct
+              ? "businessDashboard.deleteProductConfirm"
+              : "businessDashboard.deleteConfirm",
+          )}{" "}
+          <strong>{item.name}</strong>?
         </p>
         <p className="mt-[10px] text-[14px] leading-snug text-[var(--text-muted)]">
-          Все данные {nounPrep}, время, даты и свободные слоты удалятся без
-          возможности восстановить
+          {t(
+            isProduct
+              ? "businessDashboard.deleteProductHint"
+              : "businessDashboard.deleteHint",
+          )}
         </p>
 
         <div className="mt-[20px] flex gap-[10px]">
           <button
             type="button"
             onClick={onCancel}
+            data-testid="business-delete-item-cancel"
             className="flex-1 rounded-[12px] bg-[#0a6af7] py-[13px] text-[15px] font-semibold text-white transition hover:bg-[#0858ce]"
           >
-            Отмена
+            {t("businessDashboard.deleteCancel")}
           </button>
           <button
             type="button"
             onClick={onConfirm}
+            data-testid={
+              isProduct
+                ? "business-delete-product-confirm-btn"
+                : "business-delete-item-confirm-btn"
+            }
             className="flex-1 rounded-[12px] bg-[#e02424] py-[13px] text-[15px] font-semibold text-white transition hover:bg-[#c41f1f]"
           >
-            Удалить {nounAcc}
+            {t(
+              isProduct
+                ? "businessDashboard.deleteProductConfirmBtn"
+                : "businessDashboard.deleteConfirmBtn",
+            )}
           </button>
         </div>
       </div>
@@ -820,23 +1317,34 @@ function BookingStatusBadge({
 }: {
   status: BusinessBookingRequest["status"];
 }) {
+  const { t } = useTranslation();
+
   if (status === "pending") {
     return (
-      <span className="rounded-full bg-[#fff3e0] px-[12px] py-[5px] text-[12px] font-semibold text-[#ff9500]">
-        Ожидает
+      <span
+        className="rounded-full bg-[#fff3e0] px-[12px] py-[5px] text-[12px] font-semibold text-[#ff9500]"
+        data-testid="business-booking-status-pending"
+      >
+        {t("businessDashboard.bookingStatusPending")}
       </span>
     );
   }
   if (status === "cancelled") {
     return (
-      <span className="rounded-full bg-[#fde8e8] px-[12px] py-[5px] text-[12px] font-semibold text-[#e02424]">
-        Отменено
+      <span
+        className="rounded-full bg-[#fde8e8] px-[12px] py-[5px] text-[12px] font-semibold text-[#e02424]"
+        data-testid="business-booking-status-cancelled"
+      >
+        {t("business.cancelled")}
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]">
-      Подтвержденые
+    <span
+      className="rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]"
+      data-testid="business-booking-status-confirmed"
+    >
+      {t("businessDashboard.bookingStatusConfirmed")}
     </span>
   );
 }
@@ -867,11 +1375,15 @@ function BookingCard({
   onAccept: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const isConfirmed =
     booking.status === "accepted" || booking.status === "waiting";
 
   return (
-    <div className="flex flex-col gap-[14px] rounded-[18px] bg-[var(--bg-surface)] p-[16px]">
+    <div
+      className="flex flex-col gap-[14px] rounded-[18px] bg-[var(--bg-surface)] p-[16px]"
+      data-testid={`business-booking-card-${booking.id}`}
+    >
       <div className="flex items-start gap-[10px]">
         <div className="relative h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
           <Image
@@ -883,7 +1395,10 @@ function BookingCard({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold">
+          <p
+            className="truncate text-[15px] font-bold"
+            data-testid={`business-booking-customer-${booking.id}`}
+          >
             {booking.customerName}
           </p>
           <p className="truncate text-[13px] text-[var(--text-muted)]">
@@ -898,8 +1413,13 @@ function BookingCard({
           <BookingChip icon={<ClockIcon size={15} />} text={booking.time} />
           <BookingChip icon={<CalendarIcon size={15} />} text={dateLabel} />
         </div>
-        <span className="text-[15px] font-bold">
-          {formatPrice(booking.price)} сум
+        <span
+          className="text-[15px] font-bold"
+          data-testid={`business-booking-price-${booking.id}`}
+        >
+          {t("businessDashboard.bookingPrice", {
+            price: `${formatPrice(booking.price)} ${t("businessForms.currencySum")}`,
+          })}
         </span>
       </div>
 
@@ -907,24 +1427,29 @@ function BookingCard({
         <div className="flex gap-[10px]">
           <button
             type="button"
+            data-testid={`business-booking-cancel-${booking.id}`}
             onClick={onCancel}
             className="flex-1 rounded-[12px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[12px] text-[14px] font-semibold text-[var(--text-primary)]"
           >
-            Отменить
+            {t("business.cancelBooking")}
           </button>
           <button
             type="button"
+            data-testid={`business-booking-accept-${booking.id}`}
             onClick={onAccept}
             className="flex-1 rounded-[12px] bg-[#0a6af7] py-[12px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce]"
           >
-            Принять бронь
+            {t("business.acceptBooking")}
           </button>
         </div>
       )}
 
       {isConfirmed && (
-        <div className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[#0a6af7]">
-          Бронь принята
+        <div
+          className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[#0a6af7]"
+          data-testid={`business-booking-accepted-${booking.id}`}
+        >
+          {t("business.accepted")}
         </div>
       )}
     </div>
@@ -938,6 +1463,8 @@ export default function BusinessDashboard({
   onClose,
   onEditProfile,
 }: Props) {
+  const { t } = useTranslation();
+  const showToast = useToastStore((s) => s.showToast);
   const addService = useBusinessStore((s) => s.addService);
   const addProduct = useBusinessStore((s) => s.addProduct);
   const removeService = useBusinessStore((s) => s.removeService);
@@ -960,8 +1487,7 @@ export default function BusinessDashboard({
     };
   }, [businessId, businesses]);
 
-  const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<View>("dashboard");
+  const [view, setView] = useState<View>("servicesStaff");
   const [bookingTab, setBookingTab] = useState<BookingTab>("all");
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -972,15 +1498,21 @@ export default function BusinessDashboard({
   );
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (view !== "bookings") return;
     void refreshBusinessBookings(businessId);
   }, [view, businessId, refreshBusinessBookings]);
 
-  if (!mounted || !business) return null;
+  const categoryTags = useMemo(() => {
+    if (!business) return [];
+    const tags = new Set<string>();
+    if (business.category) tags.add(business.category);
+    business.services.forEach((item) => {
+      if (item.category) tags.add(item.category);
+    });
+    return Array.from(tags);
+  }, [business]);
+
+  if (!business) return null;
 
   const photos = [business.profilePhoto, ...business.gallery].filter(
     (photo): photo is string => Boolean(photo),
@@ -1017,24 +1549,94 @@ export default function BusinessDashboard({
   function handleAddService(data: ServiceFormData) {
     void addService(businessId, {
       name: data.name,
-      category: data.category || "Другое",
+      category: data.category,
       price: parsePrice(data.price),
       description: data.description,
       photo: data.photo,
+      guestCapacity: data.guestCapacity ?? undefined,
       type: "service",
     });
-    setView("services");
+    setView("servicesStaff");
   }
 
-  function handleAddProduct(data: ServiceFormData) {
-    void addProduct(businessId, {
-      name: data.name,
-      category: data.category || "Другое",
-      price: parsePrice(data.price),
-      description: data.description,
-      photo: data.photo,
-    });
-    setView("products");
+  async function handleAddProduct(data: ServiceFormData) {
+    try {
+      await addProduct(businessId, {
+        name: data.name,
+        category: data.category,
+        price: parsePrice(data.price),
+        description: data.description,
+        photo: data.photo,
+        quantity: data.quantity ?? undefined,
+      });
+      setView("servicesStaff");
+    } catch {
+      showToast(
+        t("businessForms.addProductTitle"),
+        t("businessErrors.saveFailed"),
+      );
+    }
+  }
+
+  function renderInventoryRow(item: BusinessService) {
+    const isService = item.type !== "product";
+
+    return (
+      <div
+        key={item.id}
+        className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] items-center gap-[10px] border-b border-[var(--border-default)] px-[12px] py-[12px] last:border-b-0"
+        data-testid={`business-inventory-row-${item.id}`}
+      >
+        <div className="min-w-0">
+          <p className="truncate text-[14px] font-semibold">{item.name}</p>
+          <p className="mt-[2px] text-[12px] text-[var(--text-muted)]">
+            {isService
+              ? t("businessDashboard.typeService")
+              : t("businessDashboard.typeProduct")}
+          </p>
+        </div>
+        <p className="truncate text-[13px] text-[var(--text-secondary)]">
+          {item.category || t("businessDashboard.defaultCategory")}
+        </p>
+        <p className="text-[13px] font-semibold">{formatPrice(item.price)}</p>
+        <ServiceStatusToggle
+          active={item.active}
+          ariaLabel={t("businessDashboard.serviceStatusAria", { name: item.name })}
+          testId={
+            isService
+              ? `business-service-status-toggle-${item.id}`
+              : `business-product-status-toggle-${item.id}`
+          }
+          onToggle={() => toggleService(businessId, item.id, !item.active)}
+        />
+        <div className="relative flex justify-end">
+          <button
+            type="button"
+            aria-label={t("businessDashboard.deleteAria", { name: item.name })}
+            data-testid={`business-inventory-menu-${item.id}`}
+            onClick={() =>
+              setItemMenuId(itemMenuId === item.id ? null : item.id)
+            }
+            className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
+          >
+            <DotsVerticalIcon />
+          </button>
+          {itemMenuId === item.id && (
+            <BusinessCardMenu
+              editLabel={
+                item.active
+                  ? t("businessDashboard.menuDeactivate")
+                  : t("businessDashboard.menuActivate")
+              }
+              deleteLabel={t("common.delete")}
+              onEdit={() => toggleService(businessId, item.id, !item.active)}
+              onDelete={() => setDeleteTarget(item)}
+              onClose={() => setItemMenuId(null)}
+            />
+          )}
+        </div>
+      </div>
+    );
   }
 
   function renderItemCard(item: BusinessService) {
@@ -1110,18 +1712,22 @@ export default function BusinessDashboard({
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[640px] flex-col pb-[24px]">
-        {view === "dashboard" && (
-          <div>
+      <div
+        className="mx-auto flex w-full max-w-[640px] flex-col pb-[24px]"
+        data-testid="business-dashboard"
+      >
+        {view === "servicesStaff" && (
+          <div data-testid="business-dashboard-workspace">
             <ScreenHeader
-              title={business.name || "Без названия"}
+              title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
                 <div className="relative">
                   <button
                     type="button"
-                    aria-label="Меню"
+                    aria-label={t("business.menuAria")}
                     aria-expanded={headerMenuOpen}
+                    data-testid="business-dashboard-menu"
                     onClick={() => setHeaderMenuOpen((v) => !v)}
                     className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
                   >
@@ -1129,10 +1735,12 @@ export default function BusinessDashboard({
                   </button>
                   {headerMenuOpen && (
                     <BusinessCardMenu
-                      editLabel="Редактировать бизнес"
-                      deleteLabel="Удалить бизнес"
+                      editLabel={t("businessDashboard.editProfile")}
                       onEdit={onEditProfile}
-                      onDelete={() => setShowDeleteBusiness(true)}
+                      onDelete={() => {
+                        setHeaderMenuOpen(false);
+                        setShowDeleteBusiness(true);
+                      }}
                       onClose={() => setHeaderMenuOpen(false)}
                     />
                   )}
@@ -1140,189 +1748,117 @@ export default function BusinessDashboard({
               }
             />
 
-            <div className="rounded-[24px] bg-[var(--bg-surface)] p-[12px]">
-              <div className="relative overflow-hidden rounded-[16px]">
-                <div
-                  onScroll={handleGalleryScroll}
-                  style={{ scrollbarWidth: "none" }}
-                  className="flex aspect-[2/1] w-full snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden"
-                >
-                  {photos.length > 0 ? (
-                    photos.map((photo, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={i}
-                        src={photo}
-                        alt={business.name}
-                        className="h-full w-full shrink-0 snap-center object-cover"
-                      />
-                    ))
-                  ) : (
-                    <div className="relative h-full w-full shrink-0">
-                      <Image
-                        src={assets.map.photo1}
-                        alt={business.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, 640px"
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
+            <WorkspaceTabs
+              active="servicesStaff"
+              servicesLabel={t("businessDashboard.tabServices")}
+              bookingsLabel={t("businessDashboard.tabBookings")}
+              onServicesStaff={() => setView("servicesStaff")}
+              onBookings={() => setView("bookings")}
+            />
 
-                {business.category && (
-                  <span className="absolute right-[10px] top-[10px] rounded-full bg-[#eef1ff]/95 px-[14px] py-[6px] text-[13px] font-semibold text-[#4f66eb]">
-                    {business.category}
-                  </span>
-                )}
-                <span className="absolute bottom-[10px] left-[12px] text-[12px] font-semibold text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]">
-                  {photoIndex + 1}/{Math.max(photos.length, 1)}
-                </span>
-              </div>
-
-              <div className="mt-[14px] flex items-center justify-between gap-[10px] px-[4px]">
-                <h3 className="min-w-0 truncate text-[22px] font-bold">
-                  {business.name || "Без названия"}
-                </h3>
-                <span className="shrink-0 rounded-full bg-[#e7f8ef] px-[12px] py-[6px] text-[13px] font-semibold text-[#00bd08]">
-                  Подтверждено
-                </span>
-              </div>
-              <p className="mt-[4px] px-[4px] text-[15px] text-[var(--text-secondary)]">
-                {business.address || "Ташкент, Узбекистан"}
+            <div className="rounded-[24px] bg-[var(--bg-surface)] p-[16px]">
+              <h3 className="text-[18px] font-bold">
+                {t("businessDashboard.servicesTitle")}
+              </h3>
+              <p className="mt-[4px] text-[14px] text-[var(--text-secondary)]">
+                {t("businessDashboard.servicesSubtitle")}
               </p>
 
-              <div className="mt-[16px] grid grid-cols-2 gap-[10px]">
-                <div className="rounded-[16px] bg-[var(--bg-surface-muted)] px-[10px] py-[16px] text-center">
-                  <p className="text-[20px] font-bold">{business.bookings}</p>
-                  <p className="mt-[2px] text-[13px] text-[var(--text-secondary)]">
-                    Бронирований
-                  </p>
+              {categoryTags.length > 0 && (
+                <div
+                  className="mt-[12px] flex flex-wrap gap-[8px]"
+                  data-testid="business-category-tags"
+                >
+                  {categoryTags.map((tag, index) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[#0a6af7]"
+                      data-testid={`business-category-tag-${index}`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
-                <div className="rounded-[16px] bg-[var(--bg-surface-muted)] px-[10px] py-[16px] text-center">
-                  <p className="text-[20px] font-bold">
-                    {formatPrice(business.views)}
-                  </p>
-                  <p className="mt-[2px] text-[13px] text-[var(--text-secondary)]">
-                    Просмотров
-                  </p>
+              )}
+
+              <div
+                className="mt-[16px] overflow-hidden rounded-[16px] border border-[var(--border-default)]"
+                data-testid="business-services-table"
+              >
+                <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] gap-[10px] bg-[var(--bg-surface-muted)] px-[12px] py-[10px] text-[12px] font-semibold text-[var(--text-secondary)]">
+                  <span>{t("businessDashboard.colName")}</span>
+                  <span>{t("businessDashboard.colCategory")}</span>
+                  <span>{t("businessDashboard.colPrice")}</span>
+                  <span>{t("businessDashboard.colStatus")}</span>
+                  <span className="text-right">{t("businessDashboard.colAction")}</span>
                 </div>
-                <div className="rounded-[16px] bg-[var(--bg-surface-muted)] px-[10px] py-[16px] text-center">
-                  <p className="text-[20px] font-bold">{formatPrice(income)}</p>
-                  <p className="mt-[2px] text-[13px] text-[var(--text-secondary)]">
-                    Доход{" "}
-                    <span className="text-[var(--text-muted)]">(сум)</span>
+
+                {business.services.length === 0 ? (
+                  <p className="px-[12px] py-[28px] text-center text-[14px] text-[var(--text-muted)]">
+                    {t("businessDashboard.emptyServices")}
                   </p>
-                </div>
-                <div className="rounded-[16px] bg-[var(--bg-surface-muted)] px-[10px] py-[16px] text-center">
-                  <p className="text-[20px] font-bold">{activeServicesCount}</p>
-                  <p className="mt-[2px] text-[13px] text-[var(--text-secondary)]">
-                    Активные услуги
-                  </p>
-                </div>
+                ) : (
+                  business.services.map(renderInventoryRow)
+                )}
               </div>
 
-              <div className="mt-[20px] flex flex-col gap-[10px]">
+              <div className="mt-[16px] grid grid-cols-1 gap-[10px] sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={onEditProfile}
-                  className="flex w-full items-center gap-[12px] rounded-[14px] bg-[var(--bg-surface-muted)] px-[16px] py-[17px] text-[15px] font-semibold transition hover:bg-[var(--bg-hover)]"
+                  onClick={() => setView("addService")}
+                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+                  data-testid="business-dashboard-add-service"
                 >
-                  <PencilIcon />
-                  Редактировать бизнес
+                  {t("business.addService")}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setView("services")}
-                  className="flex w-full items-center gap-[12px] rounded-[14px] bg-[var(--bg-surface-muted)] px-[16px] py-[17px] text-[15px] font-semibold transition hover:bg-[var(--bg-hover)]"
+                  onClick={() => setView("addProduct")}
+                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+                  data-testid="business-dashboard-add-product"
                 >
-                  <BagIcon />
-                  Услуги
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("products")}
-                  className="flex w-full items-center gap-[12px] rounded-[14px] bg-[var(--bg-surface-muted)] px-[16px] py-[17px] text-[15px] font-semibold transition hover:bg-[var(--bg-hover)]"
-                >
-                  <LayersIcon />
-                  Товары
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("bookings")}
-                  className="flex w-full items-center gap-[12px] rounded-[14px] bg-[var(--bg-surface-muted)] px-[16px] py-[17px] text-[15px] font-semibold transition hover:bg-[var(--bg-hover)]"
-                >
-                  <CalendarIcon />
-                  Бронирования
+                  {t("business.addProduct")}
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {view === "services" && (
-          <div>
-            <ScreenHeader title="Услуги" onBack={() => setView("dashboard")} />
-            <div className="flex flex-col gap-[12px]">
-              {services.length === 0 && (
-                <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
-                  Услуг пока нет. Добавьте первую услугу.
-                </p>
-              )}
-              {services.map(renderItemCard)}
-            </div>
-            <button
-              type="button"
-              onClick={() => setView("addService")}
-              className="mt-[20px] w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
-            >
-              Добавить услугу
-            </button>
-          </div>
-        )}
-
-        {view === "products" && (
-          <div>
-            <ScreenHeader title="Товары" onBack={() => setView("dashboard")} />
-            <div className="flex flex-col gap-[12px]">
-              {products.length === 0 && (
-                <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
-                  Товаров пока нет. Добавьте первый товар.
-                </p>
-              )}
-              {products.map(renderItemCard)}
-            </div>
-            <button
-              type="button"
-              onClick={() => setView("addProduct")}
-              className="mt-[20px] w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
-            >
-              Добавить товар
-            </button>
           </div>
         )}
 
         {view === "bookings" && (
-          <div>
+          <div data-testid="business-dashboard-bookings">
             <ScreenHeader
-              title="Бронирования"
-              onBack={() => setView("dashboard")}
+              title={business.name || t("business.untitled")}
+              onBack={onClose}
             />
 
-            <div className="flex flex-wrap gap-[8px]">
+            <WorkspaceTabs
+              active="bookings"
+              servicesLabel={t("businessDashboard.tabServices")}
+              bookingsLabel={t("businessDashboard.tabBookings")}
+              onServicesStaff={() => setView("servicesStaff")}
+              onBookings={() => setView("bookings")}
+            />
+
+            <h3 className="mb-[12px] text-[18px] font-bold">
+              {t("businessDashboard.bookingsTitle")}
+            </h3>
+
+            <div className="flex flex-wrap gap-[8px]" data-testid="business-bookings-tabs">
               <button
                 type="button"
                 onClick={() => setBookingTab("all")}
+                data-testid="business-bookings-tab-all"
                 className={bookingTabClass(bookingTab === "all")}
               >
-                Все
+                {t("businessDashboard.bookingsTabAll")}
               </button>
               <button
                 type="button"
                 onClick={() => setBookingTab("pending")}
+                data-testid="business-bookings-tab-pending"
                 className={bookingTabClass(bookingTab === "pending")}
               >
-                Ожидает
+                {t("businessDashboard.bookingsTabPending")}
                 {pendingBookings.length > 0 && (
                   <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#fff3e0] px-[5px] text-[11px] font-bold text-[#ff9500]">
                     {pendingBookings.length}
@@ -1332,9 +1868,10 @@ export default function BusinessDashboard({
               <button
                 type="button"
                 onClick={() => setBookingTab("confirmed")}
+                data-testid="business-bookings-tab-confirmed"
                 className={bookingTabClass(bookingTab === "confirmed")}
               >
-                Подтвержденые
+                {t("businessDashboard.bookingsTabConfirmed")}
                 {confirmedBookings.length > 0 && (
                   <span className="flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#e7f8ef] px-[5px] text-[11px] font-bold text-[#00bd08]">
                     {confirmedBookings.length}
@@ -1343,10 +1880,13 @@ export default function BusinessDashboard({
               </button>
             </div>
 
-            <div className="mt-[16px] flex flex-col gap-[12px]">
+            <div
+              className="mt-[16px] flex flex-col gap-[12px]"
+              data-testid="business-bookings-list"
+            >
               {business.bookingRequests.length === 0 && (
                 <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
-                  Бронирований пока нет
+                  {t("businessDashboard.emptyBookings")}
                 </p>
               )}
 
@@ -1355,7 +1895,7 @@ export default function BusinessDashboard({
                   {pendingBookings.map(renderBookingCard)}
                   {confirmedBookings.length > 0 && (
                     <p className="mt-[8px] text-[15px] font-bold">
-                      Подтвержденые
+                      {t("businessDashboard.bookingsTabConfirmed")}
                     </p>
                   )}
                   {confirmedBookings.map(renderBookingCard)}
@@ -1367,7 +1907,7 @@ export default function BusinessDashboard({
                   {pendingBookings.length === 0 &&
                     business.bookingRequests.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
-                        Нет заявок в ожидании
+                        {t("businessDashboard.emptyPendingBookings")}
                       </p>
                     )}
                   {pendingBookings.map(renderBookingCard)}
@@ -1378,7 +1918,7 @@ export default function BusinessDashboard({
                   {confirmedBookings.length === 0 &&
                     business.bookingRequests.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
-                        Нет подтверждённых броней
+                        {t("businessDashboard.emptyConfirmedBookings")}
                       </p>
                     )}
                   {confirmedBookings.map(renderBookingCard)}
@@ -1391,7 +1931,7 @@ export default function BusinessDashboard({
         {view === "addService" && (
           <AddItemScreen
             kind="service"
-            onBack={() => setView("services")}
+            onBack={() => setView("servicesStaff")}
             onSave={handleAddService}
           />
         )}
@@ -1399,7 +1939,7 @@ export default function BusinessDashboard({
         {view === "addProduct" && (
           <AddItemScreen
             kind="product"
-            onBack={() => setView("products")}
+            onBack={() => setView("servicesStaff")}
             onSave={handleAddProduct}
           />
         )}
@@ -1409,25 +1949,32 @@ export default function BusinessDashboard({
         <DeleteItemModal
           item={deleteTarget}
           onCancel={() => setDeleteTarget(null)}
-          onConfirm={() => {
-            void removeService(businessId, deleteTarget.id);
-            setDeleteTarget(null);
+          onConfirm={async () => {
+            try {
+              await removeService(businessId, deleteTarget.id);
+              setDeleteTarget(null);
+              setItemMenuId(null);
+            } catch {
+              showToast(
+                deleteTarget.type === "product"
+                  ? t("businessDashboard.deleteProductTitle")
+                  : t("businessDashboard.deleteTitle"),
+                t("businessErrors.saveFailed"),
+              );
+            }
           }}
         />
       )}
 
       <DeleteBusinessModal
-        businessName={business.name || "Без названия"}
+        businessName={business.name || t("business.untitled")}
         isOpen={showDeleteBusiness}
         onClose={() => setShowDeleteBusiness(false)}
         onConfirm={async () => {
-          try {
-            await removeBusiness(businessId);
-            setShowDeleteBusiness(false);
-            onClose();
-          } catch {
-            alert("Не удалось удалить бизнес. Попробуйте ещё раз.");
-          }
+          await removeBusiness(businessId);
+          setShowDeleteBusiness(false);
+          showToast(t("business.deleteSuccessTitle"), t("business.deleteSuccessDesc"));
+          onClose();
         }}
       />
     </>

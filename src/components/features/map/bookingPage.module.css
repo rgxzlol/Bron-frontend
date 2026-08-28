@@ -4,6 +4,11 @@
   padding-bottom: 32px;
 }
 
+.pageSheet {
+  min-height: auto;
+  padding-bottom: 16px;
+}
+
 .topCard {
   display: grid;
   grid-template-columns: minmax(280px, 420px) 1fr;
@@ -310,6 +315,32 @@
   color: #e53935;
 }
 
+.formValidationSummary {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.slotConflictAlert {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .guestsHint {
   margin-top: 4px;
   font-size: 13px;
@@ -505,6 +536,40 @@
 .stepFooterMuted {
   color: var(--text-muted);
   font-size: 13px;
+}
+
+.lockedSchedule {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  background: var(--bg-active-soft);
+  border: 1px solid rgba(10, 106, 247, 0.15);
+}
+
+.lockedScheduleLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.lockedScheduleValue {
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.lockedScheduleEdit {
+  border: none;
+  background: transparent;
+  color: #0a6af7;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .stepFooterPrice {

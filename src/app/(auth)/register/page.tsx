@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function RegisterPage() {
-  return <AuthFlow initialScreen="register-personal" />;
+  return <AuthFlow initialScreen="register" />;
 }

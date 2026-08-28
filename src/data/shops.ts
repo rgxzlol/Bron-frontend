@@ -116,5 +116,25 @@ export const ShopsPlace: ShopsType[] = [
         category: "Услуги красоты",
         distance: '0.8 км',
         time: 45
+    },
+    {
+        id: 5,
+        title: "Bron Garden Restaurant",
+        lat: 41.3125,
+        lng: 69.265,
+        type: "Ресторан",
+        img: assets.map.photo1,
+        desc: "Современный ресторан с европейской и узбекской кухней, террасой и банкетным залом.",
+        rating: 4.7,
+        reviews: 210,
+        hours: "11:00 - 23:00",
+        freeSeats: 10,
+        price: 95000,
+        address: "ул. Нукус 88, Ташкент",
+        district: "Мирабадский район",
+        phone: "+998 90 555 44 33",
+        category: "Ресторан",
+        distance: "1.5 км",
+        time: 90
     }
 ]

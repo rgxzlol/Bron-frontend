@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
@@ -9,19 +9,24 @@ import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { Logo } from "@/components/shared/Logo";
+import PasswordInput from "@/components/shared/PasswordInput";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
+import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, REGISTER_PASSWORD_RULES, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
+import { signInWithGooglePopup } from "@/lib/auth/googleSignIn";
+import { authenticateWithGoogle } from "@/lib/auth/googleAccount";
+import { startTelegramOAuth } from "@/lib/auth/oauth";
+import { useProfileStore } from "@/store/profile.store";
+import { SupportModal } from "./SupportModal";
 
 export type AuthScreen =
   | "welcome"
   | "login"
-  | "register-personal"
-  | "register-security"
+  | "register"
   | "register-success"
   | "login-success"
   | "forgot"
-  | "telegram"
-  | "support";
+  | "telegram";
 
 /* ------------------------------ shared UI ------------------------------ */
 
@@ -115,6 +120,11 @@ type FieldProps = {
   inputMode?: "text" | "email" | "tel";
   autoComplete?: string;
   password?: boolean;
+  maxLength?: number;
+  error?: string;
+  id?: string;
+  name?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
 };
 
 function Field({
@@ -127,36 +137,77 @@ function Field({
   inputMode,
   autoComplete,
   password,
+  maxLength,
+  error,
+  id,
+  name,
+  inputRef,
 }: FieldProps) {
-  const [show, setShow] = useState(false);
+  const inputId = id ?? name;
+
   return (
-    <label className="flex flex-col gap-2">
-      <span className="text-[14px] font-semibold text-[var(--text-secondary)]">
+    <div className="flex flex-col gap-2">
+      <label
+        htmlFor={inputId}
+        className="text-[14px] font-semibold text-[var(--text-secondary)]"
+      >
         {label}
         {required && <span className="text-[#0a6af7]"> *</span>}
-      </span>
-      <div className="relative flex items-center rounded-[14px] border border-transparent bg-[var(--auth-box)] transition-all focus-within:border-[#0a6af7] focus-within:bg-[var(--bg-surface)]">
-        <input
-          className="w-full bg-transparent px-4 py-4 pr-11 text-[16px] font-semibold text-[var(--text-primary)] outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
-          type={password ? (show ? "text" : "password") : type}
+      </label>
+      {password ? (
+        <PasswordInput
+          id={inputId}
+          name={name}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={placeholder}
-          inputMode={inputMode}
           autoComplete={autoComplete}
+          inputRef={inputRef}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error && inputId ? `${inputId}-error` : undefined}
+          wrapClassName={`relative flex items-center rounded-[14px] border bg-[var(--auth-box)] transition-all focus-within:bg-[var(--bg-surface)] ${
+            error
+              ? "border-[#e02424] focus-within:border-[#e02424]"
+              : "border-transparent focus-within:border-[#0a6af7]"
+          }`}
+          inputClassName="w-full bg-transparent px-4 py-4 pr-11 text-[16px] font-semibold text-[var(--text-primary)] outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
+          toggleClassName="absolute right-3 flex h-8 w-8 items-center justify-center opacity-70 transition hover:opacity-100 active:scale-90"
         />
-        {password && (
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Скрыть пароль" : "Показать пароль"}
-            className="absolute right-3 flex h-8 w-8 items-center justify-center opacity-70 transition hover:opacity-100 active:scale-90"
-          >
-            <Image src={assets.auth.eyeIcon} alt="" width={22} height={22} />
-          </button>
-        )}
-      </div>
-    </label>
+      ) : (
+        <div
+          className={`relative flex items-center rounded-[14px] border bg-[var(--auth-box)] transition-all focus-within:bg-[var(--bg-surface)] ${
+            error
+              ? "border-[#e02424] focus-within:border-[#e02424]"
+              : "border-transparent focus-within:border-[#0a6af7]"
+          }`}
+        >
+          <input
+            id={inputId}
+            name={name}
+            className="w-full bg-transparent px-4 py-4 text-[16px] font-semibold text-[var(--text-primary)] outline-none placeholder:font-normal placeholder:text-[var(--text-muted)]"
+            type={type}
+            value={value}
+            onChange={(e) => {
+              const nextValue = maxLength
+                ? clampField(e.target.value, maxLength)
+                : e.target.value;
+              onChange(nextValue);
+            }}
+            placeholder={placeholder}
+            inputMode={inputMode}
+            autoComplete={autoComplete}
+            maxLength={maxLength}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error && inputId ? `${inputId}-error` : undefined}
+          />
+        </div>
+      )}
+      {error ? (
+        <span id={inputId ? `${inputId}-error` : undefined} className="text-[13px] font-semibold text-[#e02424]">
+          {error}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -204,18 +255,44 @@ function SecondaryButton({
   );
 }
 
-const passwordRules = [
-  { label: "Минимум 8 символов", test: (p: string) => p.length >= 8 },
-  { label: "Заглавная буква", test: (p: string) => /[A-ZА-ЯЁ]/.test(p) },
-  {
-    label: "Цифра или спец. символ",
-    test: (p: string) => /\d/.test(p) || /[^\p{L}\d\s]/u.test(p),
-  },
-];
-
-function passwordValid(p: string) {
-  return passwordRules.every((r) => r.test(p));
+function AuthTabs({
+  active,
+  onLogin,
+  onRegister,
+}: {
+  active: "login" | "register";
+  onLogin: () => void;
+  onRegister: () => void;
+}) {
+  return (
+    <div className="mt-6 flex gap-2 rounded-[14px] bg-[var(--auth-box)] p-1">
+      <button
+        type="button"
+        onClick={onLogin}
+        className={`flex-1 rounded-[12px] py-3 text-[14px] font-semibold transition-colors ${
+          active === "login"
+            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm"
+            : "text-[var(--text-muted)]"
+        }`}
+      >
+        Войти в аккаунт
+      </button>
+      <button
+        type="button"
+        onClick={onRegister}
+        className={`flex-1 rounded-[12px] py-3 text-[14px] font-semibold transition-colors ${
+          active === "register"
+            ? "bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm"
+            : "text-[var(--text-muted)]"
+        }`}
+      >
+        Создать аккаунт
+      </button>
+    </div>
+  );
 }
+
+const passwordRules = REGISTER_PASSWORD_RULES;
 
 function PasswordChecklist({ password }: { password: string }) {
   return (
@@ -304,46 +381,150 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const hydrated = useAuthHydrated();
   const token = useAuthStore((s) => s.token);
   const setSession = useAuthStore((s) => s.setSession);
+  const applyAuthProfile = useProfileStore((s) => s.applyAuthProfile);
 
   const [screen, setScreen] = useState<AuthScreen>(initialScreen);
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loginName, setLoginName] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [tgName, setTgName] = useState("");
   const [tgUsername, setTgUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
+  const [registerFieldErrors, setRegisterFieldErrors] = useState<RegisterFieldErrors>({});
+  const [recoveryErrors, setRecoveryErrors] = useState<RecoveryPasswordErrors>({});
+  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const newPasswordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (hydrated && token) router.replace(routes.profile);
+    if (hydrated && token) router.replace(routes.home);
   }, [hydrated, token, router]);
 
   function go(next: AuthScreen) {
     setError(null);
+    setFieldErrors({});
+    setRegisterFieldErrors({});
+    setRecoveryErrors({});
+    if (next !== "login") {
+      setPasswordResetSuccess(false);
+    }
     setScreen(next);
+  }
+
+  function handleSaveNewPassword() {
+    const nextErrors = validateRecoveryPassword(newPassword, confirmNewPassword);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setRecoveryErrors(nextErrors);
+      setError(nextErrors.form ?? "Проверьте введённые данные");
+
+      if (nextErrors.newPassword) {
+        newPasswordInputRef.current?.focus();
+      } else if (nextErrors.confirmPassword) {
+        confirmPasswordInputRef.current?.focus();
+      }
+
+      return;
+    }
+
+    setRecoveryErrors({});
+    setError(null);
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordResetSuccess(true);
+    setScreen("login");
+  }
+
+  async function completeAuthSession(
+    session: { access_token: string; user_id: number; username: string },
+    profile?: {
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      avatarUrl?: string | null;
+    },
+  ) {
+    setSession({
+      token: session.access_token,
+      userId: session.user_id,
+      username: session.username,
+    });
+
+    applyAuthProfile({
+      fullName: profile?.fullName ?? session.username,
+      email: profile?.email,
+      phone: profile?.phone,
+      avatarUrl: profile?.avatarUrl,
+    });
+
+    router.replace(routes.home);
+  }
+
+  async function handleGoogleOAuth() {
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      await signInWithGooglePopup({
+        onSuccess: async (profile) => {
+          try {
+            const session = await authenticateWithGoogle(profile);
+            await completeAuthSession(session, {
+              fullName: profile.name,
+              email: profile.email,
+              avatarUrl: profile.picture ?? null,
+            });
+          } catch (e) {
+            setError(
+              e instanceof ApiError ? e.message : "Не удалось войти через Google",
+            );
+          }
+        },
+        onError: (message) => {
+          setError(message);
+        },
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleTelegramOAuth() {
+    const result = startTelegramOAuth();
+    if (!result.ok) {
+      if (result.fallback === "telegram-form") {
+        go("telegram");
+        return;
+      }
+
+      setError(result.error);
+    }
   }
 
   async function handleLogin() {
     setError(null);
-    if (!loginName.trim() || !password.trim()) {
-      setError("Заполните имя и пароль");
+
+    const nextFieldErrors = validateLoginFields(loginName, password);
+    if (nextFieldErrors.loginName || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
       return;
     }
+
+    setFieldErrors({});
     setSubmitting(true);
     try {
-      const session = await authApi.login({ username: loginName.trim(), password });
-      setSession({
-        token: session.access_token,
-        userId: session.user_id,
-        username: session.username,
+      const session = await authApi.login({
+        username: loginName.trim(),
+        password,
       });
-      go("login-success");
+      await completeAuthSession(session, {
+        fullName: session.username,
+      });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Не удалось выполнить вход");
     } finally {
@@ -351,27 +532,28 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     }
   }
 
-  function handlePersonalNext() {
-    setError(null);
-    if (!firstName.trim()) return setError("Укажите имя");
-    if (!email.trim()) return setError("Укажите email");
-    if (!phone.trim()) return setError("Укажите номер телефона");
-    go("register-security");
-  }
-
   async function handleRegister() {
     setError(null);
-    if (!passwordValid(password)) return setError("Пароль не соответствует требованиям");
-    if (password !== confirmPassword) return setError("Пароли не совпадают");
 
+    const nextFieldErrors = validateRegisterFields(firstName, phone, password);
+    const hasErrors = Object.values(nextFieldErrors).some(Boolean);
+    if (hasErrors) {
+      setRegisterFieldErrors(nextFieldErrors);
+      return;
+    }
+
+    setRegisterFieldErrors({});
     setSubmitting(true);
     const username = firstName.trim();
+    const normalizedPhone = phone.trim();
+    const syntheticEmail = `${username.toLowerCase().replace(/[^\w.-]/g, "") || "user"}@bron.app`;
+
     try {
       try {
         await authApi.register({
           username,
-          email: email.trim(),
-          phone: phone.trim(),
+          email: syntheticEmail,
+          phone: normalizedPhone,
           password,
         });
       } catch (registerError) {
@@ -379,27 +561,18 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           throw registerError;
         }
       }
+
       const session = await authApi.login({ username, password });
-      setSession({
-        token: session.access_token,
-        userId: session.user_id,
-        username: session.username,
+      await completeAuthSession(session, {
+        fullName: username,
+        email: syntheticEmail,
+        phone: normalizedPhone,
       });
-      go("register-success");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Не удалось создать аккаунт");
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function handleSaveNewPassword() {
-    setError(null);
-    if (!passwordValid(newPassword)) return setError("Пароль не соответствует требованиям");
-    if (newPassword !== confirmNewPassword) return setError("Пароли не совпадают");
-    // Backend has no reset endpoint; return the user to the login screen.
-    setPassword("");
-    go("login");
   }
 
   const errorBanner = useMemo(
@@ -410,6 +583,16 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         </p>
       ) : null,
     [error],
+  );
+
+  const successBanner = useMemo(
+    () =>
+      passwordResetSuccess ? (
+        <p className="rounded-[12px] bg-[#e8f7ee] px-4 py-3 text-center text-[14px] font-semibold text-[#1f8a4c]">
+          Пароль успешно изменён. Войдите с новым паролем.
+        </p>
+      ) : null,
+    [passwordResetSuccess],
   );
 
   if (!hydrated || token) return null;
@@ -432,7 +615,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           <div className="mt-8 flex flex-col gap-3">
             {errorBanner}
             <PrimaryButton onClick={() => go("login")}>Войти в аккаунт</PrimaryButton>
-            <SecondaryButton onClick={() => go("register-personal")}>Создать аккаунт</SecondaryButton>
+            <SecondaryButton onClick={() => go("register")}>Создать аккаунт</SecondaryButton>
 
             <div className="my-2 flex items-center gap-4">
               <span className="h-px flex-1 bg-[var(--border-default)]" />
@@ -441,13 +624,13 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             </div>
 
             <SecondaryButton
-              onClick={() => go("login-success")}
+              onClick={handleGoogleOAuth}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
-              Войти с Google
+              {submitting ? "Загрузка..." : "Войти с Google"}
             </SecondaryButton>
             <SecondaryButton
-              onClick={() => go("telegram")}
+              onClick={handleTelegramOAuth}
               icon={<Image src={assets.auth.telegramIcon} alt="" width={22} height={22} />}
             >
               Войти с Telegram
@@ -455,13 +638,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           </div>
 
           </div>
-          <button
-            type="button"
-            onClick={() => go("support")}
-            className="mx-auto pt-6 text-[15px] font-semibold text-[#0a6af7] hover:underline"
-          >
-            Тех поддержка
-          </button>
+          <div className="pt-6">
+            <SupportModal />
+          </div>
         </div>
       </AuthShell>
     );
@@ -471,53 +650,196 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     return (
       <AuthShell>
         <StepHeader title="Вход в аккаунт" onBack={() => go("welcome")} />
-        <div className="mt-6 flex flex-1 flex-col">
+        <AuthTabs active="login" onLogin={() => go("login")} onRegister={() => go("register")} />
+        <form
+          className="mt-6 flex flex-1 flex-col"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleLogin();
+          }}
+          noValidate
+        >
           <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
             Впишите ваш пароль и имя для входа в аккаунт
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
+            {successBanner}
             {errorBanner}
-            <Field label="Имя" placeholder="Иван" value={loginName} onChange={setLoginName} autoComplete="username" />
-            <Field label="Пароль" placeholder="Введите пароль" value={password} onChange={setPassword} password autoComplete="current-password" />
+            <Field
+              id="username-input"
+              name="username"
+              label="Имя"
+              placeholder="Иван"
+              value={loginName}
+              onChange={(value) => {
+                setLoginName(value);
+                if (fieldErrors.loginName) {
+                  setFieldErrors((current) => ({ ...current, loginName: undefined }));
+                }
+              }}
+              maxLength={AUTH_FIELD_LIMITS.username}
+              error={fieldErrors.loginName}
+              autoComplete="username"
+            />
+            <Field
+              id="password-input"
+              name="password"
+              label="Пароль"
+              placeholder="Введите пароль"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                setFieldErrors((current) => {
+                  if (value.length > LOGIN_PASSWORD_LIMITS.max) {
+                    return {
+                      ...current,
+                      password: LOGIN_PASSWORD_LENGTH_ERROR,
+                    };
+                  }
+
+                  if (!current.password) return current;
+
+                  return {
+                    ...current,
+                    password: validateLoginPasswordLength(value),
+                  };
+                });
+              }}
+              error={fieldErrors.password}
+              password
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => go("forgot")}
+              className="self-start text-[14px] font-semibold text-[#0a6af7] hover:underline"
+            >
+              Забыли пароль?
+            </button>
           </div>
 
           <div className="mt-auto flex flex-col items-center gap-4 pt-8">
-            <PrimaryButton onClick={handleLogin} disabled={submitting}>
-              {submitting ? "Загрузка..." : "Продолжить"}
+            <PrimaryButton type="submit" disabled={submitting}>
+              {submitting ? "Загрузка..." : "Войти"}
             </PrimaryButton>
-            <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
-              Забыли пароль?{" "}
-              <button type="button" onClick={() => go("forgot")} className="text-[#0a6af7] hover:underline">
-                Поменять
-              </button>
-            </p>
           </div>
-        </div>
+        </form>
       </AuthShell>
     );
   }
 
-  if (screen === "register-personal") {
+  if (screen === "register") {
     return (
       <AuthShell>
-        <StepHeader title="Создание аккаунта" onBack={() => go("welcome")} step={0} />
-        <div className="mt-6 flex flex-1 flex-col">
-          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">Личные данные</h2>
-          <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            Пожалуйста, заполните информацию о себе
+        <StepHeader title="Создание аккаунта" onBack={() => go("welcome")} />
+        <AuthTabs active="register" onLogin={() => go("login")} onRegister={() => go("register")} />
+        <form
+          className="mt-6 flex flex-1 flex-col"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleRegister();
+          }}
+          noValidate
+        >
+          <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
+            Заполните данные для создания аккаунта
           </p>
 
-          <div className="mt-6 flex flex-col gap-5">
+          <div className="mt-7 flex flex-col gap-6">
             {errorBanner}
-            <Field label="Имя" required placeholder="Иван" value={firstName} onChange={setFirstName} autoComplete="given-name" />
-            <Field label="Фамилия" placeholder="Иванович" value={lastName} onChange={setLastName} autoComplete="family-name" />
-            <Field label="Email" required type="email" inputMode="email" placeholder="ivan@gmail.com" value={email} onChange={setEmail} autoComplete="email" />
-            <Field label="Номер телефона" required type="tel" inputMode="tel" placeholder="+998 99 000 00 00" value={phone} onChange={setPhone} autoComplete="tel" />
+            <Field
+              id="register-name-input"
+              name="name"
+              label="Имя"
+              required
+              placeholder="Иван"
+              value={firstName}
+              onChange={(value) => {
+                setFirstName(value);
+                if (registerFieldErrors.name) {
+                  setRegisterFieldErrors((current) => ({ ...current, name: undefined }));
+                }
+              }}
+              maxLength={AUTH_FIELD_LIMITS.firstName}
+              error={registerFieldErrors.name}
+              autoComplete="given-name"
+            />
+            <Field
+              id="register-phone-input"
+              name="phone"
+              label="Номер телефона"
+              required
+              type="tel"
+              inputMode="tel"
+              placeholder="+998 99 999 99 99"
+              value={phone}
+              onChange={(value) => {
+                setPhone(formatUzbekPhoneInput(value));
+                if (registerFieldErrors.phone) {
+                  setRegisterFieldErrors((current) => ({ ...current, phone: undefined }));
+                }
+              }}
+              maxLength={AUTH_FIELD_LIMITS.phone}
+              error={registerFieldErrors.phone}
+              autoComplete="tel"
+            />
+            <Field
+              id="register-password-input"
+              name="password"
+              label="Создать пароль"
+              required
+              placeholder="Введите пароль"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                setRegisterFieldErrors((current) => {
+                  if (value.length > LOGIN_PASSWORD_LIMITS.max) {
+                    return {
+                      ...current,
+                      password: LOGIN_PASSWORD_LENGTH_ERROR,
+                    };
+                  }
+
+                  if (!current.password) return current;
+
+                  return {
+                    ...current,
+                    password: validateRegisterPasswordLength(value),
+                  };
+                });
+              }}
+              error={registerFieldErrors.password}
+              password
+              autoComplete="new-password"
+            />
+            <PasswordChecklist password={password} />
           </div>
 
-          <div className="mt-auto flex flex-col items-center gap-4 pt-8">
-            <PrimaryButton onClick={handlePersonalNext}>Продолжить</PrimaryButton>
+          <div className="mt-auto flex flex-col gap-4 pt-8">
+            <PrimaryButton type="submit" disabled={submitting}>
+              {submitting ? "Загрузка..." : "Создать аккаунт"}
+            </PrimaryButton>
+
+            <SecondaryButton
+              onClick={handleGoogleOAuth}
+              icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
+            >
+              {submitting ? "Загрузка..." : "Google"}
+            </SecondaryButton>
+
+            <div className="flex gap-3">
+              <SupportModal />
+              <button
+                type="button"
+                onClick={handleTelegramOAuth}
+                className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#0a6af7] p-4 text-[17px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
+              >
+                Telegram
+                <Image src={assets.auth.telegramIcon} alt="" width={22} height={22} />
+              </button>
+            </div>
+
             <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
               Уже есть аккаунт?{" "}
               <button type="button" onClick={() => go("login")} className="text-[#0a6af7] hover:underline">
@@ -525,34 +847,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </button>
             </p>
           </div>
-        </div>
-      </AuthShell>
-    );
-  }
-
-  if (screen === "register-security") {
-    return (
-      <AuthShell>
-        <StepHeader title="Создание аккаунта" onBack={() => go("register-personal")} step={1} />
-        <div className="mt-6 flex flex-1 flex-col">
-          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">Безопасность</h2>
-          <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            Придумай надежный пароль для защиты аккаунта
-          </p>
-
-          <div className="mt-6 flex flex-col gap-5">
-            {errorBanner}
-            <Field label="Пароль" required placeholder="Введите пароль" value={password} onChange={setPassword} password autoComplete="new-password" />
-            <Field label="Подтвердите пароль" required placeholder="Повторите пароль" value={confirmPassword} onChange={setConfirmPassword} password autoComplete="new-password" />
-            <PasswordChecklist password={password} />
-          </div>
-
-          <div className="mt-auto pt-8">
-            <PrimaryButton onClick={handleRegister} disabled={submitting}>
-              {submitting ? "Загрузка..." : "Продолжить"}
-            </PrimaryButton>
-          </div>
-        </div>
+        </form>
       </AuthShell>
     );
   }
@@ -585,7 +880,14 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     return (
       <AuthShell>
         <StepHeader title="Сброс пароля" onBack={() => go("login")} />
-        <div className="mt-6 flex flex-1 flex-col">
+        <form
+          className="mt-6 flex flex-1 flex-col"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSaveNewPassword();
+          }}
+          noValidate
+        >
           <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">Новый пароль</h2>
           <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
             Придумай новый пароль для защиты аккаунта
@@ -593,15 +895,58 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
           <div className="mt-6 flex flex-col gap-5">
             {errorBanner}
-            <Field label="Новый пароль" required placeholder="Введите пароль" value={newPassword} onChange={setNewPassword} password autoComplete="new-password" />
-            <Field label="Подтвердите пароль" required placeholder="Повторите пароль" value={confirmNewPassword} onChange={setConfirmNewPassword} password autoComplete="new-password" />
-            <PasswordChecklist password={newPassword} />
+            <Field
+              id="recovery-new-password"
+              label="Новый пароль"
+              required
+              placeholder="Введите пароль"
+              value={newPassword}
+              inputRef={newPasswordInputRef}
+              onChange={(value) => {
+                setNewPassword(value);
+                if (recoveryErrors.newPassword || recoveryErrors.form) {
+                  setRecoveryErrors((current) => ({
+                    ...current,
+                    newPassword: undefined,
+                    form: undefined,
+                  }));
+                  setError(null);
+                }
+              }}
+              password
+              autoComplete="new-password"
+              maxLength={AUTH_FIELD_LIMITS.password}
+              error={recoveryErrors.newPassword}
+            />
+            <Field
+              id="recovery-confirm-password"
+              label="Подтвердите пароль"
+              required
+              placeholder="Повторите пароль"
+              value={confirmNewPassword}
+              inputRef={confirmPasswordInputRef}
+              onChange={(value) => {
+                setConfirmNewPassword(value);
+                if (recoveryErrors.confirmPassword || recoveryErrors.form) {
+                  setRecoveryErrors((current) => ({
+                    ...current,
+                    confirmPassword: undefined,
+                    form: undefined,
+                  }));
+                  setError(null);
+                }
+              }}
+              password
+              autoComplete="new-password"
+              maxLength={AUTH_FIELD_LIMITS.password}
+              error={recoveryErrors.confirmPassword}
+            />
           </div>
 
           <div className="mt-auto pt-8">
-            <PrimaryButton onClick={handleSaveNewPassword}>Сохранить</PrimaryButton>
+            <PrimaryButton type="submit">Сохранить</PrimaryButton>
           </div>
-        </div>
+        </form>
       </AuthShell>
     );
   }
@@ -645,72 +990,5 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     );
   }
 
-  // support
-  const supportCards = [
-    {
-      title: "Telegram",
-      subtitle: "Написать в Telegram",
-      href: "https://t.me/Bron_Suport",
-      external: true,
-      icon: <Image src={assets.auth.telegramIcon} alt="" width={24} height={24} />,
-    },
-    {
-      title: "Email",
-      subtitle: "support@bron.com",
-      href: "mailto:support@bron.com",
-      external: false,
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="5" width="18" height="14" rx="3" stroke="#0a6af7" strokeWidth="2" />
-          <path d="M4 7l8 6 8-6" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      title: "F.A.Q",
-      subtitle: "Часто задаваемые вопросы",
-      href: routes.support,
-      external: false,
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" stroke="#0a6af7" strokeWidth="2" />
-          <path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.5" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="12" cy="17" r="1" fill="#0a6af7" />
-        </svg>
-      ),
-    },
-  ];
-
-  return (
-    <AuthShell>
-      <StepHeader title="Тех.Поддержка" onBack={() => go("welcome")} />
-      <div className="mt-4 flex flex-1 flex-col">
-        <p className="text-center text-[14px] font-semibold text-[var(--text-secondary)]">
-          Мы всегда готовы помочь вам с любыми вопросами
-        </p>
-
-        <div className="mt-7 flex flex-col gap-3">
-          {supportCards.map((card) => (
-            <a
-              key={card.title}
-              href={card.href}
-              {...(card.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className="flex items-center gap-4 rounded-[18px] bg-[var(--auth-box)] p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.99]"
-            >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface)]">
-                {card.icon}
-              </span>
-              <span className="flex flex-1 flex-col">
-                <span className="text-[16px] font-semibold text-[var(--text-primary)]">{card.title}</span>
-                <span className="text-[13px] font-semibold text-[var(--text-muted)]">{card.subtitle}</span>
-              </span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M9 6l6 6-6 6" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </a>
-          ))}
-        </div>
-      </div>
-    </AuthShell>
-  );
+  return null;
 }

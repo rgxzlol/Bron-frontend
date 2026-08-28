@@ -1,18 +1,26 @@
 import Image from "next/image";
 import type { ImageProps } from "next/image";
 
-export interface NotificationItem {
+export type NotificationCardProps = {
   icon: ImageProps["src"];
   title: string;
   description: string;
   time: string;
-}
+  testId?: string;
+};
 
-export type NotificationCardProps = NotificationItem;
-
-export function NotificationCard({ icon, title, description, time }: NotificationCardProps) {
+export function NotificationCard({
+  icon,
+  title,
+  description,
+  time,
+  testId,
+}: NotificationCardProps) {
   return (
-    <li className="group flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-3 shadow-[0_2px_10px_rgba(17,24,39,0.03)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-[0.99]">
+    <li
+      className="group flex cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-3 shadow-[0_2px_10px_rgba(17,24,39,0.03)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-[0.99]"
+      data-testid={testId}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[12px] bg-[var(--bg-active-soft)] transition-transform duration-200 group-hover:scale-105">
           <Image src={icon} alt="" className="h-5 w-5 object-contain" />

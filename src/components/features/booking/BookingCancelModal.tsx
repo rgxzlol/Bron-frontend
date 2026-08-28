@@ -60,6 +60,9 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                 aria-label="Отменить бронь?"
                 className="relative w-full max-w-[360px] rounded-[20px] bg-[var(--bg-surface)] p-[20px] shadow-lg"
                 onClick={(e) => e.stopPropagation()}
+                data-testid={
+                    bookingId != null ? `booking-cancel-modal-${bookingId}` : "booking-cancel-modal"
+                }
             >
                 <button
                     type="button"
@@ -104,7 +107,10 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                     </div>
                 </div>
 
-                <aside className="mt-[12px] flex items-start gap-[10px] rounded-[12px] bg-[#f0f4ff] p-[12px] dark:bg-[var(--bg-surface-muted)]">
+                <aside
+                    className="mt-[12px] flex items-start gap-[10px] rounded-[12px] bg-[#f0f4ff] p-[12px] dark:bg-[var(--bg-surface-muted)]"
+                    data-testid="booking-cancel-refund-info"
+                >
                     <span className="mt-[1px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-[#0a6af7] text-[13px] font-bold text-white" aria-hidden="true">
                         !
                     </span>
@@ -118,6 +124,11 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                         type="button"
                         onClick={onClose}
                         className="flex-1 rounded-[14px] bg-[#0a6af7] py-4 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
+                        data-testid={
+                            bookingId != null
+                                ? `booking-cancel-dismiss-${bookingId}`
+                                : "booking-cancel-dismiss"
+                        }
                     >
                         Не отменять
                     </button>
@@ -126,6 +137,11 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                         onClick={handleConfirm}
                         disabled={isSubmitting}
                         className="flex-1 rounded-[14px] bg-[#e02424] py-4 text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-[#c81e1e] active:scale-[0.98] disabled:opacity-60"
+                        data-testid={
+                            bookingId != null
+                                ? `booking-cancel-confirm-${bookingId}`
+                                : "booking-cancel-confirm"
+                        }
                     >
                         {isSubmitting ? 'Отмена...' : 'Отменить бронь'}
                     </button>

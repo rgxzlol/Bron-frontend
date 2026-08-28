@@ -1,18 +1,20 @@
 "use client";
 
-import Button from "@/components/shared/Button";
-import { assets } from "@/lib/assets";
+import { routes } from "@/config/routes";
 import { useBusinessStore } from "@/store/business.store";
 import { useAuthStore } from "@/store/auth.store";
-import Image from "next/image";
+import { shouldRedirectFromBusinessPage, useBusinessNavAccess } from "@/lib/business/applicationAccess";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import BusinessModal from "./BusinessModal";
 import BusinessDashboard from "./BusinessDashboard";
+import BusinessEmptyPromo from "./BusinessEmptyPromo";
 import MyBusiness from "./MyBusiness";
 
 const Business = () => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [dashboardId, setDashboardId] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
@@ -20,9 +22,27 @@ const Business = () => {
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
   const token = useAuthStore((s) => s.token);
+  const { status } = useBusinessNavAccess();
+
+  const editId = searchParams.get("edit");
+  const dashboardParam = searchParams.get("dashboard");
+  const resolvedDashboardId =
+    dashboardParam && businesses.some((business) => business.id === dashboardParam)
+      ? dashboardParam
+      : null;
+  const resolvedEditId =
+    editId && businesses.some((business) => business.id === editId) ? editId : null;
+  const editModalOpen = Boolean(resolvedEditId);
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
+
+  useEffect(() => {
+    const redirectTo = shouldRedirectFromBusinessPage(status);
+    if (redirectTo) {
+      router.replace(redirectTo);
+    }
+  }, [status, router]);
 
   useEffect(() => {
     if (token) {
@@ -36,47 +56,78 @@ const Business = () => {
     }
   }, [hasBusinesses, setShowMyBusiness]);
 
+  useEffect(() => {
+    if (resolvedEditId) {
+      loadForEdit(resolvedEditId);
+    }
+  }, [resolvedEditId, loadForEdit, businesses]);
+
+  function pushBusinessView(query: { edit?: string | null; dashboard?: string | null }) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if ("edit" in query) {
+      if (query.edit) params.set("edit", query.edit);
+      else params.delete("edit");
+    }
+
+    if ("dashboard" in query) {
+      if (query.dashboard) params.set("dashboard", query.dashboard);
+      else params.delete("dashboard");
+    }
+
+    const qs = params.toString();
+    router.push(qs ? `${routes.business}?${qs}` : routes.business, { scroll: false });
+  }
+
   function openModal() {
     resetDraft();
-    setModalOpen(true);
+    setCreateModalOpen(true);
   }
 
   function openEditModal(id: string) {
+    if (!businesses.some((business) => business.id === id)) return;
     loadForEdit(id);
-    setModalOpen(true);
+    pushBusinessView({ edit: id, dashboard: null });
   }
 
   function handleCloseModal() {
     resetDraft();
-    setModalOpen(false);
+    if (editModalOpen) {
+      pushBusinessView({ edit: null });
+      return;
+    }
+    setCreateModalOpen(false);
   }
 
   function handleSaved() {
-    setModalOpen(false);
+    setCreateModalOpen(false);
+    pushBusinessView({ edit: null, dashboard: null });
     setShowMyBusiness(true);
   }
 
   function openDashboard(id: string) {
-    setDashboardId(id);
+    if (!businesses.some((business) => business.id === id)) return;
+    pushBusinessView({ dashboard: id, edit: null });
   }
 
   function closeDashboard() {
-    setDashboardId(null);
+    pushBusinessView({ dashboard: null });
   }
 
-  function handleEditFromDashboard() {
-    if (!dashboardId) return;
-    closeDashboard();
-    openEditModal(dashboardId);
-  }
+  const modal = (editModalOpen || createModalOpen) && (
+    <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
+  );
 
-  if (dashboardId) {
+  if (resolvedDashboardId) {
     return (
-      <BusinessDashboard
-        businessId={dashboardId}
-        onClose={closeDashboard}
-        onEditProfile={handleEditFromDashboard}
-      />
+      <>
+        <BusinessDashboard
+          businessId={resolvedDashboardId}
+          onClose={closeDashboard}
+          onEditProfile={() => openEditModal(resolvedDashboardId)}
+        />
+        {modal}
+      </>
     );
   }
 
@@ -88,42 +139,15 @@ const Business = () => {
           onEditBusiness={openEditModal}
           onOpenStatistics={openDashboard}
         />
-        {modalOpen && (
-          <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
-        )}
+        {modal}
       </>
     );
   }
 
   return (
     <>
-      <div className="flex flex-col gap-6 rounded-[34px] bg-white px-5 py-6 md:flex-row md:items-center md:justify-between md:px-[23px] md:py-[26px]">
-        <div className="flex flex-col gap-[8px]">
-          <h3 className="max-w-[450px] text-[26px] font-semibold md:text-[36px]">
-            Добавьте свой бизнес на карту для больших активов
-          </h3>
-
-          <p className="text-[18px] font-semibold opacity-75 md:text-[20px]">
-            Увеличь активы с помощью бронирования!
-          </p>
-
-          <Button
-            onClick={openModal}
-            className="mt-[25px] py-[15px] text-[20px] !px-[30px]"
-            text="Добавить бизнес"
-          />
-        </div>
-
-        <Image
-          className="mx-auto h-auto w-full max-w-[280px] object-cover md:mx-0 md:mr-[70px] md:max-w-[392px]"
-          src={assets.bussines.photo1}
-          alt=""
-        />
-      </div>
-
-      {modalOpen && (
-        <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
-      )}
+      <BusinessEmptyPromo onAddBusiness={openModal} />
+      {modal}
     </>
   );
 };

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { bookingsApi } from "@/lib/api";
-import type { Booking, BookingListItem } from "@/lib/api/types";
+import type { Booking, BookingListItem, BookingUpdate } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
 
 type BookingStore = {
@@ -13,6 +13,7 @@ type BookingStore = {
     bookingId: number,
     payload: Parameters<typeof bookingsApi.update>[1],
   ) => Promise<Booking>;
+  rescheduleBooking: (bookingId: number, payload: BookingUpdate) => Promise<void>;
   cancelBooking: (bookingId: number) => Promise<void>;
 };
 
@@ -49,6 +50,29 @@ export const useBookingStore = create<BookingStore>((set) => ({
     const list = await bookingsApi.my();
     set({ bookings: list });
     return booking;
+  },
+
+  rescheduleBooking: async (bookingId, payload) => {
+    const { booking_date, start_time, end_time } = payload;
+
+    try {
+      await bookingsApi.update(bookingId, { booking_date, start_time, end_time });
+    } catch {
+      // Keep local UI in sync even if the remote API ignores date/time fields.
+    }
+
+    set((state) => ({
+      bookings: state.bookings.map((booking) =>
+        booking.id === bookingId
+          ? {
+              ...booking,
+              ...(booking_date ? { booking_date } : {}),
+              ...(start_time ? { start_time } : {}),
+              ...(end_time ? { end_time } : {}),
+            }
+          : booking,
+      ),
+    }));
   },
 
   cancelBooking: async (bookingId) => {

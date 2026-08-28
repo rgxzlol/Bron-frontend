@@ -1,50 +1,55 @@
+"use client";
+
 import { assets } from "@/lib/assets";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const steps = [
   {
     step: 1,
-    title: "Выбираете сервис",
-    description: "Выбираете сервис, который вам нужен",
+    titleKey: "home.step1Title",
+    descriptionKey: "home.step1Desc",
   },
   {
     step: 2,
-    title: "Подбираете время",
-    description: "Выбираете время и дату",
+    titleKey: "home.step2Title",
+    descriptionKey: "home.step2Desc",
   },
   {
     step: 3,
-    title: "Оплачиваете",
-    description: "Оплачиваете выбранный сервис",
+    titleKey: "home.step3Title",
+    descriptionKey: "home.step3Desc",
   },
   {
     step: 4,
-    title: "Получаете услугу",
-    description: "Получайте услугу от профессионалов",
+    titleKey: "home.step4Title",
+    descriptionKey: "home.step4Desc",
   },
 ] as const;
 
 export default function WhyUs() {
+  const { t } = useTranslation();
+
   return (
     <section className="my-[36px] mb-[100px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold">Как это работает?</h2>
+      <h2 className="mb-[16px] text-[24px] font-semibold">{t("home.howItWorks")}</h2>
 
       <div className="flex flex-col gap-[22px] sm:flex-row sm:flex-wrap xl:flex-nowrap">
-        {steps.map(({ step, title, description }) => (
+        {steps.map(({ step, titleKey, descriptionKey }) => (
           <div
             key={step}
-            className="flex flex-1 items-center gap-[13px] bg-white pt-3.5 pb-4.5 pl-3 pr-5 rounded-[24px]"
+            className="flex flex-1 items-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5"
           >
-            <p className="w-[74px] h-[74px] flex items-center justify-center rounded-full bg-[#f9f9fd] text-blue-600 text-[32px] font-semibold">
+            <p className="flex h-[74px] w-[74px] items-center justify-center rounded-full bg-[#f9f9fd] text-[32px] font-semibold text-blue-600">
               {step}
             </p>
             <div className="flex flex-col gap-[7px]">
-              <p className="max-w-[90px] font-semibold">{title}</p>
+              <p className="max-w-[90px] font-semibold">{t(titleKey)}</p>
               <p className="max-w-[144px] text-[14px] font-semibold opacity-75">
-                {description}
+                {t(descriptionKey)}
               </p>
             </div>
           </div>
@@ -55,20 +60,24 @@ export default function WhyUs() {
         <div className="xl:flex-1">
           <div className="mb-8 flex flex-col gap-[9px] xl:mb-[70px]">
             <p className="max-w-[400px] text-[24px] font-semibold xl:text-[32px]">
-              Для крупных бизнесов и предпринимателей
+              {t("home.businessTitle")}
             </p>
             <p className="max-w-[210px] font-semibold opacity-75">
-              Заходи в Bron и развивай свой бизнес
+              {t("home.businessSubtitle")}
             </p>
           </div>
-          <Link href={routes.business}>
-            <Button text="Начать" as="span" className="cursor-pointer inline-block" />
+          <Link href={routes.businessApplication} data-testid="business-get-started-btn">
+            <Button
+              text={t("home.start")}
+              as="span"
+              className="inline-block cursor-pointer"
+            />
           </Link>
         </div>
         <Image
           className="mx-auto h-auto w-[220px] xl:absolute xl:right-0 xl:top-[-155px] xl:mx-0 xl:w-[493px]"
           src={assets.marketing.homePng}
-          alt="Bron для бизнеса"
+          alt={t("home.businessAlt")}
           width={493}
           height={442}
         />

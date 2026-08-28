@@ -1,26 +1,24 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BookingNav } from "@/components/features/booking/BookingNav";
 import BookingsPageClient from "@/components/features/booking/BookingsPageClient";
 
 export const metadata: Metadata = { title: "Мои брони" };
 
-export default async function BookingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const resolvedParams = await searchParams;
-  const currentTab = resolvedParams.tab || "upcoming";
-
+export default function BookingsPage() {
   return (
-    <main>
-      <h1 className="font-semibold text-[32px] text-[var(--text-primary)] mb-[22px]">
+    <main data-testid="bookings-page">
+      <h1 className="mb-[22px] text-[32px] font-semibold text-[var(--text-primary)]">
         Мои брони
       </h1>
 
-      <BookingNav />
+      <Suspense fallback={null}>
+        <BookingNav />
+      </Suspense>
 
-      <BookingsPageClient currentTab={currentTab} />
+      <Suspense fallback={null}>
+        <BookingsPageClient />
+      </Suspense>
     </main>
   );
 }

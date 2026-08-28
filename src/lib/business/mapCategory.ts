@@ -32,5 +32,14 @@ export function businessMatchesBusinessCategory(
   businessCategory: string,
 ): boolean {
   if (!businessCategory) return true;
-  return category === businessCategory;
+  if (category === businessCategory) return true;
+
+  const mappedType = SHOP_TYPE_TO_BUSINESS_CATEGORY[category];
+  if (mappedType === businessCategory) return true;
+
+  const normalizedCategory = category.replace(/\s+/g, " ").trim();
+  const normalizedFilter = businessCategory.replace(/\s+/g, " ").trim();
+  if (normalizedCategory === normalizedFilter) return true;
+
+  return category.toLowerCase().includes(businessCategory.toLowerCase());
 }

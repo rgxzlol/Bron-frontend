@@ -1,12 +1,13 @@
 "use client";
 
-import { useToastStore } from "@/store/toast.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useState } from "react";
 
 type DeleteBusinessModalProps = {
   businessName: string;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 };
 
 function TrashIcon() {
@@ -42,17 +43,33 @@ export default function DeleteBusinessModal({
   onClose,
   onConfirm,
 }: DeleteBusinessModalProps) {
-  const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!isOpen) return null;
+
+  async function handleConfirm() {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      data-testid="business-delete-modal-backdrop"
       onClick={onClose}
     >
       <section
         className="w-full max-w-[320px] rounded-[16px] bg-[var(--bg-surface)] p-[18px] shadow-lg lg:max-w-[400px] lg:p-[22px]"
+        data-testid="business-delete-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="business-delete-modal-title"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-[10px]">
@@ -60,47 +77,50 @@ export default function DeleteBusinessModal({
             <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[#fde8e8]">
               <TrashIcon />
             </span>
-            <h3 className="text-[17px] font-bold">Удалить бизнес?</h3>
+            <h3
+              id="business-delete-modal-title"
+              className="text-[17px] font-bold"
+              data-testid="business-delete-modal-title"
+            >
+              {t("businessDeleteModal.title")}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-[6px] text-[var(--text-primary)] transition hover:opacity-70"
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
+            data-testid="business-delete-modal-close"
           >
             <CloseIcon />
           </button>
         </div>
 
         <p className="mt-[16px] text-[14px] font-semibold leading-snug">
-          Вы уверены что хотите удалить бизнес{" "}
-          <strong>{businessName}</strong>?
+          {t("businessDeleteModal.confirm", { name: businessName })}
         </p>
         <p className="mt-[8px] text-[13px] leading-snug text-[var(--text-secondary)]">
-          Все данные, бронирования и статистика будут удалены без возможности
-          восстановления
+          {t("businessDeleteModal.warning")}
         </p>
 
         <div className="mt-[18px] grid grid-cols-2 gap-[10px]">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[10px] bg-[#0a6af7] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce]"
+            disabled={isDeleting}
+            className="rounded-[10px] bg-[#0a6af7] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce] disabled:opacity-60"
+            data-testid="business-delete-cancel"
           >
-            Отмена
+            {t("businessDeleteModal.cancel")}
           </button>
           <button
             type="button"
-            onClick={() => {
-              onConfirm();
-              showToast(
-                "Бизнес успешно удален",
-                "Бизнес удален и все данные о нем удалены.",
-              );
-            }}
-            className="rounded-[10px] bg-[#e02424] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#c11f1f]"
+            disabled={isDeleting}
+            onClick={() => void handleConfirm()}
+            className="rounded-[10px] bg-[#e02424] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#c11f1f] disabled:opacity-60"
+            data-testid="business-delete-confirm"
           >
-            Удалить бизнес
+            {isDeleting ? t("businessModal.saving") : t("businessDeleteModal.delete")}
           </button>
         </div>
       </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets } from "@/lib/assets";
@@ -13,13 +13,32 @@ import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import DatePicker from "@/components/shared/DatePicker";
 import TimePicker from "@/components/shared/TimePicker";
-import { formatDateRu } from "@/lib/formatDate";
+import {
+  formatBookingDate as formatBookingDateLabel,
+  formatDateRu,
+  toBookingTimeTestId,
+} from "@/lib/formatDate";
 import {
   buildTimeGroupsFromHours,
   getAvailableSlotsForDate,
   getDefaultBookingTime,
   startOfDay,
 } from "@/lib/booking/timeSlots";
+import {
+  BOOKING_ERROR_MESSAGE_KEYS,
+  type BookingFormErrorCodes,
+  type BookingFormErrors,
+  validateBookingForm,
+} from "@/lib/booking/validation";
+import { isSlotConflictError } from "@/lib/booking/errors";
+import {
+  buildSlotKey,
+  releaseSlot,
+  tryReserveSlot,
+} from "@/lib/booking/slotLocks";
+import { formatUzbekPhoneInput } from "@/lib/auth/validation";
+import { getBookingExtraLabels } from "@/lib/booking/extras";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
@@ -30,6 +49,7 @@ import {
 } from "@/lib/api/mappers";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
+import { useProfileStore } from "@/store/profile.store";
 import { useToastStore } from "@/store/toast.store";
 import s from "./bookingPage.module.css";
 
@@ -37,9 +57,16 @@ type BookingPageProps = {
   shop: ShopsType;
   selectedServiceIds?: string[];
   onBack: () => void;
+  origin?: "home" | "map";
+  variant?: "page" | "sheet";
 };
 
 type BookingStep = 1 | 2 | 3;
+
+type LockedSchedule = {
+  date: Date;
+  time: string;
+};
 
 const RU_MONTHS_GENITIVE = [
   "января",
@@ -64,8 +91,11 @@ export default function BookingPage({
   shop,
   selectedServiceIds = [],
   onBack,
+  origin = "map",
+  variant = "page",
 }: BookingPageProps) {
   const [step, setStep] = useState<BookingStep>(1);
+  const [lockedSchedule, setLockedSchedule] = useState<LockedSchedule | null>(null);
   const [showMobileCalendar, setShowMobileCalendar] = useState(false);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
@@ -80,16 +110,23 @@ export default function BookingPage({
   const [guests, setGuests] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
-  const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string }>({});
+  const [formErrors, setFormErrors] = useState<BookingFormErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
     email: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [slotConflictMessage, setSlotConflictMessage] = useState<string | null>(null);
+  const didPrefillFormRef = useRef(false);
+  const { t, locale } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
   const showToast = useToastStore((state) => state.showToast);
+  const profileFullName = useProfileStore((state) => state.fullName);
+  const profilePhone = useProfileStore((state) => state.phone);
+  const profileEmail = useProfileStore((state) => state.email);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -120,6 +157,24 @@ export default function BookingPage({
       setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
     }
   }, [allTimeSlots, selectedDate, selectedTime]);
+
+  useEffect(() => {
+    if (step !== 2) {
+      didPrefillFormRef.current = false;
+      setSubmitAttempted(false);
+      return;
+    }
+
+    if (didPrefillFormRef.current) return;
+
+    didPrefillFormRef.current = true;
+    setForm({
+      name: profileFullName?.trim() ?? "",
+      phone: profilePhone?.trim() ?? "",
+      email: profileEmail?.trim() ?? "",
+    });
+    setFormErrors({});
+  }, [step, profileFullName, profilePhone, profileEmail]);
 
   const selectedServices = useMemo(() => {
     if (!shop.services?.length || !selectedServiceIds.length) return [];
@@ -170,17 +225,19 @@ export default function BookingPage({
         const extra = bookingExtras.find((item) => item.id === id);
         if (!extra) return [];
 
+        const labels = getBookingExtraLabels(id, t);
+
         return [
           {
             id: `extra-${id}`,
-            name: quantity > 1 ? `${extra.name} × ${quantity}` : extra.name,
+            name: quantity > 1 ? `${labels.name} × ${quantity}` : labels.name,
             price: extra.price * quantity,
             removable: true,
             sourceId: id,
           },
         ];
       }),
-    [extraQuantities],
+    [extraQuantities, t],
   );
 
   const allLineItems = useMemo(
@@ -190,17 +247,39 @@ export default function BookingPage({
 
   const total = allLineItems.reduce((sum, item) => sum + item.price, 0);
 
+  const formattedSelectedDate = useMemo(
+    () => formatBookingDateLabel(selectedDate, locale),
+    [selectedDate, locale],
+  );
+
 
 
   const priceLabel = `от ${formatPrice(shop.price)} сум`;
   const priceSubLabel = shop.type === "Больница" ? "за приём" : "за час";
   const displayEmail = form.email.trim() || "Ivan.Petrov@gmail.com";
+  const backLabel = origin === "home" ? "Закрыть" : "Назад к карте";
+  const activeDate = lockedSchedule?.date ?? selectedDate;
+  const activeTime = lockedSchedule?.time ?? selectedTime;
 
-  const isFormValid = useMemo(() => {
-    const name = form.name.trim();
-    const phoneDigits = form.phone.replace(/\D/g, "");
-    return name.length >= 2 && phoneDigits.length >= 9;
-  }, [form.name, form.phone]);
+  function handleContinueFromStep1() {
+    setLockedSchedule({
+      date: startOfDay(selectedDate),
+      time: selectedTime,
+    });
+    setStep(2);
+  }
+
+  function handleBackFromStep(stepNumber: BookingStep) {
+    if (stepNumber > 1) {
+      if (stepNumber === 2) {
+        setLockedSchedule(null);
+      }
+      setStep((current) => (current - 1) as BookingStep);
+      return;
+    }
+
+    onBack();
+  }
 
   function addExtra(id: string) {
     setExtraQuantities((prev) => ({
@@ -222,58 +301,83 @@ export default function BookingPage({
     });
   }
 
+  function clearExtra(id: string) {
+    setExtraQuantities((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function mapValidationCodesToMessages(
+    codes: BookingFormErrorCodes,
+  ): BookingFormErrors {
+    return Object.fromEntries(
+      Object.entries(codes).map(([field, code]) => [
+        field,
+        t(BOOKING_ERROR_MESSAGE_KEYS[code as keyof typeof BOOKING_ERROR_MESSAGE_KEYS]),
+      ]),
+    ) as BookingFormErrors;
+  }
+
   function validateForm() {
-    const errors: { name?: string; phone?: string } = {};
-    const name = form.name.trim();
-    const phoneDigits = form.phone.replace(/\D/g, "");
-
-    if (name.length < 2) {
-      errors.name = "Введите имя и фамилию";
-    }
-    if (phoneDigits.length < 9) {
-      errors.phone = "Введите корректный номер телефона";
-    }
-
+    const codes = validateBookingForm(form.name, form.phone, form.email);
+    const errors = mapValidationCodesToMessages(codes);
     setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    return Object.keys(codes).length === 0;
   }
 
   function handlePay() {
-    if (!validateForm()) return;
+    setSubmitAttempted(true);
+
+    if (!validateForm()) {
+      setShowExtrasModal(false);
+      return;
+    }
+
     setShowExtrasModal(true);
   }
 
-  function proceedToPayment() {
-    if (paymentMethod === "card") {
-      setShowCardModal(true);
-    } else {
-      setStep(3);
-      showToast(
-        "Бронирование прошло успешно",
-        "Бронирование прошло успешно, приходите за 10 мин до бронирования.",
-      );
-    }
+  function completeBookingFlow() {
+    setShowExtrasModal(false);
+    setShowCardModal(false);
+    setStep(3);
+    showToast(
+      "Бронирование прошло успешно",
+      "Бронирование прошло успешно, приходите за 10 мин до бронирования.",
+    );
+  }
+
+  function handleSlotConflict() {
+    setShowExtrasModal(false);
+    setShowCardModal(false);
+    setLockedSchedule(null);
+    setStep(1);
+    setSlotConflictMessage(t("booking.errorSlotUnavailable"));
+    showToast(t("booking.errorSlotUnavailable"), t("booking.errorSlotUnavailableHint"));
   }
 
   async function finishExtras() {
     if (!token) {
-      alert("Войдите в аккаунт, чтобы оформить бронь");
+      alert(t("booking.errorLoginRequired"));
       return;
     }
 
     if (!shop.apiBusinessId) {
-      setShowExtrasModal(false);
-      proceedToPayment();
+      completeBookingFlow();
       return;
     }
 
     const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
     if (!serviceId || !/^\d+$/.test(serviceId)) {
-      alert("Для этого места не выбрана услуга из API");
+      alert(t("booking.errorNoService"));
       return;
     }
 
     setIsSubmitting(true);
+
+    let slotKey: string | null = null;
 
     try {
       let branchId = shop.apiBranchId;
@@ -283,7 +387,7 @@ export default function BookingPage({
       }
 
       if (!branchId) {
-        throw new Error("У бизнеса нет доступного филиала");
+        throw new Error(t("booking.errorNoBranch"));
       }
 
       const durationMin =
@@ -291,20 +395,34 @@ export default function BookingPage({
         shop.services?.find((item) => item.id === serviceId)?.durationMin ??
         60;
 
+      const bookingDate = formatBookingDate(activeDate);
+      slotKey = buildSlotKey(shop.apiBusinessId, branchId, bookingDate, activeTime);
+
+      if (!tryReserveSlot(slotKey)) {
+        handleSlotConflict();
+        return;
+      }
+
       await createBooking({
         business_id: shop.apiBusinessId,
         service_id: Number(serviceId),
         branch_id: branchId,
-        booking_date: formatBookingDate(selectedDate),
-        start_time: selectedTime,
-        end_time: addMinutesToTime(selectedTime, durationMin),
+        booking_date: bookingDate,
+        start_time: activeTime,
+        end_time: addMinutesToTime(activeTime, durationMin),
         guest_count: guests,
       });
 
-      setShowExtrasModal(false);
-      proceedToPayment();
+      completeBookingFlow();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Не удалось создать бронь");
+      if (slotKey) releaseSlot(slotKey);
+
+      if (isSlotConflictError(error)) {
+        handleSlotConflict();
+        return;
+      }
+
+      alert(error instanceof Error ? error.message : t("booking.errorCreateFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -312,13 +430,13 @@ export default function BookingPage({
 
   function renderStepper() {
     const steps = [
-      { num: 1, label: "Выбор времени" },
-      { num: 2, label: "Ваши данные" },
-      { num: 3, label: "Подтверждение" },
+      { num: 1, label: t("booking.stepTime") },
+      { num: 2, label: t("booking.stepDetails") },
+      { num: 3, label: t("booking.stepConfirm") },
     ];
 
     return (
-      <nav className={s.stepper} aria-label="Шаги бронирования">
+      <nav className={s.stepper} aria-label={t("booking.stepsAria")} data-testid="booking-stepper">
         {steps.map(({ num, label }) => {
           const isDone = step > num;
           const isActive = step === num;
@@ -326,6 +444,8 @@ export default function BookingPage({
             <div
               key={num}
               className={`${s.step} ${isDone ? s.stepDone : ""} ${isActive ? s.stepActive : ""}`}
+              data-testid={`booking-step-${num}`}
+              data-active={isActive ? "true" : "false"}
             >
               <span className={s.stepCircle}>{isDone ? "✓" : num}</span>
               <span className={s.stepLabel}>{label}</span>
@@ -380,13 +500,13 @@ export default function BookingPage({
               <button
                 type="button"
                 className={s.backBtn}
-                onClick={() => setStep((st) => (st - 1) as BookingStep)}
+                onClick={() => handleBackFromStep(step)}
               >
                 Назад
               </button>
             ) : (
               <button type="button" className={s.backBtn} onClick={onBack}>
-                Назад
+                {backLabel}
               </button>
             )}
           </div>
@@ -423,7 +543,18 @@ export default function BookingPage({
   function renderStep1() {
     return (
       <>
-        <section className={s.timeCard}>
+        {slotConflictMessage && (
+          <div
+            className={s.slotConflictAlert}
+            role="alert"
+            data-testid="booking-slot-conflict-error"
+          >
+            <strong>{slotConflictMessage}</strong>
+            <span>{t("booking.errorSlotUnavailableHint")}</span>
+          </div>
+        )}
+
+        <section className={s.timeCard} data-testid="booking-step-1-panel">
           <div className={s.desktopPickers}>
             <DatePicker
               viewMonth={viewMonth}
@@ -442,7 +573,7 @@ export default function BookingPage({
           </div>
 
           <div className={s.mobilePickers}>
-            <h2 className={s.pickTitle}>Выбери дату</h2>
+            <h2 className={s.pickTitle}>{t("booking.pickDate")}</h2>
             <button
               type="button"
               className={s.dateField}
@@ -493,7 +624,7 @@ export default function BookingPage({
               </div>
             )}
 
-            <h2 className={s.pickTitle}>Выбери время</h2>
+            <h2 className={s.pickTitle}>{t("booking.pickTime")}</h2>
             <div className={s.timeGrid}>
               {hourlyTimeSlots.map((slot) => {
                 const disabled = disabledTimeSlots.has(slot);
@@ -504,7 +635,11 @@ export default function BookingPage({
                     type="button"
                     disabled={disabled}
                     className={`${s.timeChip} ${selected ? s.timeChipActive : ""}`}
-                    onClick={() => setSelectedTime(slot)}
+                    data-testid={toBookingTimeTestId(slot)}
+                    onClick={() => {
+                      setSelectedTime(slot);
+                      setSlotConflictMessage(null);
+                    }}
                   >
                     {slot}
                   </button>
@@ -514,32 +649,50 @@ export default function BookingPage({
           </div>
         </section>
 
-        <div className={s.stepFooter}>
-          <div className={s.stepFooterInfo}>
+        <div className={s.stepFooter} data-testid="booking-step1-summary">
+          <div className={s.stepFooterInfo} aria-live="polite">
             <span>
-              Вы выбрали <strong>{formatDateRu(selectedDate)}, {selectedTime}</strong>
+              {t("booking.youSelected")}{" "}
+              <strong>
+                <span data-testid="booking-step1-selected-date">
+                  {formattedSelectedDate}
+                </span>
+                ,{" "}
+                <span data-testid="booking-step1-selected-time">{selectedTime}</span>
+              </strong>
             </span>
-            <span className={s.stepFooterMuted}>Продолжительность {durationLabel}</span>
+            <span className={s.stepFooterMuted}>
+              <span data-testid="booking-step1-duration">
+                {t("booking.durationLabel", { duration: durationLabel })}
+              </span>
+            </span>
           </div>
           <div className={s.stepFooterActions}>
-            <span className={s.stepFooterPrice}>
-              Итог за {durationLabel} {formatPrice(bookingPrice)} сум
+            <span className={s.stepFooterPrice} data-testid="booking-step1-total">
+              {t("booking.totalForDuration", {
+                duration: durationLabel,
+                price: `${formatPrice(bookingPrice)}`,
+              })}
             </span>
             <Button
-              text="Продолжить"
+              text={t("booking.continue")}
               className={s.continueBtn}
-              onClick={() => setStep(2)}
+              data-testid="booking-continue-button"
+              onClick={handleContinueFromStep1}
             />
-            <span className={s.footerHint}>Ваши данные защищены</span>
+            <span className={s.footerHint}>{t("booking.dataProtected")}</span>
           </div>
         </div>
 
         <div className={s.mobileFooter}>
-          <p className={s.mobileTotal}>Итог: {formatPrice(bookingPrice)}сум</p>
+          <p className={s.mobileTotal} data-testid="booking-step1-total-mobile">
+            {t("booking.mobileTotal", { price: `${formatPrice(bookingPrice)}` })}
+          </p>
           <Button
-            text="Продолжить"
+            text={t("booking.continue")}
             className={s.mobileContinue}
-            onClick={() => setStep(2)}
+            data-testid="booking-continue-button"
+            onClick={handleContinueFromStep1}
           />
         </div>
       </>
@@ -552,35 +705,43 @@ export default function BookingPage({
     payButtonText: string,
     onPay?: () => void,
     paid = false,
-    payDisabled = false,
   ) {
     return (
-      <aside className={s.payCard}>
-        <h2 className={s.payTitle}>Оплата</h2>
+      <aside className={s.payCard} data-testid="booking-payment-panel">
+        <h2 className={s.payTitle}>{t("booking.paymentTitle")}</h2>
 
         {items.map((item) => (
           <div key={item.id} className={s.lineItem}>
             <span className={s.lineName}>{item.name}</span>
-            <span className={s.linePrice}>{formatPrice(item.price)} сум</span>
+            <span className={s.linePrice}>
+              {t("booking.priceSum", { price: formatPrice(item.price) })}
+            </span>
           </div>
         ))}
 
         <div className={s.total}>
-          <span>Итого:</span>
-          <span className={s.totalAmount}>{formatPrice(itemsTotal)} сум</span>
+          <span>{t("booking.total")}</span>
+          <span className={s.totalAmount}>
+            {t("booking.priceSum", { price: formatPrice(itemsTotal) })}
+          </span>
         </div>
 
         {!paid && (
-          <div className={s.payMethods} role="radiogroup" aria-label="Способ оплаты">
+          <div
+            className={s.payMethods}
+            role="radiogroup"
+            aria-label={t("booking.paymentMethodAria")}
+          >
             {[
-              { id: "card", title: "Банковская карта", sub: "Visa, MasterCard, Uzcard" },
-              { id: "click", title: "Click / Payme", sub: "Мгновенная оплата" },
-              { id: "other", title: "Другие способы", sub: "Apple Pay, Google Pay" },
+              { id: "card", title: t("booking.payCard"), sub: t("booking.payCardSub") },
+              { id: "click", title: t("booking.payClick"), sub: t("booking.payClickSub") },
+              { id: "other", title: t("booking.payOther"), sub: t("booking.payOtherSub") },
             ].map((method) => (
               <label
                 key={method.id}
                 className={`${s.payOption} ${paymentMethod === method.id ? s.payOptionSelected : ""
                   }`}
+                data-testid={`booking-payment-${method.id}`}
               >
                 <input
                   type="radio"
@@ -602,22 +763,69 @@ export default function BookingPage({
           text={payButtonText}
           className={paid ? s.paidBtn : s.payBtn}
           onClick={onPay}
-          disabled={paid || payDisabled}
+          disabled={paid}
+          data-testid="booking-pay-button"
         />
       </aside>
     );
   }
 
   function renderStep2() {
+    const hasFormErrors = Object.keys(formErrors).length > 0;
+
     return (
-      <div className={s.columns}>
-        <section className={s.formCard}>
-          <h2 className={s.formTitle}>Ваши данные</h2>
-          <p className={s.formSubtitle}>Заполните информацию для бронирования</p>
+      <div className={s.columns} data-testid="booking-step-2-panel">
+        {lockedSchedule ? (
+          <section className={s.lockedSchedule} data-testid="booking-locked-schedule">
+            <div>
+              <p className={s.lockedScheduleLabel}>{t("booking.lockedScheduleLabel")}</p>
+              <p className={s.lockedScheduleValue}>
+                <span data-testid="booking-locked-date">
+                  {formatBookingDateLabel(lockedSchedule.date, locale)}
+                </span>
+                ,{" "}
+                <span data-testid="booking-locked-time">{lockedSchedule.time}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              className={s.lockedScheduleEdit}
+              onClick={() => {
+                setLockedSchedule(null);
+                setStep(1);
+              }}
+            >
+              {t("booking.lockedScheduleEdit")}
+            </button>
+          </section>
+        ) : null}
+
+        <form
+          className={s.formCard}
+          data-testid="booking-details-form"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            handlePay();
+          }}
+          data-validation-state={hasFormErrors ? "invalid" : "valid"}
+        >
+          <h2 className={s.formTitle}>{t("booking.formTitle")}</h2>
+          <p className={s.formSubtitle}>{t("booking.formSubtitle")}</p>
+
+          {submitAttempted && hasFormErrors ? (
+            <div
+              className={s.formValidationSummary}
+              role="alert"
+              data-testid="booking-form-errors"
+            >
+              {t("booking.formValidationSummary")}
+            </div>
+          ) : null}
 
           <label className={s.field}>
             <span className={s.label}>
-              Имя и фамилия <span className={s.required}>*</span>
+              {t("booking.nameLabel")} <span className={s.required}>*</span>
             </span>
             <input
               className={`${s.input} ${formErrors.name ? s.inputError : ""}`}
@@ -627,45 +835,98 @@ export default function BookingPage({
                 setForm((prev) => ({ ...prev, name: e.target.value }));
                 if (formErrors.name) setFormErrors((prev) => ({ ...prev, name: undefined }));
               }}
-              placeholder="Иван Иванов"
+              placeholder={t("booking.namePlaceholder")}
               required
+              aria-invalid={!!formErrors.name}
+              aria-describedby={formErrors.name ? "booking-name-error" : undefined}
+              data-testid="booking-name-input"
             />
-            {formErrors.name && <span className={s.fieldError}>{formErrors.name}</span>}
+            {formErrors.name && (
+              <span
+                id="booking-name-error"
+                className={s.fieldError}
+                role="alert"
+                data-testid="booking-name-error"
+              >
+                {formErrors.name}
+              </span>
+            )}
           </label>
 
           <label className={s.field}>
             <span className={s.label}>
-              Номер телефона <span className={s.required}>*</span>
+              {t("booking.phoneLabel")} <span className={s.required}>*</span>
             </span>
             <input
               className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
               type="tel"
               value={form.phone}
               onChange={(e) => {
-                setForm((prev) => ({ ...prev, phone: e.target.value }));
-                if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: undefined }));
+                setForm((prev) => ({
+                  ...prev,
+                  phone: formatUzbekPhoneInput(e.target.value),
+                }));
+                if (formErrors.phone) {
+                  setFormErrors((prev) => ({ ...prev, phone: undefined }));
+                }
               }}
               placeholder="+998 90 000 00 00"
               required
+              inputMode="tel"
+              autoComplete="tel"
+              aria-invalid={!!formErrors.phone}
+              aria-describedby={formErrors.phone ? "booking-phone-error" : undefined}
+              data-testid="booking-phone-input"
             />
-            {formErrors.phone && <span className={s.fieldError}>{formErrors.phone}</span>}
+            {formErrors.phone && (
+              <span
+                id="booking-phone-error"
+                className={s.fieldError}
+                role="alert"
+                data-testid="booking-phone-error"
+              >
+                {formErrors.phone}
+              </span>
+            )}
           </label>
 
           <label className={s.field}>
-            <span className={s.label}>Электроная почта (необязательно)</span>
+            <span className={s.label}>{t("booking.emailLabel")}</span>
             <input
-              className={s.input}
+              className={`${s.input} ${formErrors.email ? s.inputError : ""}`}
               type="email"
               value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, email: e.target.value }));
+                if (formErrors.email) {
+                  setFormErrors((prev) => ({ ...prev, email: undefined }));
+                }
+              }}
               placeholder="email@example.com"
+              autoComplete="email"
+              aria-invalid={!!formErrors.email}
+              aria-describedby={formErrors.email ? "booking-email-error" : undefined}
+              data-testid="booking-email-input"
             />
+            {formErrors.email && (
+              <span
+                id="booking-email-error"
+                className={s.fieldError}
+                role="alert"
+                data-testid="booking-email-error"
+              >
+                {formErrors.email}
+              </span>
+            )}
           </label>
 
-          <div className={s.guests}>
+          <div className={s.guests} data-testid="booking-guests-control">
             <div className={s.guestsRow}>
               <div>
-                <span className={s.label}>Количество гостей</span>
+                <span className={s.label}>{t("booking.guestsLabel")}</span>
+                <p className={s.guestsHint}>
+                  {t("booking.guestsHint", { max: maxGuests })}
+                </p>
               </div>
               <div className={s.counter}>
                 <button
@@ -673,33 +934,40 @@ export default function BookingPage({
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.max(1, n - 1))}
                   disabled={guests <= 1}
-                  aria-label="Уменьшить"
+                  aria-label={t("booking.guestsDecrease")}
+                  data-testid="booking-guests-decrease"
                 >
                   −
                 </button>
-                <span className={s.counterValue}>{guests}</span>
+                <span className={s.counterValue} data-testid="booking-guests-count">
+                  {guests}
+                </span>
                 <button
                   type="button"
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.min(maxGuests, n + 1))}
                   disabled={guests >= maxGuests}
-                  aria-label="Увеличить"
+                  aria-label={t("booking.guestsIncrease")}
+                  data-testid="booking-guests-increase"
                 >
                   +
                 </button>
               </div>
             </div>
           </div>
-        </section>
+        </form>
 
-        {renderPaymentSummary(baseLineItems, bookingPrice, "Оплатить", handlePay, false, !isFormValid)}
+        {renderPaymentSummary(baseLineItems, bookingPrice, t("booking.pay"), handlePay)}
       </div>
     );
   }
 
   function renderStep3() {
     return (
-      <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center py-8 text-center">
+      <div
+        className="mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center py-8 text-center"
+        data-testid="booking-confirm-step"
+      >
         <div className="relative flex h-[150px] w-[150px] items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-[#16a34a]/10" />
           <span className="absolute inset-5 rounded-full bg-[#16a34a]/20" />
@@ -710,35 +978,68 @@ export default function BookingPage({
           </span>
         </div>
 
-        <h2 className="mt-6 text-[24px] font-semibold text-[var(--text-primary)]">
-          Бронирование подтверждено!
+        <h2
+          className="mt-6 text-[24px] font-semibold text-[var(--text-primary)]"
+          data-testid="booking-confirm-title"
+        >
+          {t("booking.confirmTitle")}
         </h2>
         <p className="mt-2 text-[15px] font-semibold text-[var(--text-secondary)]">
-          Мы отправили детали на вашу почту
+          {t("booking.confirmEmailSent")}
         </p>
         <span className="mt-3 rounded-full bg-[var(--bg-surface-muted)] px-4 py-1.5 text-[14px] font-semibold text-[var(--text-primary)]">
           {displayEmail}
         </span>
 
+        <div
+          className="mt-8 w-full rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface-muted)] p-4 text-left"
+          data-testid="booking-confirm-summary"
+        >
+          <h3 className="mb-3 text-[16px] font-bold text-[var(--text-primary)]">
+            {t("booking.confirmSummaryTitle")}
+          </h3>
+          <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
+            {formatDateRu(activeDate)}, {activeTime}
+          </p>
+          {allLineItems.map((item) => (
+            <div
+              key={item.id}
+              className="mt-2 flex items-center justify-between gap-3 text-[14px]"
+            >
+              <span className="text-[var(--text-secondary)]">{item.name}</span>
+              <span className="font-semibold text-[var(--text-primary)]">
+                {formatPrice(item.price)} сум
+              </span>
+            </div>
+          ))}
+          <div className="mt-4 flex items-center justify-between border-t border-[var(--border-default)] pt-3 text-[16px] font-bold">
+            <span>{t("booking.total")}</span>
+            <span data-testid="booking-confirm-total">{formatPrice(total)} сум</span>
+          </div>
+        </div>
+
         <div className="mt-10 flex w-full flex-col gap-3">
           <Link
             href={routes.home}
             className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-center text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+            data-testid="booking-go-home"
           >
-            На главную
+            {t("booking.goHome")}
           </Link>
           <button
             type="button"
             onClick={() => setShowReviewModal(true)}
             className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+            data-testid="booking-leave-review"
           >
-            Оставить отзыв
+            {t("booking.leaveReview")}
           </button>
           <Link
             href={routes.bookings}
             className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-center text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+            data-testid="booking-go-bookings"
           >
-            Мои брони
+            {t("booking.viewBooking")}
           </Link>
         </div>
       </div>
@@ -746,19 +1047,16 @@ export default function BookingPage({
   }
 
   return (
-    <div className={s.page}>
+    <div
+      className={`${s.page} ${variant === "sheet" ? s.pageSheet : ""}`}
+      data-testid="booking-wizard"
+    >
       {step < 3 && (
         <div className={s.pageTop}>
           <button
             type="button"
             className={s.backCircle}
-            onClick={() => {
-              if (step > 1) {
-                setStep((st) => (st - 1) as BookingStep);
-              } else {
-                onBack();
-              }
-            }}
+            onClick={() => handleBackFromStep(step)}
             aria-label="Назад"
           >
             <svg
@@ -776,13 +1074,13 @@ export default function BookingPage({
             </svg>
           </button>
           <button type="button" className={s.backToMap} onClick={onBack}>
-            Назад к карте
+            {backLabel}
           </button>
         </div>
       )}
 
       {step < 3 && renderTopCard()}
-      {step < 3 && renderStepper()}
+      {renderStepper()}
 
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
@@ -806,9 +1104,11 @@ export default function BookingPage({
           extraQuantities={extraQuantities}
           onAddExtra={addExtra}
           onRemoveExtra={removeExtra}
+          onClearExtra={clearExtra}
           onSkip={finishExtras}
           onContinue={finishExtras}
           onClose={() => setShowExtrasModal(false)}
+          isSubmitting={isSubmitting}
         />
       )}
 
@@ -818,11 +1118,7 @@ export default function BookingPage({
           onClose={() => setShowCardModal(false)}
           onPay={() => {
             setShowCardModal(false);
-            setStep(3);
-            showToast(
-              "Оплата прошла успешно",
-              "Оплата прошла успешно. Ожидайте подтверждения бронирования.",
-            );
+            completeBookingFlow();
           }}
         />
       )}

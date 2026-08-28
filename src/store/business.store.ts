@@ -12,14 +12,19 @@ import {
   updateBusinessBookingStatusOnApi,
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
+import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
 import { getAuthToken } from "@/lib/api/token";
-import { geocodeAddress, resolveDraftCoords } from "@/lib/geocoding";
+import { GeocodingError } from "@/lib/geocoding";
 import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
 } from "@/lib/business/schedule";
 import { mergeBusinessFromApi } from "@/lib/business/photos";
-import { hasValidCoords, normalizeCoords } from "@/lib/geocoding";
+import {
+  hasValidCoords,
+  normalizeCoords,
+  resolveDraftCoords,
+} from "@/lib/geocoding";
 
 export const BUSINESS_CATEGORIES = [
   "Спорт зал",
@@ -47,6 +52,8 @@ export type BusinessService = {
   photo: string | null;
   active: boolean;
   type: "service" | "product";
+  guestCapacity?: number;
+  quantity?: number;
 };
 
 export type BusinessBookingRequest = {
@@ -216,86 +223,104 @@ export const useBusinessStore = create<BusinessStore>()(
         const { draft, businesses, editingId } = get();
         const token = getAuthToken();
 
-        if (token) {
-          const coords = await resolveDraftCoords(draft);
-          const saved = await saveBusinessDraftToApi(draft, editingId);
-          const resolved = normalizeCoords(coords.lat, coords.lng);
-          const normalized: SavedBusiness = normalizeBusiness({
-            ...saved,
-            lat: resolved?.lat ?? coords.lat,
-            lng: resolved?.lng ?? coords.lng,
-            profilePhoto: saved.profilePhoto ?? draft.profilePhoto,
-            gallery: saved.gallery.some(Boolean) ? saved.gallery : draft.gallery,
-            website: saved.website || draft.website,
-            description: saved.description || draft.description,
-          });
-          const next = editingId
-            ? businesses.map((business) =>
-                business.id === editingId || business.id === normalized.id
-                  ? normalized
-                  : business,
-              )
-            : [...businesses, normalized];
-
-          set({
-            businesses: next,
-            draft: createEmptyDraft(),
-            editingId: null,
-            showMyBusiness: true,
-            mapFocusBusinessId: normalized.id,
-          });
-          return normalized;
-        }
-
-        if (editingId) {
-          const coords = await resolveDraftCoords(draft);
-          let updatedBusiness: SavedBusiness | null = null;
-          const next = businesses.map((business) => {
-            if (business.id !== editingId) return business;
-            updatedBusiness = normalizeBusiness({
-              ...business,
-              ...draft,
-              lat: coords.lat,
-              lng: coords.lng,
+        const persistLocally = async (): Promise<SavedBusiness> => {
+          if (editingId) {
+            const coords = await resolveDraftCoords(draft);
+            let updatedBusiness: SavedBusiness | null = null;
+            const next = businesses.map((business) => {
+              if (business.id !== editingId) return business;
+              updatedBusiness = normalizeBusiness({
+                ...business,
+                ...draft,
+                lat: coords.lat,
+                lng: coords.lng,
+              });
+              return updatedBusiness;
             });
-            return updatedBusiness;
+            if (!updatedBusiness) throw new Error("Business not found");
+            const savedBusiness: SavedBusiness = updatedBusiness;
+            set({
+              businesses: next,
+              draft: createEmptyDraft(),
+              editingId: null,
+              showMyBusiness: true,
+              mapFocusBusinessId: savedBusiness.id,
+            });
+            return savedBusiness;
+          }
+
+          const coords = await resolveDraftCoords(draft);
+          const saved: SavedBusiness = ensureNewBusinessDefaults({
+            ...draft,
+            id: crypto.randomUUID(),
+            status: "confirmed",
+            bookings: 0,
+            views: 0,
+            lat: coords.lat,
+            lng: coords.lng,
+            services: [],
+            bookingRequests: [],
           });
-          if (!updatedBusiness) throw new Error("Business not found");
-          const savedBusiness: SavedBusiness = updatedBusiness;
           set({
-            businesses: next,
+            businesses: [...businesses, saved],
             draft: createEmptyDraft(),
             editingId: null,
             showMyBusiness: true,
-            mapFocusBusinessId: savedBusiness.id,
+            mapFocusBusinessId: saved.id,
           });
-          return savedBusiness;
+          return saved;
+        };
+
+        if (token) {
+          try {
+            const coords = await resolveDraftCoords(draft);
+            const saved = await saveBusinessDraftToApi(draft, editingId);
+            const resolved = normalizeCoords(coords.lat, coords.lng);
+            const normalized: SavedBusiness = normalizeBusiness({
+              ...saved,
+              lat: resolved?.lat ?? coords.lat,
+              lng: resolved?.lng ?? coords.lng,
+              profilePhoto: saved.profilePhoto ?? draft.profilePhoto,
+              gallery: saved.gallery.some(Boolean) ? saved.gallery : draft.gallery,
+              website: saved.website || draft.website,
+              description: saved.description || draft.description,
+            });
+            const next = editingId
+              ? businesses.map((business) =>
+                  business.id === editingId || business.id === normalized.id
+                    ? normalized
+                    : business,
+                )
+              : [...businesses, normalized];
+
+            set({
+              businesses: next,
+              draft: createEmptyDraft(),
+              editingId: null,
+              showMyBusiness: true,
+              mapFocusBusinessId: normalized.id,
+            });
+            return normalized;
+          } catch (error) {
+            if (error instanceof GeocodingError) {
+              throw error;
+            }
+
+            console.warn("API business save failed, using local fallback:", error);
+            return persistLocally();
+          }
         }
 
-        const coords = await resolveDraftCoords(draft);
-        const saved: SavedBusiness = ensureNewBusinessDefaults({
-          ...draft,
-          id: crypto.randomUUID(),
-          status: "confirmed",
-          bookings: 0,
-          views: 0,
-          lat: coords.lat,
-          lng: coords.lng,
-          services: [],
-          bookingRequests: [],
-        });
-        set({
-          businesses: [...businesses, saved],
-          draft: createEmptyDraft(),
-          editingId: null,
-          showMyBusiness: true,
-          mapFocusBusinessId: saved.id,
-        });
-        return saved;
+        return persistLocally();
       },
 
       removeBusiness: async (id) => {
-        await removeBusinessFromApi(id);
+        try {
+          await removeBusinessFromApi(id);
+        } catch (error) {
+          console.warn("API business delete failed, removing locally:", error);
+        }
+
         set((state) => {
           const businesses = state.businesses.filter((b) => b.id !== id);
           return {
@@ -319,10 +344,12 @@ export const useBusinessStore = create<BusinessStore>()(
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
+          const apiIds = new Set(merged.map((item) => item.id));
+          const localOnly = existing.filter((item) => !apiIds.has(item.id));
 
           set({
-            businesses: merged,
-            showMyBusiness: merged.length > 0,
+            businesses: [...merged, ...localOnly],
+            showMyBusiness: merged.length + localOnly.length > 0,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
@@ -330,29 +357,35 @@ export const useBusinessStore = create<BusinessStore>()(
       },
 
       refreshBusinessBookings: async (businessId) => {
-        if (!/^\d+$/.test(businessId)) return;
-
         const business = get().businesses.find((item) => item.id === businessId);
         if (!business) return;
 
-        try {
-          const bookingRequests = await fetchBusinessBookingsFromApi(
-            Number(businessId),
-            business.services,
-          );
+        let bookingRequests: BusinessBookingRequest[] = [];
 
-          set((state) => ({
-            businesses: updateBusiness(state.businesses, businessId, (item) => ({
-              ...item,
-              bookingRequests,
-              bookings: bookingRequests.filter(
-                (booking) => booking.status === "accepted",
-              ).length,
-            })),
-          }));
-        } catch (error) {
-          console.error("Не удалось обновить бронирования:", error);
+        if (/^\d+$/.test(businessId)) {
+          try {
+            bookingRequests = await fetchBusinessBookingsFromApi(
+              Number(businessId),
+              business.services,
+            );
+          } catch (error) {
+            console.error("Не удалось обновить бронирования:", error);
+          }
         }
+
+        if (bookingRequests.length === 0) {
+          bookingRequests = getFallbackBusinessBookings(business.services);
+        }
+
+        set((state) => ({
+          businesses: updateBusiness(state.businesses, businessId, (item) => ({
+            ...item,
+            bookingRequests,
+            bookings: bookingRequests.filter(
+              (booking) => booking.status === "accepted",
+            ).length,
+          })),
+        }));
       },
 
       setShowMyBusiness: (value) => set({ showMyBusiness: value }),

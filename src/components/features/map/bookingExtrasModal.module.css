@@ -153,31 +153,44 @@
   color: var(--text-primary);
 }
 
-.qtyCircle {
-  margin-top: 4px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+.addBtn {
+  margin-top: 6px;
+  min-width: 88px;
+  padding: 6px 14px;
+  border-radius: 999px;
   background: var(--primary);
   color: #ffffff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
-  display: grid;
-  place-items: center;
+  line-height: 1.2;
 }
 
-.plusBtn {
-  margin-top: 4px;
-  width: 30px;
-  height: 30px;
+.qtyStepper {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qtyBtn {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
+  border: 1.5px solid var(--primary);
   color: var(--primary);
   background: transparent;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
   display: grid;
   place-items: center;
+}
+
+.qtyValue {
+  min-width: 18px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .orderBlock {
@@ -247,16 +260,19 @@
 }
 
 .skipBtn {
-  display: none;
-  padding: 14px 24px;
+  flex: 1;
+  padding: 14px 16px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
   font-weight: 600;
   font-size: 14px;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .continueBtn {
-  width: 100% !important;
+  flex: 1;
+  width: auto !important;
   border-radius: 14px !important;
   justify-content: center;
   text-align: center;

@@ -10,6 +10,9 @@ import s from "./addressAutocomplete.module.css";
 type Props = {
   value: string;
   coordsSelected?: boolean;
+  hasError?: boolean;
+  errorMessage?: string;
+  inputTestId?: string;
   onChange: (payload: {
     address: string;
     lat: number | null;
@@ -24,6 +27,9 @@ const DEBOUNCE_MS = 400;
 export default function AddressAutocomplete({
   value,
   coordsSelected = false,
+  hasError = false,
+  errorMessage,
+  inputTestId,
   onChange,
   placeholder,
   inputClassName = "",
@@ -84,9 +90,12 @@ export default function AddressAutocomplete({
   return (
     <div ref={wrapperRef} className={s.wrapper}>
       <input
-        className={inputClassName}
+        className={`${inputClassName} ${hasError ? "border-[#e02424] ring-2 ring-[#e02424]/20" : ""}`}
         value={value}
         placeholder={placeholder}
+        data-testid={inputTestId}
+        aria-invalid={hasError || undefined}
+        aria-describedby={errorMessage ? "business-address-error" : undefined}
         onChange={(event) =>
           onChange({
             address: event.target.value,
@@ -99,6 +108,17 @@ export default function AddressAutocomplete({
         }}
         autoComplete="off"
       />
+
+      {errorMessage ? (
+        <span
+          id="business-address-error"
+          role="alert"
+          className="text-[12px] font-semibold text-[#e02424]"
+          data-testid="business-field-error-address"
+        >
+          {errorMessage}
+        </span>
+      ) : null}
 
       {isLoading && <span className={s.hint}>Поиск адреса...</span>}
       {!isLoading && value.trim() && !coordsSelected && (

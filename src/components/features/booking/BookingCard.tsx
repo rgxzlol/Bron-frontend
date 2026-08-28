@@ -2,6 +2,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import ReviewModal from '@/components/features/review/ReviewModal';
+import { ShopsPlace } from '@/data/shops';
+import { useReviewStore } from '@/store/review.store';
 import { BookingDropdown } from './BookingDropdown';
 import { BookingCancelModal } from './BookingCancelModal';
 import { BookingEditModal } from './BookingEditModal';
@@ -11,10 +15,19 @@ interface BookingCardProps {
     bookingId?: number;
     bookingDate?: string;
     bookingTime?: string;
+    bookingEndTime?: string;
     totalPrice?: number;
     guestsCount?: number;
+    businessId?: number;
+    bookingStatus?: string;
 }
 
+const REVIEWABLE_STATUSES = new Set(['completed', 'finished', 'done']);
+
+function isReviewableBooking(status?: string) {
+    if (!status) return false;
+    return REVIEWABLE_STATUSES.has(status.toLowerCase());
+}
 const ORDER_ITEMS = [
     { name: 'Бронирование зала', price: '80 000 сум', qty: 'X1', icon: 'hall' },
     { name: 'Протеиновый батончик', price: '10 000 сум', qty: 'X1', icon: 'bar' },
@@ -31,7 +44,26 @@ function formatBookingDate(value?: string) {
 }
 
 function formatPrice(value?: number) {
-    return value != null ? `${value.toLocaleString('ru-RU')}сум` : '98 000сум';
+    return value != null ? `${value.toLocaleString('ru-RU')} сум` : '98 000 сум';
+}
+
+function formatTimeValue(value?: string) {
+    return value?.match(/^\d{2}:\d{2}/)?.[0] ?? null;
+}
+
+function addHourToTime(time: string) {
+    const match = time.match(/^(\d{2}):(\d{2})/);
+    if (!match) return time;
+    const totalMinutes = Number(match[1]) * 60 + Number(match[2]) + 60;
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function formatBookingTimeRange(start?: string, end?: string) {
+    const startTime = formatTimeValue(start) ?? '12:00';
+    const endTime = formatTimeValue(end) ?? addHourToTime(startTime);
+    return `${startTime}-${endTime}`;
 }
 
 const CalendarIcon = () => (
@@ -92,42 +124,81 @@ export const BookingCard = ({
     bookingId,
     bookingDate,
     bookingTime,
+    bookingEndTime,
     totalPrice,
-    guestsCount = 12,
+    guestsCount = 1,
+    businessId = 1,
+    bookingStatus,
 }: BookingCardProps) => {
+    const { t } = useTranslation();
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isOrderOpen, setIsOrderOpen] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+    const hasReviewedBooking = useReviewStore((state) => state.hasReviewedBooking);
 
     const isPast = status === 'past';
+    const canLeaveReview =
+        isPast &&
+        isReviewableBooking(bookingStatus) &&
+        bookingId != null &&
+        !hasReviewedBooking(bookingId) &&
+        !reviewSubmitted;
+    const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
+    const shopId = String(shop.id);
+    const shopName = shop.title;
     const displayDate = formatBookingDate(bookingDate);
-    const displayTime = bookingTime ?? '12:00-13:00';
+    const displayTime = formatBookingTimeRange(bookingTime, bookingEndTime);
     const displayPrice = formatPrice(totalPrice);
+    const displayGuests = guestsCount;
+    const orderPanelId =
+        bookingId != null ? `booking-order-panel-${bookingId}` : "booking-order-panel";
 
     return (
         <>
-            <article className="flex w-full flex-col rounded-[18px] bg-[var(--bg-surface)] p-[10px]">
+            <article
+                className="flex w-full flex-col rounded-[18px] bg-[var(--bg-surface)] p-[10px]"
+                data-testid={bookingId != null ? `booking-card-${bookingId}` : undefined}
+                data-booking-status={status}
+            >
                 <div className="relative h-[180px] w-full overflow-hidden rounded-[12px] md:h-[210px]">
                     <Image
-                        src={assets.map.photo1}
-                        alt="BronFitness Club"
+                        src={shop.img}
+                        alt={shop.title}
                         fill
                         className="object-cover"
                     />
                     <span className="absolute left-[10px] top-[10px] rounded-full bg-[#e7ebfd] px-[12px] py-[6px] text-[13px] font-semibold text-[#4a58fe]">
-                        Спорт зал
+                        {shop.type}
                     </span>
                     <div className="absolute right-[10px] top-[10px] flex items-center gap-[8px]">
                         {isPast ? (
-                            <span className="rounded-full bg-white px-[12px] py-[6px] text-[13px] font-semibold text-[#6b7280]">
-                                Завершено
+                            <span
+                                className="rounded-full bg-white px-[12px] py-[6px] text-[13px] font-semibold text-[#6b7280]"
+                                data-testid={
+                                    bookingId != null
+                                        ? `booking-card-status-past-${bookingId}`
+                                        : undefined
+                                }
+                            >
+                                {t('bookings.statusCompleted')}
                             </span>
                         ) : (
                             <>
-                                <span className="rounded-full bg-[#e7f8ef] px-[12px] py-[6px] text-[13px] font-semibold text-[#00bd08]">
-                                    Подтверждено
+                                <span
+                                    className="rounded-full bg-[#e7f8ef] px-[12px] py-[6px] text-[13px] font-semibold text-[#00bd08]"
+                                    data-testid={
+                                        bookingId != null
+                                            ? `booking-card-status-upcoming-${bookingId}`
+                                            : undefined
+                                    }
+                                >
+                                    {t('bookings.statusConfirmed')}
                                 </span>
                                 <BookingDropdown
+                                    bookingId={bookingId}
                                     onCancelClick={() => setIsCancelModalOpen(true)}
                                     onEditClick={() => setIsEditModalOpen(true)}
                                 />
@@ -140,32 +211,95 @@ export const BookingCard = ({
                 </div>
 
                 <div className="flex flex-col px-[6px] pt-[12px]">
-                    <h2 className="text-[20px] font-bold text-[var(--text-primary)]">BronFitness Club</h2>
-                    <p className="mt-[2px] text-[13px] font-medium text-[var(--text-secondary)]">
-                        ул. Сайрам 123, Ташкент
+                    <h2
+                        className="text-[20px] font-bold text-[var(--text-primary)]"
+                        data-testid={
+                            bookingId != null ? `booking-vendor-name-${bookingId}` : undefined
+                        }
+                    >
+                        {shop.title}
+                    </h2>
+                    <p
+                        className="mt-[2px] text-[13px] font-medium text-[var(--text-secondary)]"
+                        data-testid={
+                            bookingId != null ? `booking-vendor-address-${bookingId}` : undefined
+                        }
+                    >
+                        {shop.address}
                     </p>
 
                     <div className="mt-[12px] flex flex-wrap gap-[8px]">
-                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                        <span
+                            className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]"
+                            data-testid={
+                                bookingId != null ? `booking-date-${bookingId}` : undefined
+                            }
+                        >
                             <CalendarIcon />
                             {displayDate}
                         </span>
-                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                        <span
+                            className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]"
+                            data-testid={
+                                bookingId != null ? `booking-time-${bookingId}` : undefined
+                            }
+                        >
                             <ClockIcon />
                             {displayTime}
                         </span>
-                        <span className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]">
+                        <span
+                            className="flex items-center gap-[6px] rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[8px] text-[12px] font-semibold text-[var(--text-primary)]"
+                            data-testid={
+                                bookingId != null ? `booking-guests-${bookingId}` : undefined
+                            }
+                        >
                             <GuestsIcon />
-                            {guestsCount} гостей
+                            {t('bookings.guests', { count: displayGuests })}
                         </span>
                     </div>
 
                     <div className="mt-[14px] flex items-center justify-between gap-[12px]">
                         {isPast ? (
-                            <p className="flex items-baseline gap-[10px] text-[15px] font-medium text-[var(--text-primary)]">
-                                Итого
-                                <strong className="text-[18px] font-bold">{displayPrice}</strong>
-                            </p>
+                            <div className="flex w-full flex-col gap-[10px]">
+                                <p className="flex items-baseline gap-[10px] text-[15px] font-medium text-[var(--text-primary)]">
+                                    Итого
+                                    <strong
+                                        className="text-[18px] font-bold"
+                                        data-testid={
+                                            bookingId != null
+                                                ? `booking-total-price-${bookingId}`
+                                                : undefined
+                                        }
+                                    >
+                                        {displayPrice}
+                                    </strong>
+                                </p>
+                                {canLeaveReview ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsReviewModalOpen(true)}
+                                        className="w-full rounded-[12px] border border-[#0a6af7] px-[16px] py-[12px] text-[14px] font-semibold text-[#0a6af7] transition-colors duration-200 hover:bg-[#0a6af7]/5 active:scale-95"
+                                        data-testid={
+                                            bookingId != null
+                                                ? `booking-leave-review-${bookingId}`
+                                                : 'booking-leave-review'
+                                        }
+                                    >
+                                        {t('bookings.leaveReview')}
+                                    </button>
+                                ) : reviewSubmitted || (bookingId != null && hasReviewedBooking(bookingId)) ? (
+                                    <p
+                                        className="text-[14px] font-semibold text-[#00bd08]"
+                                        data-testid={
+                                            bookingId != null
+                                                ? `booking-review-submitted-${bookingId}`
+                                                : 'booking-review-submitted'
+                                        }
+                                    >
+                                        {t('bookings.reviewSubmitted')}
+                                    </p>
+                                ) : null}
+                            </div>
                         ) : (
                             <>
                                 <div className="flex flex-col">
@@ -178,8 +312,13 @@ export const BookingCard = ({
                                     type="button"
                                     onClick={() => setIsCancelModalOpen(true)}
                                     className="rounded-[12px] border border-[var(--border-default)] px-[16px] py-[12px] text-[14px] font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-95"
+                                    data-testid={
+                                        bookingId != null
+                                            ? `booking-cancel-button-${bookingId}`
+                                            : undefined
+                                    }
                                 >
-                                    Отменить бронь
+                                    {t('bookings.cancelBooking')}
                                 </button>
                             </>
                         )}
@@ -191,12 +330,22 @@ export const BookingCard = ({
                         type="button"
                         onClick={() => setIsOrderOpen((prev) => !prev)}
                         aria-expanded={isOrderOpen}
+                        aria-controls={orderPanelId}
                         className="flex w-full items-center justify-between px-[14px] py-[16px] transition-colors duration-200 hover:bg-[var(--bg-hover,rgba(0,0,0,0.03))]"
+                        data-testid={
+                            bookingId != null
+                                ? `booking-order-toggle-${bookingId}`
+                                : "booking-order-toggle"
+                        }
                     >
                         <span className="flex items-center gap-[10px]">
                             <Image src={assets.booking.bagIcon} alt="" width={20} height={20} />
-                            <span className="text-[15px] font-bold text-[var(--text-primary)]">Состав заказа</span>
-                            <span className="text-[14px] font-semibold text-[#0a6af7]">3 товара</span>
+                            <span className="text-[15px] font-bold text-[var(--text-primary)]">
+                                {t('bookingsCard.orderComposition')}
+                            </span>
+                            <span className="text-[14px] font-semibold text-[#0a6af7]">
+                                {t('bookingsCard.itemsCount', { count: ORDER_ITEMS.length })}
+                            </span>
                         </span>
                         <span className="text-[var(--text-secondary)]">
                             <ChevronIcon className={`transition-transform duration-200 ${isOrderOpen ? 'rotate-180' : ''}`} />
@@ -204,11 +353,24 @@ export const BookingCard = ({
                     </button>
 
                     {isOrderOpen && (
-                        <ul className="flex flex-col gap-[8px] px-[8px] pb-[10px]">
+                        <ul
+                            id={orderPanelId}
+                            className="flex flex-col gap-[8px] px-[8px] pb-[10px]"
+                            data-testid={
+                                bookingId != null
+                                    ? `booking-order-items-${bookingId}`
+                                    : "booking-order-items"
+                            }
+                        >
                             {ORDER_ITEMS.map((item, index) => (
                                 <li
                                     key={index}
                                     className="flex items-center gap-[12px] rounded-[12px] bg-[var(--bg-surface)] p-[10px]"
+                                    data-testid={
+                                        bookingId != null
+                                            ? `booking-order-item-${bookingId}-${index}`
+                                            : undefined
+                                    }
                                 >
                                     <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[10px] bg-[var(--bg-surface-muted)] text-[var(--text-primary)]">
                                         <OrderItemIcon kind={item.icon} />
@@ -237,6 +399,15 @@ export const BookingCard = ({
                 bookingId={bookingId}
                 bookingDate={bookingDate}
                 bookingTime={bookingTime}
+                hours={shop.hours}
+            />
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                shopId={shopId}
+                shopName={shopName}
+                bookingId={bookingId}
+                onSubmitted={() => setReviewSubmitted(true)}
             />
         </>
     );

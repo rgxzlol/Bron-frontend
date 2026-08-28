@@ -381,6 +381,28 @@
   cursor: not-allowed;
 }
 
+.fieldError input {
+  outline: 1.5px solid #e02424;
+  outline-offset: -1.5px;
+}
+
+.fieldErrorMessage {
+  margin-top: 6px;
+  color: #e02424;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.validationSummary {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fde8e8;
+  color: #e02424;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .errorText {
   color: #e02424;
   font-size: 14px;

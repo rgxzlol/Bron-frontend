@@ -2,19 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatPriceInputOnChange } from "@/lib/formatPrice";
+import {
+  formatPriceInputOnChange,
+  handlePriceInputKeyDown,
+  handlePriceInputPaste,
+  hasInvalidPriceInput,
+} from "@/lib/formatPrice";
+import {
+  getFilterModalErrorMessage,
+  getFilterSubmitError,
+  isFilterSubmitSuccess,
+  type FilterModalError,
+} from "@/lib/map/filterModal";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { BUSINESS_CATEGORIES } from "@/store/business.store";
 import {
   type MapLocationFilter,
   useMapFilterStore,
 } from "@/store/mapFilter.store";
 import s from "./mapCategoriesModal.module.css";
-
-const LOCATION_OPTIONS: { id: MapLocationFilter; label: string }[] = [
-  { id: "nearby", label: "По близости" },
-  { id: "3-7", label: "3-7км от меня" },
-  { id: "10-15", label: "10-15км от меня" },
-];
 
 type MapCategoriesModalProps = {
   isOpen: boolean;
@@ -27,8 +33,10 @@ export default function MapCategoriesModal({
   onClose,
   onApply,
 }: MapCategoriesModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
-  const [categoryError, setCategoryError] = useState(false);
+  const [submitError, setSubmitError] = useState<FilterModalError>(null);
+  const [priceInputInvalid, setPriceInputInvalid] = useState(false);
 
   const draftLocation = useMapFilterStore((state) => state.draftLocation);
   const draftCategory = useMapFilterStore((state) => state.draftCategory);
@@ -36,8 +44,14 @@ export default function MapCategoriesModal({
   const setDraftLocation = useMapFilterStore((state) => state.setDraftLocation);
   const setDraftCategory = useMapFilterStore((state) => state.setDraftCategory);
   const setDraftMaxPrice = useMapFilterStore((state) => state.setDraftMaxPrice);
-  const applyFilters = useMapFilterStore((state) => state.applyFilters);
+  const submitFilters = useMapFilterStore((state) => state.submitFilters);
   const syncDraftFromApplied = useMapFilterStore((state) => state.syncDraftFromApplied);
+
+  const locationOptions: { id: MapLocationFilter; label: string }[] = [
+    { id: "nearby", label: t("map.proximityNearby") },
+    { id: "3-7", label: t("map.range3to7") },
+    { id: "10-15", label: t("map.range10to15") },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -46,7 +60,8 @@ export default function MapCategoriesModal({
   useEffect(() => {
     if (!isOpen) return;
     syncDraftFromApplied();
-    setCategoryError(false);
+    setSubmitError(null);
+    setPriceInputInvalid(false);
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -66,17 +81,17 @@ export default function MapCategoriesModal({
   if (!isOpen || !mounted) return null;
 
   function handleApply() {
-    if (!draftCategory.trim()) {
-      setCategoryError(true);
+    const result = submitFilters({ invalidPriceAttempt: priceInputInvalid });
+    if (!isFilterSubmitSuccess(result)) {
+      setSubmitError(getFilterSubmitError(result));
       return;
     }
-
-    const applied = applyFilters();
-    if (!applied) return;
 
     onApply();
     onClose();
   }
+
+  const errorMessage = getFilterModalErrorMessage(submitError, t);
 
   return createPortal(
     <div
@@ -84,7 +99,8 @@ export default function MapCategoriesModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Категории"
+      aria-label={t("map.categories")}
+      data-testid="map-categories-modal"
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
         <div className={s.handle} aria-hidden="true">
@@ -92,19 +108,20 @@ export default function MapCategoriesModal({
         </div>
 
         <div className={s.header}>
-          <h2 className={s.title}>Категории</h2>
-          <button type="button" className={s.closeBtn} onClick={onClose} aria-label="Закрыть">
+          <h2 className={s.title}>{t("map.categories")}</h2>
+          <button type="button" className={s.closeBtn} onClick={onClose} aria-label={t("map.closeFilters")}>
             ×
           </button>
         </div>
 
-        <div className={s.section}>
-          <span className={s.sectionTitle}>Месторасположение</span>
+        <div className={s.section} data-testid="map-proximity-block">
+          <span className={s.sectionTitle}>{t("map.byProximity")}</span>
           <div className={s.locationList}>
-            {LOCATION_OPTIONS.map((option) => (
+            {locationOptions.map((option) => (
               <button
                 key={option.id}
                 type="button"
+                data-testid={`map-location-${option.id}`}
                 className={`${s.locationBtn} ${
                   draftLocation === option.id ? s.locationActive : ""
                 }`}
@@ -132,17 +149,19 @@ export default function MapCategoriesModal({
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Категория бизнеса</span>
+          <span className={s.sectionTitle}>{t("map.businessCategory")}</span>
           <div className={s.selectWrap}>
             <select
-              className={`${s.select} ${categoryError ? s.selectError : ""}`}
+              className={`${s.select} ${submitError ? s.selectError : ""}`}
               value={draftCategory}
+              data-testid="map-category-select"
               onChange={(event) => {
                 setDraftCategory(event.target.value);
-                setCategoryError(false);
+                setSubmitError(null);
+                setPriceInputInvalid(false);
               }}
             >
-              <option value="">Обязательно</option>
+              <option value="">{t("map.required")}</option>
               {BUSINESS_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
                   {category}
@@ -155,27 +174,60 @@ export default function MapCategoriesModal({
               </svg>
             </span>
           </div>
-          {categoryError && (
-            <p className={s.errorText}>Выберите категорию бизнеса</p>
-          )}
+          {errorMessage ? (
+            <p className={s.errorText} role="alert" data-testid="map-filter-error">
+              {errorMessage}
+            </p>
+          ) : null}
         </div>
 
         <div className={s.section}>
-          <span className={s.sectionTitle}>Введите приблизительную цену</span>
+          <span className={s.sectionTitle}>{t("map.approxPrice")}</span>
           <div className={s.priceRow}>
             <input
-              className={s.priceInput}
+              className={`${s.priceInput} ${
+                submitError === "invalid_price" ? s.priceInputError : ""
+              }`}
               type="text"
               inputMode="numeric"
-              placeholder="Введите цену"
+              data-testid="map-price-input"
+              placeholder={t("map.pricePlaceholder")}
               value={draftMaxPrice}
-              onChange={(event) =>
-                setDraftMaxPrice(formatPriceInputOnChange(event.target.value))
+              onKeyDown={(event) =>
+                handlePriceInputKeyDown(event, () => {
+                  setPriceInputInvalid(true);
+                  setSubmitError("invalid_price");
+                })
               }
+              onPaste={(event) =>
+                handlePriceInputPaste(
+                  event,
+                  (value) => {
+                    setDraftMaxPrice(value);
+                    setSubmitError(null);
+                    setPriceInputInvalid(false);
+                  },
+                  () => {
+                    setPriceInputInvalid(true);
+                    setSubmitError("invalid_price");
+                  },
+                )
+              }
+              onChange={(event) => {
+                const rawValue = event.target.value;
+                if (hasInvalidPriceInput(rawValue)) {
+                  setPriceInputInvalid(true);
+                  setSubmitError("invalid_price");
+                } else {
+                  setPriceInputInvalid(false);
+                  setSubmitError(null);
+                }
+                setDraftMaxPrice(formatPriceInputOnChange(rawValue));
+              }}
             />
             <div className={s.selectWrap}>
-              <select className={s.currencySelect} defaultValue="sum" aria-label="Валюта">
-                <option value="sum">Сум</option>
+              <select className={s.currencySelect} defaultValue="sum" aria-label={t("map.currencySum")}>
+                <option value="sum">{t("map.currencySum")}</option>
               </select>
               <span className={s.selectChevron} aria-hidden="true">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -186,8 +238,13 @@ export default function MapCategoriesModal({
           </div>
         </div>
 
-        <button type="button" className={s.applyBtn} onClick={handleApply}>
-          Применить
+        <button
+          type="button"
+          className={s.applyBtn}
+          data-testid="map-filter-apply"
+          onClick={handleApply}
+        >
+          {t("map.apply")}
         </button>
       </div>
     </div>,

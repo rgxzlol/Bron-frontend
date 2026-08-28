@@ -2,6 +2,7 @@ import { apiRequest } from "./client";
 import type {
   ChangePasswordRequest,
   LoginResponse,
+  UserNotificationSettings,
   UserProfile,
   UserProfileUpdate,
 } from "./types";
@@ -12,6 +13,23 @@ export const usersApi = {
 
   updateProfile: (body: UserProfileUpdate, token?: string) =>
     apiRequest<UserProfile>("/users/profile", {
+      method: "PUT",
+      body,
+      auth: true,
+      token,
+    }),
+
+  getNotificationSettings: (token?: string) =>
+    apiRequest<UserNotificationSettings>("/users/profile/notifications", {
+      auth: true,
+      token,
+    }),
+
+  updateNotificationSettings: (
+    body: UserNotificationSettings,
+    token?: string,
+  ) =>
+    apiRequest<UserNotificationSettings>("/users/profile/notifications", {
       method: "PUT",
       body,
       auth: true,

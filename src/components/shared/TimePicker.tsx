@@ -6,6 +6,7 @@ import {
   groupTimeSlots,
   type TimeGroup,
 } from "@/lib/booking/timeSlots";
+import { toBookingTimeTestId } from "@/lib/formatDate";
 
 interface TimePickerProps {
   selectedTime: string;
@@ -55,6 +56,7 @@ export default function TimePicker({
                         ${selected ? "!bg-[#0a6af7] !border-[#0a6af7] !text-white hover:!bg-[#0856c6]" : ""}
                       `}
                       onClick={() => onSelectedTimeChange(slot)}
+                      data-testid={toBookingTimeTestId(slot)}
                     >
                       {slot}
                     </button>

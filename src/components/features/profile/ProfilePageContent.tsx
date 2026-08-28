@@ -1,15 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
+import { siteConfig } from "@/config/site";
 import { readImageFile } from "@/lib/readImageFile";
+import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
+import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";
 import { type ProfileLanguage, useProfileStore } from "@/store/profile.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  PROFILE_ERROR_MESSAGE_KEYS,
+  type ProfilePersonalField,
+  validateProfilePersonalInfo,
+} from "@/lib/profile/validation";
 import { useToastStore } from "@/store/toast.store";
+import { useNotificationStore } from "@/store/notification.store";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -33,15 +43,15 @@ const langOptions: { id: ProfileLanguage; label: string }[] = [
   { id: "en", label: "EN" },
 ];
 
-const sectionTitles: Record<ProfileSection, string> = {
-  main: "Настройки профиля",
-  personal: "Персональные данные",
-  payments: "Платежи",
-  addCard: "Добавить карту",
-  appSettings: "Настройки",
-  notifications: "Уведомления",
-  theme: "Тема",
-  logout: "Выход из аккаунта",
+const sectionTitleKeys: Record<ProfileSection, string> = {
+  main: "profile.sectionMain",
+  personal: "profile.sectionPersonal",
+  payments: "profile.sectionPayments",
+  addCard: "profile.addCard",
+  appSettings: "profile.sectionAppSettings",
+  notifications: "profile.sectionNotifications",
+  theme: "profile.sectionTheme",
+  logout: "profile.sectionLogout",
 };
 
 const staticCards = [
@@ -60,8 +70,8 @@ export default function ProfilePageContent({
   onSectionChange,
 }: ProfilePageContentProps) {
   const router = useRouter();
-  const hydrated = useAuthHydrated();
-  const authUsername = useAuthStore((state) => state.username);
+  const { t } = useTranslation();
+  const token = useAuthStore((state) => state.token);
   const clearToken = useAuthStore((state) => state.clearToken);
   const showToast = useToastStore((state) => state.showToast);
   const {
@@ -72,16 +82,19 @@ export default function ProfilePageContent({
     language,
     theme,
     notifications,
-    updatePersonalInfo,
     setAvatarUrl,
     setLanguage,
     setTheme,
     toggleNotification,
     savePersonalInfo,
+    fetchProfile,
+    fetchNotificationSettings,
     resetProfile,
+    isProfileLoading,
   } = useProfileStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const personalDraftHydratedRef = useRef(false);
 
   const [section, setSection] = useState<ProfileSection>("main");
   const [saving, setSaving] = useState(false);
@@ -97,30 +110,41 @@ export default function ProfilePageContent({
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [personalFieldErrors, setPersonalFieldErrors] = useState<
+    Partial<Record<ProfilePersonalField, string>>
+  >({});
 
   useEffect(() => {
     if (token) {
-      void hydrateFromApi();
+      void fetchProfile();
     }
-  }, [token, hydrateFromApi]);
+  }, [token, fetchProfile]);
+
+  useEffect(() => {
+    if (section === "notifications" && token) {
+      void fetchNotificationSettings();
+    }
+  }, [section, token, fetchNotificationSettings]);
 
   useEffect(() => {
     onSectionChange?.(section);
   }, [section, onSectionChange]);
 
   useEffect(() => {
+    if (section !== "personal") {
+      personalDraftHydratedRef.current = false;
+      return;
+    }
+
+    if (personalDraftHydratedRef.current || isProfileLoading) {
+      return;
+    }
+
     setNameDraft(fullName ?? "");
     setPhoneDraft(phone ?? "");
     setEmailDraft(email ?? "");
-  }, [fullName, phone, email]);
-
-  const isPersonalDirty = useMemo(
-    () =>
-      (nameDraft ?? "").trim() !== (fullName ?? "") ||
-      (phoneDraft ?? "").trim() !== (phone ?? "") ||
-      (emailDraft ?? "").trim() !== (email ?? ""),
-    [nameDraft, fullName, phoneDraft, phone, emailDraft, email],
-  );
+    personalDraftHydratedRef.current = true;
+  }, [section, fullName, phone, email, isProfileLoading]);
 
   const canChangePassword =
     oldPassword.trim().length > 0 &&
@@ -128,27 +152,112 @@ export default function ProfilePageContent({
     confirmPassword.trim().length > 0;
 
   function goTo(next: ProfileSection) {
+    if (next !== "personal") {
+      setPersonalFieldErrors({});
+      personalDraftHydratedRef.current = false;
+    }
     setSection(next);
   }
 
-  async function handleSavePersonalInfo() {
-    if (!nameDraft.trim() || !phoneDraft.trim() || !emailDraft.trim()) return;
+  function clearPersonalFieldError(field: ProfilePersonalField) {
+    setPersonalFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
 
+  async function handleChangePassword() {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Пароли не совпадают");
+      return;
+    }
+
+    if (!token) return;
+
+    setSaving(true);
+    try {
+      await usersApi.changePassword(
+        { old_password: oldPassword, new_password: newPassword },
+        token,
+      );
+      setPasswordSuccess(true);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      showToast("Пароль изменён", "Новый пароль успешно сохранён.");
+    } catch (error) {
+      setPasswordError(
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Не удалось сменить пароль",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!token) return;
+
+    setDeleting(true);
+    try {
+      await usersApi.deleteProfile(token);
+      clearToken();
+      resetProfile();
+      onClose?.();
+      router.push(routes.login);
+    } catch (error) {
+      showToast(
+        "Ошибка",
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Не удалось удалить аккаунт",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleSavePersonalInfo() {
+    const validationErrors = validateProfilePersonalInfo(
+      nameDraft,
+      phoneDraft,
+      emailDraft,
+    );
+
+    if (Object.keys(validationErrors).length > 0) {
+      const mappedErrors = Object.fromEntries(
+        Object.entries(validationErrors).map(([field, code]) => [
+          field,
+          t(PROFILE_ERROR_MESSAGE_KEYS[code]),
+        ]),
+      ) as Partial<Record<ProfilePersonalField, string>>;
+
+      setPersonalFieldErrors(mappedErrors);
+      setSaveError(null);
+      return;
+    }
+
+    setPersonalFieldErrors({});
     setSaving(true);
     setSaveError(null);
 
-    updatePersonalInfo({
-      fullName: nameDraft,
-      phone: phoneDraft,
-      email: emailDraft,
-    });
-
     try {
       await savePersonalInfo({
+        fullName: nameDraft,
         phone: phoneDraft,
         email: emailDraft,
       });
-      showToast("Профиль обновлен", "Изменения успешно сохранены.");
+      showToast(t("profile.updatedTitle"), t("profile.updatedMessage"));
       goTo("main");
     } catch (error) {
       setSaveError(
@@ -156,7 +265,7 @@ export default function ProfilePageContent({
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Не удалось сохранить изменения",
+            : t("profile.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -164,15 +273,14 @@ export default function ProfilePageContent({
   }
 
   function handleBookingsClick() {
-    onClose?.();
     router.push(routes.bookings);
   }
 
   function handleLogout() {
     clearToken();
     resetProfile();
-    onClose?.();
-    router.push(routes.login);
+    useNotificationStore.getState().resetNotifications();
+    router.replace(routes.login);
   }
 
   async function handleAvatarUpload(file: File) {
@@ -190,7 +298,7 @@ export default function ProfilePageContent({
   return (
     <div className={s.content}>
       <SectionHeader
-        title={sectionTitles[section]}
+        title={t(sectionTitleKeys[section])}
         mobileOnly={section === "main"}
         onBack={
           section === "main"
@@ -226,7 +334,7 @@ export default function ProfilePageContent({
             </div>
 
             <div className={s.nameRow}>
-              <h2>{fullName}</h2>
+              <h2 data-testid="profile-display-name">{fullName}</h2>
               <button type="button" onClick={() => goTo("personal")} aria-label="Редактировать">
                 <Image src={assets.profile.edit} alt="" width={16} height={15} />
               </button>
@@ -237,15 +345,17 @@ export default function ProfilePageContent({
           <div className={s.menu}>
             <MenuItem
               icon={assets.profile.profileData}
-              title="Персональная информация"
-              subtitle="Просмотр и редактирование данных"
+              title={t("profile.personalInformation")}
+              subtitle={t("profile.personalDataSubtitle")}
               onClick={() => goTo("personal")}
+              testId="profile-menu-personal"
             />
             <MenuItem
               icon={assets.profile.myBookings}
-              title="Мои брони"
-              subtitle="История и статус ваших броней"
+              title={t("profile.myBookings")}
+              subtitle={t("profile.myBookingsSubtitle")}
               onClick={handleBookingsClick}
+              testId="profile-menu-bookings"
             />
             <MenuItem
               icon={assets.profile.card}
@@ -255,26 +365,45 @@ export default function ProfilePageContent({
             />
             <MenuItem
               icon={assets.profile.settings}
-              title="Настройки"
-              subtitle="Язык, тема, уведомления"
+              title={t("profile.settings")}
+              subtitle={t("profile.settingsSubtitle")}
               onClick={() => goTo("appSettings")}
+              testId="profile-menu-settings"
             />
           </div>
 
-          <button type="button" className={s.logoutRow} onClick={() => goTo("logout")}>
+          <button
+            type="button"
+            className={s.logoutRow}
+            onClick={() => goTo("logout")}
+            data-testid="profile-logout-trigger"
+          >
             <span className={s.iconTileRed}>
               <Image src={assets.profile.quit} alt="" width={17} height={21} />
             </span>
-            Выйти из аккаунта
+            {t("profile.logout")}
           </button>
-          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
-            Отмена
+          <button
+            type="button"
+            className={s.cancelBtn}
+            onClick={() => onClose?.()}
+            data-testid="profile-close"
+          >
+            {t("common.cancel")}
           </button>
         </div>
       )}
 
       {section === "personal" && (
-        <div className={`${s.section} ${s.sectionGrow}`}>
+        <form
+          className={`${s.section} ${s.sectionGrow}`}
+          data-testid="profile-personal-section"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSavePersonalInfo();
+          }}
+        >
           <div className={s.avatarBlock}>
             <div className={s.avatarWrap}>
               {avatarUrl ? (
@@ -300,32 +429,110 @@ export default function ProfilePageContent({
             </div>
           </div>
 
-          <label className={s.field}>
-            <span>Имя</span>
-            <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
+          <label className={`${s.field} ${personalFieldErrors.fullName ? s.fieldError : ""}`}>
+            <span>{t("profile.fullName")}</span>
+            <input
+              value={nameDraft}
+              onChange={(e) => {
+                setNameDraft(e.target.value);
+                clearPersonalFieldError("fullName");
+              }}
+              data-testid="profile-full-name"
+              aria-invalid={Boolean(personalFieldErrors.fullName)}
+              aria-describedby={
+                personalFieldErrors.fullName ? "profile-error-full-name" : undefined
+              }
+            />
+            {personalFieldErrors.fullName ? (
+              <span
+                id="profile-error-full-name"
+                className={s.fieldErrorMessage}
+                data-testid="profile-error-full-name"
+                role="alert"
+              >
+                {personalFieldErrors.fullName}
+              </span>
+            ) : null}
           </label>
-          <label className={s.field}>
-            <span>Номер телефона</span>
-            <input value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} />
+          <label className={`${s.field} ${personalFieldErrors.phone ? s.fieldError : ""}`}>
+            <span>{t("profile.phone")}</span>
+            <input
+              value={phoneDraft}
+              onChange={(e) => {
+                setPhoneDraft(
+                  formatUzbekPhoneInput(e.target.value, { preserveOverflow: true }),
+                );
+                clearPersonalFieldError("phone");
+              }}
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="+998 99 999 99 99"
+              data-testid="profile-phone"
+              aria-invalid={Boolean(personalFieldErrors.phone)}
+              aria-describedby={
+                personalFieldErrors.phone ? "profile-error-phone" : undefined
+              }
+            />
+            {personalFieldErrors.phone ? (
+              <span
+                id="profile-error-phone"
+                className={s.fieldErrorMessage}
+                data-testid="profile-error-phone"
+                role="alert"
+              >
+                {personalFieldErrors.phone}
+              </span>
+            ) : null}
           </label>
-          <label className={s.field}>
-            <span>Электронная почта</span>
-            <input value={emailDraft} onChange={(e) => setEmailDraft(e.target.value)} />
+          <label className={`${s.field} ${personalFieldErrors.email ? s.fieldError : ""}`}>
+            <span>{t("profile.emailAddress")}</span>
+            <input
+              value={emailDraft}
+              onChange={(e) => {
+                setEmailDraft(e.target.value);
+                clearPersonalFieldError("email");
+              }}
+              data-testid="profile-email"
+              aria-invalid={Boolean(personalFieldErrors.email)}
+              aria-describedby={
+                personalFieldErrors.email ? "profile-error-email" : undefined
+              }
+            />
+            {personalFieldErrors.email ? (
+              <span
+                id="profile-error-email"
+                className={s.fieldErrorMessage}
+                data-testid="profile-error-email"
+                role="alert"
+              >
+                {personalFieldErrors.email}
+              </span>
+            ) : null}
           </label>
+
+          {Object.keys(personalFieldErrors).length > 0 ? (
+            <p
+              className={s.validationSummary}
+              role="alert"
+              data-testid="profile-validation-summary"
+            >
+              {t("profile.validationSummary")}
+            </p>
+          ) : null}
 
           {saveError ? <p className={s.errorText}>{saveError}</p> : null}
 
           <div className={s.spacer} aria-hidden />
 
-          <p className={s.hintText}>Измените свои данные и нажмите сохранить</p>
+          <p className={s.hintText}>{t("profile.saveHint")}</p>
 
           <button
-            type="button"
+            type="submit"
             className={s.primaryBtn}
-            onClick={handleSavePersonalInfo}
-            disabled={!isPersonalDirty || saving}
+            disabled={saving}
+            data-testid="profile-save-changes"
           >
-            {saving ? "Сохранение..." : "Сохранить изменения"}
+            {saving ? t("common.saving") : t("common.saveChanges")}
           </button>
 
           <div className={`${s.passwordBlock} ${s.desktopOnly}`}>
@@ -367,7 +574,7 @@ export default function ProfilePageContent({
               {saving ? "Сохранение..." : "Сменить пароль"}
             </button>
           </div>
-        </div>
+        </form>
       )}
 
       {section === "payments" && (
@@ -492,14 +699,14 @@ export default function ProfilePageContent({
       )}
 
       {section === "appSettings" && (
-        <div className={s.section}>
+        <div className={s.section} data-testid="profile-settings-section">
           <div className={s.settingsCard}>
             <div className={s.iconTile}>
               <Image src={assets.profile.lang} alt="" width={22} height={22} />
             </div>
             <div className={s.settingsCardText}>
-              <strong>Язык</strong>
-              <p>Выберите удобный язык</p>
+              <strong>{t("profile.language")}</strong>
+              <p>{t("profile.languageHint")}</p>
             </div>
             <div className={s.langGroup}>
               {langOptions.map((lang) => (
@@ -508,6 +715,8 @@ export default function ProfilePageContent({
                   key={lang.id}
                   className={language === lang.id ? s.langBtnActive : s.langBtn}
                   onClick={() => setLanguage(lang.id)}
+                  aria-pressed={language === lang.id}
+                  data-testid={`profile-language-${lang.id}`}
                 >
                   {lang.label}
                 </button>
@@ -515,92 +724,110 @@ export default function ProfilePageContent({
             </div>
           </div>
 
-          <button type="button" className={s.settingsCard} onClick={() => goTo("theme")}>
+          <button
+            type="button"
+            className={s.settingsCard}
+            onClick={() => goTo("theme")}
+            data-testid="profile-menu-theme"
+          >
             <div className={s.iconTile}>
               <Image src={assets.profile.lightTheme} alt="" width={22} height={22} />
             </div>
             <div className={s.settingsCardText}>
-              <strong>Тема</strong>
-              <p>Можно выбрать любую тему</p>
+              <strong>{t("profile.theme")}</strong>
+              <p>{t("profile.themeHint")}</p>
             </div>
             <span className={s.navArrowBtn} aria-hidden>
               <Image src={assets.profile.arrow} alt="" width={11} height={11} className={s.arrowRight} />
             </span>
           </button>
 
-          <button type="button" className={s.settingsCard} onClick={() => goTo("notifications")}>
+          <button
+            type="button"
+            className={s.settingsCard}
+            onClick={() => goTo("notifications")}
+            data-testid="profile-menu-notifications"
+          >
             <div className={s.iconTile}>
               <MailEditIcon />
             </div>
             <div className={s.settingsCardText}>
-              <strong>Уведомления</strong>
-              <p>Настройте, какие уведомления вы хотите получать</p>
+              <strong>{t("profile.notifications")}</strong>
+              <p>{t("profile.notificationsHint")}</p>
             </div>
             <span className={s.navArrowBtn} aria-hidden>
               <Image src={assets.profile.arrow} alt="" width={11} height={11} className={s.arrowRight} />
             </span>
           </button>
 
-          <div className={s.aboutBlock}>
+          <div className={s.aboutBlock} data-testid="profile-about-app">
             <Image src={assets.profile.alert} alt="" width={24} height={24} />
             <div>
-              <strong>О приложении</strong>
-              <p>Версия 1.0.0</p>
+              <strong>{t("profile.aboutApp")}</strong>
+              <p data-testid="profile-app-version">
+                {t("profile.version", { version: siteConfig.version })}
+              </p>
             </div>
           </div>
         </div>
       )}
 
       {section === "notifications" && (
-        <div className={s.section}>
+        <div className={s.section} data-testid="profile-notifications-section">
           <div className={s.switchList}>
             <SwitchRow
               icon={<Image src={assets.profile.push} alt="" width={22} height={22} />}
-              title="Push-уведомления"
-              subtitle="Получить push-уведомления"
+              title={t("profile.pushTitle")}
+              subtitle={t("profile.pushSubtitle")}
               value={notifications.push}
               onToggle={() => toggleNotification("push")}
+              testId="profile-notification-push"
             />
             <SwitchRow
               icon={<Image src={assets.profile.email} alt="" width={22} height={22} />}
-              title="Email уведомления"
-              subtitle="Получать письма на Email"
+              title={t("profile.emailTitle")}
+              subtitle={t("profile.emailSubtitle")}
               value={notifications.email}
               onToggle={() => toggleNotification("email")}
+              testId="profile-notification-email"
             />
             <SwitchRow
               icon={<MailEditIcon />}
-              title="Напоминать о брони"
-              subtitle="Напоминать о бронированиях"
+              title={t("profile.bookingReminderTitle")}
+              subtitle={t("profile.bookingReminderSubtitle")}
               value={notifications.bookingReminder}
               onToggle={() => toggleNotification("bookingReminder")}
+              testId="profile-notification-booking-reminder"
             />
             <SwitchRow
               icon={<Image src={assets.profile.sales} alt="" width={22} height={22} />}
-              title="Акция и предложения"
-              subtitle="Получать информацию об акциях"
+              title={t("profile.promotionsTitle")}
+              subtitle={t("profile.promotionsSubtitle")}
               value={notifications.promotions}
               onToggle={() => toggleNotification("promotions")}
+              testId="profile-notification-promotions"
             />
           </div>
         </div>
       )}
 
       {section === "theme" && (
-        <div className={s.section}>
+        <div className={s.section} data-testid="profile-theme-section">
           <ThemeOption
-            title="Светлая тема"
-            description="Светлый интерфейс приложения"
+            title={t("profile.lightTheme")}
+            description={t("profile.lightThemeDesc")}
             icon={assets.profile.lightTheme}
             selected={theme === "light"}
             onSelect={() => setTheme("light")}
+            testId="profile-theme-light"
           />
           <ThemeOption
-            title="Темная тема"
-            description="Темный интерфейс приложения"
+            title={t("profile.darkTheme")}
+            description={t("profile.darkThemeDesc")}
             icon={assets.profile.nightTheme}
             selected={theme === "dark"}
             onSelect={() => setTheme("dark")}
+            testId="profile-theme-dark"
           />
 
           <div className={s.themePreviewCard}>
@@ -610,21 +837,34 @@ export default function ProfilePageContent({
       )}
 
       {section === "logout" && (
-        <div className={`${s.logoutSection} ${s.sectionGrow}`}>
+        <div
+          className={`${s.logoutSection} ${s.sectionGrow}`}
+          data-testid="profile-logout-section"
+        >
           <div className={s.spacer} aria-hidden />
           <DoorIllustration />
-          <p className={s.logoutTitle}>Вы уверены что хотите выйти из аккаунта?</p>
-          <small>Вы выйдете из аккаунта с этого устройства</small>
+          <p className={s.logoutTitle}>{t("profile.logoutConfirm")}</p>
+          <small>{t("profile.logoutHint")}</small>
           <div className={s.spacer} aria-hidden />
           <div className={s.spacer} aria-hidden />
-          <button type="button" className={s.logoutConfirmBtn} onClick={handleLogout}>
+          <button
+            type="button"
+            className={s.logoutConfirmBtn}
+            onClick={handleLogout}
+            data-testid="profile-logout-confirm"
+          >
             <span className={s.iconTileRed}>
               <Image src={assets.profile.quit} alt="" width={16} height={20} />
             </span>
-            Выйти из аккаунта
+            {t("profile.logout")}
           </button>
-          <button type="button" className={s.cancelBtn} onClick={() => goTo("main")}>
-            Отменить
+          <button
+            type="button"
+            className={s.cancelBtn}
+            onClick={() => goTo("main")}
+            data-testid="profile-logout-cancel"
+          >
+            {t("common.cancel")}
           </button>
           {token && (
             <button
@@ -685,14 +925,16 @@ function MenuItem({
   title,
   subtitle,
   onClick,
+  testId,
 }: {
   icon: string;
   title: string;
   subtitle: string;
   onClick: () => void;
+  testId?: string;
 }) {
   return (
-    <button type="button" className={s.menuItem} onClick={onClick}>
+    <button type="button" className={s.menuItem} onClick={onClick} data-testid={testId}>
       <span className={s.iconTile}>
         <Image src={icon} alt="" width={24} height={24} />
       </span>
@@ -713,12 +955,14 @@ function SwitchRow({
   subtitle,
   value,
   onToggle,
+  testId,
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   value: boolean;
   onToggle: () => void;
+  testId?: string;
 }) {
   return (
     <div className={s.switchRow}>
@@ -732,6 +976,8 @@ function SwitchRow({
         className={value ? s.toggleOn : s.toggleOff}
         onClick={onToggle}
         aria-pressed={value}
+        aria-label={title}
+        data-testid={testId}
       >
         <span />
       </button>
@@ -745,15 +991,23 @@ function ThemeOption({
   icon,
   selected,
   onSelect,
+  testId,
 }: {
   title: string;
   description: string;
   icon: string;
   selected: boolean;
   onSelect: () => void;
+  testId?: string;
 }) {
   return (
-    <button type="button" className={s.themeOption} onClick={onSelect}>
+    <button
+      type="button"
+      className={s.themeOption}
+      onClick={onSelect}
+      aria-pressed={selected}
+      data-testid={testId}
+    >
       <div className={s.iconTile}>
         <Image src={icon} alt="" width={22} height={22} />
       </div>

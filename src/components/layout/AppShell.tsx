@@ -2,6 +2,8 @@ import Sidebar from "@/components/layout/Sidebar/Sidebar";
 import BottomNav from "@/components/layout/BottomNav";
 import Header from "@/components/layout/Header/Header";
 import ToastContainer from "@/components/shared/ToastContainer";
+import BusinessApplicationStatusModals from "@/components/features/business/BusinessApplicationStatusModals";
+import BusinessApplicationSync from "@/components/features/business/BusinessApplicationSync";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +22,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <BottomNav />
       <ToastContainer />
+      <BusinessApplicationSync />
+      <BusinessApplicationStatusModals />
     </div>
   );
 }

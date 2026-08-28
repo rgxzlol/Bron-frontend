@@ -147,6 +147,12 @@
   color: var(--text-muted);
 }
 
+.priceFrom {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .desc {
   font-size: 14px;
   line-height: 1.45;

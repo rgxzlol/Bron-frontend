@@ -30,12 +30,28 @@ function formatSelectedDate(date: Date) {
 
 function parseInitialDate(value: string | undefined, today: Date) {
     if (value) {
-        const parsed = new Date(value);
+        const parsed = new Date(`${value}T12:00:00`);
         if (!Number.isNaN(parsed.getTime()) && !isDateBeforeDay(parsed, today)) {
             return startOfDay(parsed);
         }
     }
     return today;
+}
+
+function toIsoDate(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function addHourToTime(time: string) {
+    const match = time.match(/^(\d{2}):(\d{2})/);
+    if (!match) return time;
+    const totalMinutes = Number(match[1]) * 60 + Number(match[2]) + 60;
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 export const BookingEditModal = ({
@@ -46,7 +62,7 @@ export const BookingEditModal = ({
     bookingDate,
     bookingTime,
 }: BookingEditModalProps) => {
-    const updateBooking = useBookingStore((state) => state.updateBooking);
+    const rescheduleBooking = useBookingStore((state) => state.rescheduleBooking);
     const showToast = useToastStore((state) => state.showToast);
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewMonth, setViewMonth] = useState(() => parseInitialDate(bookingDate, startOfDay(new Date())));
@@ -83,6 +99,19 @@ export const BookingEditModal = ({
     useEffect(() => {
       if (!isOpen) return;
 
+      const nextDate = parseInitialDate(bookingDate, today);
+      setViewMonth(nextDate);
+      setSelectedDate(nextDate);
+
+      const match = bookingTime?.match(/^\d{2}:\d{2}/);
+      if (match) {
+        setSelectedTime(match[0]);
+      }
+    }, [bookingDate, bookingTime, isOpen, today]);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
       const available = getAvailableSlotsForDate(displaySlots, selectedDate, new Date());
       if (available.length > 0 && !available.includes(selectedTime)) {
         setSelectedTime(getDefaultBookingTime(displaySlots, selectedDate, new Date()));
@@ -99,9 +128,12 @@ export const BookingEditModal = ({
         }
         setIsSaving(true);
         try {
-            // API обновления брони не принимает дату/время (BookingUpdate: status, staff_id),
-            // поэтому вызываем update без изменений полей.
-            await updateBooking(bookingId, {});
+            const endTime = addHourToTime(selectedTime);
+            await rescheduleBooking(bookingId, {
+                booking_date: toIsoDate(selectedDate),
+                start_time: selectedTime,
+                end_time: endTime,
+            });
             showToast('Бронирование обновлено', 'Новая дата и время успешно сохранены.');
         } catch (error) {
             console.warn('Не удалось сохранить изменения брони', error);
@@ -122,6 +154,9 @@ export const BookingEditModal = ({
                 aria-label="Изменить бронь"
                 className="flex max-h-[92vh] w-full flex-col overflow-y-auto rounded-t-[20px] bg-[var(--bg-surface)] px-[16px] pb-[20px] pt-[10px] shadow-lg sm:max-w-[420px] sm:rounded-[20px] sm:p-[20px]"
                 onClick={(e) => e.stopPropagation()}
+                data-testid={
+                    bookingId != null ? `booking-edit-modal-${bookingId}` : "booking-edit-modal"
+                }
             >
                 <span className="mx-auto mb-[10px] h-[5px] w-[48px] shrink-0 rounded-full bg-[var(--border-default)] sm:hidden" aria-hidden="true" />
 
@@ -188,7 +223,7 @@ export const BookingEditModal = ({
                 )}
 
                 <p className="mt-[16px] text-[14px] font-semibold text-[var(--text-primary)]">Выбери время</p>
-                <div className="mt-[10px] grid grid-cols-4 gap-[8px]">
+                <div className="mt-[10px] grid grid-cols-4 gap-[8px]" data-testid="booking-edit-time-slots">
                     {displaySlots.map((slot) => {
                         const disabled = disabledTimeSlots.has(slot);
                         const selected = selectedTime === slot;
@@ -203,6 +238,7 @@ export const BookingEditModal = ({
                                         ? 'bg-[#0a6af7] text-white'
                                         : 'bg-[var(--bg-surface-muted)] text-[var(--text-primary)] hover:bg-[#e8edfb] dark:hover:bg-[var(--bg-hover)]'}
                                     ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+                                data-testid={`booking-edit-time-${slot.replace(':', '-')}`}
                             >
                                 {slot}
                             </button>
@@ -215,6 +251,11 @@ export const BookingEditModal = ({
                     onClick={handleSave}
                     disabled={isSaving}
                     className="mt-[20px] w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition-colors duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
+                    data-testid={
+                        bookingId != null
+                            ? `booking-edit-save-${bookingId}`
+                            : "booking-edit-save"
+                    }
                 >
                     {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
                 </button>

@@ -12,6 +12,8 @@ import {
   getShopGallery,
   isRemoteShopImage,
 } from "@/lib/business/shopImages";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import s from "./fullMap.module.css";
@@ -45,9 +47,11 @@ export default function ShopDetailPanel({
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
+  const { t } = useTranslation();
+  const shopReviewStats = useReviewStore((state) => state.shopReviewStats);
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
 
@@ -81,15 +85,24 @@ export default function ShopDetailPanel({
           },
         ];
 
+  const { rating: displayRating, reviews: displayReviews } = getEffectiveShopRating(
+    shop.id,
+    shop.rating,
+    shop.reviews,
+    shopReviewStats,
+  );
+
   const ratingRow = (
-    <div className={s.sheetRating}>
+    <div className={s.sheetRating} data-testid="map-vendor-rating">
       <Image src={assets.popular.starRating} alt="" width={16} height={16} />
-      <span className={s.sheetRatingValue}>{formatRating(shop.rating)}</span>
+      <span className={s.sheetRatingValue}>{formatRating(displayRating)}</span>
       <span className={s.sheetRatingMuted}>
-        ({shop.reviews} {pluralizeReviews(shop.reviews)})
+        ({displayReviews} {pluralizeReviews(displayReviews)})
       </span>
     </div>
   );
+
+  const priceLabel = `От ${formatPrice(shop.price)} сум`;
 
   const mobileSheet = (
     <section
@@ -97,6 +110,7 @@ export default function ShopDetailPanel({
       role="dialog"
       aria-modal="false"
       aria-label={shop.title}
+      data-testid="map-vendor-preview-card"
     >
       <button
         type="button"
@@ -129,13 +143,28 @@ export default function ShopDetailPanel({
           </div>
           <div className={s.sheetInfo}>
             <span className={s.sheetTag}>{shop.type}</span>
-            <h2 className={s.sheetTitle}>{shop.title}</h2>
+            <h2 className={s.sheetTitle} data-testid="map-vendor-title">
+              {shop.title}
+            </h2>
             {ratingRow}
-            <span className={s.sheetPrice}>От {formatPrice(shop.price)} сум</span>
+            <span className={s.sheetPrice} data-testid="map-vendor-price">
+              {priceLabel}
+            </span>
+            <p className={s.sheetHours} data-testid="map-vendor-hours">
+              {shop.hours}
+            </p>
+            <p className={s.sheetAddress} data-testid="map-vendor-address">
+              {shop.address}
+            </p>
           </div>
         </div>
 
-        <Button text="Забронировать" className={s.sheetBookBtn} onClick={onBook} />
+        <Button
+          text={t("map.bookPlace")}
+          className={s.sheetBookBtn}
+          data-testid="map-vendor-book-btn"
+          onClick={onBook}
+        />
 
         {expanded && (
           <>
@@ -270,8 +299,9 @@ export default function ShopDetailPanel({
             </div>
 
             <Button
-              text="Забронировать"
+              text={t("map.bookPlace")}
               className={s.sheetBookBtn}
+              data-testid="map-vendor-book-btn"
               onClick={onBook}
             />
           </>
@@ -289,6 +319,7 @@ export default function ShopDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-label={shop.title}
+        data-testid="map-vendor-preview-card"
       >
         <div className={s.panelScroll}>
           <div className={s.imageWrap}>
@@ -344,28 +375,43 @@ export default function ShopDetailPanel({
 
           <div className={s.body}>
             <div className={s.titleRow}>
-              <h2 className={s.title}>{shop.title}</h2>
-              <div className={s.rating}>
+              <h2 className={s.title} data-testid="map-vendor-title">
+                {shop.title}
+              </h2>
+              <div className={s.rating} data-testid="map-vendor-rating">
                 <Image
                   src={assets.popular.starRating}
                   alt=""
                   width={18}
                   height={18}
                 />
-                <span className={s.ratingValue}>{formatRating(shop.rating)}</span>
+                <span className={s.ratingValue}>{formatRating(displayRating)}</span>
                 <span className={s.ratingMuted}>
-                  ({shop.reviews} {pluralizeReviews(shop.reviews)})
+                  ({displayReviews} {pluralizeReviews(displayReviews)})
                 </span>
               </div>
             </div>
 
             <p className={s.category}>{shop.category}</p>
+            <p className={s.priceFrom} data-testid="map-vendor-price">
+              {priceLabel}
+            </p>
             <p className={s.desc}>{shop.desc}</p>
 
             <div className={s.stats}>
               <div className={s.statBox}>
                 <span className={s.statLabel}>Открыто</span>
-                <span className={s.statValue}>{shop.hours}</span>
+                <span className={s.statValue} data-testid="map-vendor-hours">
+                  {shop.hours}
+                </span>
+              </div>
+              <div className={s.statBox}>
+                <span className={s.statLabel}>Св.мест</span>
+                <span className={s.statValue}>{shop.freeSeats}</span>
+              </div>
+              <div className={s.statBox}>
+                <span className={s.statLabel}>Цена</span>
+                <span className={s.statValue}>{formatPrice(shop.price)} сум</span>
               </div>
             </div>
 
@@ -379,7 +425,9 @@ export default function ShopDetailPanel({
                   height={20}
                 />
                 <div className={s.addressText}>
-                  <span className={s.addressMain}>{shop.address}</span>
+                  <span className={s.addressMain} data-testid="map-vendor-address">
+                    {shop.address}
+                  </span>
                   <span className={s.addressSub}>{shop.district}</span>
                 </div>
                 <span className={s.distance}>{shop.distance}</span>
@@ -439,8 +487,9 @@ export default function ShopDetailPanel({
             )}
 
             <Button
-              text="Забронировать место"
+              text={t("map.bookPlace")}
               className={s.bookBtn}
+              data-testid="map-vendor-book-btn"
               onClick={onBook}
             />
           </div>

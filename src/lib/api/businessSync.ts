@@ -24,7 +24,8 @@ import {
 import { getAuthToken } from "@/lib/api/token";
 import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
 import type { BusinessDraft, BusinessService, SavedBusiness, BusinessBookingRequest } from "@/store/business.store";
-import type { Branch, Business as ApiBusiness } from "@/lib/api/types";
+import type { Branch, Business as ApiBusiness, Booking } from "@/lib/api/types";
+import { getDemoBusinessBookingsForApi } from "@/lib/business/demoBookings";
 
 async function resolveCoordsForBusiness(
   business: ApiBusiness,
@@ -46,20 +47,29 @@ async function resolveCoordsForBusiness(
 
 async function loadBusinessBookings(businessId: number, services: BusinessService[]) {
   const token = getAuthToken();
-  if (!token) return [];
+  const serviceMap = new Map(services.map((service) => [service.id, service.name]));
 
-  try {
-    const bookings = await bookingsApi.listByBusiness(businessId, token);
-    const serviceMap = new Map(services.map((service) => [service.id, service.name]));
-
-    return bookings.map((booking) =>
+  const mapBookings = (bookings: Array<Booking & { customer_name?: string }>) =>
+    bookings.map((booking) =>
       apiBookingToBusinessBookingRequest(
         booking,
         serviceMap.get(String(booking.service_id)) ?? "Услуга",
+        booking.customer_name ?? "Клиент",
       ),
     );
+
+  if (!token) {
+    return mapBookings(getDemoBusinessBookingsForApi(businessId));
+  }
+
+  try {
+    const bookings = await bookingsApi.listByBusiness(businessId, token);
+    if (bookings.length > 0) {
+      return mapBookings(bookings);
+    }
+    return mapBookings(getDemoBusinessBookingsForApi(businessId));
   } catch {
-    return [];
+    return mapBookings(getDemoBusinessBookingsForApi(businessId));
   }
 }
 

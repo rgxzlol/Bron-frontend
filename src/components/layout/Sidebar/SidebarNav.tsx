@@ -20,12 +20,18 @@ const NAV_TITLE_KEYS = [
 
 export default function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { t } = useTranslation();
-  const { canAccessBusinessPage, isBusinessLocked, businessHref } = useBusinessNavAccess();
+  const { showBusinessInNav, canAccessBusinessPage, isBusinessLocked, businessHref } =
+    useBusinessNavAccess();
 
   return (
     <ul className="mt-8 list-none w-full lg:mt-[47px]">
       {mainNavItems.map((item, index) => {
         const isBusinessItem = item.href === routes.business;
+
+        if (isBusinessItem && !showBusinessInNav) {
+          return null;
+        }
+
         const href = isBusinessItem ? businessHref : item.href;
         const locked = isBusinessItem && isBusinessLocked;
 

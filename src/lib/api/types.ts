@@ -87,6 +87,11 @@ export type Business = {
   phone: string;
   latitude: number | null;
   longitude: number | null;
+  tin?: string | null;
+  website?: string | null;
+  social_links?: Record<string, unknown>;
+  comments?: string | null;
+  status?: string | null;
   created_at: string;
 };
 
@@ -98,6 +103,10 @@ export type BusinessCreate = {
   phone: string;
   latitude?: number | null;
   longitude?: number | null;
+  tin?: string | null;
+  website?: string | null;
+  social_links?: Record<string, unknown>;
+  comments?: string | null;
 };
 
 export type BusinessUpdate = Partial<BusinessCreate>;
@@ -314,4 +323,72 @@ export type BookingUpdate = {
   booking_date?: string;
   start_time?: string;
   end_time?: string;
+};
+
+export type BusinessGalleryImage = {
+  id: number;
+  business_id: number;
+  image: string;
+  created_at: string;
+};
+
+export type BusinessLogoResponse = {
+  id: number;
+  logo: string;
+};
+
+export type Review = {
+  id: number;
+  user_id: number;
+  user_username: string;
+  business_id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+};
+
+export type ReviewCreate = {
+  business_id: number;
+  rating: number;
+  comment: string;
+};
+
+export type ReviewUpdate = {
+  rating?: number;
+  comment?: string;
+};
+
+export type Favorite = {
+  id: number;
+  user_id: number;
+  business_id: number;
+  business_name: string;
+  created_at: string;
+};
+
+export type FavoriteCreate = {
+  business_id: number;
+};
+
+export type BusinessApplicationStatusValue =
+  | "pending"
+  | "approved"
+  | "rejected";
+
+export type BusinessApplication = {
+  id: number;
+  user_id: number;
+  company_name: string;
+  sphere: string;
+  location: string;
+  phone: string;
+  status: BusinessApplicationStatusValue | string;
+  created_at: string;
+};
+
+export type BusinessApplicationCreate = {
+  company_name: string;
+  sphere: string;
+  location: string;
+  phone: string;
 };

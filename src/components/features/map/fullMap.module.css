@@ -376,6 +376,27 @@
   line-height: 1;
 }
 
+.sheetFavorite {
+  position: absolute;
+  top: 12px;
+  right: 52px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-surface-muted);
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sheetFavoriteActive {
+  color: #e02424;
+}
+
 .sheetScroll {
   display: flex;
   flex-direction: column;

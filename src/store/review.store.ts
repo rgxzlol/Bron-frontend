@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { reviewsApi } from "@/lib/api";
+import { getAuthToken } from "@/lib/api/token";
 
 export type ReviewTag =
   | "equipment"
@@ -59,7 +61,7 @@ type ReviewState = {
     shopId?: string;
     shopName?: string;
     bookingId?: number;
-  }) => boolean;
+  }) => Promise<boolean>;
 };
 
 export const REVIEW_TAG_LABEL_KEYS: Record<ReviewTag, string> = {
@@ -161,7 +163,7 @@ export const useReviewStore = create<ReviewState>()(
       hasReviewedBooking: (bookingId) =>
         get().reviewedBookingIds.includes(bookingId),
 
-      submitReview: (meta) => {
+      submitReview: async (meta) => {
         const { draft } = get();
         if (!draft.rating || !draft.text.trim() || !draft.authorName.trim()) {
           return false;
@@ -169,6 +171,22 @@ export const useReviewStore = create<ReviewState>()(
 
         if (meta?.bookingId && get().reviewedBookingIds.includes(meta.bookingId)) {
           return false;
+        }
+
+        const businessId = meta?.shopId && /^\d+$/.test(meta.shopId)
+          ? Number(meta.shopId)
+          : null;
+
+        if (businessId && getAuthToken()) {
+          try {
+            await reviewsApi.create({
+              business_id: businessId,
+              rating: draft.rating,
+              comment: draft.text.trim(),
+            });
+          } catch (error) {
+            console.warn("Не удалось отправить отзыв в API:", error);
+          }
         }
 
         const review: SubmittedReview = {

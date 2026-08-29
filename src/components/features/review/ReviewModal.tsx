@@ -120,7 +120,7 @@ export default function ReviewModal({
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const errors: { rating?: string; text?: string; authorName?: string } = {};
 
     if (draft.rating <= 0) {
@@ -138,7 +138,7 @@ export default function ReviewModal({
       return;
     }
 
-    const submitted = submitReview({ shopId, shopName, bookingId });
+    const submitted = await submitReview({ shopId, shopName, bookingId });
     if (!submitted) return;
 
     setFieldErrors({});

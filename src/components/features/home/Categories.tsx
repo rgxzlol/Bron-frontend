@@ -1,17 +1,34 @@
 "use client";
-import { categories } from "@/data/categories";
+
+import { categories as fallbackCategories } from "@/data/categories";
 import { assets } from "@/lib/assets";
+import { fetchCategoriesWithCounts } from "@/lib/home/discovery";
 import { pluralizeServices } from "@/lib/pluralize";
 import { buildMapCategoryHref } from "@/lib/category/homeCategoryMap";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchCategoriesWithCounts().then((items) => {
+      if (!cancelled) {
+        setCategories(items);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const renderCategoryCard = (category: Category) => (
     <Link

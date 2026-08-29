@@ -15,6 +15,11 @@ export const productsApi = {
   listByBusiness: (businessId: number) =>
     apiRequest<ProductListItem[]>(`/products/business/${businessId}`),
 
+  search: (query: string) =>
+    apiRequest<ProductListItem[]>(
+      `/products/search?q=${encodeURIComponent(query)}`,
+    ),
+
   create: (body: ProductCreate, token?: string) =>
     apiRequest<Product>("/products/create", {
       method: "POST",

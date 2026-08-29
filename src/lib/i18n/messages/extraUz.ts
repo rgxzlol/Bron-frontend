@@ -173,6 +173,9 @@ export const extraUz: MessageTree = {
     lockedScheduleEdit: "O‘zgartirish",
     pickDate: "Sanani tanlang",
     pickTime: "Vaqtni tanlang",
+    pickBranch: "Filialni tanlang",
+    pickStaff: "Mutaxassisni tanlang",
+    anyStaff: "Har qanday mutaxassis",
     mobileTotal: "Jami: {price} so‘m",
     errorName: "Ism va familiyani kiriting",
     errorNameInvalid: "To‘g‘ri ism va familiyani kiriting",
@@ -498,6 +501,10 @@ export const extraUz: MessageTree = {
     tagPrice: "Narx",
     tagService: "Xizmat",
     tagOther: "Boshqa",
+  },
+  favorites: {
+    add: "Sevimlilarga qo'shish",
+    remove: "Sevimlilardan olib tashlash",
   },
   datePicker: {
     title: "Kun tanlash",

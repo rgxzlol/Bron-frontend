@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets } from "@/lib/assets";
@@ -22,8 +22,16 @@ import {
   buildTimeGroupsFromHours,
   getAvailableSlotsForDate,
   getDefaultBookingTime,
+  groupTimeSlots,
   startOfDay,
 } from "@/lib/booking/timeSlots";
+import {
+  fetchAvailableSlots,
+  fetchBookingApiContext,
+  getShopHoursForDate,
+  isBookingDateUnavailable,
+  type BookingApiContext,
+} from "@/lib/booking/apiContext";
 import {
   BOOKING_ERROR_MESSAGE_KEYS,
   type BookingFormErrorCodes,
@@ -119,6 +127,10 @@ export default function BookingPage({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [slotConflictMessage, setSlotConflictMessage] = useState<string | null>(null);
+  const [apiContext, setApiContext] = useState<BookingApiContext | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [apiAvailableSlots, setApiAvailableSlots] = useState<string[] | null>(null);
   const didPrefillFormRef = useRef(false);
   const { t, locale } = useTranslation();
   const token = useAuthStore((state) => state.token);
@@ -130,9 +142,43 @@ export default function BookingPage({
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
-  const timeGroups = useMemo(
-    () => buildTimeGroupsFromHours(shop.hours),
-    [shop.hours],
+  useEffect(() => {
+    if (!shop.apiBusinessId) {
+      setApiContext(null);
+      setSelectedBranchId(null);
+      setSelectedStaffId(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchBookingApiContext(shop.apiBusinessId).then((context) => {
+      if (cancelled) return;
+      setApiContext(context);
+      setSelectedBranchId(shop.apiBranchId ?? context.branches[0]?.id ?? null);
+      setSelectedStaffId(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shop.apiBusinessId, shop.apiBranchId]);
+
+  const resolvedHours = useMemo(
+    () => getShopHoursForDate(apiContext, shop.hours, selectedDate),
+    [apiContext, shop.hours, selectedDate],
+  );
+
+  const timeGroups = useMemo(() => {
+    if (apiAvailableSlots?.length) {
+      return groupTimeSlots(apiAvailableSlots);
+    }
+    return buildTimeGroupsFromHours(resolvedHours);
+  }, [apiAvailableSlots, resolvedHours]);
+
+  const isDateDisabled = useCallback(
+    (date: Date) => isBookingDateUnavailable(apiContext, date),
+    [apiContext],
   );
 
   const allTimeSlots = useMemo(
@@ -157,6 +203,53 @@ export default function BookingPage({
       setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
     }
   }, [allTimeSlots, selectedDate, selectedTime]);
+
+  useEffect(() => {
+    if (!shop.apiBusinessId || !apiContext) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
+    if (!serviceId || !/^\d+$/.test(serviceId)) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    const branchId =
+      selectedBranchId ?? shop.apiBranchId ?? apiContext.branches[0]?.id;
+    if (!branchId) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchAvailableSlots({
+      businessId: shop.apiBusinessId,
+      serviceId: Number(serviceId),
+      branchId,
+      date: formatBookingDate(selectedDate),
+      staffId: selectedStaffId,
+    }).then((slots) => {
+      if (!cancelled) {
+        setApiAvailableSlots(slots);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shop.apiBusinessId,
+    shop.apiBranchId,
+    shop.services,
+    apiContext,
+    selectedDate,
+    selectedStaffId,
+    selectedBranchId,
+    selectedServiceIds,
+  ]);
 
   useEffect(() => {
     if (step !== 2) {
@@ -380,7 +473,7 @@ export default function BookingPage({
     let slotKey: string | null = null;
 
     try {
-      let branchId = shop.apiBranchId;
+      let branchId = selectedBranchId ?? shop.apiBranchId;
       if (!branchId) {
         const branches = await branchesApi.listByBusiness(shop.apiBusinessId);
         branchId = branches[0]?.id;
@@ -407,6 +500,7 @@ export default function BookingPage({
         business_id: shop.apiBusinessId,
         service_id: Number(serviceId),
         branch_id: branchId,
+        staff_id: selectedStaffId,
         booking_date: bookingDate,
         start_time: activeTime,
         end_time: addMinutesToTime(activeTime, durationMin),
@@ -528,7 +622,7 @@ export default function BookingPage({
           <div className={s.stats}>
             <div className={s.statBox}>
               <span className={s.statLabel}>Открыто</span>
-              <span className={s.statValue}>{shop.hours}</span>
+              <span className={s.statValue}>{resolvedHours}</span>
             </div>
             <div className={s.statBox}>
               <span className={s.statLabel}>{priceLabel}</span>
@@ -555,6 +649,53 @@ export default function BookingPage({
         )}
 
         <section className={s.timeCard} data-testid="booking-step-1-panel">
+          {apiContext && apiContext.branches.length > 1 ? (
+            <div className={s.branchPicker}>
+              <label className={s.pickTitle} htmlFor="booking-branch-select">
+                {t("booking.pickBranch")}
+              </label>
+              <select
+                id="booking-branch-select"
+                className={s.branchSelect}
+                value={selectedBranchId ?? ""}
+                onChange={(event) =>
+                  setSelectedBranchId(Number(event.target.value) || null)
+                }
+              >
+                {apiContext.branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {apiContext && apiContext.staff.length > 0 ? (
+            <div className={s.branchPicker}>
+              <label className={s.pickTitle} htmlFor="booking-staff-select">
+                {t("booking.pickStaff")}
+              </label>
+              <select
+                id="booking-staff-select"
+                className={s.branchSelect}
+                value={selectedStaffId ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSelectedStaffId(value ? Number(value) : null);
+                }}
+              >
+                <option value="">{t("booking.anyStaff")}</option>
+                {apiContext.staff.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.full_name}
+                    {member.position ? ` — ${member.position}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
           <div className={s.desktopPickers}>
             <DatePicker
               viewMonth={viewMonth}
@@ -563,6 +704,7 @@ export default function BookingPage({
               onSelectedDateChange={setSelectedDate}
               today={today}
               minDate={today}
+              isDateDisabled={shop.apiBusinessId ? isDateDisabled : undefined}
             />
             <TimePicker
               selectedTime={selectedTime}
@@ -620,6 +762,7 @@ export default function BookingPage({
                   }}
                   today={today}
                   minDate={today}
+                  isDateDisabled={shop.apiBusinessId ? isDateDisabled : undefined}
                 />
               </div>
             )}

@@ -175,6 +175,9 @@ export const extraRu: MessageTree = {
     lockedScheduleEdit: "Изменить",
     pickDate: "Выбери дату",
     pickTime: "Выбери время",
+    pickBranch: "Выберите филиал",
+    pickStaff: "Выберите специалиста",
+    anyStaff: "Любой специалист",
     mobileTotal: "Итог: {price} сум",
     errorName: "Введите имя и фамилию",
     errorNameInvalid: "Введите корректное имя и фамилию",
@@ -501,6 +504,10 @@ export const extraRu: MessageTree = {
     tagPrice: "Цена",
     tagService: "Услуга",
     tagOther: "Другое",
+  },
+  favorites: {
+    add: "Добавить в избранное",
+    remove: "Убрать из избранного",
   },
   datePicker: {
     title: "Выбрать день",

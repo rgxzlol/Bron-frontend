@@ -220,15 +220,19 @@ export function apiBusinessToSavedBusiness(
     bookingRequests?: BusinessBookingRequest[];
     branch?: Pick<Branch, "latitude" | "longitude"> | null;
     coords?: { lat: number; lng: number };
+    galleryUrls?: string[];
   },
 ): SavedBusiness {
   const coords =
     extras?.coords ?? resolveApiBusinessCoords(business, extras?.branch);
 
   const mappedServices = extras?.services ?? [];
+  const galleryUrls = (extras?.galleryUrls ?? []).map((url) => resolveMediaUrl(url)).filter(
+    (url): url is string => Boolean(url),
+  );
   const photoUrls = collectBusinessPhotoUrls({
     profilePhoto: resolveMediaUrl(business.logo),
-    gallery: [],
+    gallery: galleryUrls,
     services: mappedServices,
   });
 

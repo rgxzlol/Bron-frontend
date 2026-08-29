@@ -15,6 +15,13 @@ export const servicesApi = {
   listByBusiness: (businessId: number) =>
     apiRequest<ServiceListItem[]>(`/services/business/${businessId}`),
 
+  search: (query: string) =>
+    apiRequest<ServiceListItem[]>(
+      `/services/search?q=${encodeURIComponent(query)}`,
+    ),
+
+  categories: () => apiRequest<string[]>("/services/categories"),
+
   create: (body: ServiceCreate, token?: string) =>
     apiRequest<Service>("/services/create", {
       method: "POST",

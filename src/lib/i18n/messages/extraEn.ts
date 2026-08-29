@@ -173,6 +173,9 @@ export const extraEn: MessageTree = {
     lockedScheduleEdit: "Edit",
     pickDate: "Pick a date",
     pickTime: "Pick a time",
+    pickBranch: "Select branch",
+    pickStaff: "Select specialist",
+    anyStaff: "Any specialist",
     mobileTotal: "Total: {price} UZS",
     errorName: "Enter your full name",
     errorNameInvalid: "Enter a valid full name",
@@ -496,6 +499,10 @@ export const extraEn: MessageTree = {
     tagPrice: "Price",
     tagService: "Service",
     tagOther: "Other",
+  },
+  favorites: {
+    add: "Add to favorites",
+    remove: "Remove from favorites",
   },
   datePicker: {
     title: "Pick a day",

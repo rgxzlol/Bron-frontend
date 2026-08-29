@@ -4,6 +4,7 @@ import {
   searchCatalog,
   type SearchCatalogItem,
 } from "@/lib/search/catalog";
+import { searchBusinessesFromApi } from "@/lib/home/discovery";
 import {
   isSearchQuerySubmittable,
   normalizeSearchQuery,
@@ -19,6 +20,18 @@ type SearchState = {
   submitSearch: (query?: string) => void;
   clearSearch: () => void;
 };
+
+function mergeSearchResults(
+  localResults: SearchCatalogItem[],
+  apiResults: SearchCatalogItem[],
+) {
+  const seenShopIds = new Set(localResults.map((item) => item.shopId));
+  const uniqueApiResults = apiResults.filter(
+    (item) => !seenShopIds.has(item.shopId),
+  );
+
+  return [...uniqueApiResults, ...localResults];
+}
 
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: "",
@@ -49,13 +62,23 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       return;
     }
 
-    const results = searchCatalog(nextQuery);
+    const localResults = searchCatalog(nextQuery);
 
     set({
       query: nextQuery,
       submittedQuery: nextQuery,
-      results,
+      results: localResults,
       suggestions: getSearchSuggestions(nextQuery),
+    });
+
+    void searchBusinessesFromApi(nextQuery).then((apiResults) => {
+      if (get().submittedQuery !== nextQuery || apiResults.length === 0) {
+        return;
+      }
+
+      set({
+        results: mergeSearchResults(localResults, apiResults),
+      });
     });
   },
 

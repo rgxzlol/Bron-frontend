@@ -8,6 +8,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { useBusinessStore } from "@/store/business.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
+import { useFavoriteStore } from "@/store/favorite.store";
+import { useBusinessApplicationStore } from "@/store/businessApplication.store";
 
 export default function ApiProvider({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
@@ -16,6 +18,11 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
   const fetchProfile = useProfileStore((state) => state.fetchProfile);
   const resetProfile = useProfileStore((state) => state.resetProfile);
+  const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
+  const fetchApplicationStatus = useBusinessApplicationStore(
+    (state) => state.fetchApplicationStatus,
+  );
+  const resetApplication = useBusinessApplicationStore((state) => state.resetApplication);
 
   useEffect(() => {
     setTokenGetter(() => useAuthStore.getState().token);
@@ -37,12 +44,15 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     if (!token) {
       clearBusinesses();
       resetProfile();
+      resetApplication();
       return;
     }
 
     void fetchBusinessesFromApi();
     void fetchMyBookings();
     void fetchProfile();
+    void fetchFavorites();
+    void fetchApplicationStatus();
   }, [
     token,
     fetchBusinessesFromApi,
@@ -50,6 +60,9 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     fetchMyBookings,
     fetchProfile,
     resetProfile,
+    fetchFavorites,
+    fetchApplicationStatus,
+    resetApplication,
   ]);
 
   return children;

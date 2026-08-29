@@ -12,13 +12,9 @@ import { Logo } from "@/components/shared/Logo";
 import PasswordInput from "@/components/shared/PasswordInput";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
-import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, REGISTER_PASSWORD_RULES, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, validateRegisterPhone, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
+import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, REGISTER_PASSWORD_RULES, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
 import { signInWithGooglePopup } from "@/lib/auth/googleSignIn";
-import {
-  completeGoogleAuth,
-  resolveGoogleAuth,
-  type GoogleUserProfile,
-} from "@/lib/auth/googleAccount";
+import { authenticateWithGoogle } from "@/lib/auth/googleAccount";
 import { startTelegramOAuth } from "@/lib/auth/oauth";
 import { useProfileStore } from "@/store/profile.store";
 import { SupportModal } from "./SupportModal";
@@ -30,18 +26,12 @@ export type AuthScreen =
   | "register-success"
   | "login-success"
   | "forgot"
-  | "telegram"
-  | "google-phone";
+  | "telegram";
 
 /* ------------------------------ shared UI ------------------------------ */
 
 function AuthShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen justify-center bg-[var(--bg-page)] sm:items-center sm:p-6">
-      <div className="flex w-full max-w-[440px] flex-col bg-[var(--bg-surface)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
-        {children}
       </div>
-    </div>
   );
 }
 
@@ -419,10 +409,6 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setFieldErrors({});
     setRegisterFieldErrors({});
     setRecoveryErrors({});
-    setGooglePhoneError(undefined);
-    if (next !== "google-phone") {
-      setPendingGoogleProfile(null);
-    }
     if (next !== "login") {
       setPasswordResetSuccess(false);
     }
@@ -486,23 +472,12 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       await signInWithGooglePopup({
         onSuccess: async (profile) => {
           try {
-            const result = await resolveGoogleAuth(profile);
-
-            if (result.kind === "complete") {
-              await completeAuthSession(result.session, {
-                fullName: profile.name,
-                email: profile.email,
-                phone: result.phone,
-                avatarUrl: profile.picture ?? null,
-              });
-              return;
-            }
-
-            setPendingGoogleProfile(profile);
-            setGoogleAuthMode(result.mode);
-            setGooglePhone("");
-            setGooglePhoneError(undefined);
-            go("google-phone");
+            const session = await authenticateWithGoogle(profile);
+            await completeAuthSession(session, {
+              fullName: profile.name,
+              email: profile.email,
+              avatarUrl: profile.picture ?? null,
+            });
           } catch (e) {
             setError(
               e instanceof ApiError ? e.message : "Не удалось войти через Google",
@@ -513,45 +488,6 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           setError(message);
         },
       });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleGooglePhoneSubmit() {
-    if (!pendingGoogleProfile) return;
-
-    const phoneError = validateRegisterPhone(googlePhone);
-    if (phoneError) {
-      setGooglePhoneError(phoneError);
-      return;
-    }
-
-    setGooglePhoneError(undefined);
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      const session = await completeGoogleAuth(
-        pendingGoogleProfile,
-        googlePhone,
-        googleAuthMode,
-      );
-
-      await completeAuthSession(session, {
-        fullName: pendingGoogleProfile.name,
-        email: pendingGoogleProfile.email,
-        phone: googlePhone.trim(),
-        avatarUrl: pendingGoogleProfile.picture ?? null,
-      });
-    } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Не удалось сохранить номер телефона",
-      );
     } finally {
       setSubmitting(false);
     }
@@ -1008,57 +944,6 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
           <div className="mt-auto pt-8">
             <PrimaryButton type="submit">Сохранить</PrimaryButton>
-          </div>
-        </form>
-      </AuthShell>
-    );
-  }
-
-  if (screen === "google-phone") {
-    return (
-      <AuthShell>
-        <StepHeader title="Номер телефона" onBack={() => go("welcome")} />
-        <form
-          className="mt-6 flex flex-1 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleGooglePhoneSubmit();
-          }}
-          noValidate
-        >
-          <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
-            {googleAuthMode === "register"
-              ? "Укажите номер телефона для завершения регистрации через Google"
-              : "Укажите номер телефона для вашего аккаунта"}
-          </p>
-
-          <div className="mt-7 flex flex-col gap-6">
-            {errorBanner}
-            <Field
-              id="google-phone-input"
-              name="phone"
-              label="Номер телефона"
-              required
-              type="tel"
-              inputMode="tel"
-              placeholder="+998 99 999 99 99"
-              value={googlePhone}
-              onChange={(value) => {
-                setGooglePhone(formatUzbekPhoneInput(value));
-                if (googlePhoneError) {
-                  setGooglePhoneError(undefined);
-                }
-              }}
-              maxLength={AUTH_FIELD_LIMITS.phone}
-              error={googlePhoneError}
-              autoComplete="tel"
-            />
-          </div>
-
-          <div className="mt-auto flex flex-col gap-4 pt-8">
-            <PrimaryButton type="submit" disabled={submitting}>
-              {submitting ? "Загрузка..." : "Продолжить"}
-            </PrimaryButton>
           </div>
         </form>
       </AuthShell>

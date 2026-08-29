@@ -1,37 +1,27 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAuthStore } from "@/store/auth.store";
 import { useBusinessApplicationStore } from "@/store/businessApplication.store";
 
 export default function BusinessApplicationSync() {
-  const token = useAuthStore((state) => state.token);
-  const status = useBusinessApplicationStore((state) => state.status);
-  const fetchApplicationStatus = useBusinessApplicationStore(
-    (state) => state.fetchApplicationStatus,
+  const setApplicationStatus = useBusinessApplicationStore(
+    (state) => state.setApplicationStatus,
   );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const applicationStatus = params.get("applicationStatus");
 
-    if (!params.get("applicationStatus")) return;
+    if (applicationStatus === "approved" || applicationStatus === "rejected") {
+      setApplicationStatus(applicationStatus);
+    }
 
-    void fetchApplicationStatus();
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete("applicationStatus");
-    window.history.replaceState({}, "", url.pathname + url.search);
-  }, [fetchApplicationStatus]);
-
-  useEffect(() => {
-    if (!token || status !== "pending") return;
-
-    const intervalId = window.setInterval(() => {
-      void fetchApplicationStatus();
-    }, 30_000);
-
-    return () => window.clearInterval(intervalId);
-  }, [token, status, fetchApplicationStatus]);
+    if (applicationStatus) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("applicationStatus");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, [setApplicationStatus]);
 
   return null;
 }

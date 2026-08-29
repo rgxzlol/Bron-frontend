@@ -210,10 +210,6 @@ export function validateRegisterPhone(phone: string): string | undefined {
   return undefined;
 }
 
-export function isValidUzbekPhone(phone: string): boolean {
-  return validateRegisterPhone(phone) === undefined;
-}
-
 export function validateRegisterPassword(password: string): string | undefined {
   if (!password.trim()) {
     return "Укажите пароль";

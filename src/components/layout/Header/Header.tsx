@@ -14,6 +14,7 @@ import ProfileButton from "@/components/features/profile/ProfileButton";
 export default function Header() {
   const username = useAuthStore((state) => state.username);
   const fullName = useProfileStore((state) => state.fullName);
+  const avatarUrl = useProfileStore((state) => state.avatarUrl);
   const displayName = fullName || username;
 
   return (
@@ -26,7 +27,11 @@ export default function Header() {
         </div>
         <ThemeSwitcher />
         <NotificationDropdown />
-        <ProfileButton variant="header" displayName={displayName} />
+        <ProfileButton
+          variant="header"
+          displayName={displayName}
+          avatarUrl={avatarUrl}
+        />
       </div>
 
       <div className="w-full lg:order-1 lg:w-auto lg:flex-1">

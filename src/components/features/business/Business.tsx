@@ -22,7 +22,7 @@ const Business = () => {
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
   const token = useAuthStore((s) => s.token);
-  const { status, canAccessBusinessPage } = useBusinessNavAccess();
+  const { status } = useBusinessNavAccess();
 
   const editId = searchParams.get("edit");
   const dashboardParam = searchParams.get("dashboard");
@@ -38,11 +38,11 @@ const Business = () => {
   const showList = hasBusinesses || showMyBusiness;
 
   useEffect(() => {
-    const redirectTo = shouldRedirectFromBusinessPage(status, canAccessBusinessPage);
+    const redirectTo = shouldRedirectFromBusinessPage(status);
     if (redirectTo) {
       router.replace(redirectTo);
     }
-  }, [status, canAccessBusinessPage, router]);
+  }, [status, router]);
 
   useEffect(() => {
     if (token) {

@@ -156,7 +156,6 @@ export default function BusinessApplicationForm() {
   const { t } = useTranslation();
   const submission = useBusinessApplicationStore((state) => state.submission);
   const status = useBusinessApplicationStore((state) => state.status);
-  const isSubmitting = useBusinessApplicationStore((state) => state.isSubmitting);
   const submitApplication = useBusinessApplicationStore((state) => state.submitApplication);
 
   const [form, setForm] = useState<BusinessApplicationFormData>(
@@ -183,7 +182,7 @@ export default function BusinessApplicationForm() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (locked || isSubmitting) return;
+    if (locked) return;
 
     const errors = validateBusinessApplication(form, {
       companyNameRequired: t("businessApplication.errors.companyNameRequired"),
@@ -200,16 +199,13 @@ export default function BusinessApplicationForm() {
       return;
     }
 
-    void submitApplication({
+    submitApplication({
       companyName: form.companyName.trim(),
       sphere: form.sphere.trim(),
       location: form.location.trim(),
       phone: form.phone.trim(),
-    })
-      .then(() => {
-        setShowReviewModal(true);
-      })
-      .catch(() => undefined);
+    });
+    setShowReviewModal(true);
   }
 
   return (
@@ -339,7 +335,7 @@ export default function BusinessApplicationForm() {
                 ? t("businessApplication.submitted")
                 : t("businessApplication.submit")
             }
-            disabled={locked || isSubmitting}
+            disabled={locked}
             data-testid="business-application-submit"
             className="mt-2 w-full max-w-none text-center md:w-fit"
           />

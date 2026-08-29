@@ -12,11 +12,8 @@ import {
   getShopGallery,
   isRemoteShopImage,
 } from "@/lib/business/shopImages";
-import { useFavoriteStore } from "@/store/favorite.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { fetchBusinessReviewStats } from "@/lib/reviews/businessReviews";
 import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
-import { useAuthStore } from "@/store/auth.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import s from "./fullMap.module.css";
@@ -51,18 +48,10 @@ export default function ShopDetailPanel({
   onBook,
 }: ShopDetailPanelProps) {
   const { t } = useTranslation();
-  const token = useAuthStore((state) => state.token);
   const shopReviewStats = useReviewStore((state) => state.shopReviewStats);
-  const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
-  const toggleFavorite = useFavoriteStore((state) => state.toggleFavorite);
-  const isFavorite = useFavoriteStore((state) => state.isFavorite);
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
   const [expanded, setExpanded] = useState(true);
-  const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(
-    null,
-  );
-  const businessId = shop.apiBusinessId ?? shop.id;
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
 
@@ -113,15 +102,10 @@ export default function ShopDetailPanel({
 
   const { rating: displayRating, reviews: displayReviews } = getEffectiveShopRating(
     shop.id,
-    apiRating?.rating ?? shop.rating,
-    apiRating?.reviews ?? shop.reviews,
+    shop.rating,
+    shop.reviews,
     shopReviewStats,
   );
-
-  async function handleToggleFavorite() {
-    if (!token || !businessId) return;
-    await toggleFavorite(businessId);
-  }
 
   const ratingRow = (
     <div className={s.sheetRating} data-testid="map-vendor-rating">

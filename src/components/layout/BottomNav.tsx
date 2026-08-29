@@ -9,8 +9,7 @@ import { useBusinessNavAccess } from "@/lib/business/applicationAccess";
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { showBusinessInNav, canAccessBusinessPage, isBusinessLocked, businessHref } =
-    useBusinessNavAccess();
+  const { canAccessBusinessPage, isBusinessLocked, businessHref } = useBusinessNavAccess();
 
   return (
     <nav
@@ -20,11 +19,6 @@ export default function BottomNav() {
       <ul className="mx-auto flex max-w-[460px] items-center justify-between gap-1 rounded-full bg-[#0a6af7] p-2 shadow-[0_12px_30px_-8px_rgba(10,106,247,0.55)]">
         {mainNavItems.map((item) => {
           const isBusinessItem = item.href === routes.business;
-
-          if (isBusinessItem && !showBusinessInNav) {
-            return null;
-          }
-
           const href = isBusinessItem ? businessHref : item.href;
           const locked = isBusinessItem && isBusinessLocked;
           const isActive = pathname === href || (isBusinessItem && pathname.startsWith(routes.business));

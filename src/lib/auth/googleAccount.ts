@@ -1,10 +1,6 @@
-import { authApi, ApiError, usersApi } from "@/lib/api";
+import { authApi, ApiError } from "@/lib/api";
 import type { LoginResponse } from "@/lib/api/types";
-import {
-  AUTH_FIELD_LIMITS,
-  isValidUzbekPhone,
-  validateRegisterPhone,
-} from "@/lib/auth/validation";
+import { AUTH_FIELD_LIMITS } from "@/lib/auth/validation";
 
 export type GoogleUserProfile = {
   sub: string;
@@ -12,10 +8,6 @@ export type GoogleUserProfile = {
   name: string;
   picture?: string;
 };
-
-export type GoogleAuthResult =
-  | { kind: "complete"; session: LoginResponse; phone: string }
-  | { kind: "needs-phone"; mode: "register" | "update" };
 
 function sanitizeUsername(value: string) {
   return value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, AUTH_FIELD_LIMITS.username);
@@ -34,76 +26,37 @@ function buildGooglePassword(sub: string) {
   return `google-oauth-${sub}`;
 }
 
-export async function resolveGoogleAuth(
+function buildGooglePhone(sub: string) {
+  const digits = sub.replace(/\D/g, "").slice(0, AUTH_FIELD_LIMITS.phone - 1);
+  return `+${digits || "0000000000"}`;
+}
+
+export async function authenticateWithGoogle(
   profile: GoogleUserProfile,
-): Promise<GoogleAuthResult> {
+): Promise<LoginResponse> {
   const username = buildGoogleUsername(profile);
   const password = buildGooglePassword(profile.sub);
 
   try {
-    const session = await authApi.login({ username, password });
-    const user = await authApi.me(session.access_token);
-
-    if (isValidUzbekPhone(user.phone)) {
-      return { kind: "complete", session, phone: user.phone.trim() };
-    }
-
-    return { kind: "needs-phone", mode: "update" };
+    return await authApi.login({ username, password });
   } catch (loginError) {
-    if (loginError instanceof ApiError && loginError.status === 401) {
-      return { kind: "needs-phone", mode: "register" };
+    if (!(loginError instanceof ApiError) || loginError.status !== 401) {
+      throw loginError;
     }
-
-    throw loginError;
-  }
-}
-
-export async function completeGoogleAuth(
-  profile: GoogleUserProfile,
-  phone: string,
-  mode: "register" | "update",
-): Promise<LoginResponse> {
-  const phoneError = validateRegisterPhone(phone);
-  if (phoneError) {
-    throw new Error(phoneError);
   }
 
-  const normalizedPhone = phone.trim();
-  const username = buildGoogleUsername(profile);
-  const password = buildGooglePassword(profile.sub);
-
-  if (mode === "register") {
-    try {
-      await authApi.register({
-        username,
-        email: profile.email.trim(),
-        phone: normalizedPhone,
-        password,
-      });
-    } catch (registerError) {
-      if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-        throw registerError;
-      }
+  try {
+    await authApi.register({
+      username,
+      email: profile.email.trim(),
+      phone: buildGooglePhone(profile.sub),
+      password,
+    });
+  } catch (registerError) {
+    if (!(registerError instanceof ApiError) || registerError.status !== 400) {
+      throw registerError;
     }
-
-    return authApi.login({ username, password });
   }
 
-  const session = await authApi.login({ username, password });
-  await usersApi.updateProfile({ phone: normalizedPhone }, session.access_token);
-  return session;
-}
-
-/** @deprecated Use resolveGoogleAuth + completeGoogleAuth */
-export async function authenticateWithGoogle(
-  profile: GoogleUserProfile,
-  phone: string,
-): Promise<LoginResponse> {
-  const resolved = await resolveGoogleAuth(profile);
-
-  if (resolved.kind === "complete") {
-    return resolved.session;
-  }
-
-  return completeGoogleAuth(profile, phone, resolved.mode);
+  return authApi.login({ username, password });
 }

@@ -2,6 +2,7 @@
 
 import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth.store";
+import { useBusinessStore } from "@/store/business.store";
 import {
   useBusinessApplicationStore,
   type BusinessApplicationStatus,
@@ -10,13 +11,20 @@ import {
 export function useBusinessNavAccess() {
   const token = useAuthStore((state) => state.token);
   const status = useBusinessApplicationStore((state) => state.status);
+  const businessAccessGranted = useBusinessApplicationStore(
+    (state) => state.businessAccessGranted,
+  );
+  const businesses = useBusinessStore((state) => state.businesses);
 
+  const hasExistingBusiness = businesses.length > 0;
   const isLoggedIn = Boolean(token);
-
-  const showBusinessInNav =
-    isLoggedIn && (status === "pending" || status === "approved");
-
-  const canAccessBusinessPage = isLoggedIn && status === "approved";
+  const canAccessBusinessPage =
+    isLoggedIn &&
+    (hasExistingBusiness ||
+      businessAccessGranted ||
+      status === "none" ||
+      status === "approved" ||
+      status === "rejected");
 
   const isBusinessLocked = isLoggedIn && status === "pending";
 
@@ -24,7 +32,6 @@ export function useBusinessNavAccess() {
     status === "pending" ? routes.businessApplication : routes.business;
 
   return {
-    showBusinessInNav,
     canAccessBusinessPage,
     isBusinessLocked,
     businessHref,
@@ -32,11 +39,7 @@ export function useBusinessNavAccess() {
   };
 }
 
-export function shouldRedirectFromBusinessPage(
-  status: BusinessApplicationStatus,
-  canAccessBusinessPage: boolean,
-) {
+export function shouldRedirectFromBusinessPage(status: BusinessApplicationStatus) {
   if (status === "pending") return routes.businessApplication;
-  if (!canAccessBusinessPage) return routes.home;
   return null;
 }

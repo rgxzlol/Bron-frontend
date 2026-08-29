@@ -5,10 +5,7 @@ import { assets } from '@/lib/assets';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import ReviewModal from '@/components/features/review/ReviewModal';
 import { ShopsPlace } from '@/data/shops';
-import { resolveShopById } from '@/lib/home/discovery';
-import { isRemoteShopImage } from '@/lib/business/shopImages';
 import { useReviewStore } from '@/store/review.store';
-import type { ShopsType } from '@/types/shops.types';
 import { BookingDropdown } from './BookingDropdown';
 import { BookingCancelModal } from './BookingCancelModal';
 import { BookingEditModal } from './BookingEditModal';
@@ -139,30 +136,6 @@ export const BookingCard = ({
     const [isOrderOpen, setIsOrderOpen] = useState(false);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
-    const [shop, setShop] = useState<ShopsType | null>(
-        () => ShopsPlace.find((item) => item.id === businessId) ?? null,
-    );
-
-    useEffect(() => {
-        const mockShop = ShopsPlace.find((item) => item.id === businessId);
-        if (mockShop) {
-            setShop(mockShop);
-            return;
-        }
-
-        if (!businessId) return;
-
-        let cancelled = false;
-        void resolveShopById(businessId).then((resolvedShop) => {
-            if (!cancelled) {
-                setShop(resolvedShop);
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [businessId]);
 
     const hasReviewedBooking = useReviewStore((state) => state.hasReviewedBooking);
 
@@ -173,18 +146,7 @@ export const BookingCard = ({
         bookingId != null &&
         !hasReviewedBooking(bookingId) &&
         !reviewSubmitted;
-
-    if (!shop) {
-        return (
-            <article
-                className="flex w-full flex-col rounded-[18px] bg-[var(--bg-surface)] p-[10px]"
-                data-testid={bookingId != null ? `booking-card-${bookingId}` : undefined}
-            >
-                <div className="h-[180px] animate-pulse rounded-[12px] bg-[var(--bg-surface-muted)] md:h-[210px]" />
-            </article>
-        );
-    }
-
+    const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
     const shopId = String(shop.id);
     const shopName = shop.title;
     const displayDate = formatBookingDate(bookingDate);
@@ -202,21 +164,12 @@ export const BookingCard = ({
                 data-booking-status={status}
             >
                 <div className="relative h-[180px] w-full overflow-hidden rounded-[12px] md:h-[210px]">
-                    {isRemoteShopImage(shop.img) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={shop.img}
-                            alt={shop.title}
-                            className="h-full w-full object-cover"
-                        />
-                    ) : (
-                        <Image
-                            src={shop.img}
-                            alt={shop.title}
-                            fill
-                            className="object-cover"
-                        />
-                    )}
+                    <Image
+                        src={shop.img}
+                        alt={shop.title}
+                        fill
+                        className="object-cover"
+                    />
                     <span className="absolute left-[10px] top-[10px] rounded-full bg-[#e7ebfd] px-[12px] py-[6px] text-[13px] font-semibold text-[#4a58fe]">
                         {shop.type}
                     </span>

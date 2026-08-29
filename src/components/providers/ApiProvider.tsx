@@ -19,6 +19,9 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   const fetchProfile = useProfileStore((state) => state.fetchProfile);
   const resetProfile = useProfileStore((state) => state.resetProfile);
   const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
+  const fetchApplicationStatus = useBusinessApplicationStore(
+    (state) => state.fetchApplicationStatus,
+  );
   const resetApplication = useBusinessApplicationStore((state) => state.resetApplication);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     void fetchMyBookings();
     void fetchProfile();
     void fetchFavorites();
+    void fetchApplicationStatus();
   }, [
     token,
     fetchBusinessesFromApi,
@@ -57,6 +61,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     fetchProfile,
     resetProfile,
     fetchFavorites,
+    fetchApplicationStatus,
     resetApplication,
   ]);
 

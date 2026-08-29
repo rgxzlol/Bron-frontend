@@ -161,7 +161,7 @@ export default function ShopDetailPanel({
         ×
       </button>
 
-      {token && businessId ? (
+      {token ? (
         <button
           type="button"
           className={`${s.sheetFavorite} ${isFavorite(businessId) ? s.sheetFavoriteActive : ""}`}

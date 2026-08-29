@@ -13,7 +13,23 @@ import { useEffect, useState } from "react";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetchCategoriesWithCounts()
+      .then((nextCategories) => {
+        if (!cancelled) {
+          setCategories(nextCategories);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const renderCategoryCard = (category: Category) => (
     <Link

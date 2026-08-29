@@ -40,33 +40,6 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
   );
 }
 
-function buildBookHref(shopId?: number) {
-  return `${routes.book}?shopId=${shopId ?? 1}`;
-}
-
-function PopularCardImage({ place }: { place: PopularPlace }) {
-  if (isRemoteShopImage(place.img)) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        className="h-[169px] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        src={place.img}
-        alt={place.title}
-      />
-    );
-  }
-
-  return (
-    <Image
-      className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      src={place.img}
-      alt={place.title}
-      width={274}
-      height={169}
-    />
-  );
-}
-
 export default function Popular() {
   const { t } = useTranslation();
   const [places, setPlaces] = useState<PopularPlace[]>(fallbackPopularPlaces);
@@ -104,13 +77,7 @@ export default function Popular() {
             key={place.id}
             className="group flex w-full min-w-[240px] max-w-[274px] flex-1 flex-col overflow-hidden rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg"
           >
-            <Image
-              className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              src={place.img}
-              alt={place.title}
-              width={274}
-              height={169}
-            />
+            <PopularCardImage place={place} />
 
             <div className="flex flex-col gap-[20px] px-[16px] pb-[13px] pt-[4px] items-center">
               <div className="flex flex-col gap-[4px]">
@@ -163,14 +130,14 @@ export default function Popular() {
           </article>
         ))}
 
-        {isLoading ? (
-          Array.from({ length: Math.max(0, 3 - places.length) }).map((_, index) => (
-            <div
-              key={`popular-skeleton-${index}`}
-              className="min-h-[320px] w-full min-w-[240px] max-w-[274px] flex-1 animate-pulse rounded-[18px] bg-white"
-            />
-          ))
-        ) : null}
+        {isLoading
+          ? Array.from({ length: Math.max(0, 3 - places.length) }).map((_, index) => (
+              <div
+                key={`popular-skeleton-${index}`}
+                className="min-h-[320px] w-full min-w-[240px] max-w-[274px] flex-1 animate-pulse rounded-[18px] bg-white"
+              />
+            ))
+          : null}
 
         <Link
           href={routes.map}

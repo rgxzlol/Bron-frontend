@@ -164,6 +164,44 @@ export default function BookingPage({
     };
   }, [shop.apiBusinessId, shop.apiBranchId]);
 
+  useEffect(() => {
+    if (!shop.apiBusinessId || !selectedBranchId) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
+    if (!serviceId || !/^\d+$/.test(serviceId)) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchAvailableSlots({
+      businessId: shop.apiBusinessId,
+      serviceId: Number(serviceId),
+      branchId: selectedBranchId,
+      date: formatBookingDate(selectedDate),
+      staffId: selectedStaffId,
+    }).then((slots) => {
+      if (!cancelled) {
+        setApiAvailableSlots(slots);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shop.apiBusinessId,
+    shop.services,
+    selectedServiceIds,
+    selectedBranchId,
+    selectedDate,
+    selectedStaffId,
+  ]);
+
   const resolvedHours = useMemo(
     () => getShopHoursForDate(apiContext, shop.hours, selectedDate),
     [apiContext, shop.hours, selectedDate],

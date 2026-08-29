@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets } from "@/lib/assets";
@@ -53,6 +53,13 @@ import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
 import { useToastStore } from "@/store/toast.store";
 import s from "./bookingPage.module.css";
+import {
+  fetchAvailableSlots,
+  fetchBookingApiContext,
+  getShopHoursForDate,
+  isBookingDateUnavailable,
+  type BookingApiContext,
+} from "@/lib/booking/apiContext";
 
 type BookingPageProps = {
   shop: ShopsType;
@@ -128,6 +135,10 @@ export default function BookingPage({
   const profileFullName = useProfileStore((state) => state.fullName);
   const profilePhone = useProfileStore((state) => state.phone);
   const profileEmail = useProfileStore((state) => state.email);
+  const [apiContext, setApiContext] = useState<BookingApiContext | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [apiAvailableSlots, setApiAvailableSlots] = useState<string[] | null>(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -152,6 +163,44 @@ export default function BookingPage({
       cancelled = true;
     };
   }, [shop.apiBusinessId, shop.apiBranchId]);
+
+  useEffect(() => {
+    if (!shop.apiBusinessId || !selectedBranchId) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
+    if (!serviceId || !/^\d+$/.test(serviceId)) {
+      setApiAvailableSlots(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchAvailableSlots({
+      businessId: shop.apiBusinessId,
+      serviceId: Number(serviceId),
+      branchId: selectedBranchId,
+      date: formatBookingDate(selectedDate),
+      staffId: selectedStaffId,
+    }).then((slots) => {
+      if (!cancelled) {
+        setApiAvailableSlots(slots);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shop.apiBusinessId,
+    shop.services,
+    selectedServiceIds,
+    selectedBranchId,
+    selectedDate,
+    selectedStaffId,
+  ]);
 
   const resolvedHours = useMemo(
     () => getShopHoursForDate(apiContext, shop.hours, selectedDate),

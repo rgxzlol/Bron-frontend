@@ -13,6 +13,9 @@ import {
   isRemoteShopImage,
 } from "@/lib/business/shopImages";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { fetchBusinessReviewStats } from "@/lib/reviews/businessReviews";
+import { useAuthStore } from "@/store/auth.store";
+import { useFavoriteStore } from "@/store/favorite.store";
 import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
@@ -48,16 +51,28 @@ export default function ShopDetailPanel({
   onBook,
 }: ShopDetailPanelProps) {
   const { t } = useTranslation();
+  const token = useAuthStore((state) => state.token);
+  const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
+  const isFavorite = useFavoriteStore((state) => state.isFavorite);
+  const toggleFavorite = useFavoriteStore((state) => state.toggleFavorite);
   const shopReviewStats = useReviewStore((state) => state.shopReviewStats);
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
   const [expanded, setExpanded] = useState(true);
+  const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(null);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
+  const businessId = shop.apiBusinessId;
+
+  async function handleToggleFavorite() {
+    if (!businessId) return;
+    await toggleFavorite(businessId);
+  }
 
   useEffect(() => {
     setImageIndex(0);
     setExpanded(false);
+    setApiRating(null);
   }, [shop.id]);
 
   useEffect(() => {
@@ -102,8 +117,8 @@ export default function ShopDetailPanel({
 
   const { rating: displayRating, reviews: displayReviews } = getEffectiveShopRating(
     shop.id,
-    shop.rating,
-    shop.reviews,
+    apiRating?.rating ?? shop.rating,
+    apiRating?.reviews ?? shop.reviews,
     shopReviewStats,
   );
 
@@ -146,7 +161,7 @@ export default function ShopDetailPanel({
         ×
       </button>
 
-      {token ? (
+      {token && businessId ? (
         <button
           type="button"
           className={`${s.sheetFavorite} ${isFavorite(businessId) ? s.sheetFavoriteActive : ""}`}

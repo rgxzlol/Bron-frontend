@@ -1,4 +1,5 @@
 import { TIME_OPTIONS } from "@/lib/business/schedule";
+import type { WorkingHours } from "@/lib/api/types";
 
 export type TimeGroup = {
   label: string;
@@ -76,6 +77,17 @@ export function getAvailableSlotsForDate(
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   return allSlots.filter((slot) => timeToMinutes(slot) >= nowMinutes);
+}
+
+export function workingHoursToRangeString(
+  hours: WorkingHours[],
+  date: Date,
+): string | null {
+  const dayOfWeek = (date.getDay() + 6) % 7;
+  const schedule = hours.find((item) => item.day_of_week === dayOfWeek);
+  if (!schedule || schedule.is_closed) return null;
+
+  return `${schedule.open_time.slice(0, 5)} - ${schedule.close_time.slice(0, 5)}`;
 }
 
 export function getDefaultBookingTime(

@@ -9,6 +9,11 @@ export const blockedDatesApi = {
   getByBusiness: (businessId: number) =>
     apiRequest<BlockedDate[]>(`/blocked-dates/business/${businessId}`),
 
+  check: (businessId: number, date: string) =>
+    apiRequest<{ is_blocked: boolean }>(
+      `/blocked-dates/check?business_id=${businessId}&date=${encodeURIComponent(date)}`,
+    ),
+
   get: (blockedDateId: number) =>
     apiRequest<BlockedDate>(`/blocked-dates/${blockedDateId}`),
 

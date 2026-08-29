@@ -60,6 +60,21 @@ export default function ShopDetailPanel({
     setExpanded(false);
   }, [shop.id]);
 
+  useEffect(() => {
+    if (!token) return;
+    void fetchFavorites();
+  }, [token, fetchFavorites]);
+
+  useEffect(() => {
+    if (!businessId) return;
+
+    void fetchBusinessReviewStats(businessId).then(({ stats }) => {
+      if (stats.reviews > 0) {
+        setApiRating(stats);
+      }
+    });
+  }, [businessId]);
+
   function showPrevImage() {
     setImageIndex((index) => (index > 0 ? index - 1 : gallery.length - 1));
   }
@@ -130,6 +145,18 @@ export default function ShopDetailPanel({
       >
         ×
       </button>
+
+      {token ? (
+        <button
+          type="button"
+          className={`${s.sheetFavorite} ${isFavorite(businessId) ? s.sheetFavoriteActive : ""}`}
+          onClick={() => void handleToggleFavorite()}
+          aria-label={isFavorite(businessId) ? t("favorites.remove") : t("favorites.add")}
+          data-testid="map-vendor-favorite-button"
+        >
+          {isFavorite(businessId) ? "♥" : "♡"}
+        </button>
+      ) : null}
 
       <div className={s.sheetScroll}>
         <div className={s.sheetCard}>

@@ -31,12 +31,7 @@ export type AuthScreen =
 /* ------------------------------ shared UI ------------------------------ */
 
 function AuthShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen justify-center bg-[var(--bg-page)] sm:items-center sm:p-6">
-      <div className="flex w-full max-w-[440px] flex-col bg-[var(--bg-surface)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
-        {children}
       </div>
-    </div>
   );
 }
 
@@ -392,6 +387,10 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [tgName, setTgName] = useState("");
   const [tgUsername, setTgUsername] = useState("");
+  const [googlePhone, setGooglePhone] = useState("");
+  const [googlePhoneError, setGooglePhoneError] = useState<string | undefined>();
+  const [pendingGoogleProfile, setPendingGoogleProfile] = useState<GoogleUserProfile | null>(null);
+  const [googleAuthMode, setGoogleAuthMode] = useState<"register" | "update">("register");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [registerFieldErrors, setRegisterFieldErrors] = useState<RegisterFieldErrors>({});

@@ -11,6 +11,7 @@ interface DatePickerProps {
   onSelectedDateChange: (date: Date) => void;
   today?: Date;
   minDate?: Date;
+  isDateDisabled?: (date: Date) => boolean;
 }
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -56,6 +57,7 @@ export default function DatePicker({
   onSelectedDateChange,
   today = new Date(),
   minDate,
+  isDateDisabled,
 }: DatePickerProps) {
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
   const minSelectableDate = startOfDay(minDate ?? today);
@@ -100,7 +102,9 @@ export default function DatePicker({
           const selected = isSameDay(date, selectedDate);
           const isToday = isSameDay(date, today);
           const isDisabled =
-            !inMonth || isDateBeforeDay(date, minSelectableDate);
+            !inMonth ||
+            isDateBeforeDay(date, minSelectableDate) ||
+            (isDateDisabled?.(date) ?? false);
 
           return (
             <button

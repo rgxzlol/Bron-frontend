@@ -497,6 +497,10 @@ export const extraEn: MessageTree = {
     tagService: "Service",
     tagOther: "Other",
   },
+  favorites: {
+    add: "Add to favorites",
+    remove: "Remove from favorites",
+  },
   datePicker: {
     title: "Pick a day",
     prevMonth: "Previous month",

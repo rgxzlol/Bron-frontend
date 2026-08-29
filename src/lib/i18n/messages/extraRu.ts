@@ -502,6 +502,10 @@ export const extraRu: MessageTree = {
     tagService: "Услуга",
     tagOther: "Другое",
   },
+  favorites: {
+    add: "Добавить в избранное",
+    remove: "Убрать из избранного",
+  },
   datePicker: {
     title: "Выбрать день",
     prevMonth: "Предыдущий месяц",

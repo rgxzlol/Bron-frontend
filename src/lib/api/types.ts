@@ -87,6 +87,11 @@ export type Business = {
   phone: string;
   latitude: number | null;
   longitude: number | null;
+  tin?: string | null;
+  website?: string | null;
+  social_links?: Record<string, unknown>;
+  comments?: string | null;
+  status?: string | null;
   created_at: string;
 };
 
@@ -98,6 +103,10 @@ export type BusinessCreate = {
   phone: string;
   latitude?: number | null;
   longitude?: number | null;
+  tin?: string | null;
+  website?: string | null;
+  social_links?: Record<string, unknown>;
+  comments?: string | null;
 };
 
 export type BusinessUpdate = Partial<BusinessCreate>;

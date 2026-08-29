@@ -9,6 +9,9 @@ export const workingHoursApi = {
   getByBusiness: (businessId: number) =>
     apiRequest<WorkingHours[]>(`/working-hours/business/${businessId}`),
 
+  getToday: (businessId: number) =>
+    apiRequest<WorkingHours | null>(`/working-hours/today/${businessId}`),
+
   get: (workingHoursId: number) =>
     apiRequest<WorkingHours>(`/working-hours/${workingHoursId}`),
 

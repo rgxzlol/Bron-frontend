@@ -499,6 +499,10 @@ export const extraUz: MessageTree = {
     tagService: "Xizmat",
     tagOther: "Boshqa",
   },
+  favorites: {
+    add: "Sevimlilarga qo'shish",
+    remove: "Sevimlilardan olib tashlash",
+  },
   datePicker: {
     title: "Kun tanlash",
     prevMonth: "Oldingi oy",

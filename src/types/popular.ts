@@ -8,5 +8,5 @@ export type PopularPlace = {
   time: number;
   reviews: number;
   desc: string;
-  img: StaticImageData;
+  img: StaticImageData | string;
 };

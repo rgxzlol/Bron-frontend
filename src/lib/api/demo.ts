@@ -107,6 +107,22 @@ const demoUser = {
   notification_settings: demoNotificationSettings,
 };
 
+let demoOwnedBusinesses: Array<{
+  id: number;
+  owner_id: number;
+  owner_username: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  category: string;
+  address: string;
+  phone: string;
+  latitude: number | null;
+  longitude: number | null;
+  status: string;
+  created_at: string;
+}> = [];
+
 /**
  * Возвращает демо-ответ для известного эндпоинта или undefined,
  * если эндпоинт не поддерживается (тогда ошибка пробрасывается дальше).
@@ -206,6 +222,21 @@ export function getDemoResponse(
     return booking;
   }
 
+  const cancelMatch = cleanPath.match(/^\/bookings\/(\d+)\/cancel$/);
+  if (m === "PATCH" && cancelMatch) {
+    const id = Number(cancelMatch[1]);
+    const index = demoBookings.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      demoBookings[index].status = "cancelled";
+      return demoBookings[index];
+    }
+    return { ok: true };
+  }
+
+  if (m === "GET" && path.includes("/bookings/available-slots")) {
+    return ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"];
+  }
+
   const bookingMatch = cleanPath.match(/^\/bookings\/(\d+)$/);
   if (bookingMatch) {
     const id = Number(bookingMatch[1]);
@@ -235,6 +266,84 @@ export function getDemoResponse(
   }
 
   if (m === "GET" && (cleanPath === "/businesses" || cleanPath === "/businesses/my")) {
+    return demoOwnedBusinesses.map((business) => ({
+      id: business.id,
+      name: business.name,
+      category: business.category,
+      address: business.address,
+      phone: business.phone,
+      logo: business.logo,
+      owner_id: business.owner_id,
+    }));
+  }
+
+  const businessDetailMatch = cleanPath.match(/^\/businesses\/(\d+)$/);
+  if (m === "GET" && businessDetailMatch) {
+    const businessId = Number(businessDetailMatch[1]);
+    const business = demoOwnedBusinesses.find((item) => item.id === businessId);
+    return business ?? undefined;
+  }
+
+  if (m === "POST" && cleanPath === "/businesses/create") {
+    const payload = (body ?? {}) as {
+      name?: string;
+      category?: string;
+      address?: string;
+      phone?: string;
+    };
+
+    const business = {
+      id: demoOwnedBusinesses.length + 1,
+      owner_id: demoUser.id,
+      owner_username: demoUser.username,
+      name: String(payload.name ?? ""),
+      description: null,
+      logo: null,
+      category: String(payload.category ?? ""),
+      address: String(payload.address ?? ""),
+      phone: String(payload.phone ?? ""),
+      latitude: null,
+      longitude: null,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+
+    demoOwnedBusinesses = [business, ...demoOwnedBusinesses];
+    return business;
+  }
+
+  if (m === "GET" && (cleanPath === "/branches" || cleanPath === "/staff")) {
+    return [];
+  }
+
+  const businessBranchesMatch = cleanPath.match(
+    /^\/(?:branches\/business|staff\/business|working-hours\/business|blocked-dates\/business)\/(\d+)$/,
+  );
+  if (m === "GET" && businessBranchesMatch) {
+    return [];
+  }
+
+  const workingHoursTodayMatch = cleanPath.match(/^\/working-hours\/today\/(\d+)$/);
+  if (m === "GET" && workingHoursTodayMatch) {
+    return null;
+  }
+
+  if (m === "GET" && cleanPath === "/blocked-dates/check") {
+    return { is_blocked: false };
+  }
+
+  const staffBookingsMatch = cleanPath.match(/^\/staff\/(\d+)\/bookings$/);
+  if (m === "GET" && staffBookingsMatch) {
+    return [];
+  }
+
+  const staffScheduleMatch = cleanPath.match(/^\/staff\/(\d+)\/schedule$/);
+  if (m === "GET" && staffScheduleMatch) {
+    return [];
+  }
+
+  const staffBookingsApiMatch = cleanPath.match(/^\/bookings\/staff\/(\d+)$/);
+  if (m === "GET" && staffBookingsApiMatch) {
     return [];
   }
 

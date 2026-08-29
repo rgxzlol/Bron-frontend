@@ -7,6 +7,8 @@ import {
   servicesApi,
   workingHoursApi,
 } from "@/lib/api";
+import { fetchBusinessGalleryUrls, syncBusinessMediaFromDraft } from "@/lib/api/mediaUpload";
+import { resolveMediaUrl } from "@/lib/api/media";
 import { ApiError } from "@/lib/api/client";
 import {
   apiBookingToBusinessBookingRequest,
@@ -138,12 +140,14 @@ async function mapProductsFromApiList(
 }
 
 async function loadBusinessDetails(businessId: number, withOwnerData = false) {
-  const [business, services, products, branches, schedule] = await Promise.all([
+  const [business, services, products, branches, schedule, galleryUrls] =
+    await Promise.all([
     businessesApi.get(businessId),
     servicesApi.listByBusiness(businessId).catch(() => []),
     productsApi.listByBusiness(businessId).catch(() => []),
     branchesApi.listByBusiness(businessId).catch(() => []),
     workingHoursApi.getByBusiness(businessId).catch(() => []),
+    fetchBusinessGalleryUrls(businessId).catch(() => []),
   ]);
 
   const [mappedServices, mappedProducts] = await Promise.all([
@@ -177,6 +181,7 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
     bookingRequests,
     branch: branchDetail,
     coords,
+    galleryUrls: galleryUrls.map((url) => resolveMediaUrl(url) ?? url),
   });
 }
 
@@ -311,6 +316,7 @@ export async function saveBusinessDraftToApi(
     );
     await syncWorkingHours(businessId, draft);
     await ensureDefaultBranch(businessId, draft, coords);
+    await syncBusinessMediaFromDraft(businessId, draft);
     return loadBusinessDetails(businessId);
   }
 
@@ -334,6 +340,7 @@ export async function saveBusinessDraftToApi(
     draftToBusinessUpdate(draft, coords),
     token,
   );
+  await syncBusinessMediaFromDraft(businessId, draft);
   return loadBusinessDetails(businessId);
 }
 

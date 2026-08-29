@@ -76,7 +76,11 @@ export const useBookingStore = create<BookingStore>((set) => ({
   },
 
   cancelBooking: async (bookingId) => {
-    await bookingsApi.remove(bookingId);
+    try {
+      await bookingsApi.cancel(bookingId);
+    } catch {
+      await bookingsApi.remove(bookingId);
+    }
     const list = await bookingsApi.my();
     set({ bookings: list });
   },

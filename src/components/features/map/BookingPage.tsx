@@ -22,6 +22,7 @@ import {
   buildTimeGroupsFromHours,
   getAvailableSlotsForDate,
   getDefaultBookingTime,
+  groupTimeSlots,
   startOfDay,
 } from "@/lib/booking/timeSlots";
 import {
@@ -130,9 +131,43 @@ export default function BookingPage({
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
-  const timeGroups = useMemo(
-    () => buildTimeGroupsFromHours(shop.hours),
-    [shop.hours],
+  useEffect(() => {
+    if (!shop.apiBusinessId) {
+      setApiContext(null);
+      setSelectedBranchId(null);
+      setSelectedStaffId(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchBookingApiContext(shop.apiBusinessId).then((context) => {
+      if (cancelled) return;
+      setApiContext(context);
+      setSelectedBranchId(shop.apiBranchId ?? context.branches[0]?.id ?? null);
+      setSelectedStaffId(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shop.apiBusinessId, shop.apiBranchId]);
+
+  const resolvedHours = useMemo(
+    () => getShopHoursForDate(apiContext, shop.hours, selectedDate),
+    [apiContext, shop.hours, selectedDate],
+  );
+
+  const timeGroups = useMemo(() => {
+    if (apiAvailableSlots?.length) {
+      return groupTimeSlots(apiAvailableSlots);
+    }
+    return buildTimeGroupsFromHours(resolvedHours);
+  }, [apiAvailableSlots, resolvedHours]);
+
+  const isDateDisabled = useCallback(
+    (date: Date) => isBookingDateUnavailable(apiContext, date),
+    [apiContext],
   );
 
   const allTimeSlots = useMemo(
@@ -380,7 +415,7 @@ export default function BookingPage({
     let slotKey: string | null = null;
 
     try {
-      let branchId = shop.apiBranchId;
+      let branchId = selectedBranchId ?? shop.apiBranchId;
       if (!branchId) {
         const branches = await branchesApi.listByBusiness(shop.apiBusinessId);
         branchId = branches[0]?.id;
@@ -528,7 +563,7 @@ export default function BookingPage({
           <div className={s.stats}>
             <div className={s.statBox}>
               <span className={s.statLabel}>Открыто</span>
-              <span className={s.statValue}>{shop.hours}</span>
+              <span className={s.statValue}>{resolvedHours}</span>
             </div>
             <div className={s.statBox}>
               <span className={s.statLabel}>{priceLabel}</span>
@@ -563,6 +598,7 @@ export default function BookingPage({
               onSelectedDateChange={setSelectedDate}
               today={today}
               minDate={today}
+              isDateDisabled={shop.apiBusinessId ? isDateDisabled : undefined}
             />
             <TimePicker
               selectedTime={selectedTime}
@@ -620,6 +656,7 @@ export default function BookingPage({
                   }}
                   today={today}
                   minDate={today}
+                  isDateDisabled={shop.apiBusinessId ? isDateDisabled : undefined}
                 />
               </div>
             )}

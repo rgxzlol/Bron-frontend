@@ -42,6 +42,40 @@ export const bookingsApi = {
       token,
     }),
 
+  listByStaff: (staffId: number, token?: string) =>
+    apiRequest<Booking[]>(`/bookings/staff/${staffId}`, {
+      auth: true,
+      token,
+    }),
+
+  availableSlots: (params: {
+    business_id: number;
+    service_id: number;
+    branch_id: number;
+    date: string;
+    staff_id?: number;
+  }) => {
+    const query = new URLSearchParams({
+      business_id: String(params.business_id),
+      service_id: String(params.service_id),
+      branch_id: String(params.branch_id),
+      date: params.date,
+    });
+
+    if (params.staff_id != null) {
+      query.set("staff_id", String(params.staff_id));
+    }
+
+    return apiRequest<string[]>(`/bookings/available-slots?${query.toString()}`);
+  },
+
+  cancel: (bookingId: number, token?: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/cancel`, {
+      method: "PATCH",
+      auth: true,
+      token,
+    }),
+
   approve: (bookingId: number, token?: string) =>
     apiRequest<Booking>(`/bookings/${bookingId}/approve`, {
       method: "PATCH",

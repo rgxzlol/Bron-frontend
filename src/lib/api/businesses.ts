@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiUploadRequest } from "./client";
 import type {
   Business,
   BusinessCreate,
@@ -55,6 +55,23 @@ export const businessesApi = {
 
   remove: (businessId: number, token?: string) =>
     apiRequest<unknown>(`/businesses/${businessId}`, {
+      method: "DELETE",
+      auth: true,
+      token,
+    }),
+
+  uploadLogo: (businessId: number, image: File | Blob, token?: string) => {
+    const formData = new FormData();
+    formData.append("image", image);
+    return apiUploadRequest<import("./types").BusinessLogoResponse>(
+      `/businesses/${businessId}/logo`,
+      formData,
+      { auth: true, token },
+    );
+  },
+
+  deleteLogo: (businessId: number, token?: string) =>
+    apiRequest<unknown>(`/businesses/${businessId}/logo`, {
       method: "DELETE",
       auth: true,
       token,

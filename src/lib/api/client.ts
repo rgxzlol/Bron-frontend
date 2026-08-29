@@ -20,6 +20,12 @@ type RequestOptions = {
   token?: string | null;
 };
 
+type UploadOptions = {
+  method?: "POST" | "PUT" | "PATCH";
+  auth?: boolean;
+  token?: string | null;
+};
+
 function buildUrl(path: string) {
   const base = getApiBaseUrl().replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -83,31 +89,37 @@ function isBackendUnavailable(error: unknown): error is ApiError {
   return typeof error.data === "string" && error.data.trimStart().startsWith("<");
 }
 
-export async function apiRequest<T>(
+async function handleDemoFallback<T>(
   path: string,
-  { method = "GET", body, auth = false, token }: RequestOptions = {},
+  method: string,
+  body: unknown,
+  error: unknown,
+): Promise<T | null> {
+  if (!isBackendUnavailable(error)) {
+    throw error;
+  }
+
+  const { getDemoResponse } = await import("./demo");
+  const demo = getDemoResponse(path, method, body);
+  if (demo !== undefined) {
+    console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
+    return demo as T;
+  }
+
+  throw error;
+}
+
+async function executeRequest<T>(
+  path: string,
+  init: RequestInit,
+  bodyForDemo?: unknown,
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-  };
-
-  if (body !== undefined) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const authToken = token ?? (auth ? getAuthToken() : null);
-  if (auth && authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
-
   try {
     let response: Response;
 
     try {
       response = await fetch(buildUrl(path), {
-        method,
-        headers,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        ...init,
         cache: "no-store",
       });
     } catch {
@@ -130,14 +142,61 @@ export async function apiRequest<T>(
 
     return data as T;
   } catch (error) {
-    if (isBackendUnavailable(error)) {
-      const { getDemoResponse } = await import("./demo");
-      const demo = getDemoResponse(path, method, body);
-      if (demo !== undefined) {
-        console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
-        return demo as T;
-      }
-    }
+    const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
+    if (demo !== null) return demo;
     throw error;
   }
+}
+
+export async function apiRequest<T>(
+  path: string,
+  { method = "GET", body, auth = false, token }: RequestOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const authToken = token ?? (auth ? getAuthToken() : null);
+  if (auth && authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  return executeRequest<T>(
+    path,
+    {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    },
+    body,
+  );
+}
+
+export async function apiUploadRequest<T>(
+  path: string,
+  formData: FormData,
+  { method = "POST", auth = false, token }: UploadOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  const authToken = token ?? (auth ? getAuthToken() : null);
+  if (auth && authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  return executeRequest<T>(
+    path,
+    {
+      method,
+      headers,
+      body: formData,
+    },
+    Object.fromEntries(formData.entries()),
+  );
 }

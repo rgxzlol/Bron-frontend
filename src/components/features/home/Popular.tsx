@@ -2,12 +2,42 @@
 
 import { popularPlaces } from "@/data/popular";
 import { assets } from "@/lib/assets";
+import { isRemoteShopImage } from "@/lib/business/shopImages";
+import { fetchPopularPlaces } from "@/lib/home/discovery";
 import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+function buildBookHref(shopId?: number) {
+  return `${routes.book}?shopId=${shopId ?? 1}`;
+}
+
+function PopularCardImage({ place }: { place: PopularPlace }) {
+  if (isRemoteShopImage(place.img)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        className="h-[169px] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        src={place.img}
+        alt={place.title}
+      />
+    );
+  }
+
+  return (
+    <Image
+      className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      src={place.img}
+      alt={place.title}
+      width={274}
+      height={169}
+    />
+  );
+}
 
 function buildBookHref(shopId?: number) {
   return `${routes.book}?shopId=${shopId ?? 1}`;
@@ -36,7 +66,7 @@ export default function Popular() {
               height={169}
             />
 
-            <div className="flex flex-col gap-[9px] px-[16px] pb-[13px] pt-[4px] items-center">
+            <div className="flex flex-col gap-[20px] px-[16px] pb-[13px] pt-[4px] items-center">
               <div className="flex flex-col gap-[4px]">
                 <span className="line-clamp-2 text-[20px] font-semibold leading-[28px]">
                   {place.title}
@@ -86,6 +116,15 @@ export default function Popular() {
             </div>
           </article>
         ))}
+
+        {isLoading ? (
+          Array.from({ length: Math.max(0, 3 - places.length) }).map((_, index) => (
+            <div
+              key={`popular-skeleton-${index}`}
+              className="min-h-[320px] w-full min-w-[240px] max-w-[274px] flex-1 animate-pulse rounded-[18px] bg-white"
+            />
+          ))
+        ) : null}
 
         <Link
           href={routes.map}

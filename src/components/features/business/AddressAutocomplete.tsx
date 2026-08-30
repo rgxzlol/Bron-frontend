@@ -13,6 +13,7 @@ type Props = {
   hasError?: boolean;
   errorMessage?: string;
   inputTestId?: string;
+  disabled?: boolean;
   onChange: (payload: {
     address: string;
     lat: number | null;
@@ -30,6 +31,7 @@ export default function AddressAutocomplete({
   hasError = false,
   errorMessage,
   inputTestId,
+  disabled = false,
   onChange,
   placeholder,
   inputClassName = "",
@@ -94,6 +96,7 @@ export default function AddressAutocomplete({
         value={value}
         placeholder={placeholder}
         data-testid={inputTestId}
+        disabled={disabled}
         aria-invalid={hasError || undefined}
         aria-describedby={errorMessage ? "business-address-error" : undefined}
         onChange={(event) =>
@@ -113,7 +116,7 @@ export default function AddressAutocomplete({
         <span
           id="business-address-error"
           role="alert"
-          className="text-[12px] font-semibold text-[#e02424]"
+          className="px-4 text-[12px] font-semibold leading-snug text-[#e02424] break-words"
           data-testid="business-field-error-address"
         >
           {errorMessage}
@@ -125,7 +128,7 @@ export default function AddressAutocomplete({
         <span className={s.hint}>Выберите адрес из списка, чтобы поставить метку на карте</span>
       )}
       {!isLoading && coordsSelected && (
-        <span className={s.hintOk}>Адрес выбран — бизнес появится на карте</span>
+        <span className={s.hintOk}>Адрес принят</span>
       )}
 
       {isOpen && suggestions.length > 0 && (

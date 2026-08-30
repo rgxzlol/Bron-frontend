@@ -14,19 +14,19 @@ export default function BusinessEmptyPromo({ onAddBusiness }: Props) {
 
   return (
     <div
-      className="flex flex-col gap-6 rounded-[34px] bg-white px-5 py-6 md:flex-row md:items-center md:justify-between md:px-[23px] md:py-[26px]"
+      className="flex flex-col items-center gap-6 rounded-[34px] bg-white px-5 py-6 md:flex-row md:items-center md:justify-between md:px-[23px] md:py-[26px]"
       data-testid="business-empty-state"
     >
-      <div className="flex flex-col gap-[8px]">
+      <div className="flex w-full flex-col items-center gap-[8px] text-center">
         <h3
-          className="max-w-[450px] text-[26px] font-semibold md:text-[36px]"
+          className="mx-auto max-w-[450px] text-[26px] font-semibold md:text-[36px]"
           data-testid="business-empty-title"
         >
           {t("business.emptyTitle")}
         </h3>
 
         <p
-          className="text-[18px] font-semibold opacity-75 md:text-[20px]"
+          className="max-w-[450px] text-[18px] font-semibold opacity-75 md:text-[20px]"
           data-testid="business-empty-subtitle"
         >
           {t("business.emptySubtitle")}
@@ -34,7 +34,7 @@ export default function BusinessEmptyPromo({ onAddBusiness }: Props) {
 
         <Button
           onClick={onAddBusiness}
-          className="mt-[25px] py-[15px] text-[20px] !px-[30px]"
+          className="mx-auto mt-[25px] py-[15px] text-[20px] !px-[30px]"
           text={t("business.addBusiness")}
           data-testid="business-add-button"
         />

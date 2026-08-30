@@ -1,22 +1,13 @@
 "use client";
 
-import { assets } from "@/lib/assets";
-import Image from "next/image";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import NotificationDropdown from "@/components/layout/Header/NotificationDropdown";
 import SearchBar from "./SearchBar";
 import { Logo } from "@/components/shared/Logo";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
-import { useAuthStore } from "@/store/auth.store";
-import { useProfileStore } from "@/store/profile.store";
 import ProfileButton from "@/components/features/profile/ProfileButton";
 
 export default function Header() {
-  const username = useAuthStore((state) => state.username);
-  const fullName = useProfileStore((state) => state.fullName);
-  const avatarUrl = useProfileStore((state) => state.avatarUrl);
-  const displayName = fullName || username;
-
   return (
     <header className="my-6 flex flex-wrap items-center gap-3 lg:my-[45px] lg:flex-nowrap lg:gap-4">
       <Logo className="text-[26px] lg:hidden" />
@@ -27,11 +18,7 @@ export default function Header() {
         </div>
         <ThemeSwitcher />
         <NotificationDropdown />
-        <ProfileButton
-          variant="header"
-          displayName={displayName}
-          avatarUrl={avatarUrl}
-        />
+        <ProfileButton variant="header" />
       </div>
 
       <div className="w-full lg:order-1 lg:w-auto lg:flex-1">

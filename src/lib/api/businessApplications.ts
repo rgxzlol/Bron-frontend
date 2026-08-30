@@ -7,9 +7,16 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
     id: business.id,
     user_id: business.owner_id,
     company_name: business.name,
+    tin: business.tin,
     sphere: business.category,
     location: business.address,
     phone: business.phone,
+    description: business.description,
+    latitude: business.latitude,
+    longitude: business.longitude,
+    website: business.website,
+    social_links: business.social_links,
+    comments: business.comments,
     status: business.status ?? "pending",
     created_at: business.created_at,
   };
@@ -50,9 +57,16 @@ export const businessApplicationsApi = {
     const business = await businessesApi.create(
       {
         name: body.company_name,
+        description: body.description.trim(),
         category: body.sphere,
         address: body.location,
         phone: body.phone,
+        latitude: body.latitude,
+        longitude: body.longitude,
+        tin: body.tin,
+        website: body.website,
+        social_links: body.social_links,
+        comments: body.comments,
       },
       token,
     );

@@ -161,7 +161,7 @@ function TimeSelect({
       <select
         aria-label={ariaLabel}
         data-testid={dataTestId}
-        className="appearance-none rounded-[8px] bg-[var(--bg-surface-muted)] py-[8px] pl-[10px] pr-[26px] text-[13px] font-semibold outline-none"
+        className="appearance-none rounded-[8px] bg-[var(--bg-surface-muted)] py-[7px] pl-[8px] pr-[24px] text-[12px] font-semibold outline-none sm:py-[8px] sm:pl-[10px] sm:pr-[26px] sm:text-[13px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -212,7 +212,7 @@ function ScheduleToggle({
       }`}
     >
       <span
-        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-transform ${
+        className={`absolute top-[3px] -ml-6 h-[22px] w-[22px] rounded-full bg-white shadow transition-transform ${
           isOpen ? "translate-x-[23px]" : "translate-x-[3px]"
         }`}
       />
@@ -742,32 +742,30 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
-              <div className="flex flex-col gap-[6px] rounded-[18px] bg-[var(--bg-surface)] p-[12px] shadow-[0_1px_6px_rgba(15,23,42,0.04)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div className="flex min-w-0 flex-col gap-[4px] rounded-[18px] bg-[var(--bg-surface)] p-[10px] shadow-[0_1px_6px_rgba(15,23,42,0.04)] sm:gap-[6px] sm:p-[12px]">
                 {draft.schedule.map((day, index) => {
                   const dayLabel = getDayLabel(day.key);
                   return (
                     <div
                       key={day.key}
-                      className="flex items-center gap-[8px] rounded-[12px] px-[6px] py-[10px]"
+                      className="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-[12px] px-[4px] py-[8px] sm:grid-cols-[48px_minmax(88px,1fr)_auto] sm:gap-x-4 sm:px-[6px] sm:py-[10px]"
                       data-testid={`business-schedule-day-${day.key}`}
-                      data-open={day.isOpen ? "true" : "false"}
-                    >
+                      data-open={day.isOpen ? "true" : "false"}>
                       <ScheduleToggle
                         isOpen={day.isOpen}
                         dayLabel={dayLabel}
                         dayKey={day.key}
                         onToggle={() =>
                           updateScheduleDay(index, { isOpen: !day.isOpen })
-                        }
-                      />
+                        }/>
 
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                      <span className="min-w-0 text-[13px] font-semibold leading-tight">
                         {dayLabel}
                       </span>
 
                       {day.isOpen ? (
-                        <span className="flex items-center gap-[6px]">
+                        <span className="col-span-2 flex items-center justify-end gap-[4px] pl-[60px] sm:col-span-1 sm:col-start-3 sm:pl-0 sm:gap-[6px]">
                           <TimeSelect
                             value={day.openTime}
                             ariaLabel={`${dayLabel}: ${t("businessModal.open")}`}
@@ -788,10 +786,14 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                         </span>
                       ) : (
                         <span
-                          className="rounded-[8px] bg-[#fde8e8] px-[14px] py-[8px] text-[13px] font-semibold text-[#e02424]"
-                          data-testid={`business-schedule-closed-${day.key}`}
+                          className="col-span-2 justify-self-end pl-[60px] sm:col-span-1 sm:col-start-3 sm:pl-0"
                         >
-                          {t("businessModal.closed")}
+                          <span
+                            className="inline-flex rounded-[8px] bg-[#fde8e8] px-[12px] py-[7px] text-[12px] font-semibold text-[#e02424] sm:px-[14px] sm:py-[8px] sm:text-[13px]"
+                            data-testid={`business-schedule-closed-${day.key}`}
+                          >
+                            {t("businessModal.closed")}
+                          </span>
                         </span>
                       )}
                     </div>

@@ -1,0 +1,27 @@
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 20px;
+  width: 100%;
+}
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 240px;
+  max-width: 274px;
+  flex: 1 1 240px;
+}
+
+@media (min-width: 1024px) {
+  .cards {
+    justify-content: center;
+  }
+
+  .card {
+    flex: 0 0 274px;
+    width: 274px;
+    max-width: 274px;
+  }
+}

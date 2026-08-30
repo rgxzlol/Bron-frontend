@@ -1,0 +1,34 @@
+.homePage {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .homePage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .homePage > * {
+    width: 100%;
+    max-width: 1140px;
+  }
+
+  .homeSection {
+    text-align: center;
+  }
+
+  .homeSection :global([class*="max-w-"]) {
+    margin-inline: auto;
+  }
+
+  .homeSection :global(.flex) {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .homeSection :global(.grid) {
+    width: 100%;
+  }
+}

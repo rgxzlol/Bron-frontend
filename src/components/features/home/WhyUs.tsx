@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import s from "./homePage.module.css";
 
 const steps = [
   {
@@ -34,7 +35,7 @@ export default function WhyUs() {
   const { t } = useTranslation();
 
   return (
-    <section className="my-[36px] mb-[100px]">
+    <section className={`${s.homeSection} my-[36px] mb-[100px]`}>
       <h2 className="mb-[16px] text-[24px] font-semibold">{t("home.howItWorks")}</h2>
 
       <div className="flex flex-col gap-[22px] sm:flex-row sm:flex-wrap xl:flex-nowrap">

@@ -10,6 +10,7 @@ import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import s from "./homePage.module.css";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -60,7 +61,7 @@ export default function Categories() {
   );
 
   return (
-    <section className="my-8.75 scroll-mt-24" id="categories">
+    <section className={`${s.homeSection} my-8.75 scroll-mt-24`} id="categories">
       <h2 className="mb-15 text-[24px] font-semibold">
         {t("home.categories")}
       </h2>

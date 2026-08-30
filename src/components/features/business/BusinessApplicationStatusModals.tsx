@@ -9,6 +9,7 @@ import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessApplicationStore } from "@/store/businessApplication.store";
+import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 
 type StatusModalProps = {
   isOpen: boolean;
@@ -95,7 +96,7 @@ export default function BusinessApplicationStatusModals() {
   const hydrated = useAuthHydrated();
   const { t } = useTranslation();
   const token = useAuthStore((state) => state.token);
-  const status = useBusinessApplicationStore((state) => state.status);
+  const status = useBusinessApplicationApiStore((state) => state.status);
   const approvalAcknowledged = useBusinessApplicationStore(
     (state) => state.approvalAcknowledged,
   );

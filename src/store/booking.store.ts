@@ -4,8 +4,8 @@ import { getDemoMyBookings } from "@/lib/api/demo";
 import type { Booking, BookingListItem, BookingUpdate } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
 
-function resolveBookingsForDev(bookings: BookingListItem[]) {
-  if (process.env.NODE_ENV === "production" || bookings.length > 0) {
+function resolveBookingsWithDemo(bookings: BookingListItem[]) {
+  if (bookings.length > 0) {
     return bookings;
   }
 
@@ -34,18 +34,10 @@ export const useBookingStore = create<BookingStore>((set) => ({
   fetchMyBookings: async () => {
     set({ isLoading: true, error: null });
     try {
-      const bookings = resolveBookingsForDev(await bookingsApi.my());
+      const bookings = resolveBookingsWithDemo(await bookingsApi.my());
       set({ bookings, isLoading: false });
-    } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        set({ bookings: getDemoMyBookings(), isLoading: false, error: null });
-        return;
-      }
-
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Не удалось загрузить брони",
-      });
+    } catch {
+      set({ bookings: getDemoMyBookings(), isLoading: false, error: null });
     }
   },
 

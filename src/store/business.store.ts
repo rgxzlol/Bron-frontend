@@ -192,8 +192,8 @@ function updateBusiness(
   );
 }
 
-function resolveBusinessesForDev(businesses: SavedBusiness[]) {
-  if (process.env.NODE_ENV === "production" || businesses.length > 0) {
+function resolveBusinessesWithDemo(businesses: SavedBusiness[]) {
+  if (businesses.length > 0) {
     return businesses;
   }
 
@@ -355,7 +355,7 @@ export const useBusinessStore = create<BusinessStore>()(
           );
           const apiIds = new Set(merged.map((item) => item.id));
           const localOnly = existing.filter((item) => !apiIds.has(item.id));
-          const businesses = resolveBusinessesForDev([...merged, ...localOnly]);
+          const businesses = resolveBusinessesWithDemo([...merged, ...localOnly]);
 
           set({
             businesses,
@@ -363,10 +363,8 @@ export const useBusinessStore = create<BusinessStore>()(
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
-          if (process.env.NODE_ENV !== "production") {
-            const businesses = resolveBusinessesForDev([]);
-            set({ businesses, showMyBusiness: businesses.length > 0 });
-          }
+          const businesses = resolveBusinessesWithDemo([]);
+          set({ businesses, showMyBusiness: businesses.length > 0 });
         }
       },
 

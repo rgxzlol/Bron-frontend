@@ -46,10 +46,7 @@ export const businessApplicationsApi = {
   getMy: async () => {
     const owned = await fetchOwnedBusinesses();
     if (owned.length === 0) {
-      if (process.env.NODE_ENV !== "production") {
-        return getDemoBusinessApplication();
-      }
-      return null;
+      return getDemoBusinessApplication();
     }
 
     const latest = owned.sort(

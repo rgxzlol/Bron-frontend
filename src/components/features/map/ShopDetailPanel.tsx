@@ -146,7 +146,7 @@ export default function ShopDetailPanel({
         type="button"
         className={s.sheetHandle}
         onClick={() => setExpanded((value) => !value)}
-        aria-label={expanded ? "Свернуть" : "Развернуть"}
+        aria-label={expanded ? t("common.collapse") : t("common.expand")}
         aria-expanded={expanded}
       >
         <span className={s.handleBar} />
@@ -156,7 +156,7 @@ export default function ShopDetailPanel({
         type="button"
         className={s.sheetClose}
         onClick={onClose}
-        aria-label="Закрыть"
+        aria-label={t("common.close")}
       >
         ×
       </button>
@@ -386,7 +386,7 @@ export default function ShopDetailPanel({
               type="button"
               className={s.closeBtn}
               onClick={onClose}
-              aria-label="Закрыть"
+              aria-label={t("common.close")}
             >
               <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
             </button>
@@ -396,7 +396,7 @@ export default function ShopDetailPanel({
                   type="button"
                   className={`${s.galleryNav} ${s.galleryNavPrev}`}
                   onClick={showPrevImage}
-                  aria-label="Предыдущее фото"
+                  aria-label={t("map.prevPhoto")}
                 >
                   ‹
                 </button>
@@ -404,7 +404,7 @@ export default function ShopDetailPanel({
                   type="button"
                   className={`${s.galleryNav} ${s.galleryNavNext}`}
                   onClick={showNextImage}
-                  aria-label="Следующее фото"
+                  aria-label={t("map.nextPhoto")}
                 >
                   ›
                 </button>

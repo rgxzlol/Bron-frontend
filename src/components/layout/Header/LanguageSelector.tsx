@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useProfileStore, type ProfileLanguage } from "@/store/profile.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const LANGUAGES: Array<{
   code: ProfileLanguage;
@@ -16,6 +17,7 @@ const LANGUAGES: Array<{
 ];
 
 export default function LanguageSelector() {
+  const { t } = useTranslation();
   const language = useProfileStore((state) => state.language);
   const setLanguage = useProfileStore((state) => state.setLanguage);
   const [isOpen, setIsOpen] = useState(false);
@@ -51,7 +53,7 @@ export default function LanguageSelector() {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex h-11 items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 transition-colors hover:bg-[var(--bg-surface-muted)]"
-        aria-label="Выбрать язык"
+        aria-label={t("common.selectLanguage")}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         data-testid="language-selector"
@@ -63,7 +65,7 @@ export default function LanguageSelector() {
       {isOpen ? (
         <div
           role="listbox"
-          aria-label="Выбор языка"
+          aria-label={t("common.languageChoice")}
           className="absolute right-0 top-full z-50 mt-2 min-w-[150px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-2 shadow-lg"
         >
           <ul className="flex flex-col gap-1">

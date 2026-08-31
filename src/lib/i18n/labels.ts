@@ -28,6 +28,14 @@ export const MAP_FILTER_KEYS: Record<string, string> = {
   Ресторан: "map.filterRestaurant",
 };
 
+/** Plural/display labels for map filter pills. */
+export const MAP_FILTER_PILL_KEYS: Record<string, string> = {
+  Ресторан: "map.filterRestaurantPill",
+  Спортзал: "map.filterGymPill",
+  Кофейня: "map.filterCafePill",
+  Больница: "map.filterHospitalPill",
+};
+
 /** Shop/business type badges shown on map & booking cards. */
 export const SHOP_TYPE_KEYS: Record<string, string> = {
   "Спорт зал": "categories.sportGym",

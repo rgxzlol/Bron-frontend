@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth/googleAccount";
 import { startTelegramOAuth } from "@/lib/auth/oauth";
 import { useProfileStore } from "@/store/profile.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportModal } from "./SupportModal";
 
 export type AuthScreen =
@@ -68,13 +69,15 @@ function StepHeader({
   step?: number;
   totalSteps?: number;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div>
       <div className="relative flex items-center justify-center">
         <button
           type="button"
           onClick={onBack}
-          aria-label="Назад"
+          aria-label={t("common.back")}
           className="absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-inactive)]"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -269,6 +272,8 @@ function AuthTabs({
   onLogin: () => void;
   onRegister: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mt-6 flex gap-2 rounded-[14px] bg-[var(--auth-box)] p-1">
       <button
@@ -280,7 +285,7 @@ function AuthTabs({
             : "text-[var(--text-muted)]"
         }`}
       >
-        Войти в аккаунт
+        {t("auth.loginToAccount")}
       </button>
       <button
         type="button"
@@ -291,7 +296,7 @@ function AuthTabs({
             : "text-[var(--text-muted)]"
         }`}
       >
-        Создать аккаунт
+        {t("auth.createAccount")}
       </button>
     </div>
   );
@@ -358,13 +363,15 @@ function SuccessView({
   title,
   subtitle,
   onPrimary,
-  primaryText = "Перейти на главную",
+  primaryText = "",
 }: {
   title: string;
   subtitle: string;
   onPrimary: () => void;
   primaryText?: string;
 }) {
+  const { t } = useTranslation();
+  const buttonText = primaryText || t("auth.goToHome");
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -374,7 +381,7 @@ function SuccessView({
           {subtitle}
         </p>
       </div>
-      <PrimaryButton onClick={onPrimary}>{primaryText}</PrimaryButton>
+      <PrimaryButton onClick={onPrimary}>{buttonText}</PrimaryButton>
     </div>
   );
 }
@@ -382,6 +389,7 @@ function SuccessView({
 /* ------------------------------ main flow ------------------------------ */
 
 export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?: AuthScreen }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const token = useAuthStore((s) => s.token);
@@ -434,7 +442,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
     if (Object.keys(nextErrors).length > 0) {
       setRecoveryErrors(nextErrors);
-      setError(nextErrors.form ?? "Проверьте введённые данные");
+      setError(nextErrors.form ?? t("auth.checkData"));
 
       if (nextErrors.newPassword) {
         newPasswordInputRef.current?.focus();
@@ -505,7 +513,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             go("google-phone");
           } catch (e) {
             setError(
-              e instanceof ApiError ? e.message : "Не удалось войти через Google",
+              e instanceof ApiError ? e.message : t("auth.googleLoginFailed"),
             );
           }
         },
@@ -550,7 +558,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           ? e.message
           : e instanceof Error
             ? e.message
-            : "Не удалось сохранить номер телефона",
+            : t("auth.phoneSaveFailed"),
       );
     } finally {
       setSubmitting(false);
@@ -589,7 +597,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         fullName: session.username,
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Не удалось выполнить вход");
+      setError(e instanceof ApiError ? e.message : t("auth.loginFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -632,7 +640,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         phone: normalizedPhone,
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Не удалось создать аккаунт");
+      setError(e instanceof ApiError ? e.message : t("auth.registerFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -652,7 +660,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     () =>
       passwordResetSuccess ? (
         <p className="rounded-[12px] bg-[#e8f7ee] px-4 py-3 text-center text-[14px] font-semibold text-[#1f8a4c]">
-          Пароль успешно изменён. Войдите с новым паролем.
+          {t("auth.passwordResetSuccess")}
         </p>
       ) : null,
     [passwordResetSuccess],
@@ -669,20 +677,20 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         <div className="flex flex-1 flex-col">
           <div className="flex flex-1 flex-col justify-center py-6">
           <h1 className="text-[30px] font-semibold leading-tight text-[var(--text-primary)]">
-            Добро пожаловать
+            {t("auth.welcomeTitle")}
           </h1>
           <p className="mt-2 text-[15px] font-semibold text-[var(--text-secondary)]">
-            Войдите в аккаунт или создайте новый
+            {t("auth.welcomeSubtitle")}
           </p>
 
           <div className="mt-8 flex flex-col gap-3">
             {errorBanner}
-            <PrimaryButton onClick={() => go("login")}>Войти в аккаунт</PrimaryButton>
-            <SecondaryButton onClick={() => go("register")}>Создать аккаунт</SecondaryButton>
+            <PrimaryButton onClick={() => go("login")}>{t("auth.loginToAccount")}</PrimaryButton>
+            <SecondaryButton onClick={() => go("register")}>{t("auth.createAccount")}</SecondaryButton>
 
             <div className="my-2 flex items-center gap-4">
               <span className="h-px flex-1 bg-[var(--border-default)]" />
-              <span className="text-[14px] font-semibold text-[var(--text-muted)]">Или</span>
+              <span className="text-[14px] font-semibold text-[var(--text-muted)]">{t("auth.orDivider")}</span>
               <span className="h-px flex-1 bg-[var(--border-default)]" />
             </div>
 
@@ -690,13 +698,13 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               onClick={handleGoogleOAuth}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
-              {submitting ? "Загрузка..." : "Войти с Google"}
+              {submitting ? t("common.loading") : t("auth.loginWithGoogle")}
             </SecondaryButton>
             <SecondaryButton
               onClick={handleTelegramOAuth}
               icon={<Image src={assets.auth.telegramIcon} alt="" width={22} height={22} />}
             >
-              Войти с Telegram
+              {t("auth.loginWithTelegram")}
             </SecondaryButton>
           </div>
 
@@ -712,7 +720,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   if (screen === "login") {
     return (
       <AuthShell>
-        <StepHeader title="Вход в аккаунт" onBack={() => go("welcome")} />
+        <StepHeader title={t("auth.loginTitle")} onBack={() => go("welcome")} />
         <AuthTabs active="login" onLogin={() => go("login")} onRegister={() => go("register")} />
         <form
           className="mt-6 flex flex-1 flex-col"
@@ -723,7 +731,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           noValidate
         >
           <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
-            Впишите ваш пароль и имя для входа в аккаунт
+            {t("auth.loginSubtitle")}
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
@@ -732,8 +740,8 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="username-input"
               name="username"
-              label="Имя"
-              placeholder="Иван"
+              label={t("auth.nameLabel")}
+              placeholder={t("auth.usernamePlaceholderShort")}
               value={loginName}
               onChange={(value) => {
                 setLoginName(value);
@@ -748,8 +756,8 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="password-input"
               name="password"
-              label="Пароль"
-              placeholder="Введите пароль"
+              label={t("auth.password")}
+              placeholder={t("auth.passwordPlaceholder")}
               value={password}
               onChange={(value) => {
                 setPassword(value);
@@ -778,13 +786,13 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               onClick={() => go("forgot")}
               className="self-start text-[14px] font-semibold text-[#0a6af7] hover:underline"
             >
-              Забыли пароль?
+              {t("auth.forgotPassword")}
             </button>
           </div>
 
           <div className="mt-auto flex flex-col items-center gap-4 pt-8">
             <PrimaryButton type="submit" disabled={submitting}>
-              {submitting ? "Загрузка..." : "Войти"}
+              {submitting ? t("common.loading") : t("auth.login")}
             </PrimaryButton>
           </div>
         </form>
@@ -795,7 +803,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   if (screen === "register") {
     return (
       <AuthShell>
-        <StepHeader title="Создание аккаунта" onBack={() => go("welcome")} />
+        <StepHeader title={t("auth.registerTitle")} onBack={() => go("welcome")} />
         <AuthTabs active="register" onLogin={() => go("login")} onRegister={() => go("register")} />
         <form
           className="mt-6 flex flex-1 flex-col"
@@ -806,7 +814,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           noValidate
         >
           <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
-            Заполните данные для создания аккаунта
+            {t("auth.registerSubtitle")}
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
@@ -814,9 +822,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="register-name-input"
               name="name"
-              label="Имя"
+              label={t("auth.nameLabel")}
               required
-              placeholder="Иван"
+              placeholder={t("auth.usernamePlaceholderShort")}
               value={firstName}
               onChange={(value) => {
                 setFirstName(value);
@@ -831,7 +839,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="register-phone-input"
               name="phone"
-              label="Номер телефона"
+              label={t("auth.phone")}
               required
               type="tel"
               inputMode="tel"
@@ -850,9 +858,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="register-password-input"
               name="password"
-              label="Создать пароль"
+              label={t("auth.createPassword")}
               required
-              placeholder="Введите пароль"
+              placeholder={t("auth.passwordPlaceholder")}
               value={password}
               onChange={(value) => {
                 setPassword(value);
@@ -881,14 +889,14 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
           <div className="mt-auto flex flex-col gap-4 pt-8">
             <PrimaryButton type="submit" disabled={submitting}>
-              {submitting ? "Загрузка..." : "Создать аккаунт"}
+              {submitting ? t("common.loading") : t("auth.createAccount")}
             </PrimaryButton>
 
             <SecondaryButton
               onClick={handleGoogleOAuth}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
-              {submitting ? "Загрузка..." : "Google"}
+              {submitting ? t("common.loading") : "Google"}
             </SecondaryButton>
 
             <div className="flex gap-3">
@@ -904,9 +912,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             </div>
 
             <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
-              Уже есть аккаунт?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
               <button type="button" onClick={() => go("login")} className="text-[#0a6af7] hover:underline">
-                Войти
+                {t("auth.login")}
               </button>
             </p>
           </div>
@@ -919,8 +927,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     return (
       <AuthShell>
         <SuccessView
-          title="Аккаунт создан!"
-          subtitle="Добро пожаловать в Bron. Вы успешно зарегистрировались."
+          title={t("auth.accountCreatedTitle")}
+          subtitle={t("auth.accountCreatedSubtitle")}
+          primaryText={t("auth.goToHome")}
           onPrimary={() => router.push(routes.home)}
         />
       </AuthShell>
@@ -931,8 +940,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     return (
       <AuthShell>
         <SuccessView
-          title="Вход успешно выполнен!"
-          subtitle="Добро пожаловать в Bron."
+          title={t("auth.loginSuccessTitle")}
+          subtitle={t("auth.loginSuccessSubtitle")}
+          primaryText={t("auth.goToHome")}
           onPrimary={() => router.push(routes.home)}
         />
       </AuthShell>
@@ -942,7 +952,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   if (screen === "forgot") {
     return (
       <AuthShell>
-        <StepHeader title="Сброс пароля" onBack={() => go("login")} />
+        <StepHeader title={t("auth.forgotTitle")} onBack={() => go("login")} />
         <form
           className="mt-6 flex flex-1 flex-col"
           onSubmit={(event) => {
@@ -951,18 +961,18 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           }}
           noValidate
         >
-          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">Новый пароль</h2>
+          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">{t("auth.newPasswordTitle")}</h2>
           <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            Придумай новый пароль для защиты аккаунта
+            {t("auth.newPasswordSubtitle")}
           </p>
 
           <div className="mt-6 flex flex-col gap-5">
             {errorBanner}
             <Field
               id="recovery-new-password"
-              label="Новый пароль"
+              label={t("auth.newPasswordLabel")}
               required
-              placeholder="Введите пароль"
+              placeholder={t("auth.passwordPlaceholder")}
               value={newPassword}
               inputRef={newPasswordInputRef}
               onChange={(value) => {
@@ -983,9 +993,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             />
             <Field
               id="recovery-confirm-password"
-              label="Подтвердите пароль"
+              label={t("auth.confirmPassword")}
               required
-              placeholder="Повторите пароль"
+              placeholder={t("auth.confirmPasswordPlaceholder")}
               value={confirmNewPassword}
               inputRef={confirmPasswordInputRef}
               onChange={(value) => {
@@ -1007,7 +1017,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           </div>
 
           <div className="mt-auto pt-8">
-            <PrimaryButton type="submit">Сохранить</PrimaryButton>
+            <PrimaryButton type="submit">{t("common.save")}</PrimaryButton>
           </div>
         </form>
       </AuthShell>
@@ -1017,7 +1027,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   if (screen === "google-phone") {
     return (
       <AuthShell>
-        <StepHeader title="Номер телефона" onBack={() => go("welcome")} />
+        <StepHeader title={t("auth.phoneTitle")} onBack={() => go("welcome")} />
         <form
           className="mt-6 flex flex-1 flex-col"
           onSubmit={(event) => {
@@ -1028,8 +1038,8 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         >
           <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
             {googleAuthMode === "register"
-              ? "Укажите номер телефона для завершения регистрации через Google"
-              : "Укажите номер телефона для вашего аккаунта"}
+              ? t("auth.phoneSubtitleGoogle")
+              : t("auth.phoneSubtitleDefault")}
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
@@ -1037,7 +1047,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="google-phone-input"
               name="phone"
-              label="Номер телефона"
+              label={t("auth.phone")}
               required
               type="tel"
               inputMode="tel"
@@ -1057,7 +1067,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
           <div className="mt-auto flex flex-col gap-4 pt-8">
             <PrimaryButton type="submit" disabled={submitting}>
-              {submitting ? "Загрузка..." : "Продолжить"}
+              {submitting ? t("common.loading") : t("common.continue")}
             </PrimaryButton>
           </div>
         </form>
@@ -1068,33 +1078,33 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   if (screen === "telegram") {
     return (
       <AuthShell>
-        <StepHeader title="Вход через Telegram" onBack={() => go("welcome")} />
+        <StepHeader title={t("auth.telegramTitle")} onBack={() => go("welcome")} />
         <div className="mt-6 flex flex-1 flex-col">
           <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">
-            Войти с помощью Telegram
+            {t("auth.telegramSubtitle")}
           </h2>
           <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            Заполните данные профиля
+            {t("auth.telegramProfileSubtitle")}
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
             {errorBanner}
-            <Field label="Имя" placeholder="Иван" value={tgName} onChange={setTgName} />
-            <Field label="Имя пользователя" placeholder="@Bron_2029" value={tgUsername} onChange={setTgUsername} />
+            <Field label={t("auth.nameLabel")} placeholder={t("auth.usernamePlaceholderShort")} value={tgName} onChange={setTgName} />
+            <Field label={t("auth.telegramUsername")} placeholder={t("auth.telegramUsernamePlaceholder")} value={tgUsername} onChange={setTgUsername} />
           </div>
 
           <div className="mt-auto pt-8">
             <PrimaryButton
               onClick={() => {
                 if (!tgName.trim() || !tgUsername.trim()) {
-                  setError("Заполните имя и имя пользователя");
+                  setError(t("auth.fillTgFields"));
                   return;
                 }
                 go("login-success");
               }}
             >
               <span className="inline-flex items-center justify-center gap-2">
-                Войти с Telegram
+                {t("auth.loginWithTelegram")}
                 <Image src={assets.auth.telegramIcon} alt="" width={20} height={20} />
               </span>
             </PrimaryButton>

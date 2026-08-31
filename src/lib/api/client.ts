@@ -1,6 +1,8 @@
 import { getApiBaseUrl } from "@/config/api";
 import { getAuthToken } from "./token";
 
+const DEMO_TOKEN = "demo-token";
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -85,8 +87,50 @@ function extractErrorMessage(data: unknown, fallback: string) {
 /** Бэкенд недоступен (сетевая ошибка или заглушка хостинга вместо API). */
 function isBackendUnavailable(error: unknown): error is ApiError {
   if (!(error instanceof ApiError)) return false;
-  if (error.status === 0) return true;
-  return typeof error.data === "string" && error.data.trimStart().startsWith("<");
+  if (error.status === 0 || error.status === 502) return true;
+  if (typeof error.data === "string" && error.data.trimStart().startsWith("<")) {
+    return true;
+  }
+  if (error.data && typeof error.data === "object") {
+    const detail = (error.data as { detail?: unknown }).detail;
+    if (
+      typeof detail === "string" &&
+      detail.includes("Upstream API returned HTML instead of JSON")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function tryDemoResponse<T>(
+  path: string,
+  method: string,
+  body: unknown,
+  token?: string | null,
+): Promise<T | null> {
+  const { getDemoResponse } = await import("./demo");
+  const demo = getDemoResponse(path, method, body);
+  if (demo === undefined) return null;
+
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[demo] Демо-ответ для ${method} ${path}`);
+  }
+
+  return demo as T;
+}
+
+async function resolveDemoResponse<T>(
+  path: string,
+  method: string,
+  body: unknown,
+  token?: string | null,
+): Promise<T | null> {
+  if (token === DEMO_TOKEN) {
+    return tryDemoResponse<T>(path, method, body, token);
+  }
+
+  return null;
 }
 
 async function handleDemoFallback<T>(
@@ -102,7 +146,9 @@ async function handleDemoFallback<T>(
   const { getDemoResponse } = await import("./demo");
   const demo = getDemoResponse(path, method, body);
   if (demo !== undefined) {
-    console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
+    }
     return demo as T;
   }
 
@@ -142,6 +188,15 @@ async function executeRequest<T>(
 
     return data as T;
   } catch (error) {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      path.replace(/^\//, "") === "auth/login" &&
+      (init.method ?? "GET").toUpperCase() === "POST"
+    ) {
+      const demoLogin = await tryDemoResponse<T>(path, init.method ?? "POST", bodyForDemo);
+      if (demoLogin !== null) return demoLogin;
+    }
+
     const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
     if (demo !== null) return demo;
     throw error;
@@ -152,6 +207,10 @@ export async function apiRequest<T>(
   path: string,
   { method = "GET", body, auth = false, token }: RequestOptions = {},
 ): Promise<T> {
+  const authToken = token ?? (auth ? getAuthToken() : null);
+  const demo = await resolveDemoResponse<T>(path, method, body, authToken);
+  if (demo !== null) return demo;
+
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -160,7 +219,6 @@ export async function apiRequest<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const authToken = token ?? (auth ? getAuthToken() : null);
   if (auth && authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }

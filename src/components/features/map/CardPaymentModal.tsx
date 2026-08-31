@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type CardPaymentModalProps = {
   amountText: string;
@@ -20,6 +21,7 @@ function formatExpiry(value: string) {
 }
 
 export default function CardPaymentModal({ amountText, onClose, onPay }: CardPaymentModalProps) {
+  const { t } = useTranslation();
   const [number, setNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
@@ -36,14 +38,14 @@ export default function CardPaymentModal({ amountText, onClose, onPay }: CardPay
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Оплата картой"
+        aria-label={t("common.cardPaymentAria")}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">Оплата картой</h3>
+          <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">{t("booking.cardPaymentTitle")}</h3>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
             className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-muted)]"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">

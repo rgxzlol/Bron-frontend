@@ -162,7 +162,7 @@ export default function ReviewModal({
             type="button"
             className={s.closeBtn}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
             data-testid="review-modal-close"
           >
             <Image src={assets.map.quitIcon} alt="" width={22} height={22} />

@@ -451,7 +451,7 @@ export default function BusinessApplicationForm() {
               </span>
             </label>
             <div
-              className={`min-w-0 overflow-hidden rounded-[14px] border bg-[var(--bg-surface-muted)] transition-all focus-within:bg-[var(--bg-surface)] ${
+              className={`min-w-0 rounded-[14px] border bg-[var(--bg-surface-muted)] transition-all focus-within:bg-[var(--bg-surface)] ${
                 fieldErrors.location
                   ? "border-[#e02424] focus-within:border-[#e02424]"
                   : "border-transparent focus-within:border-[#0a6af7]"

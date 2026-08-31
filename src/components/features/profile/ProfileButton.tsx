@@ -6,6 +6,7 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type ProfileButtonProps = {
   variant?: "default" | "header";
@@ -14,6 +15,7 @@ type ProfileButtonProps = {
 export default function ProfileButton({
   variant = "default",
 }: ProfileButtonProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
@@ -32,7 +34,7 @@ export default function ProfileButton({
       <button
         type="button"
         className="rounded-full bg-white p-1"
-        aria-label="Профиль"
+        aria-label={t("common.profile")}
         aria-haspopup="dialog"
         data-testid="profile-button"
         onClick={handleClick}
@@ -48,7 +50,7 @@ export default function ProfileButton({
     <button
       type="button"
       className="rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] p-[16px]"
-      aria-label={token ? "Профиль" : "Войти"}
+      aria-label={token ? t("common.profile") : t("common.login")}
       aria-haspopup="dialog"
       onClick={handleClick}
     >

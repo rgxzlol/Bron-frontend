@@ -9,19 +9,73 @@
 .card {
   box-sizing: border-box;
   width: 100%;
-  min-width: 240px;
+  min-width: 0;
   max-width: 274px;
   flex: 1 1 240px;
 }
 
-@media (min-width: 1024px) {
+.cardBody {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: 4px 16px 13px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.description {
+  color: var(--text-primary);
+}
+
+.bookLink {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 20px;
+}
+
+.bookButton {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 16px 12px;
+  border-radius: 10px;
+  background: #0a6af7;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  transition: background-color 0.3s;
+}
+
+.card:hover .bookButton {
+  background: #0859d3;
+}
+
+@media (max-width: 1023px) {
   .cards {
     justify-content: center;
   }
+}
+
+@media (min-width: 1024px) {
+  .cards {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
 
   .card {
-    flex: 0 0 274px;
-    width: 274px;
+    flex: 1 1 0;
+    width: auto;
     max-width: 274px;
+  }
+
+  .cardBody {
+    text-align: left;
   }
 }

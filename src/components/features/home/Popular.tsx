@@ -8,7 +8,6 @@ import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { PopularPlace } from "@/types/popular";
-import Button from "@/components/shared/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -70,7 +69,7 @@ export default function Popular() {
 
   return (
     <section className={`${s.homeSection} w-full`}>
-      <h2 className="mb-[20px] text-[24px] font-semibold">
+      <h2 className="mb-[20px] w-full text-[24px] font-semibold">
         {t("home.popular")}
       </h2>
 
@@ -79,8 +78,8 @@ export default function Popular() {
           <article key={place.id} className={cardClassName}>
             <PopularCardImage place={place} />
 
-            <div className="flex flex-1 flex-col px-[16px] pb-[13px] pt-[4px]">
-              <div className="flex flex-1 flex-col gap-[4px]">
+            <div className={popularStyles.cardBody}>
+              <div className="flex flex-1 flex-col items-center gap-[4px] lg:items-start">
                 <span className="line-clamp-2 min-h-[56px] text-[20px] font-semibold leading-[28px] text-[var(--text-primary)]">
                   {place.title}
                 </span>
@@ -108,21 +107,19 @@ export default function Popular() {
                   </div>
                 </div>
 
-                <p className="line-clamp-2 min-h-[40px] text-[13px] font-semibold leading-[20px] text-black/70">
+                <p className={`${popularStyles.description} line-clamp-2 min-h-[40px] text-[13px] font-semibold leading-[20px]`}>
                   {place.desc}
                 </p>
               </div>
 
               <Link
                 href={buildBookHref(place.shopId)}
-                className="mt-[20px] flex justify-center"
+                className={popularStyles.bookLink}
                 data-testid="popular-book-button"
               >
-                <Button
-                  text={t("map.bookPlace")}
-                  as="span"
-                  className="transition-colors duration-300 group-hover:bg-[#0859d3]"
-                />
+                <span className={popularStyles.bookButton}>
+                  {t("map.bookPlace")}
+                </span>
               </Link>
             </div>
           </article>

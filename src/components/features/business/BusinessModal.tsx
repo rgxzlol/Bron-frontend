@@ -341,11 +341,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     try {
       await saveDraft();
       if (editingId) {
-        showToast("Изменения сохранены", "Информация о бизнесе успешно обновлена.");
+        showToast(t("businessModal.updatedToast"), t("businessModal.updatedToastDesc"));
       } else {
         showToast(
-          "Бизнес успешно создан",
-          "Теперь вы можете добавлять услуги и принимать бронирования.",
+          t("businessModal.createdToast"),
+          t("businessModal.createdToastDesc"),
         );
       }
       onSaved();
@@ -361,7 +361,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   }
 
   function handleDelete() {
-    if (confirm("Удалить все введённые данные?")) {
+    if (confirm(t("businessModal.deleteConfirm"))) {
       resetDraft();
       onClose();
     }

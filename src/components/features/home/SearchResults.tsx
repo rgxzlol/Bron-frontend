@@ -16,7 +16,7 @@ export default function SearchResults() {
 
   return (
     <section className={`${s.homeSection} my-8.75`} aria-live="polite">
-      <h2 className="mb-5 text-[24px] font-semibold">
+      <h2 className="mb-5 w-full text-[24px] font-semibold">
         Результаты поиска: {submittedQuery}
       </h2>
 

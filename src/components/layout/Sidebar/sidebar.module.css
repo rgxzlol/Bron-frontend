@@ -1,43 +1,30 @@
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  color: var(--text-primary);
-}
-
-.logo {
-  color: var(--text-primary);
-}
-
-.menu {
-  list-style: none;
-  width: 100%;
-}
-
 .link {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 17px;
-  padding: 15px 5px;
   position: relative;
-  transition: background 0.5s;
-  color: var(--text-primary);
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0 14px 32px;
+  color: var(--text-secondary);
+  transition:
+    background-color 0.5s,
+    color 0.5s;
 }
 
 .link:hover {
   background: var(--bg-hover);
+  color: var(--primary);
 }
 
 .link::after {
   content: "";
   position: absolute;
-  right: -10px;
   top: 0;
+  right: -10px;
   width: 9px;
   height: 100%;
-  background: var(--primary);
   border-radius: 9px;
+  background: var(--primary);
   opacity: 0;
   transition:
     opacity 0.5s,
@@ -50,8 +37,6 @@
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
   flex-shrink: 0;
   background-color: var(--icon-default);
   -webkit-mask-repeat: no-repeat;
@@ -63,35 +48,43 @@
   transition: background-color 0.5s;
 }
 
-.link:hover .icon {
+.link:hover .icon,
+.active .icon {
   background-color: var(--primary);
 }
 
 .title {
-  transition: 0.5s;
+  font-size: 20px;
+  font-weight: 600;
+  transition: color 0.5s;
 }
 
-.title:hover {
+.link:hover .title,
+.active .title {
   color: var(--primary);
 }
 
 .active {
   color: var(--primary);
-  background: var(--bg-hover);
-}
-
-.active .icon {
-  background-color: var(--primary);
+  background: var(--bg-active-soft);
 }
 
 .active::after {
-  content: "";
-  position: absolute;
-  right: 0px;
-  top: 0;
+  right: 0;
   opacity: 1;
-  width: 9px;
-  height: 100%;
-  background: var(--primary);
-  border-radius: 9px;
+}
+
+.locked {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+@media (min-width: 1024px) {
+  .link {
+    padding: 22px 0 16px 64px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
 }

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { isDateBeforeDay, isSameDay, startOfDay } from "@/lib/booking/timeSlots";
 import { toBookingDateTestId } from "@/lib/formatDate";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface DatePickerProps {
   viewMonth: Date;
@@ -14,10 +15,10 @@ interface DatePickerProps {
   isDateDisabled?: (date: Date) => boolean;
 }
 
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
-function getMonthLabel(date: Date) {
-  return date.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+function getMonthLabel(date: Date, locale: string) {
+  return date.toLocaleDateString(locale, { month: "long", year: "numeric" });
 }
 
 function buildCalendarDays(viewMonth: Date) {
@@ -59,12 +60,13 @@ export default function DatePicker({
   minDate,
   isDateDisabled,
 }: DatePickerProps) {
+  const { t, locale } = useTranslation();
   const calendarDays = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
   const minSelectableDate = startOfDay(minDate ?? today);
 
   return (
     <div className="">
-      <h2 className="text-[18px] font-bold mb-4 text-[var(--text-primary)]">Выбрать день</h2>
+      <h2 className="text-[18px] font-bold mb-4 text-[var(--text-primary)]">{t("datePicker.title")}</h2>
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
@@ -72,27 +74,27 @@ export default function DatePicker({
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
-          aria-label="Предыдущий месяц"
+          aria-label={t("datePicker.prevMonth")}
         >
           ‹
         </button>
-        <span className="text-[16px] font-bold capitalize text-[var(--text-primary)]">{getMonthLabel(viewMonth)}</span>
+        <span className="text-[16px] font-bold capitalize text-[var(--text-primary)]">{getMonthLabel(viewMonth, locale)}</span>
         <button
           type="button"
           className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }
-          aria-label="Следующий месяц"
+          aria-label={t("datePicker.nextMonth")}
         >
           ›
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {WEEKDAYS.map((day) => (
+        {WEEKDAY_KEYS.map((day) => (
           <span key={day} className="text-center text-[12px] font-semibold text-[var(--text-muted)] p-1">
-            {day}
+            {t(`datePicker.${day}`)}
           </span>
         ))}
       </div>

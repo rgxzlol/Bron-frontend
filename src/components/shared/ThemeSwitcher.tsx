@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { assets } from "@/lib/assets";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useProfileStore } from "@/store/profile.store";
 import s from "./themeToggle.module.css";
 
 export const ThemeSwitcher = () => {
+  const { t } = useTranslation();
   const theme = useProfileStore((state) => state.theme);
   const setTheme = useProfileStore((state) => state.setTheme);
   const isDark = theme === "dark";
@@ -14,7 +16,7 @@ export const ThemeSwitcher = () => {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={isDark ? "Включить светлую тему" : "Включить тёмную тему"}
+      aria-label={isDark ? t("themeToggle.enableLight") : t("themeToggle.enableDark")}
       aria-pressed={isDark}
       data-testid="theme-switcher"
       className={`${s.toggle} flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-95`}

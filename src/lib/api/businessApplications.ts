@@ -1,5 +1,6 @@
 import { businessesApi } from "./businesses";
 import { getCurrentUserId } from "./businessSync";
+import { getDemoBusinessApplication } from "@/lib/business/demoBusiness";
 import type { Business, BusinessApplication, BusinessApplicationCreate } from "./types";
 
 function mapBusinessToApplication(business: Business): BusinessApplication {
@@ -44,7 +45,12 @@ async function fetchOwnedBusinesses() {
 export const businessApplicationsApi = {
   getMy: async () => {
     const owned = await fetchOwnedBusinesses();
-    if (owned.length === 0) return null;
+    if (owned.length === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        return getDemoBusinessApplication();
+      }
+      return null;
+    }
 
     const latest = owned.sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

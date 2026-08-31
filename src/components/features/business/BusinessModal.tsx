@@ -26,6 +26,7 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { GeocodingError } from "@/lib/geocoding";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateBusinessCategory } from "@/lib/i18n/labels";
 import AddressAutocomplete from "./AddressAutocomplete";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -583,7 +584,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   <option value="">{t("businessModal.required")}</option>
                   {BUSINESS_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat}
+                      {translateBusinessCategory(t, cat)}
                     </option>
                   ))}
                 </select>

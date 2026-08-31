@@ -1,23 +1,66 @@
-/** Склонение «сервис / сервиса / сервисов» */
-export function pluralizeServices(count: number): string {
+type TranslateFn = (key: string) => string;
+
+function pluralize(
+  count: number,
+  t: TranslateFn | undefined,
+  keys: { one: string; few: string; many: string },
+  fallback: { one: string; few: string; many: string },
+): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
 
-  if (mod100 >= 11 && mod100 <= 14) return "сервисов";
-  if (mod10 === 1) return "сервис";
-  if (mod10 >= 2 && mod10 <= 4) return "сервиса";
-  return "сервисов";
+  if (mod100 >= 11 && mod100 <= 14) {
+    return t ? t(keys.many) : fallback.many;
+  }
+  if (mod10 === 1) {
+    return t ? t(keys.one) : fallback.one;
+  }
+  if (mod10 >= 2 && mod10 <= 4) {
+    return t ? t(keys.few) : fallback.few;
+  }
+  return t ? t(keys.many) : fallback.many;
+}
+
+/** Склонение «сервис / сервиса / сервисов» */
+export function pluralizeServices(count: number, t?: TranslateFn): string {
+  return pluralize(
+    count,
+    t,
+    {
+      one: "plural.servicesOne",
+      few: "plural.servicesFew",
+      many: "plural.servicesMany",
+    },
+    { one: "сервис", few: "сервиса", many: "сервисов" },
+  );
+}
+
+/** Склонение «услуга / услуги / услуг» (для поиска) */
+export function pluralizeSearchServices(count: number, t?: TranslateFn): string {
+  return pluralize(
+    count,
+    t,
+    {
+      one: "map.serviceWordOne",
+      few: "map.serviceWordFew",
+      many: "map.serviceWordMany",
+    },
+    { one: "услуга", few: "услуги", many: "услуг" },
+  );
 }
 
 /** Склонение «отзыв / отзыва / отзывов» */
-export function pluralizeReviews(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod100 >= 11 && mod100 <= 14) return "отзывов";
-  if (mod10 === 1) return "отзыв";
-  if (mod10 >= 2 && mod10 <= 4) return "отзыва";
-  return "отзывов";
+export function pluralizeReviews(count: number, t?: TranslateFn): string {
+  return pluralize(
+    count,
+    t,
+    {
+      one: "plural.reviewsOne",
+      few: "plural.reviewsFew",
+      many: "plural.reviewsMany",
+    },
+    { one: "отзыв", few: "отзыва", many: "отзывов" },
+  );
 }
 
 /** Длительность в минутах → «15 мин.» / «1 ч.» / «1 ч. 30 мин.» */

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ShopsPlace } from "@/data/shops";
 import { routes } from "@/config/routes";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { resolveShopById } from "@/lib/home/discovery";
+import { canShowShopOnMap } from "@/lib/map/mapVisibility";
 import { useAuthStore } from "@/store/auth.store";
+import type { ShopsType } from "@/types/shops.types";
 import BookingModal from "./BookingModal";
 import BookingPage from "@/components/features/map/BookingPage";
 
@@ -21,10 +23,40 @@ export default function BookingRouteClient({
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
   const shopId = Number.parseInt(searchParams.get("shopId") ?? "", 10);
-  const shop = ShopsPlace.find((item) => item.id === shopId) ?? null;
+  const [shop, setShop] = useState<ShopsType | null>(null);
+  const [isShopLoading, setIsShopLoading] = useState(true);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!Number.isFinite(shopId)) {
+      setShop(null);
+      setIsShopLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsShopLoading(true);
+
+    void resolveShopById(shopId)
+      .then((resolvedShop) => {
+        if (cancelled) return;
+
+        setShop(
+          resolvedShop && canShowShopOnMap(resolvedShop) ? resolvedShop : null,
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsShopLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shopId]);
+
+  useEffect(() => {
+    if (!hydrated || isShopLoading) return;
 
     if (!token) {
       router.replace(routes.login);
@@ -34,9 +66,9 @@ export default function BookingRouteClient({
     if (!shop) {
       router.replace(routes.home);
     }
-  }, [hydrated, token, shop, router]);
+  }, [hydrated, isShopLoading, token, shop, router]);
 
-  if (!hydrated || !token || !shop) return null;
+  if (!hydrated || isShopLoading || !token || !shop) return null;
 
   if (variant === "sheet") {
     return (

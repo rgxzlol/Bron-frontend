@@ -6,6 +6,7 @@ import { assets } from "@/lib/assets";
 import { useSearchStore } from "@/store/search.store";
 import { SEARCH_QUERY_MAX_LENGTH } from "@/lib/search/sanitize";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { localizeSearchItem } from "@/lib/search/localize";
 import { CategoryModal } from "./CategoryModal";
 
 export default function SearchBar() {
@@ -108,22 +109,26 @@ export default function SearchBar() {
           role="listbox"
           className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-[18px] border border-[var(--border-default)] bg-white shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)]"
         >
-          {suggestions.map((item) => (
-            <li key={item.id} role="option">
-              <button
-                type="button"
-                onClick={() => handleSuggestionSelect(item.title)}
-                className="flex w-full flex-col gap-1 px-5 py-4 text-left transition-colors hover:bg-[#f4f4f8]"
-              >
-                <span className="text-[15px] font-semibold text-[var(--text-primary)]">
-                  {item.title}
-                </span>
-                <span className="line-clamp-1 text-[13px] font-semibold text-[var(--text-secondary)]">
-                  {item.description}
-                </span>
-              </button>
-            </li>
-          ))}
+          {suggestions.map((item) => {
+            const localized = localizeSearchItem(t, item);
+
+            return (
+              <li key={item.id} role="option">
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionSelect(item.title)}
+                  className="flex w-full flex-col gap-1 px-5 py-4 text-left transition-colors hover:bg-[#f4f4f8]"
+                >
+                  <span className="text-[15px] font-semibold text-[var(--text-primary)]">
+                    {localized.title}
+                  </span>
+                  <span className="line-clamp-1 text-[13px] font-semibold text-[var(--text-secondary)]">
+                    {localized.description}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 

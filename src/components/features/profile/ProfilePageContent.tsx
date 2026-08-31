@@ -536,9 +536,9 @@ export default function ProfilePageContent({
           </button>
 
           <div className={`${s.passwordBlock} ${s.desktopOnly}`}>
-            <h3 className={s.blockTitle}>Смена пароля</h3>
+            <h3 className={s.blockTitle}>{t("profile.changePassword")}</h3>
             <label className={s.field}>
-              <span>Текущий пароль</span>
+              <span>{t("profile.currentPassword")}</span>
               <input
                 type="password"
                 value={oldPassword}
@@ -546,7 +546,7 @@ export default function ProfilePageContent({
               />
             </label>
             <label className={s.field}>
-              <span>Новый пароль</span>
+              <span>{t("profile.newPassword")}</span>
               <input
                 type="password"
                 value={newPassword}
@@ -554,7 +554,7 @@ export default function ProfilePageContent({
               />
             </label>
             <label className={s.field}>
-              <span>Повторите новый пароль</span>
+              <span>{t("profile.confirmNewPassword")}</span>
               <input
                 type="password"
                 value={confirmPassword}
@@ -563,7 +563,7 @@ export default function ProfilePageContent({
             </label>
             {passwordError && <p className={s.errorText}>{passwordError}</p>}
             {passwordSuccess && (
-              <p className={s.successText}>Пароль успешно изменён</p>
+              <p className={s.successText}>{t("profile.passwordChanged")}</p>
             )}
             <button
               type="button"

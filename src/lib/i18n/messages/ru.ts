@@ -76,6 +76,8 @@ export const ru: MessageTree = {
     rating: "Рейтинг",
     time: "Время",
     serviceExample: "Пример сервиса {index}",
+    searchResults: "Результаты поиска: {query}",
+    searchNoResults: "По вашему запросу ничего не найдено. Попробуйте изменить ключевые слова.",
   },
   plural: {
     servicesOne: "сервис",

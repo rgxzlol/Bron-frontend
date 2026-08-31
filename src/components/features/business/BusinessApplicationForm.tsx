@@ -19,6 +19,7 @@ import {
   type BusinessApplicationFormData,
 } from "@/lib/business/applicationValidation";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateBusinessCategory } from "@/lib/i18n/labels";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 import { useBusinessStore } from "@/store/business.store";
@@ -403,7 +404,7 @@ export default function BusinessApplicationForm() {
                 <option value="">{t("businessApplication.spherePlaceholder")}</option>
                 {BUSINESS_CATEGORIES.map((category) => (
                   <option key={category} value={category}>
-                    {category}
+                    {translateBusinessCategory(t, category)}
                   </option>
                 ))}
               </select>

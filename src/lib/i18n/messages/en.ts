@@ -76,6 +76,8 @@ export const en: MessageTree = {
     rating: "Rating",
     time: "Time",
     serviceExample: "Service example {index}",
+    searchResults: "Search results: {query}",
+    searchNoResults: "No results found. Try different keywords.",
   },
   plural: {
     servicesOne: "service",

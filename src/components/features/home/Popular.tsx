@@ -1,9 +1,11 @@
 "use client";
 
 import { popularPlaces as fallbackPopularPlaces } from "@/data/popular";
+import { ShopsPlace } from "@/data/shops";
 import { assets } from "@/lib/assets";
 import { isRemoteShopImage } from "@/lib/business/shopImages";
 import { fetchPopularPlaces } from "@/lib/home/discovery";
+import { canShowShopOnMap } from "@/lib/map/mapVisibility";
 import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -13,6 +15,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import s from "./homePage.module.css";
 import popularStyles from "./popular.module.css";
+
+function getInitialPopularPlaces(): PopularPlace[] {
+  const mappableShopIds = new Set(
+    ShopsPlace.filter(canShowShopOnMap).map((shop) => shop.id),
+  );
+
+  return fallbackPopularPlaces.filter(
+    (place) => place.shopId != null && mappableShopIds.has(place.shopId),
+  );
+}
 
 function buildBookHref(shopId?: number) {
   return `${routes.book}?shopId=${shopId ?? 1}`;
@@ -42,7 +54,7 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
 
 export default function Popular() {
   const { t } = useTranslation();
-  const [places, setPlaces] = useState<PopularPlace[]>(fallbackPopularPlaces);
+  const [places, setPlaces] = useState<PopularPlace[]>(getInitialPopularPlaces);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { assets } from "@/lib/assets";
 import { fetchCategoriesWithCounts } from "@/lib/home/discovery";
 import { pluralizeServices } from "@/lib/pluralize";
 import { buildMapCategoryHref } from "@/lib/category/homeCategoryMap";
+import { translateHomeCategory } from "@/lib/i18n/labels";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { Category } from "@/types/category";
 import Image from "next/image";
@@ -32,34 +33,36 @@ export default function Categories() {
     };
   }, []);
 
-  const renderCategoryCard = (category: Category) => (
-    <Link
-      key={category.id}
-      href={buildMapCategoryHref(category.id)}
-      className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8]"
-    >
-      <div
-        style={{ backgroundColor: category.color }}
-        className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full`}
+  const renderCategoryCard = (category: Category) => {
+    const title = translateHomeCategory(t, category.id) || category.title;
+
+    return (
+      <Link
+        key={category.id}
+        href={buildMapCategoryHref(category.id)}
+        className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8]"
       >
-        <Image
-          src={category.icon}
-          alt={category.title}
-          width={32}
-          height={32}
-          className="h-8 w-8 object-contain"
-        />
-      </div>
+        <div
+          style={{ backgroundColor: category.color }}
+          className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full`}
+        >
+          <Image
+            src={category.icon}
+            alt={title}
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+        </div>
 
-      <span className="line-clamp-2 min-h-12 font-semibold">
-        {category.title}
-      </span>
+        <span className="line-clamp-2 min-h-12 font-semibold">{title}</span>
 
-      <span className="text-[14px] opacity-75">
-        {category.count} {pluralizeServices(category.count)}
-      </span>
-    </Link>
-  );
+        <span className="text-[14px] opacity-75">
+          {category.count} {pluralizeServices(category.count, t)}
+        </span>
+      </Link>
+    );
+  };
 
   return (
     <section className={`${s.homeSection} my-8.75 scroll-mt-24`} id="categories">

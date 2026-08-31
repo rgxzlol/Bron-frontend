@@ -1,5 +1,6 @@
 import { assets } from "@/lib/assets";
 import { branchesApi, businessesApi, servicesApi, workingHoursApi } from "@/lib/api";
+import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync";
 import {
   apiBusinessToShop,
   apiCategoryToUi,
@@ -12,56 +13,74 @@ import { getHomeCategoryMapTarget } from "@/lib/category/homeCategoryMap";
 import { categories as staticCategories } from "@/data/categories";
 import { popularPlaces as fallbackPopularPlaces } from "@/data/popular";
 import { ShopsPlace } from "@/data/shops";
+import { canShowBusinessOnMap, canShowShopOnMap } from "@/lib/map/mapVisibility";
 import type { SearchCatalogItem } from "@/lib/search/catalog";
 import type { Category } from "@/types/category";
 import type { PopularPlace } from "@/types/popular";
 import type { ShopsType } from "@/types/shops.types";
+import type { SavedBusiness } from "@/store/business.store";
 
 const POPULAR_LIMIT = 3;
 
+function fallbackPlacesWithMapMarkers(): PopularPlace[] {
+  const mappableShopIds = new Set(
+    ShopsPlace.filter(canShowShopOnMap).map((shop) => shop.id),
+  );
+
+  return fallbackPopularPlaces.filter(
+    (place) => place.shopId != null && mappableShopIds.has(place.shopId),
+  );
+}
+
+function savedBusinessToPopularPlace(
+  business: SavedBusiness,
+  fallbackImage: PopularPlace["img"],
+): PopularPlace {
+  const remoteImage =
+    resolveMediaUrl(business.profilePhoto) ??
+    business.gallery.map((url) => resolveMediaUrl(url)).find(Boolean) ??
+    null;
+
+  const businessId = Number.parseInt(business.id, 10);
+
+  return {
+    id: Number.isFinite(businessId) ? businessId : 0,
+    shopId: Number.isFinite(businessId) ? businessId : undefined,
+    title: business.name,
+    rating: 0,
+    reviews: 0,
+    time: 60,
+    desc: business.description?.trim() || business.address || business.category,
+    img: remoteImage ?? fallbackImage,
+  };
+}
+
 export async function fetchPopularPlaces(): Promise<PopularPlace[]> {
+  const fallback = fallbackPlacesWithMapMarkers();
+
   try {
-    const list = await businessesApi.list();
-    if (list.length === 0) return fallbackPopularPlaces;
+    const businesses = await fetchPublicBusinessesFromApi();
+    const mappableBusinesses = businesses.filter(canShowBusinessOnMap);
 
-    const places = await Promise.all(
-      list.slice(0, POPULAR_LIMIT).map(async (item) => {
-        const services = await servicesApi.listByBusiness(item.id).catch(() => []);
-        const durations = services
-          .map((service) => service.duration)
-          .filter((duration) => duration > 0);
-        const time = durations.length > 0 ? Math.min(...durations) : 60;
+    if (mappableBusinesses.length === 0) {
+      return fallback;
+    }
 
-        let description = item.address;
-        try {
-          const detail = await businessesApi.get(item.id);
-          description = detail.description?.trim() || item.address;
-        } catch {
-          // keep address fallback
-        }
-
-        const remoteImage = resolveMediaUrl(item.logo);
+    const places = mappableBusinesses
+      .slice(0, POPULAR_LIMIT)
+      .map((business) => {
         const fallbackImage =
-          fallbackPopularPlaces.find((place) => place.id === item.id)?.img ??
-          fallbackPopularPlaces[0]?.img ??
+          fallback.find((place) => place.id === Number(business.id))?.img ??
+          fallback[0]?.img ??
           assets.popular.photo1;
 
-        return {
-          id: item.id,
-          shopId: item.id,
-          title: item.name,
-          rating: 0,
-          reviews: 0,
-          time,
-          desc: description || item.category,
-          img: remoteImage ?? fallbackImage,
-        } satisfies PopularPlace;
-      }),
-    );
+        return savedBusinessToPopularPlace(business, fallbackImage);
+      })
+      .filter((place) => place.shopId != null);
 
-    return places.length > 0 ? places : fallbackPopularPlaces;
+    return places.length > 0 ? places : fallback;
   } catch {
-    return fallbackPopularPlaces;
+    return fallback;
   }
 }
 

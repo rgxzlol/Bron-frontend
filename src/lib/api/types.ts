@@ -58,6 +58,7 @@ export type UserProfileUpdate = {
   phone?: string | null;
   language?: string | null;
   telegram_id?: number | null;
+  notification_settings?: UserNotificationSettings;
 };
 
 export type ChangePasswordRequest = {

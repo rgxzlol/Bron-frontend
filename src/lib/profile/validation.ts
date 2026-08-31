@@ -4,8 +4,7 @@ import {
   REGISTER_PHONE_PATTERN,
   validateRegisterName,
 } from "@/lib/auth/validation";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { isValidEmailAddress } from "@/lib/email/validation";
 
 export type ProfilePersonalField = "fullName" | "phone" | "email";
 
@@ -57,7 +56,7 @@ export function validateProfilePersonalInfo(
   const trimmedEmail = email.trim();
   if (!trimmedEmail) {
     errors.email = "emailRequired";
-  } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+  } else if (!isValidEmailAddress(trimmedEmail)) {
     errors.email = "emailInvalid";
   }
 

@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/auth.store";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import PasswordInput from "@/components/shared/PasswordInput";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { validateRegisterEmail } from "@/lib/auth/validation";
 import s from "./authPage.module.css";
 
 type AuthTab = "login" | "register";
@@ -46,9 +47,17 @@ export default function AuthPageContent() {
       return;
     }
 
-    if (tab === "register" && (!email.trim() || !phone.trim())) {
-      setError(t("auth.fillEmailPhone"));
-      return;
+    if (tab === "register") {
+      if (!email.trim() || !phone.trim()) {
+        setError(t("auth.fillEmailPhone"));
+        return;
+      }
+
+      const emailError = validateRegisterEmail(email);
+      if (emailError) {
+        setError(emailError);
+        return;
+      }
     }
 
     setIsSubmitting(true);

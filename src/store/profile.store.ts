@@ -2,6 +2,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { usersApi } from "@/lib/api/users";
 import type { UserNotificationSettings, UserProfile } from "@/lib/api/types";
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  loadNotificationSettings,
+  saveNotificationSettings,
+} from "@/lib/profile/notificationSettingsStorage";
 import { useAuthStore } from "@/store/auth.store";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
@@ -27,9 +32,6 @@ function applyProfileToState(profile: UserProfile) {
     phone: profile.phone,
     email: profile.email,
     language: mapApiLanguage(profile.language),
-    ...(profile.notification_settings
-      ? { notifications: profile.notification_settings }
-      : {}),
   };
 }
 
@@ -45,6 +47,7 @@ type ProfileState = {
   isProfileLoading: boolean;
   profileError: string | null;
   fetchProfile: () => Promise<void>;
+  loadNotificationsForUser: (userId: number | null) => void;
   fetchNotificationSettings: () => Promise<void>;
   setAvatarUrl: (avatarUrl: string | null) => void;
   setLanguage: (language: ProfileLanguage) => void;
@@ -70,12 +73,7 @@ type ProfileState = {
   resetProfile: () => void;
 };
 
-const DEFAULT_NOTIFICATIONS: NotificationSettings = {
-  push: true,
-  email: true,
-  bookingReminder: true,
-  promotions: false,
-};
+const DEFAULT_NOTIFICATIONS: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS;
 
 const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
   {
@@ -115,19 +113,12 @@ export const useProfileStore = create<ProfileState>()(
         set({ isProfileLoading: true, profileError: null });
 
         try {
-          const [profile, notificationSettings] = await Promise.all([
-            usersApi.getProfile(token),
-            usersApi.getNotificationSettings(token).catch(() => null),
-          ]);
+          const profile = await usersApi.getProfile(token);
 
           set((state) => ({
             ...applyProfileToState(profile),
             fullName: profile.username || state.fullName,
             avatarUrl: state.avatarUrl,
-            notifications:
-              notificationSettings ??
-              profile.notification_settings ??
-              state.notifications,
             isProfileLoading: false,
           }));
         } catch (error) {
@@ -141,16 +132,13 @@ export const useProfileStore = create<ProfileState>()(
         }
       },
 
-      fetchNotificationSettings: async () => {
-        const token = useAuthStore.getState().token;
-        if (!token) return;
+      loadNotificationsForUser: (userId) => {
+        set({ notifications: loadNotificationSettings(userId) });
+      },
 
-        try {
-          const saved = await usersApi.getNotificationSettings(token);
-          set({ notifications: saved });
-        } catch {
-          // Keep the last known local/server state when the request fails.
-        }
+      fetchNotificationSettings: async () => {
+        const userId = useAuthStore.getState().userId;
+        set({ notifications: loadNotificationSettings(userId) });
       },
 
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
@@ -169,39 +157,34 @@ export const useProfileStore = create<ProfileState>()(
       setTheme: (theme) => set({ theme }),
 
       saveNotificationSettings: async () => {
+        const userId = useAuthStore.getState().userId;
+        const notifications = get().notifications;
+        saveNotificationSettings(userId, notifications);
+
         const token = useAuthStore.getState().token;
         if (!token) return;
 
-        const notifications = get().notifications;
-
         try {
-          const saved = await usersApi.updateNotificationSettings(notifications, token);
-          set({ notifications: saved });
+          await usersApi.updateNotificationSettings(notifications, token);
         } catch {
-          // Local persisted state remains the source of truth offline.
+          // Local storage remains the source of truth.
         }
       },
 
       toggleNotification: (key) => {
-        const token = useAuthStore.getState().token;
-        const previous = get().notifications;
+        const userId = useAuthStore.getState().userId;
         const next = {
-          ...previous,
-          [key]: !previous[key],
+          ...get().notifications,
+          [key]: !get().notifications[key],
         };
 
         set({ notifications: next });
+        saveNotificationSettings(userId, next);
 
+        const token = useAuthStore.getState().token;
         if (!token) return;
 
-        void usersApi
-          .updateNotificationSettings(next, token)
-          .then((saved) => {
-            set({ notifications: saved });
-          })
-          .catch(() => {
-            set({ notifications: previous });
-          });
+        void usersApi.updateNotificationSettings(next, token);
       },
 
       savePersonalInfo: async ({ fullName, phone, email }) => {
@@ -264,7 +247,6 @@ export const useProfileStore = create<ProfileState>()(
         avatarUrl: state.avatarUrl,
         language: state.language,
         theme: state.theme,
-        notifications: state.notifications,
         paymentHistory: state.paymentHistory,
       }),
       migrate: (persisted) => {

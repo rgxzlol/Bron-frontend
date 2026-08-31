@@ -121,10 +121,10 @@ export default function ProfilePageContent({
   }, [token, fetchProfile]);
 
   useEffect(() => {
-    if (section === "notifications" && token) {
+    if (section === "notifications") {
       void fetchNotificationSettings();
     }
-  }, [section, token, fetchNotificationSettings]);
+  }, [section, fetchNotificationSettings]);
 
   useEffect(() => {
     onSectionChange?.(section);

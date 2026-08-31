@@ -10,6 +10,7 @@ import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { SupportModal } from "./SupportModal";
 import PasswordInput from "@/components/shared/PasswordInput";
+import { validateRegisterEmail } from "@/lib/auth/validation";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type AuthMode = "login" | "register";
@@ -52,6 +53,13 @@ export default function AuthForm({ mode }: Props) {
         setError(t("auth.fillEmailPhone"));
         return;
       }
+
+      const emailError = validateRegisterEmail(email);
+      if (emailError) {
+        setError(emailError);
+        return;
+      }
+
       if (password !== confirmPassword) {
         setError(t("auth.passwordMismatch"));
         return;

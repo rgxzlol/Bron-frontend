@@ -6,6 +6,8 @@ import { assets } from '@/lib/assets';
 import { Category } from '@/types/category';
 import { categories } from '@/data/categories';
 import { pluralizeServices } from '@/lib/pluralize';
+import { translateHomeCategory } from '@/lib/i18n/labels';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface CategoryDropdownProps {
     selectedCategory: Category | null;
@@ -13,6 +15,7 @@ interface CategoryDropdownProps {
 }
 
 export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, onChange }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -50,16 +53,16 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             />
                         </div>
                         <span className="text-[18px] font-semibold text-black">
-                            {selectedCategory.title}
+                            {translateHomeCategory(t, selectedCategory.id) || selectedCategory.title}
                         </span>
                         <span className="text-[14px] text-gray-500 font-normal">
-                            ({selectedCategory.count} {pluralizeServices(selectedCategory.count)})
+                            ({selectedCategory.count} {pluralizeServices(selectedCategory.count, t)})
                         </span>
                     </div>
                 ) : (
                     <div className="flex items-center gap-3">
                         <span className="text-[16px] font-semibold text-black opacity-70">
-                            Обязательно
+                            {t("map.required")}
                         </span>
                     </div>
                 )}
@@ -86,7 +89,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             <span className="text-gray-400 text-lg">★</span>
                         </div>
                         <div className="flex flex-col text-left">
-                            <span className="text-[16px] font-semibold">Все категории</span>
+                            <span className="text-[16px] font-semibold">{t("headerFilters.allCategories")}</span>
                         </div>
                         {selectedCategory === null && (
                             <span className="ml-auto text-[#0A6AF7] font-semibold animate-in zoom-in duration-200">✓</span>
@@ -95,6 +98,8 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
 
                     {categories.map((cat) => {
                         const isSelected = selectedCategory?.id === cat.id;
+                        const title = translateHomeCategory(t, cat.id) || cat.title;
+
                         return (
                             <button
                                 key={cat.id}
@@ -112,12 +117,12 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                                     style={{ backgroundColor: cat.color }}
                                     className="w-[36px] h-[36px] rounded-full flex items-center justify-center flex-shrink-0 shadow-inner"
                                 >
-                                    <Image src={cat.icon} alt={cat.title} width={18} height={18} />
+                                    <Image src={cat.icon} alt={title} width={18} height={18} />
                                 </div>
                                 <div className="flex flex-col text-left">
-                                    <span className="text-[16px] font-semibold">{cat.title}</span>
+                                    <span className="text-[16px] font-semibold">{title}</span>
                                     <span className="text-[12px] opacity-70">
-                                        {cat.count} {pluralizeServices(cat.count)}
+                                        {cat.count} {pluralizeServices(cat.count, t)}
                                     </span>
                                 </div>
                                 {isSelected && (

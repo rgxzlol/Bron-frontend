@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import BookingPage from "@/components/features/map/BookingPage";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { ShopsType } from "@/types/shops.types";
 import s from "./bookingModal.module.css";
 
@@ -15,6 +16,7 @@ type BookingModalProps = {
 };
 
 export default function BookingModal({ isOpen, shop, onClose }: BookingModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -54,18 +56,20 @@ export default function BookingModal({ isOpen, shop, onClose }: BookingModalProp
           type="button"
           className={s.closeBtn}
           onClick={onClose}
-          aria-label="Закрыть"
+          aria-label={t("common.close")}
         >
           <Image src={assets.header.close} alt="" width={18} height={18} />
         </button>
 
-        <div className={s.sheetBody}>
-          <BookingPage
-            shop={shop}
-            onBack={onClose}
-            origin="home"
-            variant="sheet"
-          />
+        <div className={s.sheetScroll}>
+          <div className={s.sheetBody}>
+            <BookingPage
+              shop={shop}
+              onBack={onClose}
+              origin="home"
+              variant="sheet"
+            />
+          </div>
         </div>
       </div>
     </div>,

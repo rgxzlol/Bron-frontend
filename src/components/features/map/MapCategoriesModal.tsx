@@ -14,6 +14,7 @@ import {
   isFilterSubmitSuccess,
   type FilterModalError,
 } from "@/lib/map/filterModal";
+import { translateBusinessCategory } from "@/lib/i18n/labels";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { BUSINESS_CATEGORIES } from "@/store/business.store";
 import {
@@ -164,7 +165,7 @@ export default function MapCategoriesModal({
               <option value="">{t("map.required")}</option>
               {BUSINESS_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
-                  {category}
+                  {translateBusinessCategory(t, category)}
                 </option>
               ))}
             </select>

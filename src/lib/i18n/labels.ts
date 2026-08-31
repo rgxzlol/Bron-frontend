@@ -166,6 +166,15 @@ export function translateLabel(
   return key ? t(key) : value;
 }
 
+export function translateBusinessCategory(t: Translator, category: string): string {
+  return translateLabel(t, category, BUSINESS_CATEGORY_KEYS);
+}
+
+export function translateHomeCategory(t: Translator, categoryId: number): string {
+  const key = HOME_CATEGORY_KEYS[categoryId];
+  return key ? t(key) : "";
+}
+
 export function translateErrorMessage(
   t: Translator,
   message: string,

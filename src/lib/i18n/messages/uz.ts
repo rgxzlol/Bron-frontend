@@ -76,6 +76,8 @@ export const uz: MessageTree = {
     rating: "Reyting",
     time: "Vaqt",
     serviceExample: "Xizmat namunasi {index}",
+    searchResults: "Qidiruv natijalari: {query}",
+    searchNoResults: "So‘rovingiz bo‘yicha hech narsa topilmadi. Kalit so‘zlarni o‘zgartirib ko‘ring.",
   },
   plural: {
     servicesOne: "xizmat",

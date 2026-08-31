@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { onStoreHydrated } from "@/lib/store/persist";
 import { setTokenGetter } from "@/lib/api/token";
 import { clearAuthCookie, setAuthCookie } from "@/lib/auth/session";
@@ -13,6 +14,7 @@ import { useBusinessApplicationStore } from "@/store/businessApplication.store";
 import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 
 export default function ApiProvider({ children }: { children: React.ReactNode }) {
+  const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
   const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
   const clearBusinesses = useBusinessStore((state) => state.clearBusinesses);
@@ -41,6 +43,8 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
+
     if (!token) {
       clearBusinesses();
       resetProfile();
@@ -55,6 +59,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     void fetchFavorites();
     void fetchApplication();
   }, [
+    hydrated,
     token,
     fetchBusinessesFromApi,
     clearBusinesses,

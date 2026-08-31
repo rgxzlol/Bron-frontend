@@ -5,7 +5,12 @@ const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 export function setAuthCookie(token: string) {
   if (typeof document === "undefined") return;
 
-  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; path=/; max-age=${MAX_AGE_SECONDS}; SameSite=Lax`;
+  const secure =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "; Secure"
+      : "";
+
+  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; path=/; max-age=${MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
 }
 
 export function clearAuthCookie() {

@@ -20,6 +20,8 @@ type RequestOptions = {
   body?: unknown;
   auth?: boolean;
   token?: string | null;
+  /** Skip demo fallback — use for endpoints where local persistence is the source of truth. */
+  skipDemo?: boolean;
 };
 
 type UploadOptions = {
@@ -159,6 +161,7 @@ async function executeRequest<T>(
   path: string,
   init: RequestInit,
   bodyForDemo?: unknown,
+  skipDemo = false,
 ): Promise<T> {
   try {
     let response: Response;
@@ -189,6 +192,7 @@ async function executeRequest<T>(
     return data as T;
   } catch (error) {
     if (
+      !skipDemo &&
       process.env.NODE_ENV !== "production" &&
       path.replace(/^\//, "") === "auth/login" &&
       (init.method ?? "GET").toUpperCase() === "POST"
@@ -197,19 +201,23 @@ async function executeRequest<T>(
       if (demoLogin !== null) return demoLogin;
     }
 
-    const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
-    if (demo !== null) return demo;
+    if (!skipDemo) {
+      const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
+      if (demo !== null) return demo;
+    }
     throw error;
   }
 }
 
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, auth = false, token }: RequestOptions = {},
+  { method = "GET", body, auth = false, token, skipDemo = false }: RequestOptions = {},
 ): Promise<T> {
   const authToken = token ?? (auth ? getAuthToken() : null);
-  const demo = await resolveDemoResponse<T>(path, method, body, authToken);
-  if (demo !== null) return demo;
+  if (!skipDemo) {
+    const demo = await resolveDemoResponse<T>(path, method, body, authToken);
+    if (demo !== null) return demo;
+  }
 
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -231,6 +239,7 @@ export async function apiRequest<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
     },
     body,
+    skipDemo,
   );
 }
 

@@ -1,3 +1,5 @@
+import { isValidEmailAddress } from "@/lib/email/validation";
+
 export type BookingFieldErrorCode =
   | "nameRequired"
   | "nameInvalid"
@@ -17,7 +19,6 @@ export type BookingFormErrors = {
   email?: string;
 };
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UZBEK_PHONE_PATTERN = /^\+998 \d{2} \d{3} \d{2} \d{2}$/;
 
 export function validateBookingName(name: string): BookingFieldErrorCode | undefined {
@@ -55,7 +56,7 @@ export function validateBookingEmail(email: string): BookingFieldErrorCode | und
     return undefined;
   }
 
-  if (!EMAIL_PATTERN.test(trimmed)) {
+  if (!isValidEmailAddress(trimmed)) {
     return "emailInvalid";
   }
 

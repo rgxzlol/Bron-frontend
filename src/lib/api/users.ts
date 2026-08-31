@@ -7,6 +7,8 @@ import type {
   UserProfileUpdate,
 } from "./types";
 
+const NOTIFICATION_REQUEST_OPTIONS = { auth: true as const, skipDemo: true as const };
+
 export const usersApi = {
   getProfile: (token?: string) =>
     apiRequest<UserProfile>("/users/profile", { auth: true, token }),
@@ -19,22 +21,55 @@ export const usersApi = {
       token,
     }),
 
-  getNotificationSettings: (token?: string) =>
-    apiRequest<UserNotificationSettings>("/users/profile/notifications", {
-      auth: true,
-      token,
-    }),
+  getNotificationSettings: async (token?: string) => {
+    try {
+      return await apiRequest<UserNotificationSettings>(
+        "/users/profile/notifications",
+        { ...NOTIFICATION_REQUEST_OPTIONS, token },
+      );
+    } catch {
+      try {
+        const profile = await apiRequest<UserProfile>("/users/profile", {
+          auth: true,
+          token,
+          skipDemo: true,
+        });
+        return profile.notification_settings ?? null;
+      } catch {
+        return null;
+      }
+    }
+  },
 
-  updateNotificationSettings: (
+  updateNotificationSettings: async (
     body: UserNotificationSettings,
     token?: string,
-  ) =>
-    apiRequest<UserNotificationSettings>("/users/profile/notifications", {
-      method: "PUT",
-      body,
-      auth: true,
-      token,
-    }),
+  ) => {
+    try {
+      return await apiRequest<UserNotificationSettings>(
+        "/users/profile/notifications",
+        {
+          method: "PUT",
+          body,
+          ...NOTIFICATION_REQUEST_OPTIONS,
+          token,
+        },
+      );
+    } catch {
+      try {
+        await apiRequest<UserProfile>("/users/profile", {
+          method: "PUT",
+          body: { notification_settings: body },
+          auth: true,
+          token,
+          skipDemo: true,
+        });
+      } catch {
+        // Local persisted preferences remain the source of truth.
+      }
+      return body;
+    }
+  },
 
   deleteProfile: (token?: string) =>
     apiRequest<unknown>("/users/profile", {

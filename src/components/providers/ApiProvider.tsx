@@ -16,10 +16,14 @@ import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.s
 export default function ApiProvider({ children }: { children: React.ReactNode }) {
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
+  const userId = useAuthStore((state) => state.userId);
   const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
   const clearBusinesses = useBusinessStore((state) => state.clearBusinesses);
   const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
   const fetchProfile = useProfileStore((state) => state.fetchProfile);
+  const loadNotificationsForUser = useProfileStore(
+    (state) => state.loadNotificationsForUser,
+  );
   const resetProfile = useProfileStore((state) => state.resetProfile);
   const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
   const resetApplication = useBusinessApplicationStore((state) => state.resetApplication);
@@ -56,15 +60,18 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     void fetchBusinessesFromApi();
     void fetchMyBookings();
     void fetchProfile();
+    loadNotificationsForUser(userId);
     void fetchFavorites();
     void fetchApplication();
   }, [
     hydrated,
     token,
+    userId,
     fetchBusinessesFromApi,
     clearBusinesses,
     fetchMyBookings,
     fetchProfile,
+    loadNotificationsForUser,
     resetProfile,
     fetchFavorites,
     resetApplication,

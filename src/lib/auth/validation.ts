@@ -141,6 +141,7 @@ export const REGISTER_PASSWORD_RULES = [
 export type RegisterFieldErrors = {
   name?: string;
   phone?: string;
+  email?: string;
   password?: string;
 };
 
@@ -191,6 +192,22 @@ export function validateRegisterName(name: string): string | undefined {
 
   if (!/^[\p{L}][\p{L}\s'-]*$/u.test(trimmed)) {
     return "Укажите корректное имя";
+  }
+
+  return undefined;
+}
+
+import { isValidEmailAddress } from "@/lib/email/validation";
+
+export function validateRegisterEmail(email: string): string | undefined {
+  const trimmed = email.trim();
+
+  if (!trimmed) {
+    return "Укажите email";
+  }
+
+  if (!isValidEmailAddress(trimmed)) {
+    return "Введите корректный email";
   }
 
   return undefined;
@@ -254,10 +271,12 @@ export function validateRegisterFields(
   name: string,
   phone: string,
   password: string,
+  email?: string,
 ): RegisterFieldErrors {
   return {
     name: validateRegisterName(name),
     phone: validateRegisterPhone(phone),
     password: validateRegisterPassword(password),
+    ...(email !== undefined ? { email: validateRegisterEmail(email) } : {}),
   };
 }

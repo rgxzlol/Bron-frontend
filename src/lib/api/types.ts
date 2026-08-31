@@ -379,16 +379,30 @@ export type BusinessApplication = {
   id: number;
   user_id: number;
   company_name: string;
+  tin?: string | null;
   sphere: string;
   location: string;
   phone: string;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  website?: string | null;
+  social_links?: Record<string, unknown>;
+  comments?: string | null;
   status: BusinessApplicationStatusValue | string;
   created_at: string;
 };
 
 export type BusinessApplicationCreate = {
   company_name: string;
+  tin: string;
   sphere: string;
   location: string;
   phone: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  website: string;
+  social_links: Record<string, string>;
+  comments: string;
 };

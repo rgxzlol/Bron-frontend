@@ -27,6 +27,7 @@ import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
 import { onStoreHydrated } from "@/lib/store/persist"
 import { getMapboxToken, isMapboxConfigured } from "@/lib/mapbox"
+import { MAP_FILTER_PILL_KEYS, translateLabel } from "@/lib/i18n/labels"
 import { useTranslation } from "@/lib/i18n/useTranslation"
 import "mapbox-gl/dist/mapbox-gl.css"
 
@@ -40,13 +41,6 @@ type FullMapProps = {
 }
 
 const filters = ["Ресторан", "Спортзал", "Кофейня", "Больница"]
-
-const filterLabels: Record<string, string> = {
-  Ресторан: "Рестораны",
-  Спортзал: "Спорт зал",
-  Кофейня: "Кофетерии",
-  Больница: "Больницы",
-}
 const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
@@ -811,7 +805,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               }
             `}
           >
-            {filterLabels[filter] ?? filter}
+            {translateLabel(t, filter, MAP_FILTER_PILL_KEYS)}
           </button>
         ))}
       </div>

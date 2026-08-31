@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { assets } from '@/lib/assets';
 import { useBookingStore } from '@/store/booking.store';
 import { useToastStore } from '@/store/toast.store';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface BookingCancelModalProps {
     isOpen: boolean;
@@ -22,6 +23,7 @@ function formatBookingDate(value?: string) {
 }
 
 export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: BookingCancelModalProps) => {
+    const { t } = useTranslation();
     const cancelBooking = useBookingStore((state) => state.cancelBooking);
     const showToast = useToastStore((state) => state.showToast);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,8 +40,8 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
         try {
             await cancelBooking(bookingId);
             showToast(
-                'Бронирование отменено',
-                'Запись отменена. Информация обновлена в вашем аккаунте.',
+                t('bookingsCancel.cancelledToast'),
+                t('bookingsCancel.cancelledToastDesc'),
             );
         } catch (error) {
             console.error('Не удалось отменить бронь', error);
@@ -57,7 +59,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
             <section
                 role="dialog"
                 aria-modal="true"
-                aria-label="Отменить бронь?"
+                aria-label={t('bookingsCancel.title')}
                 className="relative w-full max-w-[360px] rounded-[20px] bg-[var(--bg-surface)] p-[20px] shadow-lg"
                 onClick={(e) => e.stopPropagation()}
                 data-testid={
@@ -67,7 +69,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                 <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Закрыть"
+                    aria-label={t('common.close')}
                     className="absolute right-[14px] top-[14px] grid h-[36px] w-[36px] place-items-center rounded-full text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--bg-surface-muted)]"
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
@@ -82,7 +84,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                 </div>
 
                 <h3 className="mt-[14px] text-center text-[20px] font-bold text-[var(--text-primary)]">
-                    Отменить бронь?
+                    {t('bookingsCancel.title')}
                 </h3>
                 <p className="mx-auto mt-[6px] max-w-[260px] text-center text-[14px] font-medium text-[var(--text-secondary)]">
                     Вы уверены что хотите отменить бронь в BronFitness Club
@@ -115,7 +117,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                         !
                     </span>
                     <p className="text-[13px] font-semibold leading-[1.4] text-[var(--text-primary)]">
-                        Средства будут возвращены на ваш счет в течение 3-5 рабочих дней
+                        {t('bookingsCancel.refundHint')}
                     </p>
                 </aside>
 
@@ -130,7 +132,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                                 : "booking-cancel-dismiss"
                         }
                     >
-                        Не отменять
+                        {t('bookingsCancel.keep')}
                     </button>
                     <button
                         type="button"
@@ -143,7 +145,7 @@ export const BookingCancelModal = ({ isOpen, onClose, bookingId, bookingDate }: 
                                 : "booking-cancel-confirm"
                         }
                     >
-                        {isSubmitting ? 'Отмена...' : 'Отменить бронь'}
+                        {isSubmitting ? t('bookingsCancel.cancelling') : t('bookingsCancel.confirm')}
                     </button>
                 </div>
             </section>

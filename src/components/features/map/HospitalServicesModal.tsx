@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ShopService, ShopsType } from "@/types/shops.types";
 import { formatPrice } from "@/lib/formatPrice";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import Button from "@/components/shared/Button";
 import s from "./hospitalServicesModal.module.css";
 
@@ -12,13 +13,13 @@ type HospitalServicesModalProps = {
   onContinue: (serviceIds: string[]) => void;
 };
 
-function pluralizeUslugi(count: number) {
+function pluralizeServices(count: number, t: (key: string) => string) {
   const mod10 = count % 10;
   const mod100 = count % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "услуг";
-  if (mod10 === 1) return "услуга";
-  if (mod10 >= 2 && mod10 <= 4) return "услуги";
-  return "услуг";
+  if (mod100 >= 11 && mod100 <= 14) return t("map.serviceWordMany");
+  if (mod10 === 1) return t("map.serviceWordOne");
+  if (mod10 >= 2 && mod10 <= 4) return t("map.serviceWordFew");
+  return t("map.serviceWordMany");
 }
 
 const ICON_TONES = [s.iconTonePink, s.iconToneBlue, s.iconTonePurple];
@@ -75,6 +76,7 @@ export default function HospitalServicesModal({
   onClose,
   onContinue,
 }: HospitalServicesModalProps) {
+  const { t } = useTranslation();
   const services = useMemo<ShopService[]>(() => shop.services ?? [], [shop]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -114,13 +116,12 @@ export default function HospitalServicesModal({
 
         <div className={s.header}>
           <div className={s.headerText}>
-            <h2 className={s.title}>Услуги</h2>
+            <h2 className={s.title}>{t("map.services")}</h2>
             <p className={s.subtitle}>
-              Выберите консультацию у врача и убедитесь что вы полностью
-              здоровы.
+              {t("map.hospitalServicesSubtitle")}
             </p>
           </div>
-          <button type="button" className={s.close} onClick={onClose} aria-label="Закрыть">
+          <button type="button" className={s.close} onClick={onClose} aria-label={t("common.close")}>
             ×
           </button>
         </div>
@@ -149,7 +150,7 @@ export default function HospitalServicesModal({
 
                   <div className={s.cardSide}>
                     <span className={s.price}>
-                      От {formatPrice(service.priceFrom)}сум
+                      {t("map.priceFromShort", { price: formatPrice(service.priceFrom) })}
                     </span>
                     <button
                       type="button"
@@ -157,7 +158,7 @@ export default function HospitalServicesModal({
                       onClick={() => toggleService(service.id)}
                       aria-pressed={isSelected}
                     >
-                      {isSelected ? "Выбрано" : "Выбрать услугу"}
+                      {isSelected ? t("map.selected") : t("map.selectService")}
                     </button>
                   </div>
                 </div>
@@ -169,15 +170,15 @@ export default function HospitalServicesModal({
         <div className={s.footer}>
           <div className={s.totalBox}>
             <div className={s.totalInfo}>
-              <span className={s.totalLabel}>Итого</span>
+              <span className={s.totalLabel}>{t("booking.total")}</span>
               <span className={s.totalValue}>{formatPrice(totalPrice)}сум</span>
             </div>
             <span className={s.countPill}>
-              {selectedCount} {pluralizeUslugi(selectedCount)}
+              {selectedCount} {pluralizeServices(selectedCount, t)}
             </span>
           </div>
           <Button
-            text="Продолжить"
+            text={t("map.continue")}
             className={`${s.continueBtn} ${!canContinue ? s.continueDisabled : ""}`}
             onClick={handleContinue}
             disabled={!canContinue}

@@ -3,30 +3,33 @@
 import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessStore } from "@/store/business.store";
-import {
-  useBusinessApplicationStore,
-  type BusinessApplicationStatus,
-} from "@/store/businessApplication.store";
+import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
+import type { BusinessApplicationStatus } from "@/store/businessApplication.store";
+
+function resolveNavStatus(
+  apiStatus: BusinessApplicationStatus,
+  hasExistingBusiness: boolean,
+): BusinessApplicationStatus {
+  if (apiStatus === "none" && hasExistingBusiness) {
+    return "approved";
+  }
+
+  return apiStatus;
+}
 
 export function useBusinessNavAccess() {
   const token = useAuthStore((state) => state.token);
-  const status = useBusinessApplicationStore((state) => state.status);
-  const businessAccessGranted = useBusinessApplicationStore(
-    (state) => state.businessAccessGranted,
-  );
+  const apiStatus = useBusinessApplicationApiStore((state) => state.status);
   const businesses = useBusinessStore((state) => state.businesses);
 
   const hasExistingBusiness = businesses.length > 0;
   const isLoggedIn = Boolean(token);
-  const canAccessBusinessPage =
-    isLoggedIn &&
-    (hasExistingBusiness ||
-      businessAccessGranted ||
-      status === "none" ||
-      status === "approved" ||
-      status === "rejected");
+  const status = resolveNavStatus(apiStatus, hasExistingBusiness);
 
-  const isBusinessLocked = isLoggedIn && status === "pending";
+  const isBusinessVisible =
+    isLoggedIn && (status === "pending" || status === "approved");
+  const isBusinessLocked = status === "pending";
+  const canAccessBusinessPage = status === "approved";
 
   const businessHref =
     status === "pending" ? routes.businessApplication : routes.business;
@@ -34,6 +37,7 @@ export function useBusinessNavAccess() {
   return {
     canAccessBusinessPage,
     isBusinessLocked,
+    isBusinessVisible,
     businessHref,
     status,
   };

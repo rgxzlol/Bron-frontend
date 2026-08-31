@@ -1,5 +1,6 @@
 import { businessesApi } from "./businesses";
 import { getCurrentUserId } from "./businessSync";
+import { getDemoBusinessApplication } from "@/lib/business/demoBusiness";
 import type { Business, BusinessApplication, BusinessApplicationCreate } from "./types";
 
 function mapBusinessToApplication(business: Business): BusinessApplication {
@@ -7,9 +8,16 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
     id: business.id,
     user_id: business.owner_id,
     company_name: business.name,
+    tin: business.tin,
     sphere: business.category,
     location: business.address,
     phone: business.phone,
+    description: business.description,
+    latitude: business.latitude,
+    longitude: business.longitude,
+    website: business.website,
+    social_links: business.social_links,
+    comments: business.comments,
     status: business.status ?? "pending",
     created_at: business.created_at,
   };
@@ -37,7 +45,12 @@ async function fetchOwnedBusinesses() {
 export const businessApplicationsApi = {
   getMy: async () => {
     const owned = await fetchOwnedBusinesses();
-    if (owned.length === 0) return null;
+    if (owned.length === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        return getDemoBusinessApplication();
+      }
+      return null;
+    }
 
     const latest = owned.sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -50,9 +63,16 @@ export const businessApplicationsApi = {
     const business = await businessesApi.create(
       {
         name: body.company_name,
+        description: body.description.trim(),
         category: body.sphere,
         address: body.location,
         phone: body.phone,
+        latitude: body.latitude,
+        longitude: body.longitude,
+        tin: body.tin,
+        website: body.website,
+        social_links: body.social_links,
+        comments: body.comments,
       },
       token,
     );

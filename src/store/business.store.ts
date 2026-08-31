@@ -13,6 +13,7 @@ import {
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
 import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
+import { getDemoSavedBusiness } from "@/lib/business/demoBusiness";
 import { getAuthToken } from "@/lib/api/token";
 import { GeocodingError } from "@/lib/geocoding";
 import {
@@ -191,6 +192,14 @@ function updateBusiness(
   );
 }
 
+function resolveBusinessesForDev(businesses: SavedBusiness[]) {
+  if (process.env.NODE_ENV === "production" || businesses.length > 0) {
+    return businesses;
+  }
+
+  return [getDemoSavedBusiness()];
+}
+
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
@@ -346,13 +355,18 @@ export const useBusinessStore = create<BusinessStore>()(
           );
           const apiIds = new Set(merged.map((item) => item.id));
           const localOnly = existing.filter((item) => !apiIds.has(item.id));
+          const businesses = resolveBusinessesForDev([...merged, ...localOnly]);
 
           set({
-            businesses: [...merged, ...localOnly],
-            showMyBusiness: merged.length + localOnly.length > 0,
+            businesses,
+            showMyBusiness: businesses.length > 0,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
+          if (process.env.NODE_ENV !== "production") {
+            const businesses = resolveBusinessesForDev([]);
+            set({ businesses, showMyBusiness: businesses.length > 0 });
+          }
         }
       },
 

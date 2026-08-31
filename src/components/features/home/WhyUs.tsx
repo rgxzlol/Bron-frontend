@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import s from "./homePage.module.css";
 
 const steps = [
   {
@@ -34,19 +35,21 @@ export default function WhyUs() {
   const { t } = useTranslation();
 
   return (
-    <section className="my-[36px] mb-[100px]">
-      <h2 className="mb-[16px] text-[24px] font-semibold">{t("home.howItWorks")}</h2>
+    <section className={`${s.homeSection} my-[36px] mb-[100px]`}>
+      <h2 className="mb-[16px] w-full text-[24px] font-semibold">{t("home.howItWorks")}</h2>
 
-      <div className="flex flex-col gap-[22px] sm:flex-row sm:flex-wrap xl:flex-nowrap">
+      <div className="flex w-full flex-col items-center gap-[22px] sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start xl:flex-nowrap">
         {steps.map(({ step, titleKey, descriptionKey }) => (
           <div
             key={step}
-            className="flex flex-1 items-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5"
+            className="flex flex-1 items-center justify-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5 lg:justify-start"
           >
-            <p className="flex h-[74px] w-[74px] items-center justify-center rounded-full bg-[#f9f9fd] text-[32px] font-semibold text-blue-600">
+            <p
+              className={`${s.iconCircle} h-[74px] w-[74px] shrink-0 rounded-full bg-[#f9f9fd] text-[32px] font-semibold leading-none text-blue-600`}
+            >
               {step}
             </p>
-            <div className="flex flex-col gap-[7px]">
+            <div className="flex flex-col items-center gap-[7px] text-center lg:items-start lg:text-left">
               <p className="max-w-[90px] font-semibold">{t(titleKey)}</p>
               <p className="max-w-[144px] text-[14px] font-semibold opacity-75">
                 {t(descriptionKey)}
@@ -56,9 +59,9 @@ export default function WhyUs() {
         ))}
       </div>
 
-      <div className="relative mt-[70px] flex flex-col gap-4 overflow-hidden rounded-[24px] bg-white px-6 py-[27px] xl:flex-row xl:overflow-visible xl:px-[32px]">
-        <div className="xl:flex-1">
-          <div className="mb-8 flex flex-col gap-[9px] xl:mb-[70px]">
+      <div className="relative mt-[70px] flex w-full flex-col items-center gap-4 overflow-hidden rounded-[24px] bg-white px-6 py-[27px] lg:items-start xl:flex-row xl:overflow-visible xl:px-[32px]">
+        <div className="flex w-full flex-col items-center lg:items-start xl:flex-1">
+          <div className="mb-8 flex flex-col items-center gap-[9px] lg:items-start xl:mb-[70px]">
             <p className="max-w-[400px] text-[24px] font-semibold xl:text-[32px]">
               {t("home.businessTitle")}
             </p>

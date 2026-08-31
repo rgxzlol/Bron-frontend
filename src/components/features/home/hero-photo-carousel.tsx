@@ -46,7 +46,7 @@ export default function HeroPhotoCarousel() {
 
   return (
     <div
-      className="relative h-[250px] w-[min(100%,400px)] shrink-0"
+      className="relative mx-auto h-[250px] w-[min(100%,400px)] shrink-0 lg:mx-0"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

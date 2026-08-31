@@ -49,7 +49,7 @@ export default function SearchBar() {
           type="button"
           onClick={handleSubmit}
           className="mr-4 shrink-0"
-          aria-label="Поиск"
+          aria-label={t("common.search")}
         >
           <Image src={assets.header.search} alt="" width={22} height={22} />
         </button>
@@ -85,7 +85,7 @@ export default function SearchBar() {
               setShowSuggestions(false);
             }}
             className="absolute right-5 text-gray-400 transition-colors hover:text-black"
-            aria-label="Очистить поиск"
+            aria-label={t("common.clearSearch")}
           >
             <Image src={assets.header.close} alt="" />
           </button>

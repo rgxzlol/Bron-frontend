@@ -10,6 +10,7 @@ import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { SupportModal } from "./SupportModal";
 import PasswordInput from "@/components/shared/PasswordInput";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type AuthMode = "login" | "register";
 
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export default function AuthForm({ mode }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const token = useAuthStore((state) => state.token);
@@ -41,17 +43,17 @@ export default function AuthForm({ mode }: Props) {
     setError(null);
 
     if (!username.trim() || !password.trim()) {
-      setError("Заполните имя пользователя и пароль");
+      setError(t("auth.fillUsernamePassword"));
       return;
     }
 
     if (mode === "register") {
       if (!email.trim() || !phone.trim()) {
-        setError("Для регистрации укажите email и телефон");
+        setError(t("auth.fillEmailPhone"));
         return;
       }
       if (password !== confirmPassword) {
-        setError("Пароли не совпадают");
+        setError(t("auth.passwordMismatch"));
         return;
       }
     }
@@ -85,8 +87,8 @@ export default function AuthForm({ mode }: Props) {
         submitError instanceof ApiError
           ? submitError.message
           : mode === "login"
-            ? "Не удалось выполнить вход"
-            : "Не удалось создать аккаунт",
+            ? t("auth.loginFailed")
+            : t("auth.registerFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -96,7 +98,7 @@ export default function AuthForm({ mode }: Props) {
   if (hydrated && token) {
     return (
       <section className="mt-9.5 w-full text-center text-[18px] font-semibold text-black/60">
-        Перенаправление в профиль...
+        {t("auth.redirectingToProfile")}
       </section>
     );
   }
@@ -115,13 +117,13 @@ export default function AuthForm({ mode }: Props) {
               htmlFor="username-input"
               className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
             >
-              Имя пользователя
+              {t("auth.username")}
             </label>
             <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
               <input
                 id="username-input"
                 type="text"
-                placeholder="Иван"
+                placeholder={t("auth.usernamePlaceholderShort")}
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 className="w-full bg-transparent text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
@@ -155,7 +157,7 @@ export default function AuthForm({ mode }: Props) {
                   htmlFor="phone-input"
                   className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
                 >
-                  Телефон
+                  {t("auth.phone")}
                 </label>
                 <div className="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]">
                   <input
@@ -176,13 +178,13 @@ export default function AuthForm({ mode }: Props) {
               htmlFor="password-input"
               className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
             >
-              Пароль
+              {t("auth.password")}
             </label>
             <PasswordInput
               id="password-input"
               value={password}
               onChange={setPassword}
-              placeholder="Введите пароль"
+              placeholder={t("auth.passwordPlaceholder")}
               wrapClassName="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]"
               inputClassName="w-full bg-transparent pr-12 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
               toggleClassName="absolute right-5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-black/50 transition-opacity hover:text-black/80"
@@ -195,13 +197,13 @@ export default function AuthForm({ mode }: Props) {
                 htmlFor="confirm-password-input"
                 className="mb-1.25 text-[20px] font-semibold text-black opacity-60"
               >
-                Повторите пароль
+                {t("auth.confirmPassword")}
               </label>
               <PasswordInput
                 id="confirm-password-input"
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                placeholder="Повторите пароль"
+                placeholder={t("auth.confirmPasswordPlaceholder")}
                 wrapClassName="relative flex max-h-16.75 items-center rounded-[22px] border border-transparent bg-white p-5.5 transition-all duration-200 focus-within:border-[#0A6AF7]"
                 inputClassName="w-full bg-transparent pr-12 text-[20px] font-semibold text-black outline-none placeholder:opacity-60"
                 toggleClassName="absolute right-5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-black/50 transition-opacity hover:text-black/80"
@@ -222,10 +224,10 @@ export default function AuthForm({ mode }: Props) {
               className="w-full rounded-[22px] border border-[rgba(0,0,0,0.08)] bg-[#0A6AF7] p-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98] disabled:opacity-60"
             >
               {isSubmitting
-                ? "Загрузка..."
+                ? t("common.loading")
                 : mode === "login"
-                  ? "Войти"
-                  : "Регистрация"}
+                  ? t("auth.login")
+                  : t("auth.register")}
             </button>
 
             <button

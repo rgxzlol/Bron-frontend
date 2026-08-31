@@ -3,6 +3,7 @@
 import Button from "@/components/shared/Button";
 import { assets } from "@/lib/assets";
 import { formatPrice } from "@/lib/formatPrice";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { SavedBusiness } from "@/store/business.store";
 import Image from "next/image";
 import s from "./fullMap.module.css";
@@ -18,6 +19,7 @@ export default function UserBusinessPanel({
   onClose,
   onBook,
 }: UserBusinessPanelProps) {
+  const { t } = useTranslation();
   const previewImage =
     business.gallery.find(Boolean) ??
     business.profilePhoto ??
@@ -58,7 +60,7 @@ export default function UserBusinessPanel({
             type="button"
             className={s.closeBtn}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
           >
             <Image src={assets.map.quitIcon} alt="" width={20} height={20} />
           </button>
@@ -75,31 +77,31 @@ export default function UserBusinessPanel({
                 height={18}
               />
               <span className={s.ratingValue}>0,0</span>
-              <span className={s.ratingMuted}>(0 отзывов)</span>
+              <span className={s.ratingMuted}>{t("map.zeroReviews")}</span>
             </div>
           </div>
 
           <p className={s.category}>{business.category}</p>
           <p className={s.desc}>
-            {business.description || "Описание отсутствует"}
+            {business.description || t("map.noDescription")}
           </p>
 
           <div className={s.stats}>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Адрес</span>
+              <span className={s.statLabel}>{t("map.address")}</span>
               <span className={s.statValue}>
-                {business.address || "Ташкент"}
+                {business.address || t("map.defaultCity")}
               </span>
             </div>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Телефон</span>
+              <span className={s.statLabel}>{t("map.phone")}</span>
               <span className={s.statValue}>{business.phone || "—"}</span>
             </div>
           </div>
 
           {activeServices.length > 0 && (
             <div className="mt-[16px]">
-              <p className="mb-[10px] text-[15px] font-semibold">Услуги</p>
+              <p className="mb-[10px] text-[15px] font-semibold">{t("map.services")}</p>
               <ul className="flex flex-col gap-[8px]">
                 {activeServices.slice(0, 3).map((service) => (
                   <li
@@ -116,12 +118,12 @@ export default function UserBusinessPanel({
 
           {minPrice != null && (
             <p className="mt-[16px] text-[18px] font-semibold">
-              от {formatPrice(minPrice)}
+              {t("map.priceFrom", { price: formatPrice(minPrice) })}
             </p>
           )}
 
           <Button
-            text="Забронировать"
+            text={t("home.book")}
             onClick={onBook}
             className="mt-[20px] w-full !px-[20px] text-center"
           />

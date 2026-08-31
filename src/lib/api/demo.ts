@@ -1,5 +1,12 @@
 import { ApiError } from "./client";
 import { DEMO_BUSINESS_BOOKINGS } from "@/lib/business/demoBookings";
+import {
+  DEMO_BUSINESS_ID,
+  getDemoBusinessBranches,
+  getDemoBusinessServices,
+  getDemoBusinessStats,
+  getDemoOwnedBusinessRecord,
+} from "@/lib/business/demoBusiness";
 import type { Booking, BookingListItem, LoginResponse } from "./types";
 
 /**
@@ -10,64 +17,69 @@ import type { Booking, BookingListItem, LoginResponse } from "./types";
 
 let demoBookingId = 100;
 
-const demoBookings: Booking[] = [
-  {
-    id: 1,
-    user_id: 1,
-    business_id: 1,
-    service_id: 1,
-    branch_id: 1,
-    staff_id: null,
-    booking_date: "2026-09-12",
-    start_time: "12:00",
-    end_time: "13:00",
-    guest_count: 12,
-    total_price: 98000,
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    user_id: 1,
-    business_id: 1,
-    service_id: 1,
-    branch_id: 1,
-    staff_id: null,
-    booking_date: "2026-10-03",
-    start_time: "18:00",
-    end_time: "19:00",
-    guest_count: 2,
-    total_price: 98000,
-    status: "confirmed",
-  },
-  {
-    id: 3,
-    user_id: 1,
-    business_id: 1,
-    service_id: 1,
-    branch_id: 1,
-    staff_id: null,
-    booking_date: "2026-05-12",
-    start_time: "12:00",
-    end_time: "13:00",
-    guest_count: 12,
-    total_price: 98000,
-    status: "completed",
-  },
-  {
-    id: 4,
-    user_id: 1,
-    business_id: 1,
-    service_id: 1,
-    branch_id: 1,
-    staff_id: null,
-    booking_date: "2026-04-20",
-    start_time: "10:00",
-    end_time: "11:00",
-    guest_count: 1,
-    total_price: 80000,
-    status: "completed",
-  },
-];
+function formatBookingDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(base: Date, days: number) {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function buildSeedBookings(): Booking[] {
+  const today = new Date();
+
+  return [
+    {
+      id: 1,
+      user_id: 1,
+      business_id: 1,
+      service_id: 1,
+      branch_id: 1,
+      staff_id: null,
+      booking_date: formatBookingDate(addDays(today, 4)),
+      start_time: "12:00",
+      end_time: "13:00",
+      guest_count: 2,
+      total_price: 98000,
+      status: "confirmed",
+    },
+    {
+      id: 2,
+      user_id: 1,
+      business_id: 2,
+      service_id: 1,
+      branch_id: 1,
+      staff_id: null,
+      booking_date: formatBookingDate(addDays(today, 11)),
+      start_time: "18:00",
+      end_time: "19:00",
+      guest_count: 1,
+      total_price: 45000,
+      status: "confirmed",
+    },
+    {
+      id: 3,
+      user_id: 1,
+      business_id: 3,
+      service_id: 1,
+      branch_id: 1,
+      staff_id: null,
+      booking_date: formatBookingDate(addDays(today, -12)),
+      start_time: "10:00",
+      end_time: "11:00",
+      guest_count: 1,
+      total_price: 120000,
+      status: "completed",
+    },
+  ];
+}
+
+const demoBookings: Booking[] = buildSeedBookings();
 
 function toListItem(booking: Booking): BookingListItem {
   return {
@@ -80,6 +92,10 @@ function toListItem(booking: Booking): BookingListItem {
     business_id: booking.business_id,
     guest_count: booking.guest_count,
   };
+}
+
+export function getDemoMyBookings(): BookingListItem[] {
+  return demoBookings.map(toListItem);
 }
 
 const demoNotificationSettings = {
@@ -107,21 +123,9 @@ const demoUser = {
   notification_settings: demoNotificationSettings,
 };
 
-let demoOwnedBusinesses: Array<{
-  id: number;
-  owner_id: number;
-  owner_username: string;
-  name: string;
-  description: string | null;
-  logo: string | null;
-  category: string;
-  address: string;
-  phone: string;
-  latitude: number | null;
-  longitude: number | null;
-  status: string;
-  created_at: string;
-}> = [];
+let demoOwnedBusinesses: Array<ReturnType<typeof getDemoOwnedBusinessRecord>> = [
+  getDemoOwnedBusinessRecord(),
+];
 
 /**
  * Возвращает демо-ответ для известного эндпоинта или undefined,
@@ -284,6 +288,43 @@ export function getDemoResponse(
     return business ?? undefined;
   }
 
+  const businessStatsMatch = cleanPath.match(/^\/businesses\/(\d+)\/stats$/);
+  if (m === "GET" && businessStatsMatch && Number(businessStatsMatch[1]) === DEMO_BUSINESS_ID) {
+    return getDemoBusinessStats();
+  }
+
+  const servicesBusinessMatch = cleanPath.match(/^\/services\/business\/(\d+)$/);
+  if (
+    m === "GET" &&
+    servicesBusinessMatch &&
+    Number(servicesBusinessMatch[1]) === DEMO_BUSINESS_ID
+  ) {
+    return getDemoBusinessServices();
+  }
+
+  const productsBusinessMatch = cleanPath.match(/^\/products\/business\/(\d+)$/);
+  if (
+    m === "GET" &&
+    productsBusinessMatch &&
+    Number(productsBusinessMatch[1]) === DEMO_BUSINESS_ID
+  ) {
+    return [];
+  }
+
+  const branchDetailMatch = cleanPath.match(/^\/branches\/(\d+)$/);
+  if (m === "GET" && branchDetailMatch && Number(branchDetailMatch[1]) === 1) {
+    return getDemoBusinessBranches()[0];
+  }
+
+  const galleryBusinessMatch = cleanPath.match(/^\/business-gallery\/business\/(\d+)$/);
+  if (
+    m === "GET" &&
+    galleryBusinessMatch &&
+    Number(galleryBusinessMatch[1]) === DEMO_BUSINESS_ID
+  ) {
+    return [];
+  }
+
   if (m === "POST" && cleanPath === "/businesses/create") {
     const payload = (body ?? {}) as {
       name?: string;
@@ -320,6 +361,10 @@ export function getDemoResponse(
     /^\/(?:branches\/business|staff\/business|working-hours\/business|blocked-dates\/business)\/(\d+)$/,
   );
   if (m === "GET" && businessBranchesMatch) {
+    const businessId = Number(businessBranchesMatch[1]);
+    if (businessId === DEMO_BUSINESS_ID && cleanPath.startsWith("/branches/business/")) {
+      return getDemoBusinessBranches();
+    }
     return [];
   }
 

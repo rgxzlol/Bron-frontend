@@ -173,7 +173,7 @@ export default function ProfilePageContent({
     setPasswordSuccess(false);
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("Пароли не совпадают");
+      setPasswordError(t("profile.passwordMismatch"));
       return;
     }
 
@@ -189,14 +189,14 @@ export default function ProfilePageContent({
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showToast("Пароль изменён", "Новый пароль успешно сохранён.");
+      showToast(t("profile.passwordChangedToast"), t("profile.passwordChangedToastDesc"));
     } catch (error) {
       setPasswordError(
         error instanceof ApiError
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Не удалось сменить пароль",
+            : t("profile.passwordChangeFailed"),
       );
     } finally {
       setSaving(false);
@@ -215,12 +215,12 @@ export default function ProfilePageContent({
       router.push(routes.login);
     } catch (error) {
       showToast(
-        "Ошибка",
+        t("common.errorTitle"),
         error instanceof ApiError
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Не удалось удалить аккаунт",
+            : t("profile.deleteFailed"),
       );
     } finally {
       setDeleting(false);
@@ -326,7 +326,7 @@ export default function ProfilePageContent({
               <button
                 type="button"
                 className={s.cameraBtn}
-                aria-label="Изменить фото"
+                aria-label={t("profile.changePhoto")}
                 onClick={() => avatarInputRef.current?.click()}
               >
                 <Image src={assets.profile.camera} alt="" width={16} height={16} />
@@ -335,7 +335,7 @@ export default function ProfilePageContent({
 
             <div className={s.nameRow}>
               <h2 data-testid="profile-display-name">{fullName}</h2>
-              <button type="button" onClick={() => goTo("personal")} aria-label="Редактировать">
+              <button type="button" onClick={() => goTo("personal")} aria-label={t("profile.editAria")}>
                 <Image src={assets.profile.edit} alt="" width={16} height={15} />
               </button>
             </div>
@@ -359,8 +359,8 @@ export default function ProfilePageContent({
             />
             <MenuItem
               icon={assets.profile.card}
-              title="Платежи"
-              subtitle="Способ оплаты и история платежей"
+              title={t("profile.payments")}
+              subtitle={t("profile.paymentsSubtitle")}
               onClick={() => goTo("payments")}
             />
             <MenuItem
@@ -421,7 +421,7 @@ export default function ProfilePageContent({
               <button
                 type="button"
                 className={s.cameraBtn}
-                aria-label="Изменить фото"
+                aria-label={t("profile.changePhoto")}
                 onClick={() => avatarInputRef.current?.click()}
               >
                 <Image src={assets.profile.camera} alt="" width={16} height={16} />
@@ -571,7 +571,7 @@ export default function ProfilePageContent({
               onClick={() => void handleChangePassword()}
               disabled={!canChangePassword || saving || !token}
             >
-              {saving ? "Сохранение..." : "Сменить пароль"}
+              {saving ? t("common.saving") : t("profile.changePasswordBtn")}
             </button>
           </div>
         </form>
@@ -652,7 +652,7 @@ export default function ProfilePageContent({
                 <span>Срок действия</span>
                 <input
                   inputMode="numeric"
-                  placeholder={"ММ\\ ГГ"}
+                  placeholder={t("profile.cardExpiryPlaceholder")}
                   className={s.borderedInput}
                 />
               </label>
@@ -673,7 +673,7 @@ export default function ProfilePageContent({
 
             <label className={s.field}>
               <span>Имя карты</span>
-              <input placeholder="Необязательно" className={s.borderedInput} />
+              <input placeholder={t("common.optional")} className={s.borderedInput} />
             </label>
           </div>
 
@@ -684,7 +684,7 @@ export default function ProfilePageContent({
               className={saveCardForFuture ? s.toggleOn : s.toggleOff}
               onClick={() => setSaveCardForFuture((v) => !v)}
               aria-pressed={saveCardForFuture}
-              aria-label="Сохранить карту для будущих платежей"
+              aria-label={t("profile.saveCardAria")}
             >
               <span />
             </button>
@@ -873,7 +873,7 @@ export default function ProfilePageContent({
               onClick={() => void handleDeleteAccount()}
               disabled={deleting}
             >
-              {deleting ? "Удаление..." : "Удалить аккаунт"}
+              {deleting ? t("common.deleting") : t("profile.deleteAccount")}
             </button>
           )}
         </div>
@@ -902,9 +902,11 @@ function SectionHeader({
   onBack: () => void;
   mobileOnly?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className={mobileOnly ? `${s.sectionHead} ${s.mobileOnly}` : s.sectionHead}>
-      <button type="button" className={s.backBtn} onClick={onBack} aria-label="Назад">
+      <button type="button" className={s.backBtn} onClick={onBack} aria-label={t("common.back")}>
         <svg width="18" height="16" viewBox="0 0 18 16" fill="none" aria-hidden>
           <path
             d="M8 1.5 1.5 8 8 14.5M2 8h15"

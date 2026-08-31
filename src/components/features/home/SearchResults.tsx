@@ -6,6 +6,7 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { pluralizeReviews } from "@/lib/pluralize";
 import { useSearchStore } from "@/store/search.store";
+import s from "./homePage.module.css";
 
 export default function SearchResults() {
   const submittedQuery = useSearchStore((state) => state.submittedQuery);
@@ -14,8 +15,8 @@ export default function SearchResults() {
   if (!submittedQuery) return null;
 
   return (
-    <section className="my-8.75" aria-live="polite">
-      <h2 className="mb-5 text-[24px] font-semibold">
+    <section className={`${s.homeSection} my-8.75`} aria-live="polite">
+      <h2 className="mb-5 w-full text-[24px] font-semibold">
         Результаты поиска: {submittedQuery}
       </h2>
 

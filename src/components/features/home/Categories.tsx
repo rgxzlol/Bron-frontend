@@ -10,6 +10,7 @@ import type { Category } from "@/types/category";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import s from "./homePage.module.css";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -39,13 +40,14 @@ export default function Categories() {
     >
       <div
         style={{ backgroundColor: category.color }}
-        className="flex h-18.75 w-18.75 items-center justify-center rounded-full"
+        className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full`}
       >
         <Image
           src={category.icon}
           alt={category.title}
           width={32}
           height={32}
+          className="h-8 w-8 object-contain"
         />
       </div>
 
@@ -60,13 +62,13 @@ export default function Categories() {
   );
 
   return (
-    <section className="my-8.75 scroll-mt-24" id="categories">
-      <h2 className="mb-15 text-[24px] font-semibold">
+    <section className={`${s.homeSection} my-8.75 scroll-mt-24`} id="categories">
+      <h2 className="mb-15 w-full text-[24px] font-semibold">
         {t("home.categories")}
       </h2>
 
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-4">
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex flex-wrap justify-center gap-4 lg:justify-start">
           {categories.slice(0, 5).map(renderCategoryCard)}
 
           <button
@@ -75,12 +77,13 @@ export default function Categories() {
             className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2]"
             aria-expanded={isExpanded}
           >
-            <div className="flex h-18.75 w-18.75 items-center justify-center rounded-full bg-[#ffebd3]">
+            <div className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full bg-[#ffebd3]`}>
               <Image
                 src={assets.categories.more}
                 alt={t("home.allCategories")}
                 width={32}
                 height={32}
+                className="h-8 w-8 object-contain"
               />
             </div>
 
@@ -95,7 +98,7 @@ export default function Categories() {
         </div>
 
         {isExpanded && (
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap justify-center gap-4 lg:justify-start">
             {categories.slice(5).map(renderCategoryCard)}
           </div>
         )}

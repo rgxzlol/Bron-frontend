@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import ProfilePageContent from "./ProfilePageContent";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -22,18 +23,19 @@ type ProfileModalProps = {
   onClose: () => void;
 };
 
-const sectionTitles: Record<ProfileSection, string> = {
-  main: "Настройки профиля",
-  personal: "Персональные данные",
-  payments: "Платежи",
-  addCard: "Добавить карту",
-  appSettings: "Настройки",
-  notifications: "Уведомления",
-  theme: "Тема",
-  logout: "Выход из аккаунта",
-};
+const sectionTitleKeys = {
+  main: "profile.sectionMain",
+  personal: "profile.personalData",
+  payments: "profile.payments",
+  addCard: "profile.addCard",
+  appSettings: "profile.settings",
+  notifications: "profile.notifications",
+  theme: "profile.theme",
+  logout: "profile.logout",
+} as const;
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [section, setSection] = useState<ProfileSection>("main");
 
@@ -73,17 +75,17 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={sectionTitles[section]}
+      aria-label={t(sectionTitleKeys[section])}
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
         {section === "main" ? (
           <div className={s.modalHead}>
-            <h1 className={s.title}>{sectionTitles.main}</h1>
+            <h1 className={s.title}>{t(sectionTitleKeys.main)}</h1>
             <button
               type="button"
               className={s.closeBtn}
               onClick={onClose}
-              aria-label="Закрыть"
+              aria-label={t("common.close")}
             >
               <Image src={assets.header.close} alt="" width={18} height={18} />
             </button>
@@ -93,7 +95,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             type="button"
             className={s.closeBtnFloating}
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
           >
             <Image src={assets.header.close} alt="" width={18} height={18} />
           </button>

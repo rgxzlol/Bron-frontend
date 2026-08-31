@@ -85,7 +85,7 @@ export default function Support() {
       <header className="relative mb-[24px] flex min-h-[44px] items-center justify-center lg:mb-[32px] lg:block">
         <button
           type="button"
-          aria-label="Назад"
+          aria-label={t("common.back")}
           onClick={() => router.back()}
           className="absolute left-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] lg:hidden"
         >

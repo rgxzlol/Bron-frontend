@@ -5,6 +5,7 @@ import {
   searchAddressSuggestions,
   type AddressSuggestion,
 } from "@/lib/geocoding";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import s from "./addressAutocomplete.module.css";
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   hasError?: boolean;
   errorMessage?: string;
   inputTestId?: string;
+  disabled?: boolean;
   onChange: (payload: {
     address: string;
     lat: number | null;
@@ -30,10 +32,12 @@ export default function AddressAutocomplete({
   hasError = false,
   errorMessage,
   inputTestId,
+  disabled = false,
   onChange,
   placeholder,
   inputClassName = "",
 }: Props) {
+  const { t } = useTranslation();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -87,64 +91,72 @@ export default function AddressAutocomplete({
     setIsOpen(false);
   }
 
+  const showSuggestions = isOpen && suggestions.length > 0;
+
   return (
-    <div ref={wrapperRef} className={s.wrapper}>
-      <input
-        className={`${inputClassName} ${hasError ? "border-[#e02424] ring-2 ring-[#e02424]/20" : ""}`}
-        value={value}
-        placeholder={placeholder}
-        data-testid={inputTestId}
-        aria-invalid={hasError || undefined}
-        aria-describedby={errorMessage ? "business-address-error" : undefined}
-        onChange={(event) =>
-          onChange({
-            address: event.target.value,
-            lat: null,
-            lng: null,
-          })
-        }
-        onFocus={() => {
-          if (suggestions.length > 0) setIsOpen(true);
-        }}
-        autoComplete="off"
-      />
+    <div
+      ref={wrapperRef}
+      className={`${s.wrapper} ${showSuggestions ? s.wrapperOpen : ""}`}
+    >
+      <div className={s.inputArea}>
+        <input
+          className={`${inputClassName} ${hasError ? "border-[#e02424] ring-2 ring-[#e02424]/20" : ""}`}
+          value={value}
+          placeholder={placeholder}
+          data-testid={inputTestId}
+          disabled={disabled}
+          aria-invalid={hasError || undefined}
+          aria-describedby={errorMessage ? "business-address-error" : undefined}
+          onChange={(event) =>
+            onChange({
+              address: event.target.value,
+              lat: null,
+              lng: null,
+            })
+          }
+          onFocus={() => {
+            if (suggestions.length > 0) setIsOpen(true);
+          }}
+          autoComplete="off"
+        />
+
+        {showSuggestions && (
+          <ul className={s.list} role="listbox">
+            {suggestions.map((suggestion) => (
+              <li key={suggestion.id}>
+                <button
+                  type="button"
+                  className={s.item}
+                  onClick={() => handleSelect(suggestion)}
+                >
+                  <span className={s.itemTitle}>{suggestion.placeName}</span>
+                  {suggestion.subtitle && (
+                    <span className={s.itemSubtitle}>{suggestion.subtitle}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {errorMessage ? (
         <span
           id="business-address-error"
           role="alert"
-          className="text-[12px] font-semibold text-[#e02424]"
+          className="px-4 text-[12px] font-semibold leading-snug text-[#e02424] break-words"
           data-testid="business-field-error-address"
         >
           {errorMessage}
         </span>
       ) : null}
 
-      {isLoading && <span className={s.hint}>Поиск адреса...</span>}
+      {isLoading && <span className={s.hint}>{t("businessAddress.searching")}</span>}
       {!isLoading && value.trim() && !coordsSelected && (
-        <span className={s.hint}>Выберите адрес из списка, чтобы поставить метку на карте</span>
+        <span className={s.hint}>{t("businessAddress.pickFromList")}</span>
       )}
       {!isLoading && coordsSelected && (
-        <span className={s.hintOk}>Адрес выбран — бизнес появится на карте</span>
-      )}
-
-      {isOpen && suggestions.length > 0 && (
-        <ul className={s.list} role="listbox">
-          {suggestions.map((suggestion) => (
-            <li key={suggestion.id}>
-              <button
-                type="button"
-                className={s.item}
-                onClick={() => handleSelect(suggestion)}
-              >
-                <span className={s.itemTitle}>{suggestion.placeName}</span>
-                {suggestion.subtitle && (
-                  <span className={s.itemSubtitle}>{suggestion.subtitle}</span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <span className={s.hintOk}>{t("businessAddress.accepted")}</span>
       )}
     </div>
   );

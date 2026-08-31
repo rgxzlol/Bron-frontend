@@ -120,7 +120,7 @@ export default function BookingExtrasModal({
             className={s.close}
             onClick={onClose}
             disabled={isSubmitting}
-            aria-label="Закрыть"
+            aria-label={t("common.close")}
           >
             ×
           </button>
@@ -131,7 +131,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(-1)}
-            aria-label="Назад"
+            aria-label={t("common.back")}
           >
             ‹
           </button>
@@ -205,7 +205,7 @@ export default function BookingExtrasModal({
             type="button"
             className={s.carouselArrow}
             onClick={() => scrollCarousel(1)}
-            aria-label="Вперёд"
+            aria-label={t("common.forward")}
           >
             ›
           </button>

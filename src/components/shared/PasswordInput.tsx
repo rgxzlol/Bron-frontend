@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type PasswordInputProps = {
   id?: string;
@@ -33,6 +34,7 @@ export default function PasswordInput({
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
 }: PasswordInputProps) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -59,7 +61,7 @@ export default function PasswordInput({
           event.stopPropagation();
           setVisible((prev) => !prev);
         }}
-        aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
+        aria-label={visible ? t("auth.hidePassword") : t("auth.showPassword")}
         aria-pressed={visible}
         data-testid="password-visibility-toggle"
       >

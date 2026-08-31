@@ -1,6 +1,7 @@
 "use client";
 
 import { useToastStore } from "@/store/toast.store";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function CheckCircle() {
   return (
@@ -47,6 +48,7 @@ function ConfettiSparks() {
 }
 
 export default function ToastContainer() {
+  const { t } = useTranslation();
   const toasts = useToastStore((state) => state.toasts);
   const dismissToast = useToastStore((state) => state.dismissToast);
 
@@ -82,7 +84,7 @@ export default function ToastContainer() {
           <button
             type="button"
             onClick={() => dismissToast(toast.id)}
-            aria-label="Закрыть уведомление"
+            aria-label={t("common.closeNotification")}
             className="flex h-[28px] w-[28px] shrink-0 items-center justify-center self-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
           >
             <svg

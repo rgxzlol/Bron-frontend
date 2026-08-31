@@ -123,6 +123,7 @@ export function draftToBusinessCreate(
     phone: draft.phone.trim(),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
+    comments: "",
   };
 }
 

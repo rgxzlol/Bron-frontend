@@ -340,11 +340,11 @@ export const useBusinessStore = create<BusinessStore>()(
       },
 
       fetchBusinessesFromApi: async () => {
+        const token = getAuthToken();
+        if (!token) return;
+
         const userId = await getCurrentUserId();
-        if (!userId) {
-          set({ businesses: [], showMyBusiness: false });
-          return;
-        }
+        if (!userId) return;
 
         try {
           const existing = get().businesses;

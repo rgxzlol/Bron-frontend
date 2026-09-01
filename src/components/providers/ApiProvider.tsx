@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { restoreSessionFromCookie } from "@/lib/auth/restoreSession";
 import { onStoreHydrated } from "@/lib/store/persist";
 import { setTokenGetter } from "@/lib/api/token";
 import { useAuthStore } from "@/store/auth.store";

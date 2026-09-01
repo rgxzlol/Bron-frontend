@@ -5,8 +5,8 @@ export const supportContacts = {
   phone: "+998 90 022 66 07",
   phoneHref: "tel:+998900226607",
   email: "Bron_Suport@gmail.com",
-  telegram: "Muhammad_JI",
-  telegramHref: "https://t.me/Muhammad_JI",
+  telegram: "Bron_support",
+  telegramHref: "https://t.me/Bron_support",
 } as const;
 
 export type FaqItem = {

@@ -19,13 +19,11 @@ import {
   resolveGoogleAuth,
   type GoogleUserProfile,
 } from "@/lib/auth/googleAccount";
-import { isTelegramOAuthConfigured } from "@/lib/auth/oauth";
+import { openTelegramAuthBot } from "@/lib/auth/oauth";
 import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
-import { signInWithTelegramPopup } from "@/lib/auth/telegramSignIn";
 import {
   completeTelegramAuth,
-  resolveTelegramAuth,
 } from "@/lib/auth/telegramAccount";
 import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 import { useProfileStore } from "@/store/profile.store";
@@ -545,52 +543,8 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     }
   }
 
-  async function handleTelegramOAuth() {
-    if (!isTelegramOAuthConfigured()) {
-      go("telegram");
-      return;
-    }
-
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      await signInWithTelegramPopup({
-        onSuccess: async (profile) => {
-          try {
-            const result = await resolveTelegramAuth(profile);
-
-            if (result.kind === "complete") {
-              const displayName =
-                profile.username ??
-                [profile.first_name, profile.last_name].filter(Boolean).join(" ");
-              await completeAuthSession(result.session, {
-                fullName: displayName,
-                phone: result.phone,
-                avatarUrl: profile.photo_url ?? null,
-              });
-              return;
-            }
-
-            setPendingTelegramProfile(profile);
-            setPendingGoogleProfile(null);
-            setTelegramAuthMode(result.mode);
-            setGooglePhone("");
-            setGooglePhoneError(undefined);
-            go("google-phone");
-          } catch (e) {
-            setError(
-              e instanceof ApiError ? e.message : t("auth.telegramLoginFailed"),
-            );
-          }
-        },
-        onError: (message) => {
-          setError(message);
-        },
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  function handleTelegramOAuth() {
+    openTelegramAuthBot();
   }
 
   async function handleOAuthPhoneSubmit() {

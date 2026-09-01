@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { routes } from "@/config/routes";
-import { useAuthReady } from "@/lib/auth/useAuthReady";
+import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { resolveShopById } from "@/lib/home/discovery";
 import { canShowShopOnMap } from "@/lib/map/mapVisibility";
 import { useAuthStore } from "@/store/auth.store";
@@ -56,7 +56,7 @@ export default function BookingRouteClient({
   }, [shopId]);
 
   useEffect(() => {
-    if (!authReady || isShopLoading) return;
+    if (!hydrated || isShopLoading) return;
 
     if (!token) {
       router.replace(routes.login);
@@ -66,9 +66,9 @@ export default function BookingRouteClient({
     if (!shop) {
       router.replace(routes.home);
     }
-  }, [authReady, isShopLoading, token, shop, router]);
+  }, [hydrated, isShopLoading, token, shop, router]);
 
-  if (!authReady || isShopLoading || !token || !shop) return null;
+  if (!hydrated || isShopLoading || !token || !shop) return null;
 
   if (variant === "sheet") {
     return (

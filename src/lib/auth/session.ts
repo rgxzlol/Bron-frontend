@@ -27,7 +27,10 @@ export function getAuthCookie(): string | null {
 export function setAuthCookie(token: string) {
   if (typeof document === "undefined") return;
 
-  const secure = isSecureContext() ? "; Secure" : "";
+  const secure =
+    typeof window !== "undefined" && window.location.protocol === "https:"
+      ? "; Secure"
+      : "";
 
   document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; path=/; max-age=${MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
 }

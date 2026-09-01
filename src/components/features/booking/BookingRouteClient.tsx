@@ -20,7 +20,7 @@ export default function BookingRouteClient({
 }: BookingRouteClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hydrated = useAuthHydrated();
+  const authReady = useAuthReady();
   const token = useAuthStore((state) => state.token);
   const shopId = Number.parseInt(searchParams.get("shopId") ?? "", 10);
   const [shop, setShop] = useState<ShopsType | null>(null);

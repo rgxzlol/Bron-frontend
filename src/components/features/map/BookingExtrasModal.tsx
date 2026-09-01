@@ -126,6 +126,7 @@ export default function BookingExtrasModal({
           </button>
         </div>
 
+        <div className={s.body}>
         <div className={s.carouselWrap}>
           <button
             type="button"
@@ -151,13 +152,15 @@ export default function BookingExtrasModal({
                       src={extra.image}
                       alt={labels.name}
                       fill
-                      sizes="160px"
+                      sizes="180px"
                       className={s.productImage}
                     />
                   </div>
-                  <h3 className={s.productName}>{labels.name}</h3>
-                  <p className={s.productDesc}>{labels.description}</p>
-                  <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
+                  <div className={s.productBody}>
+                    <h3 className={s.productName}>{labels.name}</h3>
+                    <p className={s.productDesc}>{labels.description}</p>
+                    <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
+                  </div>
                   {quantity > 0 ? (
                     <div className={s.qtyStepper} data-testid={`booking-extra-stepper-${extra.id}`}>
                       <button
@@ -248,6 +251,7 @@ export default function BookingExtrasModal({
               {formatPrice(total)} сум
             </span>
           </div>
+        </div>
         </div>
 
         <div className={s.footer}>

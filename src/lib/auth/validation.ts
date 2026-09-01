@@ -121,22 +121,30 @@ export const REGISTER_PHONE_FORMAT_ERROR =
   "Введите номер в формате +998 99 999 99 99";
 
 export const REGISTER_PASSWORD_COMPLEXITY_RULES = [
-  { label: "Заглавная буква", test: (password: string) => /[A-ZА-ЯЁ]/.test(password) },
+  { id: "uppercase", test: (password: string) => /[A-ZА-ЯЁ]/.test(password) },
   {
-    label: "Цифра или спец. символ",
+    id: "digitOrSymbol",
     test: (password: string) => /\d/.test(password) || /[^\p{L}\d\s]/u.test(password),
   },
 ] as const;
 
 export const REGISTER_PASSWORD_RULES = [
   {
-    label: "От 8 до 16 символов",
+    id: "length",
     test: (password: string) =>
       password.length >= LOGIN_PASSWORD_LIMITS.min &&
       password.length <= LOGIN_PASSWORD_LIMITS.max,
   },
   ...REGISTER_PASSWORD_COMPLEXITY_RULES,
 ] as const;
+
+const REGISTER_PASSWORD_RULE_ERROR_LABELS: Record<
+  (typeof REGISTER_PASSWORD_COMPLEXITY_RULES)[number]["id"],
+  string
+> = {
+  uppercase: "заглавная буква",
+  digitOrSymbol: "цифра или спец. символ",
+};
 
 export type RegisterFieldErrors = {
   name?: string;
@@ -245,7 +253,7 @@ export function validateRegisterPassword(password: string): string | undefined {
 
   for (const rule of REGISTER_PASSWORD_COMPLEXITY_RULES) {
     if (!rule.test(password)) {
-      return `Пароль не соответствует требованиям: ${rule.label.toLowerCase()}`;
+      return `Пароль не соответствует требованиям: ${REGISTER_PASSWORD_RULE_ERROR_LABELS[rule.id]}`;
     }
   }
 

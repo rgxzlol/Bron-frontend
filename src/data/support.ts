@@ -2,11 +2,11 @@ import { assets } from "@/lib/assets";
 import type { StaticImageData } from "next/image";
 
 export const supportContacts = {
-  phone: "+998 99 999 99 99",
-  phoneHref: "tel:+99899999999",
+  phone: "+998 90 022 66 07",
+  phoneHref: "tel:+998900226607",
   email: "Bron_Suport@gmail.com",
-  telegram: "Bron_Suport",
-  telegramHref: "https://t.me/Bron_Suport",
+  telegram: "Muhammad_JI",
+  telegramHref: "https://t.me/Muhammad_JI",
 } as const;
 
 export type FaqItem = {

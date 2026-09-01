@@ -196,16 +196,6 @@ async function executeRequest<T>(
 
     return data as T;
   } catch (error) {
-    if (
-      !skipDemo &&
-      process.env.NODE_ENV !== "production" &&
-      path.replace(/^\//, "") === "auth/login" &&
-      (init.method ?? "GET").toUpperCase() === "POST"
-    ) {
-      const demoLogin = await tryDemoResponse<T>(path, init.method ?? "POST", bodyForDemo);
-      if (demoLogin !== null) return demoLogin;
-    }
-
     if (!skipDemo) {
       const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
       if (demo !== null) return demo;

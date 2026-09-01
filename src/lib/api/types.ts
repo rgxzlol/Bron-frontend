@@ -10,10 +10,16 @@ export type RegisterRequest = {
   password: string;
 };
 
+export type RegisterResponse = {
+  message?: string;
+  user_id?: number | null;
+};
+
 export type LoginResponse = {
   access_token: string;
   user_id: number;
   username: string;
+  tg_token?: string | null;
 };
 
 export type UserOut = {

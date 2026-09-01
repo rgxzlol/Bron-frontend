@@ -3,8 +3,10 @@ import type { LoginResponse } from "@/lib/api/types";
 import {
   AUTH_FIELD_LIMITS,
   isValidUzbekPhone,
+  normalizePhoneForApi,
   validateRegisterPhone,
 } from "@/lib/auth/validation";
+import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
 import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 
 export type TelegramAuthResult =
@@ -72,24 +74,17 @@ export async function completeTelegramAuth(
     throw new Error(phoneError);
   }
 
-  const normalizedPhone = phone.trim();
+  const normalizedPhone = normalizePhoneForApi(phone);
   const username = buildTelegramUsername(profile);
   const password = buildTelegramPassword(profile.id);
-  const syntheticEmail = `${username.toLowerCase()}@bron.app`;
 
   if (mode === "register") {
-    try {
-      await authApi.register({
-        username,
-        email: syntheticEmail,
-        phone: normalizedPhone,
-        password,
-      });
-    } catch (registerError) {
-      if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-        throw registerError;
-      }
-    }
+    await authApi.register({
+      username,
+      email: buildSyntheticEmail(username, phone),
+      phone: normalizedPhone,
+      password,
+    });
 
     const session = await authApi.login({ username, password });
     await linkTelegramId(profile, session.access_token);

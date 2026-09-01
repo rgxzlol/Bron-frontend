@@ -8,6 +8,7 @@ import {
   saveNotificationSettings,
 } from "@/lib/profile/notificationSettingsStorage";
 import { useAuthStore } from "@/store/auth.store";
+import { looksLikePhoneUsername } from "@/lib/auth/validation";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -26,9 +27,17 @@ function mapApiLanguage(language: string): ProfileLanguage {
   return "ru";
 }
 
-function applyProfileToState(profile: UserProfile) {
+function resolveDisplayFullName(apiUsername: string, fallbackFullName: string) {
+  if (looksLikePhoneUsername(apiUsername)) {
+    return fallbackFullName;
+  }
+
+  return apiUsername || fallbackFullName;
+}
+
+function applyProfileToState(profile: UserProfile, currentFullName: string) {
   return {
-    fullName: profile.username,
+    fullName: resolveDisplayFullName(profile.username, currentFullName),
     phone: profile.phone,
     email: profile.email,
     language: mapApiLanguage(profile.language),
@@ -116,8 +125,7 @@ export const useProfileStore = create<ProfileState>()(
           const profile = await usersApi.getProfile(token);
 
           set((state) => ({
-            ...applyProfileToState(profile),
-            fullName: profile.username || state.fullName,
+            ...applyProfileToState(profile, state.fullName),
             avatarUrl: state.avatarUrl,
             isProfileLoading: false,
           }));
@@ -199,7 +207,6 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = await usersApi.updateProfile(
           {
-            username: trimmedName,
             phone: trimmedPhone,
             email: trimmedEmail,
             language: get().language,
@@ -207,12 +214,12 @@ export const useProfileStore = create<ProfileState>()(
           token,
         );
 
-        set({
-          ...applyProfileToState(updated),
-          fullName: trimmedName || updated.username,
+        set((state) => ({
+          ...applyProfileToState(updated, trimmedName || state.fullName),
+          fullName: trimmedName || state.fullName,
           phone: trimmedPhone || updated.phone,
           email: trimmedEmail || updated.email,
-        });
+        }));
       },
 
       updatePersonalInfo: ({ fullName, phone, email }) =>
@@ -242,8 +249,11 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 4,
+      version: 5,
       partialize: (state) => ({
+        fullName: state.fullName,
+        phone: state.phone,
+        email: state.email,
         avatarUrl: state.avatarUrl,
         language: state.language,
         theme: state.theme,
@@ -255,6 +265,9 @@ export const useProfileStore = create<ProfileState>()(
 
         return {
           ...rest,
+          fullName: looksLikePhoneUsername(String(rest.fullName ?? ""))
+            ? ""
+            : String(rest.fullName ?? ""),
           avatarUrl: (rest.avatarUrl as string | null | undefined) ?? null,
           paymentHistory: (
             (rest.paymentHistory as PaymentHistoryItem[] | undefined) ??

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { REMOTE_API_URL } from "@/config/api";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function looksLikeHtml(text: string, contentType: string | null) {
   const type = contentType?.toLowerCase() ?? "";
   if (type.includes("text/html")) return true;
@@ -33,6 +36,7 @@ async function proxyRequest(request: NextRequest) {
       headers,
       body,
       cache: "no-store",
+      redirect: "follow",
     });
   } catch {
     return NextResponse.json(
@@ -66,3 +70,4 @@ export const POST = proxyRequest;
 export const PUT = proxyRequest;
 export const PATCH = proxyRequest;
 export const DELETE = proxyRequest;
+export const OPTIONS = proxyRequest;

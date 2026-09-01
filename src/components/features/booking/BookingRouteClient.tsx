@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { routes } from "@/config/routes";
-import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { useAuthReady } from "@/lib/auth/useAuthReady";
 import { resolveShopById } from "@/lib/home/discovery";
 import { canShowShopOnMap } from "@/lib/map/mapVisibility";
 import { useAuthStore } from "@/store/auth.store";
@@ -20,7 +20,7 @@ export default function BookingRouteClient({
 }: BookingRouteClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const hydrated = useAuthHydrated();
+  const authReady = useAuthReady();
   const token = useAuthStore((state) => state.token);
   const shopId = Number.parseInt(searchParams.get("shopId") ?? "", 10);
   const [shop, setShop] = useState<ShopsType | null>(null);
@@ -56,7 +56,7 @@ export default function BookingRouteClient({
   }, [shopId]);
 
   useEffect(() => {
-    if (!hydrated || isShopLoading) return;
+    if (!authReady || isShopLoading) return;
 
     if (!token) {
       router.replace(routes.login);
@@ -66,9 +66,9 @@ export default function BookingRouteClient({
     if (!shop) {
       router.replace(routes.home);
     }
-  }, [hydrated, isShopLoading, token, shop, router]);
+  }, [authReady, isShopLoading, token, shop, router]);
 
-  if (!hydrated || isShopLoading || !token || !shop) return null;
+  if (!authReady || isShopLoading || !token || !shop) return null;
 
   if (variant === "sheet") {
     return (

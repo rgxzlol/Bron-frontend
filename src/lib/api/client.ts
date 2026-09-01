@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "@/config/api";
+import { getApiBaseUrl, isCrossOriginApiRequest } from "@/config/api";
 import { getAuthToken } from "./token";
 
 const DEMO_TOKEN = "demo-token";
@@ -163,13 +163,18 @@ async function executeRequest<T>(
   bodyForDemo?: unknown,
   skipDemo = false,
 ): Promise<T> {
+  const requestUrl = buildUrl(path);
+  const crossOrigin = isCrossOriginApiRequest(requestUrl);
+
   try {
     let response: Response;
 
     try {
-      response = await fetch(buildUrl(path), {
+      response = await fetch(requestUrl, {
         ...init,
         cache: "no-store",
+        mode: crossOrigin ? "cors" : "same-origin",
+        credentials: crossOrigin ? "omit" : "same-origin",
       });
     } catch {
       throw new ApiError(

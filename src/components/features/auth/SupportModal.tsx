@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { supportContacts } from "@/data/support";
 
 export const SupportModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,7 +48,7 @@ export const SupportModal = () => {
 
             <div className="mb-8 flex flex-col gap-2.5">
               <a
-                href="https://t.me/Bron_Suport"
+                href={supportContacts.telegramHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex flex-col gap-1.5 text-left"
@@ -55,33 +56,33 @@ export const SupportModal = () => {
                 <span className="text-xl font-semibold text-black">Телеграм</span>
                 <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
                   <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
-                    @Bron_Suport
+                    @{supportContacts.telegram}
                   </span>
                 </div>
               </a>
 
               <a
-                href="tel:+998999999999"
-                aria-label="Позвонить +998 99 999 99 99"
+                href={supportContacts.phoneHref}
+                aria-label={`Позвонить ${supportContacts.phone}`}
                 className="group flex flex-col gap-1.5 text-left"
               >
                 <span className="text-xl font-semibold text-black">Номер телефона</span>
                 <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
                   <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
-                    +998 99 999 99 99
+                    {supportContacts.phone}
                   </span>
                 </div>
               </a>
 
               <a
-                href="mailto:Bron_Suport@gmail.com"
-                aria-label="Написать на Bron_Suport@gmail.com"
+                href={`mailto:${supportContacts.email}`}
+                aria-label={`Написать на ${supportContacts.email}`}
                 className="group flex flex-col gap-1.5 text-left"
               >
                 <span className="text-xl font-semibold text-black">Email</span>
                 <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
                   <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
-                    Bron_Suport@gmail.com
+                    {supportContacts.email}
                   </span>
                 </div>
               </a>

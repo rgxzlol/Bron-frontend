@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { restoreSessionFromCookie } from "@/lib/auth/restoreSession";
 import { onStoreHydrated } from "@/lib/store/persist";
 import { setTokenGetter } from "@/lib/api/token";
-import { clearAuthCookie, setAuthCookie } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessStore } from "@/store/business.store";
 import { useBookingStore } from "@/store/booking.store";
@@ -33,17 +33,13 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     setTokenGetter(() => useAuthStore.getState().token);
 
-    function syncAuthCookie() {
-      const currentToken = useAuthStore.getState().token;
-      if (currentToken) {
-        setAuthCookie(currentToken);
-        return;
-      }
-
-      clearAuthCookie();
+    async function syncAuthCookie() {
+      await restoreSessionFromCookie();
     }
 
-    return onStoreHydrated(useAuthStore, syncAuthCookie);
+    return onStoreHydrated(useAuthStore, () => {
+      void syncAuthCookie();
+    });
   }, []);
 
   useEffect(() => {

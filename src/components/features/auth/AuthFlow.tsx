@@ -19,7 +19,13 @@ import {
   resolveGoogleAuth,
   type GoogleUserProfile,
 } from "@/lib/auth/googleAccount";
-import { startTelegramOAuth } from "@/lib/auth/oauth";
+import { isTelegramOAuthConfigured } from "@/lib/auth/oauth";
+import { signInWithTelegramPopup } from "@/lib/auth/telegramSignIn";
+import {
+  completeTelegramAuth,
+  resolveTelegramAuth,
+} from "@/lib/auth/telegramAccount";
+import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 import { useProfileStore } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { SupportModal } from "./SupportModal";
@@ -305,12 +311,14 @@ function AuthTabs({
 const passwordRules = REGISTER_PASSWORD_RULES;
 
 function PasswordChecklist({ password }: { password: string }) {
+  const { t } = useTranslation();
+
   return (
     <ul className="flex flex-col gap-3 rounded-[16px] bg-[var(--auth-box)] p-4">
       {passwordRules.map((rule) => {
         const ok = rule.test(password);
         return (
-          <li key={rule.label} className="flex items-center gap-3">
+          <li key={rule.id} className="flex items-center gap-3">
             <span
               className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full transition-colors ${
                 ok ? "bg-[#0a6af7]" : "bg-[var(--bg-inactive)]"
@@ -320,7 +328,9 @@ function PasswordChecklist({ password }: { password: string }) {
                 <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="text-[15px] font-semibold text-[var(--text-primary)]">{rule.label}</span>
+            <span className="text-[15px] font-semibold text-[var(--text-primary)]">
+              {t(`auth.passwordRules.${rule.id}`)}
+            </span>
           </li>
         );
       })}
@@ -409,6 +419,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const [googlePhoneError, setGooglePhoneError] = useState<string | undefined>();
   const [pendingGoogleProfile, setPendingGoogleProfile] = useState<GoogleUserProfile | null>(null);
   const [googleAuthMode, setGoogleAuthMode] = useState<"register" | "update">("register");
+  const [pendingTelegramProfile, setPendingTelegramProfile] =
+    useState<TelegramUserProfile | null>(null);
+  const [telegramAuthMode, setTelegramAuthMode] = useState<"register" | "update">("register");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [registerFieldErrors, setRegisterFieldErrors] = useState<RegisterFieldErrors>({});
@@ -430,6 +443,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setGooglePhoneError(undefined);
     if (next !== "google-phone") {
       setPendingGoogleProfile(null);
+      setPendingTelegramProfile(null);
     }
     if (next !== "login") {
       setPasswordResetSuccess(false);
@@ -507,6 +521,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             }
 
             setPendingGoogleProfile(profile);
+            setPendingTelegramProfile(null);
             setGoogleAuthMode(result.mode);
             setGooglePhone("");
             setGooglePhoneError(undefined);
@@ -526,9 +541,55 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     }
   }
 
-  async function handleGooglePhoneSubmit() {
-    if (!pendingGoogleProfile) return;
+  async function handleTelegramOAuth() {
+    if (!isTelegramOAuthConfigured()) {
+      go("telegram");
+      return;
+    }
 
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      await signInWithTelegramPopup({
+        onSuccess: async (profile) => {
+          try {
+            const result = await resolveTelegramAuth(profile);
+
+            if (result.kind === "complete") {
+              const displayName =
+                profile.username ??
+                [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+              await completeAuthSession(result.session, {
+                fullName: displayName,
+                phone: result.phone,
+                avatarUrl: profile.photo_url ?? null,
+              });
+              return;
+            }
+
+            setPendingTelegramProfile(profile);
+            setPendingGoogleProfile(null);
+            setTelegramAuthMode(result.mode);
+            setGooglePhone("");
+            setGooglePhoneError(undefined);
+            go("google-phone");
+          } catch (e) {
+            setError(
+              e instanceof ApiError ? e.message : t("auth.telegramLoginFailed"),
+            );
+          }
+        },
+        onError: (message) => {
+          setError(message);
+        },
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleOAuthPhoneSubmit() {
     const phoneError = validateRegisterPhone(googlePhone);
     if (phoneError) {
       setGooglePhoneError(phoneError);
@@ -540,6 +601,28 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setSubmitting(true);
 
     try {
+      if (pendingTelegramProfile) {
+        const session = await completeTelegramAuth(
+          pendingTelegramProfile,
+          googlePhone,
+          telegramAuthMode,
+        );
+        const displayName =
+          pendingTelegramProfile.username ??
+          [pendingTelegramProfile.first_name, pendingTelegramProfile.last_name]
+            .filter(Boolean)
+            .join(" ");
+
+        await completeAuthSession(session, {
+          fullName: displayName,
+          phone: googlePhone.trim(),
+          avatarUrl: pendingTelegramProfile.photo_url ?? null,
+        });
+        return;
+      }
+
+      if (!pendingGoogleProfile) return;
+
       const session = await completeGoogleAuth(
         pendingGoogleProfile,
         googlePhone,
@@ -562,18 +645,6 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       );
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  function handleTelegramOAuth() {
-    const result = startTelegramOAuth();
-    if (!result.ok) {
-      if (result.fallback === "telegram-form") {
-        go("telegram");
-        return;
-      }
-
-      setError(result.error);
     }
   }
 
@@ -701,10 +772,10 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               {submitting ? t("common.loading") : t("auth.loginWithGoogle")}
             </SecondaryButton>
             <SecondaryButton
-              onClick={handleTelegramOAuth}
+              onClick={() => void handleTelegramOAuth()}
               icon={<Image src={assets.auth.telegramIcon} alt="" width={22} height={22} />}
             >
-              {t("auth.loginWithTelegram")}
+              {submitting ? t("common.loading") : t("auth.loginWithTelegram")}
             </SecondaryButton>
           </div>
 
@@ -903,10 +974,10 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               <SupportModal />
               <button
                 type="button"
-                onClick={handleTelegramOAuth}
+                onClick={() => void handleTelegramOAuth()}
                 className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#0a6af7] p-4 text-[17px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
               >
-                Telegram
+                {submitting ? t("common.loading") : "Telegram"}
                 <Image src={assets.auth.telegramIcon} alt="" width={22} height={22} />
               </button>
             </div>
@@ -1032,14 +1103,18 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           className="mt-6 flex flex-1 flex-col"
           onSubmit={(event) => {
             event.preventDefault();
-            void handleGooglePhoneSubmit();
+            void handleOAuthPhoneSubmit();
           }}
           noValidate
         >
           <p className="text-[15px] font-semibold text-[var(--text-secondary)]">
-            {googleAuthMode === "register"
-              ? t("auth.phoneSubtitleGoogle")
-              : t("auth.phoneSubtitleDefault")}
+            {pendingTelegramProfile
+              ? telegramAuthMode === "register"
+                ? t("auth.phoneSubtitleTelegram")
+                : t("auth.phoneSubtitleDefault")
+              : googleAuthMode === "register"
+                ? t("auth.phoneSubtitleGoogle")
+                : t("auth.phoneSubtitleDefault")}
           </p>
 
           <div className="mt-7 flex flex-col gap-6">

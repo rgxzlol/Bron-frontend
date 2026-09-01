@@ -2,8 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/session";
 
+function readAuthToken(request: NextRequest) {
+  const rawToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  if (!rawToken) return null;
+
+  try {
+    return decodeURIComponent(rawToken);
+  } catch {
+    return rawToken;
+  }
+}
+
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const token = readAuthToken(request);
   const { pathname } = request.nextUrl;
 
   const isProtectedPage =

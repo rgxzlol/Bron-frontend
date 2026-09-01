@@ -27,7 +27,7 @@ export default function Support() {
         id: "telegram",
         title: "Telegram",
         description: t("support.telegramDesc"),
-        buttonText: "Telegram",
+        buttonText: `@${supportContacts.telegram}`,
         icon: assets.support.tg,
         href: supportContacts.telegramHref,
         external: true,
@@ -125,29 +125,31 @@ export default function Support() {
           {contactCards.map((card) => (
             <article
               key={card.id}
-              className="flex items-center gap-[12px] rounded-[14px] bg-[var(--bg-surface)] p-[10px] pr-[14px] lg:gap-[16px] lg:rounded-[24px] lg:p-[16px]"
+              className="flex h-full flex-col gap-[12px] rounded-[14px] bg-[var(--bg-surface)] p-[14px] lg:gap-[16px] lg:rounded-[24px] lg:p-[16px]"
               data-testid={`support-card-${card.id}`}
             >
-              <div className="flex h-[56px] w-[64px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--auth-box)] lg:h-[72px] lg:w-[80px] lg:rounded-[16px]">
-                <Image
-                  src={card.icon}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-[28px] w-[28px] lg:h-[36px] lg:w-[36px]"
-                />
-              </div>
+              <div className="flex items-start gap-[12px] lg:gap-[16px]">
+                <div className="flex h-[56px] w-[64px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--auth-box)] lg:h-[72px] lg:w-[80px] lg:rounded-[16px]">
+                  <Image
+                    src={card.icon}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-[28px] w-[28px] lg:h-[36px] lg:w-[36px]"
+                  />
+                </div>
 
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[16px] font-bold lg:text-[20px]">{card.title}</h3>
-                <p className="mt-[2px] text-[11px] leading-snug text-[var(--text-muted)] lg:text-[13px]">
-                  {card.description}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[16px] font-bold lg:text-[20px]">{card.title}</h3>
+                  <p className="mt-[4px] text-[12px] leading-snug text-[var(--text-muted)] lg:text-[14px]">
+                    {card.description}
+                  </p>
+                </div>
               </div>
 
               <a
                 href={card.href}
-                className="shrink-0 rounded-[10px] border-[1.5px] border-[#0a6af7] px-[16px] py-[8px] text-[13px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[22px] lg:py-[10px] lg:text-[15px]"
+                className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
                 data-testid={card.testId}
                 {...(card.external
                   ? { target: "_blank", rel: "noopener noreferrer" }

@@ -3,22 +3,22 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { routes } from "@/config/routes";
-import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
+import { useAuthReady } from "@/lib/auth/useAuthReady";
 import { useAuthStore } from "@/store/auth.store";
 import ProfileModal from "./ProfileModal";
 
 export default function ProfileRouteClient() {
   const router = useRouter();
-  const hydrated = useAuthHydrated();
+  const authReady = useAuthReady();
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    if (hydrated && !token) {
+    if (authReady && !token) {
       router.replace(routes.login);
     }
-  }, [hydrated, token, router]);
+  }, [authReady, token, router]);
 
-  if (!token) return null;
+  if (!authReady || !token) return null;
 
   return (
     <ProfileModal

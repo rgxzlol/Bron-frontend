@@ -3,8 +3,10 @@ import type { LoginResponse } from "@/lib/api/types";
 import {
   AUTH_FIELD_LIMITS,
   isValidUzbekPhone,
+  normalizePhoneForApi,
   validateRegisterPhone,
 } from "@/lib/auth/validation";
+import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
 
 export type GoogleUserProfile = {
   sub: string;
@@ -68,23 +70,17 @@ export async function completeGoogleAuth(
     throw new Error(phoneError);
   }
 
-  const normalizedPhone = phone.trim();
+  const normalizedPhone = normalizePhoneForApi(phone);
   const username = buildGoogleUsername(profile);
   const password = buildGooglePassword(profile.sub);
 
   if (mode === "register") {
-    try {
-      await authApi.register({
-        username,
-        email: profile.email.trim(),
-        phone: normalizedPhone,
-        password,
-      });
-    } catch (registerError) {
-      if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-        throw registerError;
-      }
-    }
+    await authApi.register({
+      username,
+      email: buildSyntheticEmail(username, phone),
+      phone: normalizedPhone,
+      password,
+    });
 
     return authApi.login({ username, password });
   }

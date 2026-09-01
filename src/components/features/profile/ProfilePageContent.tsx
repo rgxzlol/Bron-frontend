@@ -7,7 +7,7 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 import { readImageFile } from "@/lib/readImageFile";
-import { formatUzbekPhoneInput } from "@/lib/auth/validation";
+import { formatUzbekPhoneInput, looksLikePhoneUsername } from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";
@@ -104,7 +104,9 @@ export default function ProfilePageContent({
   const [deleting, setDeleting] = useState(false);
   const [saveCardForFuture, setSaveCardForFuture] = useState(true);
 
-  const [nameDraft, setNameDraft] = useState(fullName ?? "");
+  const [nameDraft, setNameDraft] = useState(
+    looksLikePhoneUsername(fullName) ? "" : (fullName ?? ""),
+  );
   const [phoneDraft, setPhoneDraft] = useState(phone ?? "");
   const [emailDraft, setEmailDraft] = useState(email ?? "");
   const [oldPassword, setOldPassword] = useState("");
@@ -113,6 +115,8 @@ export default function ProfilePageContent({
   const [personalFieldErrors, setPersonalFieldErrors] = useState<
     Partial<Record<ProfilePersonalField, string>>
   >({});
+
+  const displayName = looksLikePhoneUsername(fullName) ? "" : fullName;
 
   useEffect(() => {
     if (token) {
@@ -140,7 +144,7 @@ export default function ProfilePageContent({
       return;
     }
 
-    setNameDraft(fullName ?? "");
+    setNameDraft(looksLikePhoneUsername(fullName) ? "" : (fullName ?? ""));
     setPhoneDraft(phone ?? "");
     setEmailDraft(email ?? "");
     personalDraftHydratedRef.current = true;
@@ -334,7 +338,7 @@ export default function ProfilePageContent({
             </div>
 
             <div className={s.nameRow}>
-              <h2 data-testid="profile-display-name">{fullName}</h2>
+              <h2 data-testid="profile-display-name">{displayName || t("profile.fullName")}</h2>
               <button type="button" onClick={() => goTo("personal")} aria-label={t("profile.editAria")}>
                 <Image src={assets.profile.edit} alt="" width={16} height={15} />
               </button>

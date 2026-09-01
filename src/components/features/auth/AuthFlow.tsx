@@ -12,7 +12,7 @@ import { Logo } from "@/components/shared/Logo";
 import PasswordInput from "@/components/shared/PasswordInput";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
-import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, REGISTER_PASSWORD_RULES, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, validateRegisterPhone, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
+import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, normalizePhoneForApi, REGISTER_PASSWORD_RULES, resolveLoginUsername, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, validateRegisterPhone, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
 import { signInWithGooglePopup } from "@/lib/auth/googleSignIn";
 import {
   completeGoogleAuth,
@@ -20,6 +20,8 @@ import {
   type GoogleUserProfile,
 } from "@/lib/auth/googleAccount";
 import { isTelegramOAuthConfigured } from "@/lib/auth/oauth";
+import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
+import { looksLikePhoneUsername } from "@/lib/auth/validation";
 import { signInWithTelegramPopup } from "@/lib/auth/telegramSignIn";
 import {
   completeTelegramAuth,
@@ -491,7 +493,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     });
 
     applyAuthProfile({
-      fullName: profile?.fullName ?? session.username,
+      fullName:
+        profile?.fullName ??
+        (looksLikePhoneUsername(session.username) ? undefined : session.username),
       email: profile?.email,
       phone: profile?.phone,
       avatarUrl: profile?.avatarUrl,
@@ -661,12 +665,10 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setSubmitting(true);
     try {
       const session = await authApi.login({
-        username: loginName.trim(),
+        username: resolveLoginUsername(loginName),
         password,
       });
-      await completeAuthSession(session, {
-        fullName: session.username,
-      });
+      await completeAuthSession(session);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("auth.loginFailed"));
     } finally {
@@ -686,27 +688,23 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
     setRegisterFieldErrors({});
     setSubmitting(true);
-    const username = firstName.trim();
-    const normalizedPhone = phone.trim();
-    const syntheticEmail = `${username.toLowerCase().replace(/[^\w.-]/g, "") || "user"}@bron.app`;
+    const displayName = firstName.trim();
+    const normalizedPhone = normalizePhoneForApi(phone);
+    const apiUsername = normalizedPhone;
+    const syntheticEmail = buildSyntheticEmail(displayName, phone);
 
     try {
-      try {
-        await authApi.register({
-          username,
+      const session = await authApi.registerOrSignIn(
+        {
+          username: apiUsername,
           email: syntheticEmail,
           phone: normalizedPhone,
           password,
-        });
-      } catch (registerError) {
-        if (!(registerError instanceof ApiError) || registerError.status !== 400) {
-          throw registerError;
-        }
-      }
-
-      const session = await authApi.login({ username, password });
+        },
+        { username: apiUsername, password },
+      );
       await completeAuthSession(session, {
-        fullName: username,
+        fullName: displayName,
         email: syntheticEmail,
         phone: normalizedPhone,
       });
@@ -811,18 +809,20 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <Field
               id="username-input"
               name="username"
-              label={t("auth.nameLabel")}
-              placeholder={t("auth.usernamePlaceholderShort")}
+              label={t("auth.phone")}
+              placeholder="+998 99 999 99 99"
               value={loginName}
               onChange={(value) => {
-                setLoginName(value);
+                setLoginName(formatUzbekPhoneInput(value));
                 if (fieldErrors.loginName) {
                   setFieldErrors((current) => ({ ...current, loginName: undefined }));
                 }
               }}
-              maxLength={AUTH_FIELD_LIMITS.username}
+              type="tel"
+              inputMode="tel"
+              maxLength={AUTH_FIELD_LIMITS.phone}
               error={fieldErrors.loginName}
-              autoComplete="username"
+              autoComplete="tel"
             />
             <Field
               id="password-input"

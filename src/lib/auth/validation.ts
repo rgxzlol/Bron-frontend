@@ -41,9 +41,22 @@ export function validateLoginPasswordLength(password: string): string | undefine
 
 export function validateLoginFields(loginName: string, password: string): LoginFieldErrors {
   const errors: LoginFieldErrors = {};
+  const trimmed = loginName.trim();
 
-  if (!loginName.trim()) {
-    errors.loginName = "Укажите имя пользователя";
+  if (!trimmed) {
+    errors.loginName = "Укажите телефон";
+  } else {
+    const localDigits = getUzbekPhoneLocalDigits(trimmed);
+
+    if (localDigits.length > 0) {
+      if (
+        localDigits.length < UZBEK_PHONE_LOCAL_DIGIT_LIMIT ||
+        hasExcessUzbekPhoneDigits(trimmed) ||
+        !REGISTER_PHONE_PATTERN.test(formatUzbekPhoneInput(trimmed))
+      ) {
+        errors.loginName = REGISTER_PHONE_FORMAT_ERROR;
+      }
+    }
   }
 
   const passwordError = validateLoginPasswordLength(password);
@@ -102,6 +115,30 @@ export const UZBEK_PHONE_LOCAL_DIGIT_LIMIT = 9;
 export function getUzbekPhoneLocalDigits(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   return digits.startsWith("998") ? digits.slice(3) : digits;
+}
+
+/** Compact E.164 phone for API requests: +998XXXXXXXXX */
+export function normalizePhoneForApi(phone: string): string {
+  const local = getUzbekPhoneLocalDigits(phone);
+  if (!local) return phone.trim();
+  return `+998${local}`;
+}
+
+/** API username is a phone number (phone-based accounts). */
+export function looksLikePhoneUsername(value: string): boolean {
+  return getUzbekPhoneLocalDigits(value).length >= UZBEK_PHONE_LOCAL_DIGIT_LIMIT;
+}
+
+/** Login identifier: phone numbers map to API username, names pass through. */
+export function resolveLoginUsername(loginValue: string): string {
+  const trimmed = loginValue.trim();
+  const localDigits = getUzbekPhoneLocalDigits(trimmed);
+
+  if (localDigits.length >= UZBEK_PHONE_LOCAL_DIGIT_LIMIT) {
+    return normalizePhoneForApi(trimmed);
+  }
+
+  return trimmed;
 }
 
 export function isUzbekPhoneEmpty(phone: string): boolean {

@@ -8,6 +8,7 @@ import { routes } from "@/config/routes";
 import { authApi, ApiError } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
+import { openTelegramAuthBot } from "@/lib/auth/oauth";
 import { SupportModal } from "./SupportModal";
 import PasswordInput from "@/components/shared/PasswordInput";
 import { validateRegisterEmail } from "@/lib/auth/validation";
@@ -250,6 +251,7 @@ export default function AuthForm({ mode }: Props) {
               <SupportModal />
               <button
                 type="button"
+                onClick={openTelegramAuthBot}
                 className="flex w-full items-center justify-center gap-1.25 rounded-3xl bg-[#0A6AF7] p-4 text-[20px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
               >
                 Telegram

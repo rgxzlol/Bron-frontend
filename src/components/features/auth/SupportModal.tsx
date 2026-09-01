@@ -39,10 +39,10 @@ export const SupportModal = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="flex w-full max-w-211.25 flex-col justify-center rounded-[30px] bg-slate-50 px-7 pt-5 pb-9"
+            className="flex w-full max-w-211.25 flex-col justify-center rounded-[30px] bg-[var(--bg-surface)] px-7 pt-5 pb-9 text-[var(--text-primary)] shadow-[var(--shadow-modal)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <h1 id={titleId} className="mb-4.5 text-center text-3xl font-semibold text-black">
+            <h1 id={titleId} className="mb-4.5 text-center text-3xl font-semibold text-[var(--text-primary)]">
               Тех.Поддержка
             </h1>
 
@@ -53,9 +53,9 @@ export const SupportModal = () => {
                 rel="noopener noreferrer"
                 className="group flex flex-col gap-1.5 text-left"
               >
-                <span className="text-xl font-semibold text-black">Телеграм</span>
-                <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
-                  <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
+                <span className="text-xl font-semibold text-[var(--text-primary)]">Телеграм</span>
+                <div className="w-full rounded-3xl bg-[var(--bg-surface-muted)] px-6 py-7.5 transition-all duration-200 group-hover:bg-[var(--bg-hover)] group-active:scale-[0.99]">
+                  <span className="text-2xl font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[#3d8df8]">
                     @{supportContacts.telegram}
                   </span>
                 </div>
@@ -66,9 +66,9 @@ export const SupportModal = () => {
                 aria-label={`Позвонить ${supportContacts.phone}`}
                 className="group flex flex-col gap-1.5 text-left"
               >
-                <span className="text-xl font-semibold text-black">Номер телефона</span>
-                <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
-                  <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
+                <span className="text-xl font-semibold text-[var(--text-primary)]">Номер телефона</span>
+                <div className="w-full rounded-3xl bg-[var(--bg-surface-muted)] px-6 py-7.5 transition-all duration-200 group-hover:bg-[var(--bg-hover)] group-active:scale-[0.99]">
+                  <span className="text-2xl font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[#3d8df8]">
                     {supportContacts.phone}
                   </span>
                 </div>
@@ -79,9 +79,9 @@ export const SupportModal = () => {
                 aria-label={`Написать на ${supportContacts.email}`}
                 className="group flex flex-col gap-1.5 text-left"
               >
-                <span className="text-xl font-semibold text-black">Email</span>
-                <div className="w-full rounded-3xl bg-white px-6 py-7.5 transition-all duration-200 group-hover:border-blue-500 group-hover:shadow-md group-active:scale-[0.99] group-active:bg-gray-50">
-                  <span className="text-2xl font-semibold text-black transition-colors group-hover:text-blue-600">
+                <span className="text-xl font-semibold text-[var(--text-primary)]">Email</span>
+                <div className="w-full rounded-3xl bg-[var(--bg-surface-muted)] px-6 py-7.5 transition-all duration-200 group-hover:bg-[var(--bg-hover)] group-active:scale-[0.99]">
+                  <span className="text-2xl font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[#3d8df8]">
                     {supportContacts.email}
                   </span>
                 </div>
@@ -91,7 +91,7 @@ export const SupportModal = () => {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="h-20 w-full rounded-3xl bg-blue-600 p-6 transition-all duration-200 hover:bg-blue-700 active:scale-[0.98]"
+              className="h-20 w-full rounded-3xl bg-[#0A6AF7] p-6 transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.98]"
             >
               <span className="text-2xl font-semibold text-white">Закрыть</span>
             </button>

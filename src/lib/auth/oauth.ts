@@ -1,6 +1,16 @@
 const GOOGLE_OAUTH_BASE = "https://accounts.google.com/o/oauth2/v2/auth";
 const TELEGRAM_OAUTH_BASE = "https://oauth.telegram.org/auth";
 
+export const TELEGRAM_AUTH_BOT = {
+  username: "vs007_testdevbot",
+  href: "https://t.me/vs007_testdevbot",
+} as const;
+
+export function openTelegramAuthBot() {
+  if (typeof window === "undefined") return;
+  window.open(TELEGRAM_AUTH_BOT.href, "_blank", "noopener,noreferrer");
+}
+
 export type OAuthStartResult =
   | { ok: true }
   | { ok: false; error: string; fallback?: "telegram-form" };

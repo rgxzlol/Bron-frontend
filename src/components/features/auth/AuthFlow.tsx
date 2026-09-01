@@ -19,10 +19,9 @@ import {
   resolveGoogleAuth,
   type GoogleUserProfile,
 } from "@/lib/auth/googleAccount";
-import { isTelegramOAuthConfigured } from "@/lib/auth/oauth";
+import { openTelegramAuthBot } from "@/lib/auth/oauth";
 import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
-import { signInWithTelegramPopup } from "@/lib/auth/telegramSignIn";
 import {
   completeTelegramAuth,
 } from "@/lib/auth/telegramAccount";

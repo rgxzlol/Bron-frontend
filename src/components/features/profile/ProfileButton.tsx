@@ -33,14 +33,20 @@ export default function ProfileButton({
     return (
       <button
         type="button"
-        className="rounded-full bg-white p-1"
+        className="rounded-full bg-white p-1 transition-opacity hover:opacity-90"
         aria-label={t("common.profile")}
         aria-haspopup="dialog"
         data-testid="profile-button"
         onClick={handleClick}
       >
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)]">
-          <Image src={assets.header.profileIcon} alt="" width={24} height={24} />
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] transition-colors hover:bg-[var(--bg-hover)]">
+          <Image
+            src={assets.header.profileIcon}
+            alt=""
+            width={24}
+            height={24}
+            data-header-icon
+          />
         </span>
       </button>
     );

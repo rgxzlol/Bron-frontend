@@ -302,6 +302,51 @@ export function getDemoResponse(
     return getDemoBusinessServices();
   }
 
+  const serviceUpdateMatch = cleanPath.match(/^\/services\/(\d+)$/);
+  if (m === "PUT" && serviceUpdateMatch) {
+    const serviceId = Number(serviceUpdateMatch[1]);
+    const payload = (body ?? {}) as {
+      title?: string;
+      description?: string | null;
+      category?: string;
+      price?: number;
+      is_active?: boolean;
+    };
+    const existing = getDemoBusinessServices().find((item) => item.id === serviceId);
+
+    return {
+      id: serviceId,
+      business_id: DEMO_BUSINESS_ID,
+      title: payload.title ?? existing?.title ?? "Услуга",
+      description: payload.description ?? existing?.description ?? "",
+      category: payload.category ?? existing?.category ?? "other",
+      duration: existing?.duration ?? 60,
+      price: payload.price ?? existing?.price ?? 0,
+      is_active: payload.is_active ?? existing?.is_active ?? true,
+    };
+  }
+
+  const productUpdateMatch = cleanPath.match(/^\/products\/(\d+)$/);
+  if (m === "PUT" && productUpdateMatch) {
+    const productId = Number(productUpdateMatch[1]);
+    const payload = (body ?? {}) as {
+      name?: string;
+      description?: string | null;
+      price?: number;
+      is_active?: boolean;
+    };
+
+    return {
+      id: productId,
+      business_id: DEMO_BUSINESS_ID,
+      name: payload.name ?? "Товар",
+      description: payload.description ?? null,
+      image: null,
+      price: payload.price ?? 0,
+      is_active: payload.is_active ?? true,
+    };
+  }
+
   const productsBusinessMatch = cleanPath.match(/^\/products\/business\/(\d+)$/);
   if (
     m === "GET" &&

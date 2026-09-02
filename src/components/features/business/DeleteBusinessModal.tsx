@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import desktop from "./businessDesktop.module.css";
 
 type DeleteBusinessModalProps = {
   businessName: string;
@@ -12,7 +13,7 @@ type DeleteBusinessModalProps = {
 
 function TrashIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"
         stroke="#e02424"
@@ -24,13 +25,37 @@ function TrashIcon() {
   );
 }
 
-function CloseIcon() {
+function ExitIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect
+        x="4"
+        y="4"
+        width="12"
+        height="16"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M10 12h10M17 9l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function WarningIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="10" fill="#e02424" />
       <path
-        d="M6 6l12 12M18 6L6 18"
-        stroke="currentColor"
-        strokeWidth="2.4"
+        d="M12 7v6M12 17h.01"
+        stroke="white"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
     </svg>
@@ -46,6 +71,17 @@ export default function DeleteBusinessModal({
   const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !isDeleting) onClose();
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, isDeleting, onClose]);
+
   if (!isOpen) return null;
 
   async function handleConfirm() {
@@ -60,26 +96,26 @@ export default function DeleteBusinessModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className={desktop.deleteBackdrop}
       data-testid="business-delete-modal-backdrop"
       onClick={onClose}
     >
       <section
-        className="w-full max-w-[320px] rounded-[16px] bg-[var(--bg-surface)] p-[18px] shadow-lg lg:max-w-[400px] lg:p-[22px]"
+        className={desktop.deleteModal}
         data-testid="business-delete-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="business-delete-modal-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-[10px]">
-          <div className="flex items-center gap-[10px]">
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[#fde8e8]">
+        <div className={desktop.deleteHeader}>
+          <div className={desktop.deleteHeaderLeft}>
+            <span className={desktop.deleteIconWrap}>
               <TrashIcon />
             </span>
             <h3
               id="business-delete-modal-title"
-              className="text-[17px] font-bold"
+              className={desktop.deleteTitle}
               data-testid="business-delete-modal-title"
             >
               {t("businessDeleteModal.title")}
@@ -88,27 +124,36 @@ export default function DeleteBusinessModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-[6px] text-[var(--text-primary)] transition hover:opacity-70"
+            className={desktop.deleteCloseButton}
             aria-label={t("common.close")}
             data-testid="business-delete-modal-close"
           >
-            <CloseIcon />
+            <ExitIcon />
           </button>
         </div>
 
-        <p className="mt-[16px] text-[14px] font-semibold leading-snug">
-          {t("businessDeleteModal.confirm", { name: businessName })}
+        <p className={desktop.deleteConfirm}>
+          {t("businessDeleteModal.confirmBefore")}{" "}
+          <strong>{businessName}</strong>
+          {t("businessDeleteModal.confirmAfter")}
         </p>
-        <p className="mt-[8px] text-[13px] leading-snug text-[var(--text-secondary)]">
-          {t("businessDeleteModal.warning")}
-        </p>
+        <p className={desktop.deleteWarning}>{t("businessDeleteModal.warning")}</p>
 
-        <div className="mt-[18px] grid grid-cols-2 gap-[10px]">
+        <div className={desktop.deleteAlertBox}>
+          <span className={desktop.deleteAlertIcon}>
+            <WarningIcon />
+          </span>
+          <p className={desktop.deleteAlertText}>
+            {t("businessDeleteModal.irreversible")}
+          </p>
+        </div>
+
+        <div className={desktop.deleteActions}>
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="rounded-[10px] bg-[#0a6af7] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce] disabled:opacity-60"
+            className={desktop.deleteCancelButton}
             data-testid="business-delete-cancel"
           >
             {t("businessDeleteModal.cancel")}
@@ -117,7 +162,7 @@ export default function DeleteBusinessModal({
             type="button"
             disabled={isDeleting}
             onClick={() => void handleConfirm()}
-            className="rounded-[10px] bg-[#e02424] py-[13px] text-[14px] font-semibold text-white transition hover:bg-[#c11f1f] disabled:opacity-60"
+            className={desktop.deleteConfirmButton}
             data-testid="business-delete-confirm"
           >
             {isDeleting ? t("businessModal.saving") : t("businessDeleteModal.delete")}

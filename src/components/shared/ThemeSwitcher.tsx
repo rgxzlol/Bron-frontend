@@ -4,7 +4,6 @@ import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useProfileStore } from "@/store/profile.store";
-import s from "./themeToggle.module.css";
 
 export const ThemeSwitcher = () => {
   const { t } = useTranslation();
@@ -19,15 +18,17 @@ export const ThemeSwitcher = () => {
       aria-label={isDark ? t("themeToggle.enableLight") : t("themeToggle.enableDark")}
       aria-pressed={isDark}
       data-testid="theme-switcher"
-      className={`${s.toggle} flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-95`}
+      className="rounded-full bg-white p-1 transition-opacity hover:opacity-90 active:scale-95"
     >
-      <Image
-        src={isDark ? assets.profile.nightTheme : assets.profile.lightTheme}
-        alt=""
-        width={22}
-        height={22}
-        data-theme-aware
-      />
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] transition-colors hover:bg-[var(--bg-hover)]">
+        <Image
+          src={isDark ? assets.profile.nightTheme : assets.profile.lightTheme}
+          alt=""
+          width={22}
+          height={22}
+          data-theme-aware
+        />
+      </span>
     </button>
   );
 };

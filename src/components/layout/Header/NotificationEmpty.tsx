@@ -15,6 +15,7 @@ export function NotificationEmpty() {
       <Image
         src={assets.notification.emptyNotification}
         alt=""
+        data-theme-invert
         className="mb-[31px] h-auto w-[220px] max-w-full"
       />
       <h1

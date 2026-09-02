@@ -1,6 +1,7 @@
 import { authApi, ApiError, usersApi } from "@/lib/api";
 import type { LoginResponse } from "@/lib/api/types";
 import {
+  areUzbekPhonesEqual,
   AUTH_FIELD_LIMITS,
   isValidUzbekPhone,
   normalizePhoneForApi,
@@ -75,17 +76,42 @@ export async function completeGoogleAuth(
   const password = buildGooglePassword(profile.sub);
 
   if (mode === "register") {
-    await authApi.register({
-      username,
-      email: buildSyntheticEmail(username, phone),
-      phone: normalizedPhone,
-      password,
-    });
-
-    return authApi.login({ username, password });
+    return authApi.registerOrSignIn(
+      {
+        username,
+        email: buildSyntheticEmail(username, phone),
+        phone: normalizedPhone,
+        password,
+      },
+      { username, password },
+    );
   }
 
   const session = await authApi.login({ username, password });
-  await usersApi.updateProfile({ phone: normalizedPhone }, session.access_token);
+  const user = await authApi.me(session.access_token);
+
+  if (areUzbekPhonesEqual(user.phone, normalizedPhone)) {
+    return session;
+  }
+
+  try {
+    await usersApi.updateProfile({ phone: normalizedPhone }, session.access_token);
+  } catch (updateError) {
+    if (
+      updateError instanceof ApiError &&
+      (updateError.status === 409 ||
+        (updateError.status === 500 &&
+          /unique constraint failed.*phone/i.test(updateError.message)))
+    ) {
+      throw new ApiError(
+        409,
+        `Аккаунт с номером ${normalizedPhone} уже зарегистрирован. Войдите с этим номером и паролем.`,
+        updateError.data,
+      );
+    }
+
+    throw updateError;
+  }
+
   return session;
 }

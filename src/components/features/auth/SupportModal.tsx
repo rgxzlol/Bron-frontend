@@ -2,8 +2,11 @@
 
 import { useEffect, useId, useState } from "react";
 import { supportContacts } from "@/data/support";
+import { openSupportEmail } from "@/lib/support/openSupportEmail";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export const SupportModal = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
 
@@ -74,10 +77,16 @@ export const SupportModal = () => {
                 </div>
               </a>
 
-              <a
-                href={`mailto:${supportContacts.email}`}
-                aria-label={`Написать на ${supportContacts.email}`}
-                className="group flex flex-col gap-1.5 text-left"
+              <button
+                type="button"
+                onClick={() =>
+                  openSupportEmail({
+                    email: supportContacts.email,
+                    subject: t("support.emailSubject"),
+                  })
+                }
+                aria-label={`${t("support.writeEmail")} ${supportContacts.email}`}
+                className="group flex w-full flex-col gap-1.5 text-left"
               >
                 <span className="text-xl font-semibold text-[var(--text-primary)]">Email</span>
                 <div className="w-full rounded-3xl bg-[var(--bg-surface-muted)] px-6 py-7.5 transition-all duration-200 group-hover:bg-[var(--bg-hover)] group-active:scale-[0.99]">
@@ -85,7 +94,7 @@ export const SupportModal = () => {
                     {supportContacts.email}
                   </span>
                 </div>
-              </a>
+              </button>
             </div>
 
             <button

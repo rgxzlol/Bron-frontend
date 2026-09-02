@@ -11,6 +11,22 @@ import BusinessDashboard from "./BusinessDashboard";
 import BusinessEmptyPromo from "./BusinessEmptyPromo";
 import MyBusiness from "./MyBusiness";
 
+function useDesktopLayout() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updateViewport = () => setIsDesktop(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  return isDesktop;
+}
+
 const Business = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,11 +74,13 @@ const Business = () => {
   }, [hasBusinesses, setShowMyBusiness]);
 
   useEffect(() => {
+    if (createModalOpen) return;
+
     if (resolvedEditId) {
       setEditBusinessId(resolvedEditId);
       loadForEdit(resolvedEditId);
     }
-  }, [resolvedEditId, loadForEdit, businesses]);
+  }, [resolvedEditId, loadForEdit, businesses, createModalOpen]);
 
   function pushBusinessView(query: { edit?: string | null; dashboard?: string | null }) {
     const params = new URLSearchParams(searchParams.toString());
@@ -85,6 +103,7 @@ const Business = () => {
     resetDraft();
     setEditBusinessId(null);
     setCreateModalOpen(true);
+    pushBusinessView({ edit: null, dashboard: null });
   }
 
   function openEditModal(id: string) {
@@ -103,6 +122,8 @@ const Business = () => {
       return;
     }
     setCreateModalOpen(false);
+    setEditBusinessId(null);
+    pushBusinessView({ edit: null, dashboard: null });
   }
 
   function handleSaved() {

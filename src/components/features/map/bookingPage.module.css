@@ -90,7 +90,7 @@
   flex-shrink: 0;
   padding: 10px 18px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-default);
   background: var(--bg-surface);
   font-size: 14px;
   font-weight: 600;
@@ -136,7 +136,7 @@
 .statBox {
   padding: 12px;
   border-radius: 12px;
-  background: #f0f4fa;
+  background: var(--bg-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -145,11 +145,12 @@
 .statLabel {
   font-size: 12px;
   font-weight: 600;
+  color: var(--text-muted);
 }
 
 .statValue {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .statValueRow {
@@ -185,7 +186,7 @@
   left: calc(50% + 20px);
   width: calc(100% - 40px);
   height: 2px;
-  background: #e5e7eb;
+  background: var(--bg-inactive);
   z-index: 0;
 }
 
@@ -201,7 +202,7 @@
   place-items: center;
   font-size: 14px;
   font-weight: 700;
-  background: #e5e7eb;
+  background: var(--bg-inactive);
   color: var(--text-muted);
   position: relative;
   z-index: 1;
@@ -272,8 +273,8 @@
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  background: var(--bg-input);
   font-size: 14px;
 }
 
@@ -353,7 +354,8 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-muted);
   font-size: 20px;
   line-height: 1;
   display: grid;
@@ -388,7 +390,7 @@
 }
 
 .lineName {
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .linePrice {
@@ -422,13 +424,13 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-default);
   cursor: pointer;
 }
 
 .payOptionSelected {
   border-color: #0a6af7;
-  background: #f0f6ff;
+  background: var(--bg-active-soft);
 }
 
 .payOption input {
@@ -460,7 +462,7 @@
   padding: 18px 20px;
   border-radius: 16px;
   border: 1px solid #cfe0ff;
-  background: #f0f6ff;
+  background: var(--bg-active-soft);
 }
 
 .securityIcon {
@@ -483,7 +485,7 @@
 
 .securityText {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.45;
 }
 
@@ -496,7 +498,7 @@
 .backToMap {
   padding: 10px 18px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-default);
   background: var(--bg-surface);
   font-size: 14px;
   font-weight: 600;
@@ -652,12 +654,12 @@
 
 .confirmEmail {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .whatsNext {
   text-align: left;
-  background: #f9fafb;
+  background: var(--bg-surface-muted);
   border-radius: 16px;
   padding: 18px;
   margin-bottom: 24px;
@@ -671,7 +673,7 @@
 
 .whatsNextList {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.5;
   padding-left: 18px;
 }
@@ -694,7 +696,7 @@
 .secondaryBtn {
   padding: 14px 24px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-default);
   font-weight: 600;
   font-size: 14px;
   background: var(--bg-surface);

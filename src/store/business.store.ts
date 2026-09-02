@@ -15,6 +15,8 @@ import {
 import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
 import { getDemoSavedBusiness } from "@/lib/business/demoBusiness";
 import { getAuthToken } from "@/lib/api/token";
+import { ApiError } from "@/lib/api/client";
+import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
 import { GeocodingError } from "@/lib/geocoding";
 import {
   DEFAULT_SCHEDULE,
@@ -100,7 +102,7 @@ export const createEmptyDraft = (): BusinessDraft => ({
   description: "",
   category: "",
   website: "",
-  phone: "",
+  phone: UZBEK_PHONE_PREFIX,
   address: "",
   lat: null,
   lng: null,
@@ -311,7 +313,7 @@ export const useBusinessStore = create<BusinessStore>()(
             });
             return normalized;
           } catch (error) {
-            if (error instanceof GeocodingError) {
+            if (error instanceof GeocodingError || error instanceof ApiError) {
               throw error;
             }
 

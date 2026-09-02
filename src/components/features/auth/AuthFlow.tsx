@@ -12,7 +12,7 @@ import { Logo } from "@/components/shared/Logo";
 import PasswordInput from "@/components/shared/PasswordInput";
 import LanguageSelector from "@/components/layout/Header/LanguageSelector";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
-import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, normalizePhoneForApi, REGISTER_PASSWORD_RULES, resolveLoginUsername, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, validateRegisterPhone, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
+import { AUTH_FIELD_LIMITS, clampField, formatUzbekPhoneInput, LOGIN_PASSWORD_LENGTH_ERROR, LOGIN_PASSWORD_LIMITS, normalizePhoneForApi, REGISTER_PASSWORD_RULES, resolveLoginUsername, UZBEK_PHONE_PREFIX, validateLoginFields, validateLoginPasswordLength, validateRecoveryPassword, validateRegisterFields, validateRegisterPasswordLength, validateRegisterPhone, type LoginFieldErrors, type RecoveryPasswordErrors, type RegisterFieldErrors } from "@/lib/auth/validation";
 import { signInWithGooglePopup } from "@/lib/auth/googleSignIn";
 import {
   completeGoogleAuth,
@@ -408,7 +408,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
   const [screen, setScreen] = useState<AuthScreen>(initialScreen);
   const [firstName, setFirstName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(UZBEK_PHONE_PREFIX);
   const [loginName, setLoginName] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -447,6 +447,12 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     }
     if (next !== "login") {
       setPasswordResetSuccess(false);
+    }
+    if (next === "register") {
+      setPhone((current) => current || UZBEK_PHONE_PREFIX);
+    }
+    if (next === "google-phone") {
+      setGooglePhone((current) => current || UZBEK_PHONE_PREFIX);
     }
     setScreen(next);
   }
@@ -612,6 +618,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     const nextFieldErrors = validateLoginFields(loginName, password);
     if (nextFieldErrors.loginName || nextFieldErrors.password) {
       setFieldErrors(nextFieldErrors);
+      setPasswordResetSuccess(false);
       return;
     }
 
@@ -624,6 +631,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       });
       await completeAuthSession(session);
     } catch (e) {
+      setPasswordResetSuccess(false);
       setError(e instanceof ApiError ? e.message : t("auth.loginFailed"));
     } finally {
       setSubmitting(false);
@@ -758,8 +766,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           </p>
 
           <div className="mt-7 flex flex-col gap-6">
-            {successBanner}
-            {errorBanner}
+            {errorBanner ?? successBanner}
             <Field
               id="username-input"
               name="username"
@@ -871,7 +878,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               placeholder="+998 99 999 99 99"
               value={phone}
               onChange={(value) => {
-                setPhone(formatUzbekPhoneInput(value));
+                setPhone(formatUzbekPhoneInput(value, { keepPrefix: true }));
                 if (registerFieldErrors.phone) {
                   setRegisterFieldErrors((current) => ({ ...current, phone: undefined }));
                 }
@@ -1083,7 +1090,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               placeholder="+998 99 999 99 99"
               value={googlePhone}
               onChange={(value) => {
-                setGooglePhone(formatUzbekPhoneInput(value));
+                setGooglePhone(formatUzbekPhoneInput(value, { keepPrefix: true }));
                 if (googlePhoneError) {
                   setGooglePhoneError(undefined);
                 }

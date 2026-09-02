@@ -886,7 +886,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 aria-invalid={!!formErrors.phone}
                 aria-describedby={formErrors.phone ? "business-phone-error" : undefined}
                 onChange={(e) => {
-                  updateDraft({ phone: formatUzbekPhoneInput(e.target.value) });
+                  updateDraft({
+                    phone: formatUzbekPhoneInput(e.target.value, { keepPrefix: true }),
+                  });
                   clearFieldError("phone");
                 }}
               />
@@ -1248,4 +1250,22 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     </>,
     document.body,
   );
+
+  if (isDesktop) {
+    return (
+      <div className={desktop.page} data-testid="business-config-page">
+        {content}
+        <DeleteBusinessModal
+          businessName={draft.name || t("business.untitled")}
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    );
+  }
+
+  if (!mounted) return mobileOverlay;
+
+  return createPortal(mobileOverlay, document.body);
 }

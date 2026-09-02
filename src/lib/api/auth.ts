@@ -23,7 +23,7 @@ function mapAuthError(status: number, message: string): string {
   if (status !== 401) return message;
 
   if (/invalid username or password/i.test(message)) {
-    return "Неверное имя или пароль. Войдите по имени, указанному при регистрации.";
+    return "Неверный телефон или пароль. Войдите по номеру, указанному при регистрации.";
   }
 
   if (/unauthorized/i.test(message)) {

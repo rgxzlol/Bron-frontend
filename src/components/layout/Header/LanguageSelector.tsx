@@ -5,6 +5,7 @@ import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useProfileStore, type ProfileLanguage } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import s from "./languageSelector.module.css";
 
 const LANGUAGES: Array<{
   code: ProfileLanguage;
@@ -58,11 +59,9 @@ export default function LanguageSelector() {
         aria-haspopup="listbox"
         data-testid="language-selector"
       >
-        <span className="flex h-11 w-11 items-center justify-center gap-2 rounded-full bg-[var(--bg-surface-muted)] transition-colors hover:bg-[var(--bg-hover)] lg:w-auto lg:px-3.5">
-          <Image src={currentLanguage.icon} alt="" className="w-6" />
-          <span className="hidden text-[18px] font-semibold lg:inline">
-            {currentLanguage.label}
-          </span>
+        <span className={s.trigger}>
+          <Image src={currentLanguage.icon} alt="" className="w-6 shrink-0" />
+          <span className={s.label}>{currentLanguage.label}</span>
         </span>
       </button>
 

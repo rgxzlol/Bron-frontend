@@ -58,9 +58,11 @@ export default function LanguageSelector() {
         aria-haspopup="listbox"
         data-testid="language-selector"
       >
-        <span className="flex h-11 items-center gap-2 rounded-full bg-[var(--bg-surface-muted)] px-3.5 transition-colors hover:bg-[var(--bg-hover)]">
+        <span className="flex h-11 w-11 items-center justify-center gap-2 rounded-full bg-[var(--bg-surface-muted)] transition-colors hover:bg-[var(--bg-hover)] lg:w-auto lg:px-3.5">
           <Image src={currentLanguage.icon} alt="" className="w-6" />
-          <span className="text-[18px] font-semibold">{currentLanguage.label}</span>
+          <span className="hidden text-[18px] font-semibold lg:inline">
+            {currentLanguage.label}
+          </span>
         </span>
       </button>
 

@@ -13,9 +13,7 @@ export default function Header() {
       <Logo className="text-[26px] lg:hidden" />
 
       <div className="ml-auto flex items-center gap-[6px] lg:order-3 lg:ml-0 lg:gap-[10px]">
-        <div className="hidden lg:flex">
-          <LanguageSelector />
-        </div>
+        <LanguageSelector />
         <ThemeSwitcher />
         <NotificationDropdown />
         <ProfileButton variant="header" />

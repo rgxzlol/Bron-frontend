@@ -24,7 +24,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/business");
 
   if (!token && isProtectedPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectPath = pathname.startsWith("/profile") ? "/auth" : "/login";
+    return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
   return NextResponse.next();

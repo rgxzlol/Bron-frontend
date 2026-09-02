@@ -14,7 +14,7 @@ export default function ProfileRouteClient() {
 
   useEffect(() => {
     if (authReady && !token) {
-      router.replace(routes.login);
+      router.replace(routes.auth);
     }
   }, [authReady, token, router]);
 

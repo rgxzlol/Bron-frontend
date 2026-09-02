@@ -22,7 +22,7 @@ export default function ProfileButton({
 
   function handleClick() {
     if (hydrated && !token) {
-      router.push(routes.login);
+      router.push(routes.auth);
       return;
     }
 

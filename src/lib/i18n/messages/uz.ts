@@ -199,7 +199,7 @@ export const uz: MessageTree = {
     loginWithGoogle: "Google orqali kirish",
     loginWithTelegram: "Telegram orqali kirish",
     loginTitle: "Hisobga kirish",
-    loginSubtitle: "Kirish uchun ism va parolni kiriting",
+    loginSubtitle: "Kirish uchun telefon va parolni kiriting",
     nameLabel: "Ism",
     forgotPassword: "Parolni unutdingizmi?",
     registerTitle: "Hisob yaratish",

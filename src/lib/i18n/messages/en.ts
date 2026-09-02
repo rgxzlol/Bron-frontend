@@ -199,7 +199,7 @@ export const en: MessageTree = {
     loginWithGoogle: "Sign in with Google",
     loginWithTelegram: "Sign in with Telegram",
     loginTitle: "Sign in",
-    loginSubtitle: "Enter your name and password to sign in",
+    loginSubtitle: "Enter your phone and password to sign in",
     nameLabel: "Name",
     forgotPassword: "Forgot password?",
     registerTitle: "Create account",

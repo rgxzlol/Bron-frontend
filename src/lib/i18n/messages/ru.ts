@@ -199,7 +199,7 @@ export const ru: MessageTree = {
     loginWithGoogle: "Войти с Google",
     loginWithTelegram: "Войти с Telegram",
     loginTitle: "Вход в аккаунт",
-    loginSubtitle: "Впишите ваш пароль и имя для входа в аккаунт",
+    loginSubtitle: "Впишите ваш пароль и телефон для входа в аккаунт",
     nameLabel: "Имя",
     forgotPassword: "Забыли пароль?",
     registerTitle: "Создание аккаунта",

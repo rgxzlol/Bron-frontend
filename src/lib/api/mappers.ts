@@ -1,3 +1,4 @@
+import { normalizePhoneForApi } from "@/lib/auth/validation";
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
 import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
@@ -120,9 +121,10 @@ export function draftToBusinessCreate(
     description: draft.description?.trim() || null,
     category: uiCategoryToApi(draft.category),
     address: draft.address.trim(),
-    phone: draft.phone.trim(),
+    phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
+    website: draft.website?.trim() || null,
     comments: "",
   };
 }
@@ -136,9 +138,10 @@ export function draftToBusinessUpdate(
     description: draft.description?.trim() || null,
     category: uiCategoryToApi(draft.category),
     address: draft.address.trim(),
-    phone: draft.phone.trim(),
+    phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
+    website: draft.website?.trim() || null,
   };
 }
 

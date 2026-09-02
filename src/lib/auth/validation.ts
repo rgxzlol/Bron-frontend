@@ -150,8 +150,11 @@ export function hasExcessUzbekPhoneDigits(phone: string): boolean {
   return getUzbekPhoneLocalDigits(phone).length > UZBEK_PHONE_LOCAL_DIGIT_LIMIT;
 }
 
+export const UZBEK_PHONE_PREFIX = "+998";
+
 type FormatUzbekPhoneOptions = {
   preserveOverflow?: boolean;
+  keepPrefix?: boolean;
 };
 
 export const REGISTER_PHONE_FORMAT_ERROR =
@@ -201,10 +204,10 @@ export function formatUzbekPhoneInput(
     : local.slice(0, UZBEK_PHONE_LOCAL_DIGIT_LIMIT);
 
   if (subscriberDigits.length === 0) {
-    return "";
+    return options?.keepPrefix ? UZBEK_PHONE_PREFIX : "";
   }
 
-  let formatted = "+998";
+  let formatted = UZBEK_PHONE_PREFIX;
   if (subscriberDigits.length > 0) {
     formatted += ` ${subscriberDigits.slice(0, 2)}`;
   }

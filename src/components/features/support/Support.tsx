@@ -1,6 +1,7 @@
 "use client";
 
 import { faqItems, supportContacts } from "@/data/support";
+import { openSupportEmail } from "@/lib/support/openSupportEmail";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
@@ -39,7 +40,11 @@ export default function Support() {
         description: t("support.emailDesc"),
         buttonText: t("support.writeEmail"),
         icon: assets.support.email,
-        href: `mailto:${supportContacts.email}?subject=${encodeURIComponent(t("support.emailSubject"))}`,
+        onClick: () =>
+          openSupportEmail({
+            email: supportContacts.email,
+            subject: t("support.emailSubject"),
+          }),
         testId: "support-email",
       },
     ],
@@ -147,16 +152,27 @@ export default function Support() {
                 </div>
               </div>
 
-              <a
-                href={card.href}
-                className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
-                data-testid={card.testId}
-                {...(card.external
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-              >
-                {card.buttonText}
-              </a>
+              {"onClick" in card && card.onClick ? (
+                <button
+                  type="button"
+                  onClick={card.onClick}
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
+                  data-testid={card.testId}
+                >
+                  {card.buttonText}
+                </button>
+              ) : (
+                <a
+                  href={card.href}
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
+                  data-testid={card.testId}
+                  {...(card.external
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                >
+                  {card.buttonText}
+                </a>
+              )}
             </article>
           ))}
         </div>

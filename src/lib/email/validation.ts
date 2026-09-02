@@ -23,6 +23,7 @@ const KNOWN_INVALID_DOMAINS = new Set([
   "gmqil.com",
   "gmail.co",
   "gmail.cm",
+  "gmail.csm",
   "gmail.con",
   "gmail.om",
   "gmail.coom",
@@ -114,8 +115,8 @@ function isTypoDomain(domain: string): boolean {
   }
 
   for (const host of POPULAR_EMAIL_HOSTS) {
-    if (label === host.label && (host.tlds as readonly string[]).includes(tld)) {
-      return false;
+    if (label === host.label) {
+      return !(host.tlds as readonly string[]).includes(tld);
     }
   }
 

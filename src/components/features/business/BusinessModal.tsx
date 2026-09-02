@@ -886,7 +886,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 aria-invalid={!!formErrors.phone}
                 aria-describedby={formErrors.phone ? "business-phone-error" : undefined}
                 onChange={(e) => {
-                  updateDraft({ phone: formatUzbekPhoneInput(e.target.value) });
+                  updateDraft({
+                    phone: formatUzbekPhoneInput(e.target.value, { keepPrefix: true }),
+                  });
                   clearFieldError("phone");
                 }}
               />
@@ -1218,7 +1220,23 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     </div>
   );
 
-  if (!mounted) return null;
+  const mobileOverlay = (
+    <>
+      <div
+        className={s.backdrop}
+        data-testid="business-config-modal"
+        data-editing={editingId ? "true" : "false"}
+      >
+        <div className={s.panel}>{content}</div>
+      </div>
+      <DeleteBusinessModal
+        businessName={draft.name || t("business.untitled")}
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
+    </>
+  );
 
   if (isDesktop) {
     return (
@@ -1234,18 +1252,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     );
   }
 
-  return createPortal(
-    <>
-      <div className={s.backdrop} data-testid="business-config-modal" data-editing={editingId ? "true" : "false"}>
-        <div className={s.panel}>{content}</div>
-      </div>
-      <DeleteBusinessModal
-        businessName={draft.name || t("business.untitled")}
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-      />
-    </>,
-    document.body,
-  );
+  if (!mounted) return mobileOverlay;
+
+  return createPortal(mobileOverlay, document.body);
 }

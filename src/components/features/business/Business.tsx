@@ -11,6 +11,22 @@ import BusinessDashboard from "./BusinessDashboard";
 import BusinessEmptyPromo from "./BusinessEmptyPromo";
 import MyBusiness from "./MyBusiness";
 
+function useDesktopLayout() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updateViewport = () => setIsDesktop(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  return isDesktop;
+}
+
 const Business = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,7 +49,8 @@ const Business = () => {
       : null;
   const resolvedEditId =
     editId && businesses.some((business) => business.id === editId) ? editId : null;
-  const editModalOpen = editBusinessId !== null || Boolean(resolvedEditId);
+  const editModalOpen =
+    !createModalOpen && (editBusinessId !== null || Boolean(resolvedEditId));
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
@@ -58,11 +75,13 @@ const Business = () => {
   }, [hasBusinesses, setShowMyBusiness]);
 
   useEffect(() => {
+    if (createModalOpen) return;
+
     if (resolvedEditId) {
       setEditBusinessId(resolvedEditId);
       loadForEdit(resolvedEditId);
     }
-  }, [resolvedEditId, loadForEdit, businesses]);
+  }, [resolvedEditId, loadForEdit, businesses, createModalOpen]);
 
   function pushBusinessView(query: { edit?: string | null; dashboard?: string | null }) {
     const params = new URLSearchParams(searchParams.toString());
@@ -85,6 +104,7 @@ const Business = () => {
     resetDraft();
     setEditBusinessId(null);
     setCreateModalOpen(true);
+    pushBusinessView({ edit: null, dashboard: null });
   }
 
   function openEditModal(id: string) {
@@ -97,12 +117,9 @@ const Business = () => {
 
   function handleCloseModal() {
     resetDraft();
-    if (editBusinessId || resolvedEditId) {
-      setEditBusinessId(null);
-      pushBusinessView({ edit: null });
-      return;
-    }
     setCreateModalOpen(false);
+    setEditBusinessId(null);
+    pushBusinessView({ edit: null, dashboard: null });
   }
 
   function handleSaved() {
@@ -123,6 +140,8 @@ const Business = () => {
   }
 
   const modalOpen = editModalOpen || createModalOpen;
+  const isDesktop = useDesktopLayout();
+  const hideUnderlyingView = modalOpen && isDesktop;
   const modal = modalOpen ? (
     <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
   ) : null;
@@ -143,26 +162,24 @@ const Business = () => {
   if (showList) {
     return (
       <>
-        {modalOpen ? (
-          modal
-        ) : (
+        {!hideUnderlyingView ? (
           <MyBusiness
             onAddBusiness={openModal}
             onEditBusiness={openEditModal}
             onOpenStatistics={openDashboard}
           />
-        )}
+        ) : null}
+        {modal}
       </>
     );
   }
 
   return (
     <>
-      {modalOpen ? (
-        modal
-      ) : (
+      {!hideUnderlyingView ? (
         <BusinessEmptyPromo onAddBusiness={openModal} />
-      )}
+      ) : null}
+      {modal}
     </>
   );
 };

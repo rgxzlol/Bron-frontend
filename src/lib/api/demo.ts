@@ -282,10 +282,36 @@ export function getDemoResponse(
   }
 
   const businessDetailMatch = cleanPath.match(/^\/businesses\/(\d+)$/);
-  if (m === "GET" && businessDetailMatch) {
+  if (businessDetailMatch) {
     const businessId = Number(businessDetailMatch[1]);
-    const business = demoOwnedBusinesses.find((item) => item.id === businessId);
-    return business ?? undefined;
+    const index = demoOwnedBusinesses.findIndex((item) => item.id === businessId);
+
+    if (m === "GET") {
+      const business = demoOwnedBusinesses.find((item) => item.id === businessId);
+      return business ?? undefined;
+    }
+
+    if (m === "PUT" || m === "PATCH") {
+      const patch = (body ?? {}) as Partial<(typeof demoOwnedBusinesses)[number]>;
+
+      if (index >= 0) {
+        demoOwnedBusinesses[index] = {
+          ...demoOwnedBusinesses[index],
+          ...patch,
+          id: businessId,
+        };
+        return demoOwnedBusinesses[index];
+      }
+
+      return { ok: true };
+    }
+
+    if (m === "DELETE") {
+      if (index >= 0) {
+        demoOwnedBusinesses.splice(index, 1);
+      }
+      return { ok: true };
+    }
   }
 
   const businessStatsMatch = cleanPath.match(/^\/businesses\/(\d+)\/stats$/);

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useProfileStore, type ProfileLanguage } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import s from "./languageSelector.module.css";
 
 const LANGUAGES: Array<{
   code: ProfileLanguage;

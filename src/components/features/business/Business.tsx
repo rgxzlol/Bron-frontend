@@ -49,8 +49,7 @@ const Business = () => {
       : null;
   const resolvedEditId =
     editId && businesses.some((business) => business.id === editId) ? editId : null;
-  const editModalOpen =
-    !createModalOpen && (editBusinessId !== null || Boolean(resolvedEditId));
+  const editModalOpen = editBusinessId !== null || Boolean(resolvedEditId);
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
@@ -117,6 +116,11 @@ const Business = () => {
 
   function handleCloseModal() {
     resetDraft();
+    if (editBusinessId || resolvedEditId) {
+      setEditBusinessId(null);
+      pushBusinessView({ edit: null });
+      return;
+    }
     setCreateModalOpen(false);
     setEditBusinessId(null);
     pushBusinessView({ edit: null, dashboard: null });
@@ -140,8 +144,6 @@ const Business = () => {
   }
 
   const modalOpen = editModalOpen || createModalOpen;
-  const isDesktop = useDesktopLayout();
-  const hideUnderlyingView = modalOpen && isDesktop;
   const modal = modalOpen ? (
     <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
   ) : null;
@@ -162,24 +164,26 @@ const Business = () => {
   if (showList) {
     return (
       <>
-        {!hideUnderlyingView ? (
+        {modalOpen ? (
+          modal
+        ) : (
           <MyBusiness
             onAddBusiness={openModal}
             onEditBusiness={openEditModal}
             onOpenStatistics={openDashboard}
           />
-        ) : null}
-        {modal}
+        )}
       </>
     );
   }
 
   return (
     <>
-      {!hideUnderlyingView ? (
+      {modalOpen ? (
+        modal
+      ) : (
         <BusinessEmptyPromo onAddBusiness={openModal} />
-      ) : null}
-      {modal}
+      )}
     </>
   );
 };

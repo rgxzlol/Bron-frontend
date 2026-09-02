@@ -1220,13 +1220,25 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     </div>
   );
 
-  const mobileOverlay = (
+  if (!mounted) return null;
+
+  if (isDesktop) {
+    return (
+      <div className={desktop.page} data-testid="business-config-page">
+        {content}
+        <DeleteBusinessModal
+          businessName={draft.name || t("business.untitled")}
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={handleConfirmDelete}
+        />
+      </div>
+    );
+  }
+
+  return createPortal(
     <>
-      <div
-        className={s.backdrop}
-        data-testid="business-config-modal"
-        data-editing={editingId ? "true" : "false"}
-      >
+      <div className={s.backdrop} data-testid="business-config-modal" data-editing={editingId ? "true" : "false"}>
         <div className={s.panel}>{content}</div>
       </div>
       <DeleteBusinessModal
@@ -1235,7 +1247,8 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
       />
-    </>
+    </>,
+    document.body,
   );
 
   if (isDesktop) {

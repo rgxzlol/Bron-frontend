@@ -465,26 +465,54 @@ export const useBusinessStore = create<BusinessStore>()(
       updateService: async (businessId, serviceId, partial) => {
         const business = get().businesses.find((item) => item.id === businessId);
         const current = business?.services.find((item) => item.id === serviceId);
-        const updated = current
-          ? await updateServiceOnApi(serviceId, { ...current, ...partial })
-          : null;
+        if (!current) return;
+
+        const previous = { ...current };
 
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
             ...b,
             services: b.services.map((s) =>
-              s.id === serviceId ? { ...s, ...partial, ...(updated ?? {}) } : s,
+              s.id === serviceId ? { ...s, ...partial } : s,
             ),
           })),
         }));
+
+        try {
+          const updated = await updateServiceOnApi(serviceId, {
+            ...current,
+            ...partial,
+          });
+          if (updated) {
+            set((state) => ({
+              businesses: updateBusiness(state.businesses, businessId, (b) => ({
+                ...b,
+                services: b.services.map((s) =>
+                  s.id === serviceId ? { ...s, ...partial, ...updated } : s,
+                ),
+              })),
+            }));
+          }
+        } catch (error) {
+          console.warn("Failed to update service:", error);
+          set((state) => ({
+            businesses: updateBusiness(state.businesses, businessId, (b) => ({
+              ...b,
+              services: b.services.map((s) =>
+                s.id === serviceId ? previous : s,
+              ),
+            })),
+          }));
+          throw error;
+        }
       },
 
       toggleService: async (businessId, serviceId, active) => {
         const business = get().businesses.find((item) => item.id === businessId);
         const current = business?.services.find((item) => item.id === serviceId);
-        if (current) {
-          await updateServiceOnApi(serviceId, { ...current, active });
-        }
+        if (!current) return;
+
+        const previousActive = current.active;
 
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
@@ -494,6 +522,20 @@ export const useBusinessStore = create<BusinessStore>()(
             ),
           })),
         }));
+
+        try {
+          await updateServiceOnApi(serviceId, { ...current, active });
+        } catch (error) {
+          console.warn("Failed to toggle service status:", error);
+          set((state) => ({
+            businesses: updateBusiness(state.businesses, businessId, (b) => ({
+              ...b,
+              services: b.services.map((s) =>
+                s.id === serviceId ? { ...s, active: previousActive } : s,
+              ),
+            })),
+          }));
+        }
       },
 
       updateBookingStatus: async (businessId, bookingId, status) => {

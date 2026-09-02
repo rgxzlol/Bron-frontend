@@ -160,10 +160,11 @@
 }
 
 .stepper {
+  width: 100%;
   margin: 28px 0 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 0;
 }
 
@@ -173,7 +174,7 @@
   align-items: center;
   gap: 8px;
   flex: 1;
-  max-width: 200px;
+  min-width: 0;
   position: relative;
 }
 
@@ -225,7 +226,7 @@
 
 .stepActive .stepLabel,
 .stepDone .stepLabel {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .columns {

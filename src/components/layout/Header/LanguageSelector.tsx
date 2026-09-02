@@ -52,14 +52,16 @@ export default function LanguageSelector() {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex h-11 items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 transition-colors hover:bg-[var(--bg-surface-muted)]"
+        className="rounded-full bg-white p-1 transition-opacity hover:opacity-90"
         aria-label={t("common.selectLanguage")}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         data-testid="language-selector"
       >
-        <Image src={currentLanguage.icon} alt="" className="w-6" />
-        <span className="text-[18px] font-semibold">{currentLanguage.label}</span>
+        <span className="flex h-11 items-center gap-2 rounded-full bg-[var(--bg-surface-muted)] px-3.5 transition-colors hover:bg-[var(--bg-hover)]">
+          <Image src={currentLanguage.icon} alt="" className="w-6" />
+          <span className="text-[18px] font-semibold">{currentLanguage.label}</span>
+        </span>
       </button>
 
       {isOpen ? (

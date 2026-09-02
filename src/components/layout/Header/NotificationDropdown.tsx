@@ -158,22 +158,29 @@ export default function NotificationDropdown() {
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative grid place-items-center rounded-full p-[18px] hover:bg-[var(--bg-hover)] transition-colors border border-transparent"
+        className="relative rounded-full bg-white p-1 transition-opacity hover:opacity-90"
         aria-label={t("header.notifications")}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         aria-controls="notifications-panel"
         data-testid="notifications-button"
       >
-        <Image src={assets.header.notification} alt="" className="opacity-60" />
-        {hasNotifications ? (
-          <span
-            className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e02424] px-1 text-[11px] font-bold text-white"
-            data-testid="notifications-count"
-          >
-            {items.length}
-          </span>
-        ) : null}
+        <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[var(--bg-surface-muted)] transition-colors hover:bg-[var(--bg-hover)]">
+          <Image
+            src={assets.header.notification}
+            alt=""
+            data-header-icon
+            className="opacity-60"
+          />
+          {hasNotifications ? (
+            <span
+              className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e02424] px-1 text-[11px] font-bold text-white"
+              data-testid="notifications-count"
+            >
+              {items.length}
+            </span>
+          ) : null}
+        </span>
       </button>
 
       {isOpen ? (

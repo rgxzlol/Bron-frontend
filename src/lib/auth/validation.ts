@@ -273,7 +273,30 @@ export function validateRegisterPhone(phone: string): string | undefined {
 }
 
 export function isValidUzbekPhone(phone: string): boolean {
-  return validateRegisterPhone(phone) === undefined;
+  const trimmed = phone.trim();
+  if (!trimmed || isUzbekPhoneEmpty(trimmed)) {
+    return false;
+  }
+
+  if (validateRegisterPhone(trimmed) === undefined) {
+    return true;
+  }
+
+  const localDigits = getUzbekPhoneLocalDigits(trimmed);
+  return (
+    localDigits.length === UZBEK_PHONE_LOCAL_DIGIT_LIMIT &&
+    !hasExcessUzbekPhoneDigits(trimmed)
+  );
+}
+
+export function areUzbekPhonesEqual(left: string, right: string): boolean {
+  const leftDigits = getUzbekPhoneLocalDigits(left);
+  const rightDigits = getUzbekPhoneLocalDigits(right);
+
+  return (
+    leftDigits.length === UZBEK_PHONE_LOCAL_DIGIT_LIMIT &&
+    leftDigits === rightDigits
+  );
 }
 
 export function validateRegisterPassword(password: string): string | undefined {

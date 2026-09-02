@@ -15,6 +15,7 @@ const Business = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editBusinessId, setEditBusinessId] = useState<string | null>(null);
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
@@ -32,7 +33,7 @@ const Business = () => {
       : null;
   const resolvedEditId =
     editId && businesses.some((business) => business.id === editId) ? editId : null;
-  const editModalOpen = Boolean(resolvedEditId);
+  const editModalOpen = editBusinessId !== null || Boolean(resolvedEditId);
 
   const hasBusinesses = businesses.length > 0;
   const showList = hasBusinesses || showMyBusiness;
@@ -58,6 +59,7 @@ const Business = () => {
 
   useEffect(() => {
     if (resolvedEditId) {
+      setEditBusinessId(resolvedEditId);
       loadForEdit(resolvedEditId);
     }
   }, [resolvedEditId, loadForEdit, businesses]);
@@ -81,18 +83,22 @@ const Business = () => {
 
   function openModal() {
     resetDraft();
+    setEditBusinessId(null);
     setCreateModalOpen(true);
   }
 
   function openEditModal(id: string) {
     if (!businesses.some((business) => business.id === id)) return;
+    setCreateModalOpen(false);
+    setEditBusinessId(id);
     loadForEdit(id);
     pushBusinessView({ edit: id, dashboard: null });
   }
 
   function handleCloseModal() {
     resetDraft();
-    if (editModalOpen) {
+    if (editBusinessId || resolvedEditId) {
+      setEditBusinessId(null);
       pushBusinessView({ edit: null });
       return;
     }
@@ -101,12 +107,14 @@ const Business = () => {
 
   function handleSaved() {
     setCreateModalOpen(false);
+    setEditBusinessId(null);
     pushBusinessView({ edit: null, dashboard: null });
     setShowMyBusiness(true);
   }
 
   function openDashboard(id: string) {
     if (!businesses.some((business) => business.id === id)) return;
+    setEditBusinessId(null);
     pushBusinessView({ dashboard: id, edit: null });
   }
 
@@ -114,9 +122,10 @@ const Business = () => {
     pushBusinessView({ dashboard: null });
   }
 
-  const modal = (editModalOpen || createModalOpen) && (
+  const modalOpen = editModalOpen || createModalOpen;
+  const modal = modalOpen ? (
     <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
-  );
+  ) : null;
 
   if (resolvedDashboardId) {
     return (
@@ -134,20 +143,26 @@ const Business = () => {
   if (showList) {
     return (
       <>
-        <MyBusiness
-          onAddBusiness={openModal}
-          onEditBusiness={openEditModal}
-          onOpenStatistics={openDashboard}
-        />
-        {modal}
+        {modalOpen ? (
+          modal
+        ) : (
+          <MyBusiness
+            onAddBusiness={openModal}
+            onEditBusiness={openEditModal}
+            onOpenStatistics={openDashboard}
+          />
+        )}
       </>
     );
   }
 
   return (
     <>
-      <BusinessEmptyPromo onAddBusiness={openModal} />
-      {modal}
+      {modalOpen ? (
+        modal
+      ) : (
+        <BusinessEmptyPromo onAddBusiness={openModal} />
+      )}
     </>
   );
 };

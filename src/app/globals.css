@@ -147,6 +147,17 @@
   opacity: 0.92;
 }
 
+[data-theme="dark"] img[data-header-icon] {
+  filter: brightness(0) saturate(100%) invert(36%) sepia(89%) saturate(4786%)
+    hue-rotate(206deg) brightness(98%) contrast(98%);
+  opacity: 1 !important;
+}
+
+[data-theme="dark"] img[data-theme-invert] {
+  filter: invert(1) hue-rotate(180deg);
+  opacity: 1 !important;
+}
+
 [data-theme="dark"] .bg-white {
   background-color: var(--bg-surface) !important;
 }

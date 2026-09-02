@@ -1,14 +1,17 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
+  anchorEl: HTMLElement | null;
   onEdit?: () => void;
   onDelete: () => void;
   onClose: () => void;
   editLabel?: string;
   deleteLabel?: string;
+  variant?: "default" | "desktop";
 };
 
 function PencilIcon() {
@@ -38,41 +41,85 @@ function CloseIcon() {
 }
 
 export default function BusinessCardMenu({
+  anchorEl,
   onEdit,
   onDelete,
   onClose,
   editLabel,
   deleteLabel,
+  variant = "default",
 }: Props) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const resolvedEditLabel = editLabel ?? t("businessCardMenu.editProfile");
   const resolvedDeleteLabel = deleteLabel ?? t("businessCardMenu.deleteBusiness");
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    function updatePosition() {
+      if (!anchorEl) return;
+
+      const rect = anchorEl.getBoundingClientRect();
+      const menuWidth = 230;
+      const gap = variant === "desktop" ? 10 : 8;
+      const left = Math.max(12, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 12));
+
+      setPosition({
+        top: rect.bottom + gap,
+        left,
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorEl, variant]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (anchorEl?.contains(target)) return;
+      onClose();
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
     document.addEventListener("keydown", handleEscape);
+
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]);
+  }, [anchorEl, onClose]);
 
-  return (
+  if (!mounted || !anchorEl) return null;
+
+  const menu = (
     <div
       ref={menuRef}
-      className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[210px] rounded-[18px] bg-[var(--bg-surface)] p-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.16)]"
+      className={`fixed z-[100] min-w-[230px] overflow-hidden rounded-[18px] bg-[var(--bg-surface)] shadow-[0_12px_40px_rgba(0,0,0,0.16)] ${
+        variant === "desktop" ? "p-[12px]" : "p-[10px]"
+      }`}
+      style={{ top: position.top, left: position.left }}
       data-testid="business-card-menu"
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
     >
       {onEdit && (
         <button
@@ -102,4 +149,6 @@ export default function BusinessCardMenu({
       </button>
     </div>
   );
+
+  return createPortal(menu, document.body);
 }

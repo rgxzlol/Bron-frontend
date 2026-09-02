@@ -16,7 +16,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
 import { useToastStore } from "@/store/toast.store";
 import Image from "next/image";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 
@@ -30,7 +30,9 @@ type View =
   | "servicesStaff"
   | "bookings"
   | "addService"
-  | "addProduct";
+  | "addProduct"
+  | "editService"
+  | "editProduct";
 
 type BookingTab = "all" | "pending" | "confirmed";
 
@@ -380,8 +382,8 @@ function ServiceStatusToggle({
       }`}
     >
       <span
-        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-transform ${
-          active ? "translate-x-[23px]" : "translate-x-[3px]"
+        className={`absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-[left] duration-200 ease-in-out ${
+          active ? "left-[23px]" : "left-[3px]"
         }`}
       />
     </button>
@@ -434,6 +436,18 @@ const emptyServiceForm = (): ServiceFormData => ({
   guestCapacity: null,
   quantity: null,
 });
+
+function serviceToFormData(item: BusinessService): ServiceFormData {
+  return {
+    name: item.name,
+    price: String(item.price),
+    category: item.category,
+    description: item.description,
+    photo: item.photo,
+    guestCapacity: item.guestCapacity ?? null,
+    quantity: item.quantity ?? null,
+  };
+}
 
 type FormFieldErrors = {
   name?: boolean;
@@ -845,20 +859,25 @@ function PhotoUploadField({
 
 function AddItemScreen({
   kind,
+  initialItem,
   onBack,
   onSave,
 }: {
   kind: "service" | "product";
+  initialItem?: BusinessService;
   onBack: () => void;
   onSave: (data: ServiceFormData) => void;
 }) {
   const { t } = useTranslation();
   const showToast = useToastStore((s) => s.showToast);
   const isService = kind === "service";
+  const isEditing = Boolean(initialItem);
   const formTestId = isService ? "business-add-service-form" : "business-add-product-form";
   const fieldPrefix = isService ? "business-service" : "business-product";
 
-  const [form, setForm] = useState<ServiceFormData>(emptyServiceForm);
+  const [form, setForm] = useState<ServiceFormData>(() =>
+    initialItem ? serviceToFormData(initialItem) : emptyServiceForm(),
+  );
   const { fieldErrors, submitAttempted, validate, clearFieldError } =
     useRequiredFormSubmit(form, {
       requireGuestCapacity: isService,
@@ -907,8 +926,12 @@ function AddItemScreen({
       <ScreenHeader
         title={
           isService
-            ? t("businessForms.addServiceTitle")
-            : t("businessForms.addProductTitle")
+            ? isEditing
+              ? t("businessForms.editServiceTitle")
+              : t("businessForms.addServiceTitle")
+            : isEditing
+              ? t("businessForms.editProductTitle")
+              : t("businessForms.addProductTitle")
         }
         onBack={onBack}
       />
@@ -1467,6 +1490,7 @@ export default function BusinessDashboard({
   const showToast = useToastStore((s) => s.showToast);
   const addService = useBusinessStore((s) => s.addService);
   const addProduct = useBusinessStore((s) => s.addProduct);
+  const updateService = useBusinessStore((s) => s.updateService);
   const removeService = useBusinessStore((s) => s.removeService);
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
@@ -1492,10 +1516,13 @@ export default function BusinessDashboard({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [itemMenuId, setItemMenuId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<BusinessService | null>(null);
   const [showDeleteBusiness, setShowDeleteBusiness] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BusinessService | null>(
     null,
   );
+  const menuAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const headerMenuAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (view !== "bookings") return;
@@ -1578,6 +1605,42 @@ export default function BusinessDashboard({
     }
   }
 
+  function openEditItem(item: BusinessService) {
+    setEditingItem(item);
+    setItemMenuId(null);
+    setView(item.type === "product" ? "editProduct" : "editService");
+  }
+
+  function closeEditItem() {
+    setEditingItem(null);
+    setView("servicesStaff");
+  }
+
+  async function handleEditItem(data: ServiceFormData) {
+    if (!editingItem) return;
+
+    try {
+      await updateService(businessId, editingItem.id, {
+        name: data.name,
+        category: data.category,
+        price: parsePrice(data.price),
+        description: data.description,
+        photo: data.photo,
+        ...(editingItem.type === "service"
+          ? { guestCapacity: data.guestCapacity ?? undefined }
+          : { quantity: data.quantity ?? undefined }),
+      });
+      closeEditItem();
+    } catch {
+      showToast(
+        editingItem.type === "product"
+          ? t("businessForms.editProductTitle")
+          : t("businessForms.editServiceTitle"),
+        t("businessErrors.saveFailed"),
+      );
+    }
+  }
+
   function renderInventoryRow(item: BusinessService) {
     const isService = item.type !== "product";
 
@@ -1607,29 +1670,32 @@ export default function BusinessDashboard({
               ? `business-service-status-toggle-${item.id}`
               : `business-product-status-toggle-${item.id}`
           }
-          onToggle={() => toggleService(businessId, item.id, !item.active)}
+          onToggle={() => void toggleService(businessId, item.id, !item.active)}
         />
         <div className="relative flex justify-end">
-          <button
-            type="button"
-            aria-label={t("businessDashboard.deleteAria", { name: item.name })}
-            data-testid={`business-inventory-menu-${item.id}`}
-            onClick={() =>
-              setItemMenuId(itemMenuId === item.id ? null : item.id)
-            }
-            className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
+          <div
+            ref={(el) => {
+              menuAnchorRefs.current[`row-${item.id}`] = el;
+            }}
           >
-            <DotsVerticalIcon />
-          </button>
+            <button
+              type="button"
+              aria-label={t("businessDashboard.deleteAria", { name: item.name })}
+              data-testid={`business-inventory-menu-${item.id}`}
+              onClick={() =>
+                setItemMenuId(itemMenuId === item.id ? null : item.id)
+              }
+              className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
+            >
+              <DotsVerticalIcon />
+            </button>
+          </div>
           {itemMenuId === item.id && (
             <BusinessCardMenu
-              editLabel={
-                item.active
-                  ? t("businessDashboard.menuDeactivate")
-                  : t("businessDashboard.menuActivate")
-              }
+              anchorEl={menuAnchorRefs.current[`row-${item.id}`]}
+              editLabel={t("businessDashboard.menuEdit")}
               deleteLabel={t("common.delete")}
-              onEdit={() => toggleService(businessId, item.id, !item.active)}
+              onEdit={() => openEditItem(item)}
               onDelete={() => setDeleteTarget(item)}
               onClose={() => setItemMenuId(null)}
             />
@@ -1661,7 +1727,12 @@ export default function BusinessDashboard({
         </div>
 
         <div className="absolute right-[8px] top-[8px]">
-          <div className="relative">
+          <div
+            ref={(el) => {
+              menuAnchorRefs.current[`card-${item.id}`] = el;
+            }}
+            className="relative"
+          >
             <button
               type="button"
               aria-label={`Меню ${item.name}`}
@@ -1674,9 +1745,10 @@ export default function BusinessDashboard({
             </button>
             {itemMenuId === item.id && (
               <BusinessCardMenu
-                editLabel={item.active ? "Деактивировать" : "Активировать"}
-                deleteLabel="Удалить"
-                onEdit={() => toggleService(businessId, item.id, !item.active)}
+                anchorEl={menuAnchorRefs.current[`card-${item.id}`]}
+                editLabel={t("businessDashboard.menuEdit")}
+                deleteLabel={t("common.delete")}
+                onEdit={() => openEditItem(item)}
                 onDelete={() => setDeleteTarget(item)}
                 onClose={() => setItemMenuId(null)}
               />
@@ -1722,7 +1794,7 @@ export default function BusinessDashboard({
               title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
-                <div className="relative">
+                <div className="relative" ref={headerMenuAnchorRef}>
                   <button
                     type="button"
                     aria-label={t("business.menuAria")}
@@ -1735,6 +1807,7 @@ export default function BusinessDashboard({
                   </button>
                   {headerMenuOpen && (
                     <BusinessCardMenu
+                      anchorEl={headerMenuAnchorRef.current}
                       editLabel={t("businessDashboard.editProfile")}
                       onEdit={onEditProfile}
                       onDelete={() => {
@@ -1941,6 +2014,24 @@ export default function BusinessDashboard({
             kind="product"
             onBack={() => setView("servicesStaff")}
             onSave={handleAddProduct}
+          />
+        )}
+
+        {view === "editService" && editingItem && (
+          <AddItemScreen
+            kind="service"
+            initialItem={editingItem}
+            onBack={closeEditItem}
+            onSave={handleEditItem}
+          />
+        )}
+
+        {view === "editProduct" && editingItem && (
+          <AddItemScreen
+            kind="product"
+            initialItem={editingItem}
+            onBack={closeEditItem}
+            onSave={handleEditItem}
           />
         )}
       </div>

@@ -653,6 +653,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     const displayName = firstName.trim();
     const normalizedPhone = normalizePhoneForApi(phone);
     const apiUsername = normalizedPhone;
+    // Synthetic email is API-only; booking/profile UI leave the field empty.
     const syntheticEmail = buildSyntheticEmail(displayName, phone);
 
     try {
@@ -667,7 +668,6 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       );
       await completeAuthSession(session, {
         fullName: displayName,
-        email: syntheticEmail,
         phone: normalizedPhone,
       });
     } catch (e) {

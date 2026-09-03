@@ -47,6 +47,7 @@ import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
+import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";

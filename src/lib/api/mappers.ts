@@ -334,6 +334,7 @@ export function apiBusinessToShop(
       description: service.description,
       priceFrom: service.price,
       durationMin: service.type === "service" ? 60 : 0,
+      kind: service.type,
       icon: service.photo ?? undefined,
     })),
   };
@@ -359,7 +360,10 @@ export function addMinutesToTime(time: string, minutes: number) {
 }
 
 export function formatBookingDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export { DAY_KEY_TO_INDEX, DAY_INDEX_TO_KEY };

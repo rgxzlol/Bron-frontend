@@ -31,23 +31,24 @@ import {
   type BookingFormErrors,
   validateBookingForm,
 } from "@/lib/booking/validation";
-import { isSlotConflictError } from "@/lib/booking/errors";
+import { isMissingBookingTargetError, isSlotConflictError } from "@/lib/booking/errors";
 import {
   buildSlotKey,
   releaseSlot,
   tryReserveSlot,
 } from "@/lib/booking/slotLocks";
 import { formatUzbekPhoneInput } from "@/lib/auth/validation";
+import {
+  pickBookableShopService,
+  resolveBookingTargetIds,
+} from "@/lib/booking/payload";
 import { getBookingExtraLabels } from "@/lib/booking/extras";
+import type { BookingOrderItem } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
-import { branchesApi } from "@/lib/api";
-import {
-  addMinutesToTime,
-  formatBookingDate,
-} from "@/lib/api/mappers";
+import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
@@ -155,7 +156,11 @@ export default function BookingPage({
     void fetchBookingApiContext(shop.apiBusinessId).then((context) => {
       if (cancelled) return;
       setApiContext(context);
-      setSelectedBranchId(shop.apiBranchId ?? context.branches[0]?.id ?? null);
+      const preferredBranchId = shop.apiBranchId;
+      const liveBranchId = context.branches.some((branch) => branch.id === preferredBranchId)
+        ? preferredBranchId
+        : (context.branches[0]?.id ?? null);
+      setSelectedBranchId(liveBranchId ?? null);
       setSelectedStaffId(null);
     });
 
@@ -170,7 +175,8 @@ export default function BookingPage({
       return;
     }
 
-    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
+    const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
+    const serviceId = bookableService?.id;
     if (!serviceId || !/^\d+$/.test(serviceId)) {
       setApiAvailableSlots(null);
       return;
@@ -252,9 +258,10 @@ export default function BookingPage({
     if (didPrefillFormRef.current) return;
 
     didPrefillFormRef.current = true;
+    const prefilledName = profileFullName?.trim() ?? "";
     setForm({
-      name: profileFullName?.trim() ?? "",
-      phone: profilePhone?.trim() ?? "",
+      name: validateBookingForm(prefilledName, "", "").name ? "" : prefilledName,
+      phone: formatUzbekPhoneInput(profilePhone ?? "", { keepPrefix: true }),
       email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
@@ -453,31 +460,33 @@ export default function BookingPage({
       return;
     }
 
-    const serviceId = selectedServiceIds[0] ?? shop.services?.[0]?.id;
-    if (!serviceId || !/^\d+$/.test(serviceId)) {
-      alert(t("booking.errorNoService"));
-      return;
-    }
+    const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
 
     setIsSubmitting(true);
 
     let slotKey: string | null = null;
 
     try {
-      let branchId = selectedBranchId ?? shop.apiBranchId;
-      if (!branchId) {
-        const branches = await branchesApi.listByBusiness(shop.apiBusinessId);
-        branchId = branches[0]?.id;
+      const resolved = await resolveBookingTargetIds({
+        businessId: shop.apiBusinessId,
+        preferredServiceId: bookableService?.id,
+        preferredBranchId: selectedBranchId ?? shop.apiBranchId,
+        fallbackDurationMin:
+          bookableService?.durationMin ??
+          selectedServices[0]?.durationMin ??
+          60,
+      });
+
+      if (!resolved.ok) {
+        alert(
+          resolved.reason === "branch"
+            ? t("booking.errorNoBranch")
+            : t("booking.errorNoService"),
+        );
+        return;
       }
 
-      if (!branchId) {
-        throw new Error(t("booking.errorNoBranch"));
-      }
-
-      const durationMin =
-        selectedServices[0]?.durationMin ??
-        shop.services?.find((item) => item.id === serviceId)?.durationMin ??
-        60;
+      const { serviceId, branchId, durationMin } = resolved.targets;
 
       const bookingDate = formatBookingDate(activeDate);
       slotKey = buildSlotKey(shop.apiBusinessId, branchId, bookingDate, activeTime);
@@ -487,14 +496,40 @@ export default function BookingPage({
         return;
       }
 
+      const orderItems: BookingOrderItem[] = [
+        {
+          id: "service",
+          name: baseBookingName,
+          price: bookingPrice,
+          quantity: 1,
+          kind: "service",
+        },
+        ...Object.entries(extraQuantities).flatMap(([id, quantity]) => {
+          if (quantity <= 0) return [];
+          const extra = bookingExtras.find((item) => item.id === id);
+          if (!extra) return [];
+          return [
+            {
+              id,
+              name: getBookingExtraLabels(id, t).name,
+              price: extra.price,
+              quantity,
+              kind: "extra" as const,
+            },
+          ];
+        }),
+      ];
+
       await createBooking({
         business_id: shop.apiBusinessId,
-        service_id: Number(serviceId),
+        service_id: serviceId,
         branch_id: branchId,
         booking_date: bookingDate,
         start_time: activeTime,
         end_time: addMinutesToTime(activeTime, durationMin),
         guest_count: guests,
+        items: orderItems,
+        total_price: total,
       });
 
       completeBookingFlow();
@@ -506,7 +541,13 @@ export default function BookingPage({
         return;
       }
 
-      alert(error instanceof Error ? error.message : t("booking.errorCreateFailed"));
+      alert(
+        isMissingBookingTargetError(error)
+          ? t("booking.errorTargetNotFound")
+          : error instanceof Error
+            ? error.message
+            : t("booking.errorCreateFailed"),
+      );
     } finally {
       setIsSubmitting(false);
     }

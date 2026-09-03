@@ -24,6 +24,7 @@ type Props = {
   businessId: string;
   onClose: () => void;
   onEditProfile: () => void;
+  onBusinessIdChange?: (id: string) => void;
 };
 
 type View =
@@ -1485,6 +1486,7 @@ export default function BusinessDashboard({
   businessId,
   onClose,
   onEditProfile,
+  onBusinessIdChange,
 }: Props) {
   const { t } = useTranslation();
   const showToast = useToastStore((s) => s.showToast);
@@ -1573,22 +1575,35 @@ export default function BusinessDashboard({
     setPhotoIndex(Math.max(0, Math.min(Math.max(photos.length, 1) - 1, idx)));
   }
 
-  function handleAddService(data: ServiceFormData) {
-    void addService(businessId, {
-      name: data.name,
-      category: data.category,
-      price: parsePrice(data.price),
-      description: data.description,
-      photo: data.photo,
-      guestCapacity: data.guestCapacity ?? undefined,
-      type: "service",
-    });
-    setView("servicesStaff");
+  async function handleAddService(data: ServiceFormData) {
+    try {
+      const nextId = await addService(businessId, {
+        name: data.name,
+        category: data.category,
+        price: parsePrice(data.price),
+        description: data.description,
+        photo: data.photo,
+        guestCapacity: data.guestCapacity ?? undefined,
+        type: "service",
+      });
+      if (nextId !== businessId) {
+        onBusinessIdChange?.(nextId);
+      }
+      setView("servicesStaff");
+    } catch (error) {
+      const message =
+        error instanceof Error && /business not found/i.test(error.message)
+          ? t("businessErrors.itemSaveFailed")
+          : error instanceof Error && error.message.trim()
+            ? error.message
+            : t("businessErrors.itemSaveFailed");
+      showToast(t("businessForms.addServiceTitle"), message);
+    }
   }
 
   async function handleAddProduct(data: ServiceFormData) {
     try {
-      await addProduct(businessId, {
+      const nextId = await addProduct(businessId, {
         name: data.name,
         category: data.category,
         price: parsePrice(data.price),
@@ -1596,12 +1611,18 @@ export default function BusinessDashboard({
         photo: data.photo,
         quantity: data.quantity ?? undefined,
       });
+      if (nextId !== businessId) {
+        onBusinessIdChange?.(nextId);
+      }
       setView("servicesStaff");
-    } catch {
-      showToast(
-        t("businessForms.addProductTitle"),
-        t("businessErrors.saveFailed"),
-      );
+    } catch (error) {
+      const message =
+        error instanceof Error && /business not found/i.test(error.message)
+          ? t("businessErrors.itemSaveFailed")
+          : error instanceof Error && error.message.trim()
+            ? error.message
+            : t("businessErrors.itemSaveFailed");
+      showToast(t("businessForms.addProductTitle"), message);
     }
   }
 

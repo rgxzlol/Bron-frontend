@@ -258,6 +258,7 @@ export const uz: MessageTree = {
     reviewSubmitted: "Sharh chop etildi",
     statusConfirmed: "Tasdiqlangan",
     statusCompleted: "Yakunlangan",
+    statusCancelled: "Bekor qilindi",
     guests: "{count} mehmon",
     editBooking: "Bronni o‘zgartirish",
     cancelBooking: "Bronni bekor qilish",

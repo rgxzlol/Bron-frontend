@@ -72,7 +72,8 @@ export function businessToShop(
       title: service.name,
       description: service.description,
       priceFrom: service.price,
-      durationMin: 60,
+      durationMin: service.type === "service" ? 60 : 0,
+      kind: service.type,
       icon: service.photo ?? undefined,
     })),
   };

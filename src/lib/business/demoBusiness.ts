@@ -25,6 +25,15 @@ const demoServices: BusinessService[] = [
   },
 ];
 
+export function isPlaceholderDemoBusiness(
+  business: Pick<SavedBusiness, "id" | "name">,
+) {
+  return (
+    business.id === String(DEMO_BUSINESS_ID) &&
+    business.name === "BronFitness Club"
+  );
+}
+
 export function getDemoSavedBusiness(): SavedBusiness {
   return {
     id: String(DEMO_BUSINESS_ID),

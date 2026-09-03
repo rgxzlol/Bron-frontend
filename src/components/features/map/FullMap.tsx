@@ -777,7 +777,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     if (!selectedShop) return
 
     const shop = selectedShop
-    const services = shop.services ?? []
+    const services = (shop.services ?? []).filter((service) => service.kind !== "product")
 
     setSelectedShop(null)
     setServiceSelectionShop(null)

@@ -258,6 +258,7 @@ export const en: MessageTree = {
     reviewSubmitted: "Review published",
     statusConfirmed: "Confirmed",
     statusCompleted: "Completed",
+    statusCancelled: "Cancelled",
     guests: "{count} guests",
     editBooking: "Change booking",
     cancelBooking: "Cancel booking",

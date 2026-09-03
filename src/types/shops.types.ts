@@ -6,6 +6,7 @@ export type ShopService = {
   description: string;
   priceFrom: number;
   durationMin: number;
+  kind?: "service" | "product";
   icon?: StaticImageData | string;
 };
 
@@ -18,7 +19,7 @@ export type ShopsType = {
   lng: number;
   img: StaticImageData | string;
   profilePhoto?: string | null;
-  gallery?: string[];
+  gallery?: (StaticImageData | string)[];
   website?: string;
   type: string;
   desc: string;

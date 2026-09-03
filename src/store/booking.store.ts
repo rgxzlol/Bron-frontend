@@ -44,7 +44,19 @@ export const useBookingStore = create<BookingStore>((set) => ({
   createBooking: async (payload) => {
     const booking = await bookingsApi.create(payload);
     const list = await bookingsApi.my();
-    set({ bookings: list });
+    const items = payload.items ?? booking.items;
+    set({
+      bookings: list.map((item) =>
+        item.id === booking.id
+          ? {
+              ...item,
+              items: item.items?.length ? item.items : items,
+              total_price: item.total_price || booking.total_price,
+              guest_count: item.guest_count ?? booking.guest_count,
+            }
+          : item,
+      ),
+    });
     void useBusinessStore
       .getState()
       .refreshBusinessBookings(String(payload.business_id));

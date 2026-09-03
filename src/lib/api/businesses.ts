@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 export const businessesApi = {
-  list: () => apiRequest<BusinessListItem[]>("/businesses/"),
+  list: () => apiRequest<BusinessListItem[]>("/businesses"),
 
   search: (query: string) =>
     apiRequest<Business[]>(

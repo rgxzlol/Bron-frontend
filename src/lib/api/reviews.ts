@@ -3,7 +3,7 @@ import type { Review, ReviewCreate, ReviewUpdate } from "./types";
 
 export const reviewsApi = {
   create: (body: ReviewCreate, token?: string) =>
-    apiRequest<Review>("/reviews/", {
+    apiRequest<Review>("/reviews", {
       method: "POST",
       body,
       auth: true,

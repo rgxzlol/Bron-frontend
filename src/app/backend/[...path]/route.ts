@@ -13,7 +13,9 @@ function looksLikeHtml(text: string, contentType: string | null) {
 }
 
 async function proxyRequest(request: NextRequest) {
-  const apiPath = request.nextUrl.pathname.replace(/^\/backend\/?/, "");
+  const apiPath = request.nextUrl.pathname
+    .replace(/^\/backend\/?/, "")
+    .replace(/\/+$/, "");
   const targetUrl = `${REMOTE_API_URL}/${apiPath}${request.nextUrl.search}`;
 
   const headers = new Headers();

@@ -30,9 +30,19 @@ type UploadOptions = {
   token?: string | null;
 };
 
+function normalizeApiPath(path: string) {
+  const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
+  const [pathname, ...searchParts] = withLeadingSlash.split("?");
+  const normalizedPathname =
+    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const search = searchParts.join("?");
+
+  return search ? `${normalizedPathname}?${search}` : normalizedPathname;
+}
+
 function buildUrl(path: string) {
-  const base = getApiBaseUrl().replace(/\/$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const base = getApiBaseUrl().replace(/\/+$/, "");
+  const normalizedPath = normalizeApiPath(path);
   return `${base}${normalizedPath}`;
 }
 
@@ -90,7 +100,13 @@ function extractErrorMessage(data: unknown, fallback: string) {
 function isBackendUnavailable(error: unknown): error is ApiError {
   if (!(error instanceof ApiError)) return false;
   if (error.status === 0 || error.status === 502) return true;
-  if (typeof error.data === "string" && error.data.trimStart().startsWith("<")) {
+  if (typeof error.data === "string") {
+    const trimmed = error.data.trimStart();
+    if (trimmed.startsWith("<") || /^redirecting\b/i.test(trimmed)) {
+      return true;
+    }
+  }
+  if (error.status >= 300 && error.status < 400) {
     return true;
   }
   if (error.data && typeof error.data === "object") {

@@ -2,7 +2,7 @@ import { apiRequest } from "./client";
 import type { Branch, BranchCreate, BranchListItem, BranchUpdate } from "./types";
 
 export const branchesApi = {
-  list: () => apiRequest<BranchListItem[]>("/branches/"),
+  list: () => apiRequest<BranchListItem[]>("/branches"),
 
   get: (branchId: number) =>
     apiRequest<Branch>(`/branches/${branchId}`),

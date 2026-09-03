@@ -3,10 +3,10 @@ import type { Favorite, FavoriteCreate } from "./types";
 
 export const favoritesApi = {
   list: (token?: string) =>
-    apiRequest<Favorite[]>("/favorites/", { auth: true, token }),
+    apiRequest<Favorite[]>("/favorites", { auth: true, token }),
 
   add: (body: FavoriteCreate, token?: string) =>
-    apiRequest<Favorite>("/favorites/", {
+    apiRequest<Favorite>("/favorites", {
       method: "POST",
       body,
       auth: true,

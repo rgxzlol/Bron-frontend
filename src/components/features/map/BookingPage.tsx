@@ -36,7 +36,6 @@ import {
   releaseSlot,
   tryReserveSlot,
 } from "@/lib/booking/slotLocks";
-import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import {
   pickBookableShopService,
   resolveBookingTargetIds,
@@ -239,8 +238,7 @@ export default function BookingPage({
     didPrefillFormRef.current = true;
     const prefilledName = profileFullName?.trim() ?? "";
     setForm({
-      name: validateBookingForm(prefilledName, "", "").name ? "" : prefilledName,
-      phone: formatUzbekPhoneInput(profilePhone ?? "", { keepPrefix: true }),
+      name: validateBookingForm(prefilledName, "").name ? "" : prefilledName,
       email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
@@ -484,7 +482,7 @@ export default function BookingPage({
       const { serviceId, branchId, durationMin } = resolved.targets;
 
       const bookingDate = formatBookingDate(activeDate);
-      slotKey = buildSlotKey(businessId, branchId, bookingDate, activeTime);
+      slotKey = buildSlotKey(shop.apiBusinessId, branchId, bookingDate, activeTime);
 
       if (!tryReserveSlot(slotKey)) {
         handleSlotConflict();

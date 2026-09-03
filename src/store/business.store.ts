@@ -221,17 +221,6 @@ function replaceBusiness(
   return [...next, saved];
 }
 
-function replaceBusiness(
-  businesses: SavedBusiness[],
-  previousId: string | null,
-  saved: SavedBusiness,
-) {
-  const next = businesses.filter(
-    (business) => business.id !== saved.id && business.id !== previousId,
-  );
-  return [...next, saved];
-}
-
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({

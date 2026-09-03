@@ -169,6 +169,25 @@ let demoOwnedBusinesses: Array<ReturnType<typeof getDemoOwnedBusinessRecord>> = 
   getDemoOwnedBusinessRecord(),
 ];
 
+let demoServiceId = 1;
+let demoProductId = 1;
+
+let demoServices = getDemoBusinessServices().map((service) => ({
+  ...service,
+  business_id: DEMO_BUSINESS_ID,
+  image: null as string | null,
+}));
+
+let demoProducts: Array<{
+  id: number;
+  business_id: number;
+  name: string;
+  description: string | null;
+  image: string | null;
+  price: number;
+  is_active: boolean;
+}> = [];
+
 /**
  * Возвращает демо-ответ для известного эндпоинта или undefined,
  * если эндпоинт не поддерживается (тогда ошибка пробрасывается дальше).
@@ -371,52 +390,129 @@ export function getDemoResponse(
     servicesBusinessMatch &&
     Number(servicesBusinessMatch[1]) === DEMO_BUSINESS_ID
   ) {
-    return getDemoBusinessServices();
+    return demoServices.map(({ business_id: _businessId, ...item }) => item);
+  }
+
+  if (m === "POST" && cleanPath === "/services/create") {
+    const payload = (body ?? {}) as {
+      business_id?: number;
+      title?: string;
+      description?: string;
+      category?: string;
+      duration?: number;
+      price?: number;
+    };
+    const service = {
+      id: ++demoServiceId,
+      business_id: Number(payload.business_id ?? DEMO_BUSINESS_ID),
+      title: String(payload.title ?? "Услуга"),
+      description: String(payload.description ?? ""),
+      category: String(payload.category ?? "other"),
+      duration: Number(payload.duration ?? 60),
+      price: Number(payload.price ?? 0),
+      is_active: true,
+      image: null as string | null,
+    };
+    demoServices = [service, ...demoServices];
+    return service;
   }
 
   const serviceUpdateMatch = cleanPath.match(/^\/services\/(\d+)$/);
-  if (m === "PUT" && serviceUpdateMatch) {
+  if (serviceUpdateMatch) {
     const serviceId = Number(serviceUpdateMatch[1]);
-    const payload = (body ?? {}) as {
-      title?: string;
-      description?: string | null;
-      category?: string;
-      price?: number;
-      is_active?: boolean;
-    };
-    const existing = getDemoBusinessServices().find((item) => item.id === serviceId);
+    const index = demoServices.findIndex((item) => item.id === serviceId);
 
-    return {
-      id: serviceId,
-      business_id: DEMO_BUSINESS_ID,
-      title: payload.title ?? existing?.title ?? "Услуга",
-      description: payload.description ?? existing?.description ?? "",
-      category: payload.category ?? existing?.category ?? "other",
-      duration: existing?.duration ?? 60,
-      price: payload.price ?? existing?.price ?? 0,
-      is_active: payload.is_active ?? existing?.is_active ?? true,
-    };
+    if (m === "PUT" || m === "PATCH") {
+      const payload = (body ?? {}) as {
+        title?: string;
+        description?: string | null;
+        category?: string;
+        duration?: number;
+        price?: number;
+        is_active?: boolean;
+      };
+      const existing = index >= 0 ? demoServices[index] : undefined;
+      const updated = {
+        id: serviceId,
+        business_id: existing?.business_id ?? DEMO_BUSINESS_ID,
+        title: payload.title ?? existing?.title ?? "Услуга",
+        description: payload.description ?? existing?.description ?? "",
+        category: payload.category ?? existing?.category ?? "other",
+        duration: payload.duration ?? existing?.duration ?? 60,
+        price: payload.price ?? existing?.price ?? 0,
+        is_active: payload.is_active ?? existing?.is_active ?? true,
+        image: existing?.image ?? null,
+      };
+      if (index >= 0) demoServices[index] = updated;
+      else demoServices = [updated, ...demoServices];
+      return updated;
+    }
+
+    if (m === "DELETE" && index >= 0) {
+      demoServices.splice(index, 1);
+      return { ok: true };
+    }
+
+    if (m === "GET" && index >= 0) {
+      return demoServices[index];
+    }
   }
 
-  const productUpdateMatch = cleanPath.match(/^\/products\/(\d+)$/);
-  if (m === "PUT" && productUpdateMatch) {
-    const productId = Number(productUpdateMatch[1]);
+  if (m === "POST" && cleanPath === "/products/create") {
     const payload = (body ?? {}) as {
+      business_id?: number;
       name?: string;
       description?: string | null;
       price?: number;
-      is_active?: boolean;
     };
-
-    return {
-      id: productId,
-      business_id: DEMO_BUSINESS_ID,
-      name: payload.name ?? "Товар",
+    const product = {
+      id: ++demoProductId,
+      business_id: Number(payload.business_id ?? DEMO_BUSINESS_ID),
+      name: String(payload.name ?? "Товар"),
       description: payload.description ?? null,
-      image: null,
-      price: payload.price ?? 0,
-      is_active: payload.is_active ?? true,
+      image: null as string | null,
+      price: Number(payload.price ?? 0),
+      is_active: true,
     };
+    demoProducts = [product, ...demoProducts];
+    return product;
+  }
+
+  const productUpdateMatch = cleanPath.match(/^\/products\/(\d+)$/);
+  if (productUpdateMatch) {
+    const productId = Number(productUpdateMatch[1]);
+    const index = demoProducts.findIndex((item) => item.id === productId);
+
+    if (m === "PUT" || m === "PATCH") {
+      const payload = (body ?? {}) as {
+        name?: string;
+        description?: string | null;
+        price?: number;
+        is_active?: boolean;
+      };
+      const existing = index >= 0 ? demoProducts[index] : undefined;
+      const updated = {
+        id: productId,
+        business_id: existing?.business_id ?? DEMO_BUSINESS_ID,
+        name: payload.name ?? existing?.name ?? "Товар",
+        description: payload.description ?? existing?.description ?? null,
+        image: existing?.image ?? null,
+        price: payload.price ?? existing?.price ?? 0,
+        is_active: payload.is_active ?? existing?.is_active ?? true,
+      };
+      if (index >= 0) demoProducts[index] = updated;
+      else demoProducts = [updated, ...demoProducts];
+      return updated;
+    }
+
+    if (m === "DELETE" && index >= 0) {
+      demoProducts.splice(index, 1);
+      return { ok: true };
+    }
+
+    if (m === "GET" && index >= 0) {
+      return demoProducts[index];
+    }
   }
 
   const productsBusinessMatch = cleanPath.match(/^\/products\/business\/(\d+)$/);
@@ -425,7 +521,7 @@ export function getDemoResponse(
     productsBusinessMatch &&
     Number(productsBusinessMatch[1]) === DEMO_BUSINESS_ID
   ) {
-    return [];
+    return demoProducts.map(({ business_id: _businessId, ...item }) => item);
   }
 
   const branchDetailMatch = cleanPath.match(/^\/branches\/(\d+)$/);

@@ -201,6 +201,9 @@ export const extraUz: MessageTree = {
     confirmTitle: "Bron tasdiqlandi!",
     confirmEmailSent: "Tafsilotlarni pochtangizga yubordik",
     confirmSummaryTitle: "Bron tafsilotlari",
+    successToast: "Bron muvaffaqiyatli yaratildi",
+    successToastDesc:
+      "Bron muvaffaqiyatli yaratildi, bronlashdan 10 daqiqa oldin keling.",
     whatsNext: "Keyin nima?",
     arriveEarly: "Bron boshlanishidan 10–15 daqiqa oldin keling.",
     cancelPolicy: "Bekor qilish tashrifdan kamida 2 soat oldin mumkin.",

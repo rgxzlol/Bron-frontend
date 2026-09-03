@@ -201,6 +201,9 @@ export const extraEn: MessageTree = {
     confirmTitle: "Booking confirmed!",
     confirmEmailSent: "We sent the details to your email",
     confirmSummaryTitle: "Booking summary",
+    successToast: "Booking successful",
+    successToastDesc:
+      "Booking successful — please arrive 10 minutes before your reservation.",
     whatsNext: "What's next?",
     arriveEarly: "Please arrive 10–15 minutes before your booking.",
     cancelPolicy: "Cancellation is possible no later than 2 hours before the visit.",

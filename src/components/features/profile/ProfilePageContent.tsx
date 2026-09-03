@@ -7,7 +7,7 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 import { readImageFile } from "@/lib/readImageFile";
-import { formatUzbekPhoneInput, looksLikePhoneUsername } from "@/lib/auth/validation";
+import { looksLikePhoneUsername } from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";
@@ -458,36 +458,12 @@ export default function ProfilePageContent({
               </span>
             ) : null}
           </label>
-          <label className={`${s.field} ${personalFieldErrors.phone ? s.fieldError : ""}`}>
+          <div className={s.field}>
             <span>{t("profile.phone")}</span>
-            <input
-              value={phoneDraft}
-              onChange={(e) => {
-                setPhoneDraft(
-                  formatUzbekPhoneInput(e.target.value, { preserveOverflow: true }),
-                );
-                clearPersonalFieldError("phone");
-              }}
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+998 99 999 99 99"
-              data-testid="profile-phone"
-              aria-invalid={Boolean(personalFieldErrors.phone)}
-              aria-describedby={
-                personalFieldErrors.phone ? "profile-error-phone" : undefined
-              }
-            />
-            {personalFieldErrors.phone ? (
-              <span
-                id="profile-error-phone"
-                className={s.fieldErrorMessage}
-                data-testid="profile-error-phone"
-                role="alert"
-              >
-                {personalFieldErrors.phone}
-              </span>
-            ) : null}
-          </label>
+            <p className={s.readOnlyValue} data-testid="profile-phone">
+              {phoneDraft || "—"}
+            </p>
+          </div>
           <label className={`${s.field} ${personalFieldErrors.email ? s.fieldError : ""}`}>
             <span>{t("profile.emailAddress")}</span>
             <input

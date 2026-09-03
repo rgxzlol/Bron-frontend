@@ -23,6 +23,7 @@ import { translateBusinessCategory } from "@/lib/i18n/labels";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 import { useBusinessStore } from "@/store/business.store";
+import { useProfileStore } from "@/store/profile.store";
 import AddressAutocomplete from "./AddressAutocomplete";
 
 type ApplicationFieldProps = {
@@ -178,6 +179,7 @@ const EMPTY_FORM: BusinessApplicationFormData = {
 export default function BusinessApplicationForm() {
   const { t } = useTranslation();
   const token = useAuthStore((state) => state.token);
+  const profilePhone = useProfileStore((state) => state.phone);
   const application = useBusinessApplicationApiStore((state) => state.application);
   const status = useBusinessApplicationApiStore((state) => state.status);
   const fetchApplication = useBusinessApplicationApiStore(
@@ -200,7 +202,7 @@ export default function BusinessApplicationForm() {
       tin: application.tin?.trim() ?? "",
       sphere: application.sphere,
       location: application.location,
-      phone: application.phone,
+      phone: application.phone || formatBusinessApplicationPhone(profilePhone ?? ""),
       description: application.description?.trim() ?? "",
       latitude:
         application.latitude != null && Number.isFinite(application.latitude)
@@ -215,7 +217,16 @@ export default function BusinessApplicationForm() {
       socialInstagram: getSocialLinkValue(application.social_links, "instagram"),
       comments: application.comments?.trim() ?? "",
     });
-  }, [application]);
+  }, [application, profilePhone]);
+
+  useEffect(() => {
+    if (application) return;
+    const phone = formatBusinessApplicationPhone(profilePhone ?? "");
+    if (!phone) return;
+    setForm((current) =>
+      current.phone ? current : { ...current, phone },
+    );
+  }, [application, profilePhone]);
 
   function updateField<K extends keyof BusinessApplicationFormData>(
     key: K,
@@ -250,7 +261,12 @@ export default function BusinessApplicationForm() {
 
     if (locked || isSubmitting) return;
 
-    const errors = validateBusinessApplication(form, {
+    const accountPhone = formatBusinessApplicationPhone(
+      form.phone || profilePhone || "",
+    );
+    const formWithPhone = { ...form, phone: accountPhone };
+
+    const errors = validateBusinessApplication(formWithPhone, {
       companyNameRequired: t("businessApplication.errors.companyNameRequired"),
       companyNameInvalid: t("businessApplication.errors.companyNameInvalid"),
       tinRequired: t("businessApplication.errors.tinRequired"),
@@ -276,7 +292,11 @@ export default function BusinessApplicationForm() {
     });
 
     if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+      const { phone: phoneError, ...visibleErrors } = errors;
+      setFieldErrors(visibleErrors);
+      if (phoneError) {
+        setSubmitError(phoneError);
+      }
       return;
     }
 
@@ -300,7 +320,7 @@ export default function BusinessApplicationForm() {
           tin: form.tin.trim(),
           sphere: form.sphere.trim(),
           location: form.location.trim(),
-          phone: form.phone.trim(),
+          phone: formWithPhone.phone.trim(),
           description: form.description.trim(),
           latitude,
           longitude,
@@ -471,19 +491,6 @@ export default function BusinessApplicationForm() {
               />
             </div>
           </div>
-
-          <ApplicationField
-            id="phone"
-            label={t("businessApplication.phone")}
-            value={form.phone}
-            onChange={(value) => updateField("phone", formatBusinessApplicationPhone(value))}
-            error={fieldErrors.phone}
-            required
-            disabled={locked}
-            placeholder={t("businessApplication.phonePlaceholder")}
-            type="tel"
-            inputMode="tel"
-          />
 
           <ApplicationField
             id="website"

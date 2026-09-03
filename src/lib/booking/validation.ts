@@ -64,14 +64,18 @@ export function validateBookingEmail(email: string): BookingFieldErrorCode | und
 
 export function validateBookingForm(
   name: string,
-  phone: string,
   email: string,
+  /** When set, validate the account phone silently (field is not shown in the form). */
+  accountPhone?: string,
 ): BookingFormErrorCodes {
   const errors: BookingFormErrorCodes = {
     name: validateBookingName(name),
-    phone: validateBookingPhone(phone),
     email: validateBookingEmail(email),
   };
+
+  if (accountPhone !== undefined) {
+    errors.phone = validateBookingPhone(accountPhone);
+  }
 
   return Object.fromEntries(
     Object.entries(errors).filter(([, value]) => value != null),

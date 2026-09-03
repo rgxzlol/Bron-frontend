@@ -4,21 +4,10 @@ import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookingCard } from "@/components/features/booking/BookingCard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { compareBookingsByTime, isPastBooking } from "@/lib/booking/classify";
+import { onStoreHydrated } from "@/lib/store/persist";
 import { useBookingStore } from "@/store/booking.store";
 import { useAuthStore } from "@/store/auth.store";
-
-const FINISHED_STATUSES = new Set([
-  "finished",
-  "completed",
-  "cancelled",
-  "canceled",
-  "past",
-  "rejected",
-]);
-
-function isFinishedBooking(status: string) {
-  return FINISHED_STATUSES.has(status.toLowerCase());
-}
 
 export default function BookingsPageClient() {
   const { t } = useTranslation();
@@ -28,17 +17,24 @@ export default function BookingsPageClient() {
   const { bookings, isLoading, error, fetchMyBookings } = useBookingStore();
 
   useEffect(() => {
-    if (token) {
+    if (!token) return;
+
+    return onStoreHydrated(useBookingStore, () => {
       void fetchMyBookings();
-    }
+    });
   }, [token, fetchMyBookings]);
 
   const isPastTab = currentTab === "past";
 
-  const filtered = bookings.filter((booking) => {
-    const finished = isFinishedBooking(booking.status);
-    return isPastTab ? finished : !finished;
-  });
+  const filtered = bookings
+    .filter((booking) => {
+      const past = isPastBooking(booking);
+      return isPastTab ? past : !past;
+    })
+    .sort((a, b) => {
+      const order = compareBookingsByTime(a, b);
+      return isPastTab ? -order : order;
+    });
 
   if (!token) {
     return (

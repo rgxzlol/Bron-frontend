@@ -141,7 +141,13 @@ async function handleDemoFallback<T>(
   body: unknown,
   error: unknown,
 ): Promise<T | null> {
-  if (!isBackendUnavailable(error)) {
+  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
+  const upperMethod = method.toUpperCase();
+  const allowBookingWriteFallback =
+    (upperMethod === "POST" && cleanPath === "/bookings/create") ||
+    (upperMethod === "PATCH" && /\/bookings\/\d+\/cancel$/.test(cleanPath));
+
+  if (!isBackendUnavailable(error) && !allowBookingWriteFallback) {
     throw error;
   }
 
@@ -149,7 +155,7 @@ async function handleDemoFallback<T>(
   const demo = getDemoResponse(path, method, body);
   if (demo !== undefined) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn(`[demo] Бэкенд недоступен — демо-ответ для ${method} ${path}`);
+      console.warn(`[demo] Fallback-ответ для ${method} ${path}`);
     }
     return demo as T;
   }

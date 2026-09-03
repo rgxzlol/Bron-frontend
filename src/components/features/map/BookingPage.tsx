@@ -15,7 +15,6 @@ import DatePicker from "@/components/shared/DatePicker";
 import TimePicker from "@/components/shared/TimePicker";
 import {
   formatBookingDate as formatBookingDateLabel,
-  formatDateRu,
   toBookingTimeTestId,
 } from "@/lib/formatDate";
 import {
@@ -37,7 +36,6 @@ import {
   releaseSlot,
   tryReserveSlot,
 } from "@/lib/booking/slotLocks";
-import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import {
   pickBookableShopService,
   resolveBookingTargetIds,
@@ -77,25 +75,6 @@ type LockedSchedule = {
   time: string;
 };
 
-const RU_MONTHS_GENITIVE = [
-  "января",
-  "февраля",
-  "марта",
-  "апреля",
-  "мая",
-  "июня",
-  "июля",
-  "августа",
-  "сентября",
-  "октября",
-  "ноября",
-  "декабря",
-];
-
-function formatDateShortRu(date: Date) {
-  return `${date.getDate()} ${RU_MONTHS_GENITIVE[date.getMonth()]} ${date.getFullYear()}`;
-}
-
 export default function BookingPage({
   shop,
   selectedServiceIds = [],
@@ -123,7 +102,6 @@ export default function BookingPage({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    phone: "",
     email: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -260,12 +238,11 @@ export default function BookingPage({
     didPrefillFormRef.current = true;
     const prefilledName = profileFullName?.trim() ?? "";
     setForm({
-      name: validateBookingForm(prefilledName, "", "").name ? "" : prefilledName,
-      phone: formatUzbekPhoneInput(profilePhone ?? "", { keepPrefix: true }),
+      name: validateBookingForm(prefilledName, "").name ? "" : prefilledName,
       email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
-  }, [step, profileFullName, profilePhone, profileEmail]);
+  }, [step, profileFullName, profileEmail]);
 
   const selectedServices = useMemo(() => {
     if (!shop.services?.length || !selectedServiceIds.length) return [];
@@ -281,17 +258,21 @@ export default function BookingPage({
 
   const baseBookingName = useMemo(() => {
     if (selectedServices.length === 1) return selectedServices[0].title;
-    if (selectedServices.length > 1) return `Услуги (${selectedServices.length})`;
-    return shop.type === "Больница" ? shop.category : "Бронирование зала";
-  }, [selectedServices, shop]);
+    if (selectedServices.length > 1) {
+      return t("booking.servicesCount", { count: selectedServices.length });
+    }
+    return shop.type === "Больница" ? shop.category : t("booking.hallBooking");
+  }, [selectedServices, shop, t]);
 
   const durationLabel = useMemo(() => {
     if (selectedServices.length > 0) {
       const mins = selectedServices.reduce((sum, svc) => sum + svc.durationMin, 0);
-      return `${mins} мин`;
+      return t("booking.durationMinutes", { mins });
     }
-    return shop.type === "Больница" ? `${shop.time} мин` : "1 час";
-  }, [selectedServices, shop]);
+    return shop.type === "Больница"
+      ? t("booking.durationMinutes", { mins: shop.time })
+      : t("booking.durationOneHour");
+  }, [selectedServices, shop, t]);
 
   const maxGuests = 20;
 
@@ -302,11 +283,13 @@ export default function BookingPage({
       {
         id: "booking-base",
         name:
-          guests > 1 ? `${baseBookingName} (${guests} гост.)` : baseBookingName,
+          guests > 1
+            ? t("booking.guestSuffix", { name: baseBookingName, guests })
+            : baseBookingName,
         price: bookingPrice,
       },
     ],
-    [baseBookingName, bookingPrice, guests],
+    [baseBookingName, bookingPrice, guests, t],
   );
 
   const extraLineItems = useMemo(
@@ -345,10 +328,11 @@ export default function BookingPage({
 
 
 
-  const priceLabel = `от ${formatPrice(shop.price)} сум`;
-  const priceSubLabel = shop.type === "Больница" ? "за приём" : "за час";
+  const priceLabel = t("booking.priceFrom", { price: formatPrice(shop.price) });
+  const priceSubLabel =
+    shop.type === "Больница" ? t("booking.perVisit") : t("booking.perHour");
   const displayEmail = form.email.trim() || "Ivan.Petrov@gmail.com";
-  const backLabel = origin === "home" ? "Закрыть" : "Назад к карте";
+  const backLabel = origin === "home" ? t("common.close") : t("booking.backToMap");
   const activeDate = lockedSchedule?.date ?? selectedDate;
   const activeTime = lockedSchedule?.time ?? selectedTime;
 
@@ -413,9 +397,18 @@ export default function BookingPage({
   }
 
   function validateForm() {
-    const codes = validateBookingForm(form.name, form.phone, form.email);
-    const errors = mapValidationCodesToMessages(codes);
+    const codes = validateBookingForm(form.name, form.email, profilePhone ?? "");
+    const { phone: phoneCode, ...visibleCodes } = codes;
+    const errors = mapValidationCodesToMessages(visibleCodes);
     setFormErrors(errors);
+
+    if (phoneCode) {
+      showToast(
+        t(BOOKING_ERROR_MESSAGE_KEYS[phoneCode]),
+        t("booking.errorPhone"),
+      );
+    }
+
     return Object.keys(codes).length === 0;
   }
 
@@ -435,8 +428,8 @@ export default function BookingPage({
     setShowCardModal(false);
     setStep(3);
     showToast(
-      "Бронирование прошло успешно",
-      "Бронирование прошло успешно, приходите за 10 мин до бронирования.",
+      t("booking.successToast"),
+      t("booking.successToastDesc"),
     );
   }
 
@@ -455,12 +448,13 @@ export default function BookingPage({
       return;
     }
 
-    if (!shop.apiBusinessId) {
-      completeBookingFlow();
-      return;
-    }
-
+    const businessId = shop.apiBusinessId ?? shop.id;
     const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
+    const fallbackDurationMin =
+      bookableService?.durationMin ??
+      selectedServices[0]?.durationMin ??
+      shop.time ??
+      60;
 
     setIsSubmitting(true);
 
@@ -468,28 +462,24 @@ export default function BookingPage({
 
     try {
       const resolved = await resolveBookingTargetIds({
-        businessId: shop.apiBusinessId,
+        businessId,
         preferredServiceId: bookableService?.id,
         preferredBranchId: selectedBranchId ?? shop.apiBranchId,
-        fallbackDurationMin:
-          bookableService?.durationMin ??
-          selectedServices[0]?.durationMin ??
-          60,
+        fallbackDurationMin,
       });
 
-      if (!resolved.ok) {
-        alert(
-          resolved.reason === "branch"
-            ? t("booking.errorNoBranch")
-            : t("booking.errorNoService"),
-        );
-        return;
-      }
+      const targets = resolved.ok
+        ? resolved.targets
+        : {
+            serviceId: 1,
+            branchId: selectedBranchId ?? shop.apiBranchId ?? 1,
+            durationMin: fallbackDurationMin,
+          };
 
-      const { serviceId, branchId, durationMin } = resolved.targets;
+      const { serviceId, branchId, durationMin } = targets;
 
       const bookingDate = formatBookingDate(activeDate);
-      slotKey = buildSlotKey(shop.apiBusinessId, branchId, bookingDate, activeTime);
+      slotKey = buildSlotKey(businessId, branchId, bookingDate, activeTime);
 
       if (!tryReserveSlot(slotKey)) {
         handleSlotConflict();
@@ -521,7 +511,7 @@ export default function BookingPage({
       ];
 
       await createBooking({
-        business_id: shop.apiBusinessId,
+        business_id: businessId,
         service_id: serviceId,
         branch_id: branchId,
         booking_date: bookingDate,
@@ -648,7 +638,7 @@ export default function BookingPage({
 
           <div className={s.stats}>
             <div className={s.statBox}>
-              <span className={s.statLabel}>Открыто</span>
+              <span className={s.statLabel}>{t("booking.open")}</span>
               <span className={s.statValue}>{resolvedHours}</span>
             </div>
             <div className={s.statBox}>
@@ -716,7 +706,7 @@ export default function BookingPage({
                   <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
                   <path d="M3.5 9.5h17M8 3v4M16 3v4" />
                 </svg>
-                {formatDateShortRu(selectedDate)}
+                {formatBookingDateLabel(selectedDate, locale)}
               </span>
               <svg
                 className={`${s.dateChevron} ${showMobileCalendar ? s.dateChevronOpen : ""}`}
@@ -977,43 +967,6 @@ export default function BookingPage({
           </label>
 
           <label className={s.field}>
-            <span className={s.label}>
-              {t("booking.phoneLabel")} <span className={s.required}>*</span>
-            </span>
-            <input
-              className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
-              type="tel"
-              value={form.phone}
-              onChange={(e) => {
-                setForm((prev) => ({
-                  ...prev,
-                  phone: formatUzbekPhoneInput(e.target.value),
-                }));
-                if (formErrors.phone) {
-                  setFormErrors((prev) => ({ ...prev, phone: undefined }));
-                }
-              }}
-              placeholder="+998 90 000 00 00"
-              required
-              inputMode="tel"
-              autoComplete="tel"
-              aria-invalid={!!formErrors.phone}
-              aria-describedby={formErrors.phone ? "booking-phone-error" : undefined}
-              data-testid="booking-phone-input"
-            />
-            {formErrors.phone && (
-              <span
-                id="booking-phone-error"
-                className={s.fieldError}
-                role="alert"
-                data-testid="booking-phone-error"
-              >
-                {formErrors.phone}
-              </span>
-            )}
-          </label>
-
-          <label className={s.field}>
             <span className={s.label}>{t("booking.emailLabel")}</span>
             <input
               className={`${s.input} ${formErrors.email ? s.inputError : ""}`}
@@ -1122,7 +1075,7 @@ export default function BookingPage({
             {t("booking.confirmSummaryTitle")}
           </h3>
           <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
-            {formatDateRu(activeDate)}, {activeTime}
+            {formatBookingDateLabel(activeDate, locale)}, {activeTime}
           </p>
           {allLineItems.map((item) => (
             <div
@@ -1131,13 +1084,15 @@ export default function BookingPage({
             >
               <span className="text-[var(--text-secondary)]">{item.name}</span>
               <span className="font-semibold text-[var(--text-primary)]">
-                {formatPrice(item.price)} сум
+                {t("booking.priceSum", { price: formatPrice(item.price) })}
               </span>
             </div>
           ))}
           <div className="mt-4 flex items-center justify-between border-t border-[var(--border-default)] pt-3 text-[16px] font-bold">
             <span>{t("booking.total")}</span>
-            <span data-testid="booking-confirm-total">{formatPrice(total)} сум</span>
+            <span data-testid="booking-confirm-total">
+              {t("booking.priceSum", { price: formatPrice(total) })}
+            </span>
           </div>
         </div>
 
@@ -1217,10 +1172,8 @@ export default function BookingPage({
         <div className={s.security}>
           <Image src={assets.map.security} alt="" />
           <div>
-            <p className={s.securityTitle}>Ваши данные защищены</p>
-            <p className={s.securityText}>
-              Мы используем шифрование для защиты ваших персональных данных и платежей.
-            </p>
+            <p className={s.securityTitle}>{t("booking.securityTitle")}</p>
+            <p className={s.securityText}>{t("booking.securityText")}</p>
           </div>
         </div>
       )}

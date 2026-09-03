@@ -78,6 +78,7 @@ export default function Popular() {
   }, []);
 
   const cardClassName = `${popularStyles.card} group flex h-full flex-col overflow-hidden rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg`;
+  const seeAllClassName = `${popularStyles.card} ${popularStyles.seeAll} group rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg`;
 
   return (
     <section className={`${s.homeSection} w-full`}>
@@ -148,7 +149,7 @@ export default function Popular() {
             )
           : null}
 
-        <Link href={routes.map} className={`${cardClassName} items-center justify-center gap-2.5 px-6 py-11`}>
+        <Link href={routes.map} className={seeAllClassName} data-testid="popular-see-all">
           <Image
             src={assets.popular.blueMore}
             alt={t("common.viewAll")}

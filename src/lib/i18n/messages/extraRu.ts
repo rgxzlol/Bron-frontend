@@ -203,6 +203,9 @@ export const extraRu: MessageTree = {
     confirmTitle: "Бронирование подтверждено!",
     confirmEmailSent: "Мы отправили детали на вашу почту",
     confirmSummaryTitle: "Детали бронирования",
+    successToast: "Бронирование прошло успешно",
+    successToastDesc:
+      "Бронирование прошло успешно, приходите за 10 мин до бронирования.",
     whatsNext: "Что дальше?",
     arriveEarly: "Приходите за 10–15 минут до начала бронирования.",
     cancelPolicy: "Отмена возможна не позднее чем за 2 часа до визита.",

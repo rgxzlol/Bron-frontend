@@ -198,12 +198,27 @@ function updateBusiness(
   );
 }
 
-function resolveBusinessesWithDemo(businesses: SavedBusiness[]) {
+function resolveBusinessesWithDemo(
+  businesses: SavedBusiness[],
+  previous: SavedBusiness[] = [],
+) {
   if (businesses.length > 0) {
     return businesses;
   }
 
-  return [getDemoSavedBusiness()];
+  const previousDemo = previous.find(isPlaceholderDemoBusiness);
+  return [previousDemo ? normalizeBusiness(previousDemo) : getDemoSavedBusiness()];
+}
+
+function replaceBusiness(
+  businesses: SavedBusiness[],
+  previousId: string | null,
+  saved: SavedBusiness,
+) {
+  const next = businesses.filter(
+    (business) => business.id !== saved.id && business.id !== previousId,
+  );
+  return [...next, saved];
 }
 
 function replaceBusiness(
@@ -220,10 +235,10 @@ function replaceBusiness(
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
-      businesses: [],
+      businesses: [getDemoSavedBusiness()],
       draft: createEmptyDraft(),
       editingId: null,
-      showMyBusiness: false,
+      showMyBusiness: true,
       mapFocusBusinessId: null,
 
       updateDraft: (partial) =>
@@ -341,7 +356,8 @@ export const useBusinessStore = create<BusinessStore>()(
         }
 
         set((state) => {
-          const businesses = state.businesses.filter((b) => b.id !== id);
+          const remaining = state.businesses.filter((b) => b.id !== id);
+          const businesses = resolveBusinessesWithDemo(remaining, state.businesses);
           return {
             businesses,
             showMyBusiness: businesses.length > 0,
@@ -379,7 +395,8 @@ export const useBusinessStore = create<BusinessStore>()(
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
-          const businesses = resolveBusinessesWithDemo([]);
+          const current = get().businesses;
+          const businesses = resolveBusinessesWithDemo(current, current);
           set({ businesses, showMyBusiness: businesses.length > 0 });
         }
       },
@@ -617,16 +634,24 @@ export const useBusinessStore = create<BusinessStore>()(
     }),
     {
       name: "business-storage",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
-        const state = persisted as { businesses?: SavedBusiness[] };
-        if (!state?.businesses) return persisted;
+        const state = persisted as {
+          businesses?: SavedBusiness[];
+          showMyBusiness?: boolean;
+        };
+        if (!state) return persisted;
+
+        const businesses = resolveBusinessesWithDemo(
+          (state.businesses ?? []).map((b) =>
+            normalizeBusiness(b as SavedBusiness),
+          ),
+        );
 
         return {
           ...state,
-          businesses: state.businesses.map((b) =>
-            normalizeBusiness(b as SavedBusiness),
-          ),
+          businesses,
+          showMyBusiness: businesses.length > 0 ? true : state.showMyBusiness,
         };
       },
       partialize: (state) => ({

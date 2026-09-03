@@ -424,19 +424,24 @@ export async function createServiceOnApi(
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(businessId)) return null;
 
-  const created = await servicesApi.create(
-    {
-      business_id: Number(businessId),
-      title: service.name,
-      description: service.description,
-      category: service.category,
-      duration: 60,
-      price: service.price,
-    },
-    token,
-  );
+  try {
+    const created = await servicesApi.create(
+      {
+        business_id: Number(businessId),
+        title: service.name,
+        description: service.description,
+        category: service.category,
+        duration: 60,
+        price: service.price,
+      },
+      token,
+    );
 
-  return apiServiceToBusinessService(created);
+    return apiServiceToBusinessService(created);
+  } catch (error) {
+    console.warn("API service create failed, saving locally:", error);
+    return null;
+  }
 }
 
 export async function createProductOnApi(
@@ -446,17 +451,22 @@ export async function createProductOnApi(
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(businessId)) return null;
 
-  const created = await productsApi.create(
-    {
-      business_id: Number(businessId),
-      name: product.name,
-      description: product.description || null,
-      price: product.price,
-    },
-    token,
-  );
+  try {
+    const created = await productsApi.create(
+      {
+        business_id: Number(businessId),
+        name: product.name,
+        description: product.description || null,
+        price: product.price,
+      },
+      token,
+    );
 
-  return apiProductToBusinessService(created);
+    return apiProductToBusinessService(created);
+  } catch (error) {
+    console.warn("API product create failed, saving locally:", error);
+    return null;
+  }
 }
 
 export async function updateServiceOnApi(
@@ -466,45 +476,53 @@ export async function updateServiceOnApi(
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(serviceId)) return null;
 
-  if (partial.type === "product") {
-    const updated = await productsApi.update(
+  try {
+    if (partial.type === "product") {
+      const updated = await productsApi.update(
+        Number(serviceId),
+        {
+          name: partial.name,
+          description: partial.description,
+          price: partial.price,
+          is_active: partial.active,
+        },
+        token,
+      );
+      return apiProductToBusinessService(updated);
+    }
+
+    const updated = await servicesApi.update(
       Number(serviceId),
       {
-        name: partial.name,
+        title: partial.name,
         description: partial.description,
+        category: partial.category,
         price: partial.price,
         is_active: partial.active,
       },
       token,
     );
-    return apiProductToBusinessService(updated);
+    return apiServiceToBusinessService(updated);
+  } catch (error) {
+    console.warn("API item update failed, keeping local changes:", error);
+    return null;
   }
-
-  const updated = await servicesApi.update(
-    Number(serviceId),
-    {
-      title: partial.name,
-      description: partial.description,
-      category: partial.category,
-      price: partial.price,
-      is_active: partial.active,
-    },
-    token,
-  );
-
-  return apiServiceToBusinessService(updated);
 }
 
 export async function removeServiceFromApi(serviceId: string, type: "service" | "product") {
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(serviceId)) return;
 
-  if (type === "product") {
-    await productsApi.remove(Number(serviceId), token);
-    return;
-  }
+  try {
+    if (type === "product") {
+      await productsApi.remove(Number(serviceId), token);
+      return;
+    }
 
-  await servicesApi.remove(Number(serviceId), token);
+    await servicesApi.remove(Number(serviceId), token);
+  } catch (error) {
+    console.warn("API item delete failed, removing locally:", error);
+  }
 }
 
 export async function updateBusinessBookingStatusOnApi(

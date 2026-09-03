@@ -12,6 +12,19 @@
   min-width: 0;
   max-width: 274px;
   flex: 1 1 240px;
+  align-self: stretch;
+}
+
+.seeAll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 44px 24px;
+  /* Stretch to the row height from sibling cards (avoid height: 100%). */
+  height: auto;
+  align-self: stretch;
 }
 
 .cardBody {

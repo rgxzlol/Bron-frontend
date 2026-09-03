@@ -53,12 +53,14 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    void fetchBusinessesFromApi();
-    void fetchMyBookings();
-    void fetchProfile();
-    loadNotificationsForUser(userId);
-    void fetchFavorites();
-    void fetchApplication();
+    return onStoreHydrated(useBookingStore, () => {
+      void fetchBusinessesFromApi();
+      void fetchMyBookings();
+      void fetchProfile();
+      loadNotificationsForUser(userId);
+      void fetchFavorites();
+      void fetchApplication();
+    });
   }, [
     hydrated,
     token,

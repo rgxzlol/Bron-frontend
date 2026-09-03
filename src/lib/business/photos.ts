@@ -125,6 +125,18 @@ export function photosToGallerySlots(
   return slots;
 }
 
+export function mergeServiceLists(
+  fromApi: SavedBusiness["services"],
+  existing: SavedBusiness["services"],
+): SavedBusiness["services"] {
+  if (fromApi.length === 0) return existing;
+  if (existing.length === 0) return fromApi;
+
+  const apiIds = new Set(fromApi.map((item) => item.id));
+  const localOnly = existing.filter((item) => !apiIds.has(item.id));
+  return [...fromApi, ...localOnly];
+}
+
 export function mergeBusinessFromApi(
   fromApi: SavedBusiness,
   existing?: SavedBusiness,
@@ -162,7 +174,11 @@ export function mergeBusinessFromApi(
     gallery: photosToGallerySlots(photos),
     website: existing.website || fromApi.website,
     description: fromApi.description || existing.description,
-    services: fromApi.services.length > 0 ? fromApi.services : existing.services,
+    services: mergeServiceLists(fromApi.services, existing.services),
+    bookingRequests:
+      fromApi.bookingRequests.length > 0
+        ? fromApi.bookingRequests
+        : existing.bookingRequests,
   };
 }
 

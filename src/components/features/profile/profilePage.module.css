@@ -348,6 +348,19 @@
   font-weight: 500;
 }
 
+.readOnlyValue {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 52px;
+  border-radius: 14px;
+  padding: 0 16px;
+  background: var(--bg-surface-muted);
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .borderedInput {
   border: 1px solid var(--border-strong) !important;
   border-radius: 12px !important;

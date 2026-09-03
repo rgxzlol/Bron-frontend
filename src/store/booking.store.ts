@@ -209,12 +209,58 @@ type BookingStore = {
   cancelBooking: (bookingId: number) => Promise<void>;
 };
 
-export const useBookingStore = create<BookingStore>()(
-  persist(
-    (set, get) => ({
-      bookings: [],
-      isLoading: false,
-      error: null,
+export const useBookingStore = create<BookingStore>((set) => ({
+  bookings: [],
+  isLoading: false,
+  error: null,
+
+  fetchMyBookings: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const bookings = resolveBookingsWithDemo(await bookingsApi.my());
+      set({ bookings, isLoading: false });
+    } catch {
+      set({ bookings: getDemoMyBookings(), isLoading: false, error: null });
+    }
+  },
+
+  createBooking: async (payload) => {
+    const booking = await bookingsApi.create(payload);
+    const list = await bookingsApi.my();
+    const items = payload.items ?? booking.items;
+    set({
+      bookings: list.map((item) =>
+        item.id === booking.id
+          ? {
+              ...item,
+              items: item.items?.length ? item.items : items,
+              total_price: item.total_price || booking.total_price,
+              guest_count: item.guest_count ?? booking.guest_count,
+            }
+          : item,
+      ),
+    });
+    void useBusinessStore
+      .getState()
+      .refreshBusinessBookings(String(payload.business_id));
+    return booking;
+  },
+
+  updateBooking: async (bookingId, payload) => {
+    const booking = await bookingsApi.update(bookingId, payload);
+    const list = await bookingsApi.my();
+    set({ bookings: list });
+    return booking;
+  },
+
+  rescheduleBooking: async (bookingId, payload) => {
+    const { booking_date, start_time, end_time } = payload;
+
+    try {
+      await bookingsApi.update(bookingId, { booking_date, start_time, end_time });
+    } catch {
+      // Keep local UI in sync even if the remote API ignores date/time fields.
+    }
 
       fetchMyBookings: async () => {
         const hasLocal = get().bookings.length > 0;

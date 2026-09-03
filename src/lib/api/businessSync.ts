@@ -304,15 +304,6 @@ function isMissingBusinessError(error: unknown) {
   return /business not found/i.test(error.message);
 }
 
-function isTransientApiError(error: unknown) {
-  if (!(error instanceof ApiError)) return false;
-  if (error.status === 0 || error.status === 502 || error.status === 503) return true;
-  return (
-    /временно недоступен/i.test(error.message) ||
-    /подключиться к серверу/i.test(error.message)
-  );
-}
-
 async function getOwnedApiBusinessId(businessId: string): Promise<number | null> {
   if (!/^\d+$/.test(businessId)) return null;
 
@@ -325,8 +316,8 @@ async function getOwnedApiBusinessId(businessId: string): Promise<number | null>
       return detail.id;
     }
   } catch (error) {
-    if (!isMissingBusinessError(error) && !isTransientApiError(error)) {
-      console.warn("Не удалось проверить бизнес на API:", error);
+    if (!isMissingBusinessError(error)) {
+      throw error;
     }
   }
 
@@ -401,18 +392,13 @@ export async function ensureWritableBusinessId(
   businessId: string,
   draft: BusinessDraft,
 ) {
-  try {
-    const ownedId = await getOwnedApiBusinessId(businessId);
-    if (ownedId != null) {
-      return { id: String(ownedId), created: false as const };
-    }
-
-    const created = await createBusinessFromDraft(draft);
-    return { id: created.id, created: true as const, business: created };
-  } catch (error) {
-    console.warn("API business sync failed, saving item locally:", error);
-    return { id: businessId, created: false as const };
+  const ownedId = await getOwnedApiBusinessId(businessId);
+  if (ownedId != null) {
+    return { id: String(ownedId), created: false as const };
   }
+
+  const created = await createBusinessFromDraft(draft);
+  return { id: created.id, created: true as const, business: created };
 }
 
 export async function removeBusinessFromApi(businessId: string) {

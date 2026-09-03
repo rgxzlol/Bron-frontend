@@ -36,6 +36,7 @@ import {
   releaseSlot,
   tryReserveSlot,
 } from "@/lib/booking/slotLocks";
+import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import {
   pickBookableShopService,
   resolveBookingTargetIds,
@@ -238,7 +239,8 @@ export default function BookingPage({
     didPrefillFormRef.current = true;
     const prefilledName = profileFullName?.trim() ?? "";
     setForm({
-      name: validateBookingForm(prefilledName, "").name ? "" : prefilledName,
+      name: validateBookingForm(prefilledName, "", "").name ? "" : prefilledName,
+      phone: formatUzbekPhoneInput(profilePhone ?? "", { keepPrefix: true }),
       email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
@@ -448,13 +450,12 @@ export default function BookingPage({
       return;
     }
 
-    const businessId = shop.apiBusinessId ?? shop.id;
+    if (!shop.apiBusinessId) {
+      completeBookingFlow();
+      return;
+    }
+
     const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
-    const fallbackDurationMin =
-      bookableService?.durationMin ??
-      selectedServices[0]?.durationMin ??
-      shop.time ??
-      60;
 
     setIsSubmitting(true);
 
@@ -462,21 +463,25 @@ export default function BookingPage({
 
     try {
       const resolved = await resolveBookingTargetIds({
-        businessId,
+        businessId: shop.apiBusinessId,
         preferredServiceId: bookableService?.id,
         preferredBranchId: selectedBranchId ?? shop.apiBranchId,
-        fallbackDurationMin,
+        fallbackDurationMin:
+          bookableService?.durationMin ??
+          selectedServices[0]?.durationMin ??
+          60,
       });
 
-      const targets = resolved.ok
-        ? resolved.targets
-        : {
-            serviceId: 1,
-            branchId: selectedBranchId ?? shop.apiBranchId ?? 1,
-            durationMin: fallbackDurationMin,
-          };
+      if (!resolved.ok) {
+        alert(
+          resolved.reason === "branch"
+            ? t("booking.errorNoBranch")
+            : t("booking.errorNoService"),
+        );
+        return;
+      }
 
-      const { serviceId, branchId, durationMin } = targets;
+      const { serviceId, branchId, durationMin } = resolved.targets;
 
       const bookingDate = formatBookingDate(activeDate);
       slotKey = buildSlotKey(businessId, branchId, bookingDate, activeTime);
@@ -511,7 +516,7 @@ export default function BookingPage({
       ];
 
       await createBooking({
-        business_id: businessId,
+        business_id: shop.apiBusinessId,
         service_id: serviceId,
         branch_id: branchId,
         booking_date: bookingDate,

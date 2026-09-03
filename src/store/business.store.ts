@@ -221,6 +221,17 @@ function replaceBusiness(
   return [...next, saved];
 }
 
+function replaceBusiness(
+  businesses: SavedBusiness[],
+  previousId: string | null,
+  saved: SavedBusiness,
+) {
+  const next = businesses.filter(
+    (business) => business.id !== saved.id && business.id !== previousId,
+  );
+  return [...next, saved];
+}
+
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
@@ -373,10 +384,10 @@ export const useBusinessStore = create<BusinessStore>()(
             (item) =>
               !apiIds.has(item.id) && !isPlaceholderDemoBusiness(item),
           );
-          const businesses = resolveBusinessesWithDemo(
-            merged.length > 0 ? [...merged, ...localOnly] : localOnly,
-            existing,
-          );
+          const businesses =
+            merged.length > 0
+              ? [...merged, ...localOnly]
+              : localOnly;
 
           set({
             businesses,

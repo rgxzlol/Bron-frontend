@@ -8,6 +8,7 @@ import {
   saveNotificationSettings,
 } from "@/lib/profile/notificationSettingsStorage";
 import { useAuthStore } from "@/store/auth.store";
+import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
@@ -39,7 +40,7 @@ function applyProfileToState(profile: UserProfile, currentFullName: string) {
   return {
     fullName: resolveDisplayFullName(profile.username, currentFullName),
     phone: profile.phone,
-    email: profile.email,
+    email: toUserFacingEmail(profile.email),
     language: mapApiLanguage(profile.language),
   };
 }
@@ -218,7 +219,7 @@ export const useProfileStore = create<ProfileState>()(
           ...applyProfileToState(updated, trimmedName || state.fullName),
           fullName: trimmedName || state.fullName,
           phone: trimmedPhone || updated.phone,
-          email: trimmedEmail || updated.email,
+          email: trimmedEmail || toUserFacingEmail(updated.email),
         }));
       },
 
@@ -233,7 +234,7 @@ export const useProfileStore = create<ProfileState>()(
         set((state) => ({
           fullName: fullName ?? state.fullName,
           phone: phone ?? state.phone,
-          email: email ?? state.email,
+          email: email === undefined ? state.email : toUserFacingEmail(email),
           avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
         })),
 
@@ -249,7 +250,7 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 5,
+      version: 6,
       partialize: (state) => ({
         fullName: state.fullName,
         phone: state.phone,
@@ -268,6 +269,7 @@ export const useProfileStore = create<ProfileState>()(
           fullName: looksLikePhoneUsername(String(rest.fullName ?? ""))
             ? ""
             : String(rest.fullName ?? ""),
+          email: toUserFacingEmail(String(rest.email ?? "")),
           avatarUrl: (rest.avatarUrl as string | null | undefined) ?? null,
           paymentHistory: (
             (rest.paymentHistory as PaymentHistoryItem[] | undefined) ??

@@ -7,7 +7,6 @@ import {
   normalizePhoneForApi,
   validateRegisterPhone,
 } from "@/lib/auth/validation";
-import { buildSyntheticEmail } from "@/lib/auth/syntheticEmail";
 
 export type GoogleUserProfile = {
   sub: string;
@@ -48,6 +47,7 @@ export async function resolveGoogleAuth(
     const user = await authApi.me(session.access_token);
 
     if (isValidUzbekPhone(user.phone)) {
+      await syncGoogleEmail(profile.email, session.access_token);
       return { kind: "complete", session, phone: user.phone.trim() };
     }
 
@@ -79,7 +79,7 @@ export async function completeGoogleAuth(
     return authApi.registerOrSignIn(
       {
         username,
-        email: buildSyntheticEmail(username, phone),
+        email: profile.email,
         phone: normalizedPhone,
         password,
       },
@@ -91,11 +91,15 @@ export async function completeGoogleAuth(
   const user = await authApi.me(session.access_token);
 
   if (areUzbekPhonesEqual(user.phone, normalizedPhone)) {
+    await syncGoogleEmail(profile.email, session.access_token);
     return session;
   }
 
   try {
-    await usersApi.updateProfile({ phone: normalizedPhone }, session.access_token);
+    await usersApi.updateProfile(
+      { phone: normalizedPhone, email: profile.email },
+      session.access_token,
+    );
   } catch (updateError) {
     if (
       updateError instanceof ApiError &&
@@ -114,4 +118,13 @@ export async function completeGoogleAuth(
   }
 
   return session;
+}
+
+/** Keep the real Google email on the account (replaces synthetic @bron.app placeholders). */
+async function syncGoogleEmail(email: string, token: string) {
+  try {
+    await usersApi.updateProfile({ email }, token);
+  } catch {
+    // Local profile still receives the Google email from AuthFlow.
+  }
 }

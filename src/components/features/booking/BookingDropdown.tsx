@@ -41,7 +41,7 @@ export const BookingDropdown = ({
                 type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
                 className="grid h-[32px] w-[32px] place-items-center rounded-full bg-black/80 text-white transition-colors duration-200 hover:bg-black active:scale-90"
-                aria-label={t("business.menuAria")}
+                aria-label={t("bookingsMenu.menuAria")}
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
                 data-testid={menuTestId}
@@ -56,7 +56,7 @@ export const BookingDropdown = ({
             {isOpen && (
                 <div
                     role="menu"
-                    className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[190px] rounded-[14px] bg-[var(--bg-surface)] p-[6px] shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+                    className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[190px] rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[6px] shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
                     data-testid={
                         bookingId != null
                             ? `booking-menu-panel-${bookingId}`
@@ -86,7 +86,7 @@ export const BookingDropdown = ({
                             setIsOpen(false);
                             onCancelClick();
                         }}
-                        className="flex w-full items-center rounded-[10px] px-[14px] py-[12px] text-left text-[14px] font-semibold text-[#e02424] transition-colors duration-200 hover:bg-[#fde8e8] dark:hover:bg-[var(--bg-surface-muted)]"
+                        className="flex w-full items-center rounded-[10px] px-[14px] py-[12px] text-left text-[14px] font-semibold text-[#e02424] transition-colors duration-200 hover:bg-[rgba(224,36,36,0.12)]"
                         data-testid={
                             bookingId != null
                                 ? `booking-menu-cancel-${bookingId}`

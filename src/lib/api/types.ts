@@ -286,6 +286,14 @@ export type BlockedDateUpdate = {
   reason?: string | null;
 };
 
+export type BookingOrderItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  kind?: "service" | "extra" | "product";
+};
+
 export type Booking = {
   id: number;
   user_id: number;
@@ -299,6 +307,7 @@ export type Booking = {
   guest_count: number;
   total_price: number;
   status: string;
+  items?: BookingOrderItem[];
 };
 
 export type BookingListItem = {
@@ -310,6 +319,7 @@ export type BookingListItem = {
   total_price: number;
   business_id?: number;
   guest_count?: number;
+  items?: BookingOrderItem[];
 };
 
 export type BookingCreate = {
@@ -322,6 +332,8 @@ export type BookingCreate = {
   end_time: string;
   guest_count?: number;
   product_ids?: number[];
+  items?: BookingOrderItem[];
+  total_price?: number;
 };
 
 export type BookingUpdate = {

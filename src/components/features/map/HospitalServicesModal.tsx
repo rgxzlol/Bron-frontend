@@ -77,7 +77,10 @@ export default function HospitalServicesModal({
   onContinue,
 }: HospitalServicesModalProps) {
   const { t } = useTranslation();
-  const services = useMemo<ShopService[]>(() => shop.services ?? [], [shop]);
+  const services = useMemo<ShopService[]>(
+    () => (shop.services ?? []).filter((service) => service.kind !== "product"),
+    [shop],
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selectedCount = selectedIds.length;

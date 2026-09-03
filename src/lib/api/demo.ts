@@ -47,6 +47,29 @@ function buildSeedBookings(): Booking[] {
       guest_count: 2,
       total_price: 98000,
       status: "confirmed",
+      items: [
+        {
+          id: "service",
+          name: "Бронирование зала",
+          price: 80000,
+          quantity: 1,
+          kind: "service",
+        },
+        {
+          id: "protein-bar",
+          name: "Протеиновый батончик",
+          price: 10000,
+          quantity: 1,
+          kind: "extra",
+        },
+        {
+          id: "water",
+          name: "Минеральная вода",
+          price: 8000,
+          quantity: 1,
+          kind: "extra",
+        },
+      ],
     },
     {
       id: 2,
@@ -61,6 +84,15 @@ function buildSeedBookings(): Booking[] {
       guest_count: 1,
       total_price: 45000,
       status: "confirmed",
+      items: [
+        {
+          id: "service",
+          name: "Бронирование столика",
+          price: 45000,
+          quantity: 1,
+          kind: "service",
+        },
+      ],
     },
     {
       id: 3,
@@ -75,6 +107,15 @@ function buildSeedBookings(): Booking[] {
       guest_count: 1,
       total_price: 120000,
       status: "completed",
+      items: [
+        {
+          id: "service",
+          name: "Консультация терапевта",
+          price: 120000,
+          quantity: 1,
+          kind: "service",
+        },
+      ],
     },
   ];
 }
@@ -91,6 +132,7 @@ function toListItem(booking: Booking): BookingListItem {
     total_price: booking.total_price,
     business_id: booking.business_id,
     guest_count: booking.guest_count,
+    items: booking.items,
   };
 }
 
@@ -188,7 +230,10 @@ export function getDemoResponse(
   }
 
   if (m === "POST" && cleanPath === "/bookings/create") {
-    const payload = (body ?? {}) as Partial<Booking>;
+    const payload = (body ?? {}) as Partial<Booking> & {
+      items?: Booking["items"];
+      total_price?: number;
+    };
     const businessId = Number(payload.business_id ?? 1);
     const branchId = Number(payload.branch_id ?? 1);
     const bookingDate = String(payload.booking_date ?? "2026-09-01");
@@ -219,8 +264,9 @@ export function getDemoResponse(
       start_time: startTime,
       end_time: String(payload.end_time ?? "13:00"),
       guest_count: Number(payload.guest_count ?? 1),
-      total_price: 98000,
+      total_price: Number(payload.total_price ?? 98000),
       status: "confirmed",
+      items: payload.items,
     };
     demoBookings.unshift(booking);
     return booking;

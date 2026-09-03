@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import {
   createProductOnApi,
   createServiceOnApi,
+  ensureWritableBusinessId,
   fetchBusinessBookingsFromApi,
   fetchMyBusinessesFromApi,
   getCurrentUserId,
@@ -13,7 +14,10 @@ import {
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
 import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
-import { getDemoSavedBusiness } from "@/lib/business/demoBusiness";
+import {
+  getDemoSavedBusiness,
+  isPlaceholderDemoBusiness,
+} from "@/lib/business/demoBusiness";
 import { getAuthToken } from "@/lib/api/token";
 import { ApiError } from "@/lib/api/client";
 import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
@@ -145,11 +149,11 @@ type BusinessStore = {
   addService: (
     businessId: string,
     service: Omit<BusinessService, "id" | "active">,
-  ) => Promise<void>;
+  ) => Promise<string>;
   addProduct: (
     businessId: string,
     product: Omit<BusinessService, "id" | "active" | "type">,
-  ) => Promise<void>;
+  ) => Promise<string>;
   removeService: (businessId: string, serviceId: string) => Promise<void>;
   updateService: (
     businessId: string,
@@ -200,6 +204,17 @@ function resolveBusinessesWithDemo(businesses: SavedBusiness[]) {
   }
 
   return [getDemoSavedBusiness()];
+}
+
+function replaceBusiness(
+  businesses: SavedBusiness[],
+  previousId: string | null,
+  saved: SavedBusiness,
+) {
+  const next = businesses.filter(
+    (business) => business.id !== saved.id && business.id !== previousId,
+  );
+  return [...next, saved];
 }
 
 export const useBusinessStore = create<BusinessStore>()(
@@ -296,16 +311,9 @@ export const useBusinessStore = create<BusinessStore>()(
               website: saved.website || draft.website,
               description: saved.description || draft.description,
             });
-            const next = editingId
-              ? businesses.map((business) =>
-                  business.id === editingId || business.id === normalized.id
-                    ? normalized
-                    : business,
-                )
-              : [...businesses, normalized];
 
             set({
-              businesses: next,
+              businesses: replaceBusiness(businesses, editingId, normalized),
               draft: createEmptyDraft(),
               editingId: null,
               showMyBusiness: true,
@@ -356,8 +364,14 @@ export const useBusinessStore = create<BusinessStore>()(
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
           const apiIds = new Set(merged.map((item) => item.id));
-          const localOnly = existing.filter((item) => !apiIds.has(item.id));
-          const businesses = resolveBusinessesWithDemo([...merged, ...localOnly]);
+          const localOnly = existing.filter(
+            (item) =>
+              !apiIds.has(item.id) && !isPlaceholderDemoBusiness(item),
+          );
+          const businesses =
+            merged.length > 0
+              ? [...merged, ...localOnly]
+              : localOnly;
 
           set({
             businesses,
@@ -414,39 +428,83 @@ export const useBusinessStore = create<BusinessStore>()(
         }),
 
       addService: async (businessId, service) => {
-        const created = await createServiceOnApi(businessId, service);
-        set((state) => ({
-          businesses: updateBusiness(state.businesses, businessId, (b) => ({
-            ...b,
-            services: [
-              ...b.services,
-              created ?? {
-                ...service,
-                id: crypto.randomUUID(),
-                active: true,
-                type: "service",
-              },
-            ],
-          })),
-        }));
+        const current = get().getBusiness(businessId);
+        if (!current) {
+          throw new Error("Business not found");
+        }
+
+        const writable = await ensureWritableBusinessId(
+          businessId,
+          draftFromBusiness(current),
+        );
+        const targetId = writable.id;
+        const created = await createServiceOnApi(targetId, service);
+        const nextItem = created ?? {
+          ...service,
+          id: crypto.randomUUID(),
+          active: true,
+          type: "service" as const,
+        };
+
+        set((state) => {
+          const businesses =
+            targetId === businessId
+              ? state.businesses
+              : replaceBusiness(state.businesses, businessId, {
+                  ...current,
+                  ...("business" in writable ? writable.business : current),
+                  id: targetId,
+                });
+
+          return {
+            businesses: updateBusiness(businesses, targetId, (b) => ({
+              ...b,
+              services: [...b.services, nextItem],
+            })),
+          };
+        });
+
+        return targetId;
       },
 
       addProduct: async (businessId, product) => {
-        const created = await createProductOnApi(businessId, product);
-        set((state) => ({
-          businesses: updateBusiness(state.businesses, businessId, (b) => ({
-            ...b,
-            services: [
-              ...b.services,
-              created ?? {
-                ...product,
-                id: crypto.randomUUID(),
-                active: true,
-                type: "product",
-              },
-            ],
-          })),
-        }));
+        const current = get().getBusiness(businessId);
+        if (!current) {
+          throw new Error("Business not found");
+        }
+
+        const writable = await ensureWritableBusinessId(
+          businessId,
+          draftFromBusiness(current),
+        );
+        const targetId = writable.id;
+        const created = await createProductOnApi(targetId, product);
+        const nextItem = created ?? {
+          ...product,
+          id: crypto.randomUUID(),
+          active: true,
+          type: "product" as const,
+        };
+
+        set((state) => {
+          const businesses =
+            targetId === businessId
+              ? state.businesses
+              : replaceBusiness(state.businesses, businessId, {
+                  ...current,
+                  ...("business" in writable ? writable.business : current),
+                  id: targetId,
+                });
+
+          return {
+            businesses: updateBusiness(businesses, targetId, (b) => ({
+              ...b,
+              services: [...b.services, nextItem],
+            })),
+          };
+        });
+
+        return targetId;
       },
 
       removeService: async (businessId, serviceId) => {

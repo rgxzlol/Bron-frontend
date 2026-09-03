@@ -98,6 +98,7 @@ export default function BookingsPageClient() {
           businessId={booking.business_id}
           bookingStatus={booking.status}
           guestsCount={booking.guest_count}
+          orderItems={booking.items}
         />
       ))}
     </div>

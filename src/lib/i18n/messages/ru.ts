@@ -258,6 +258,7 @@ export const ru: MessageTree = {
     reviewSubmitted: "Отзыв опубликован",
     statusConfirmed: "Подтверждено",
     statusCompleted: "Завершено",
+    statusCancelled: "Отменено",
     guests: "{count} гостей",
     editBooking: "Изменить бронь",
     cancelBooking: "Отменить бронь",

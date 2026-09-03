@@ -297,27 +297,55 @@ async function resolveCreatedBusinessId(
   )[0].id;
 }
 
-export async function saveBusinessDraftToApi(
-  draft: BusinessDraft,
-  editingId: string | null,
-) {
+function isMissingBusinessError(error: unknown) {
+  if (!(error instanceof ApiError)) return false;
+  if (error.status === 404 || error.status === 403) return true;
+
+  return /business not found/i.test(error.message);
+}
+
+async function getOwnedApiBusinessId(businessId: string): Promise<number | null> {
+  if (!/^\d+$/.test(businessId)) return null;
+
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  try {
+    const detail = await businessesApi.get(Number(businessId));
+    if (detail.owner_id === userId) {
+      return detail.id;
+    }
+  } catch (error) {
+    if (!isMissingBusinessError(error)) {
+      throw error;
+    }
+  }
+
+  return null;
+}
+
+async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
   const token = getAuthToken();
   if (!token) {
     throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
   }
 
-  if (editingId && /^\d+$/.test(editingId)) {
-    const businessId = Number(editingId);
-    const coords = await resolveDraftCoords(draft);
-    await businessesApi.update(
-      businessId,
-      draftToBusinessUpdate(draft, coords),
-      token,
-    );
-    await syncWorkingHours(businessId, draft);
-    await ensureDefaultBranch(businessId, draft, coords);
-    await syncBusinessMediaFromDraft(businessId, draft);
-    return loadBusinessDetails(businessId);
+  const coords = await resolveDraftCoords(draft);
+  await businessesApi.update(
+    businessId,
+    draftToBusinessUpdate(draft, coords),
+    token,
+  );
+  await syncWorkingHours(businessId, draft);
+  await ensureDefaultBranch(businessId, draft, coords);
+  await syncBusinessMediaFromDraft(businessId, draft);
+  return loadBusinessDetails(businessId);
+}
+
+async function createBusinessFromDraft(draft: BusinessDraft) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
   }
 
   const coords = await resolveDraftCoords(draft);
@@ -332,16 +360,45 @@ export async function saveBusinessDraftToApi(
   }
 
   const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));
+  return persistBusinessToApi(draft, businessId);
+}
 
-  await syncWorkingHours(businessId, draft);
-  await ensureDefaultBranch(businessId, draft, coords);
-  await businessesApi.update(
-    businessId,
-    draftToBusinessUpdate(draft, coords),
-    token,
-  );
-  await syncBusinessMediaFromDraft(businessId, draft);
-  return loadBusinessDetails(businessId);
+export async function saveBusinessDraftToApi(
+  draft: BusinessDraft,
+  editingId: string | null,
+) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
+  }
+
+  if (editingId) {
+    const ownedId = await getOwnedApiBusinessId(editingId);
+    if (ownedId != null) {
+      try {
+        return await persistBusinessToApi(draft, ownedId);
+      } catch (error) {
+        if (!isMissingBusinessError(error)) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  return createBusinessFromDraft(draft);
+}
+
+export async function ensureWritableBusinessId(
+  businessId: string,
+  draft: BusinessDraft,
+) {
+  const ownedId = await getOwnedApiBusinessId(businessId);
+  if (ownedId != null) {
+    return { id: String(ownedId), created: false as const };
+  }
+
+  const created = await createBusinessFromDraft(draft);
+  return { id: created.id, created: true as const, business: created };
 }
 
 export async function removeBusinessFromApi(businessId: string) {

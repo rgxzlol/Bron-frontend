@@ -155,6 +155,7 @@ const Business = () => {
           businessId={resolvedDashboardId}
           onClose={closeDashboard}
           onEditProfile={() => openEditModal(resolvedDashboardId)}
+          onBusinessIdChange={(id) => openDashboard(id)}
         />
         {modal}
       </>

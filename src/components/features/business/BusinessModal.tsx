@@ -200,7 +200,7 @@ function TimeSelect({
   const selectClass =
     variant === "desktop"
       ? desktop.desktopTimeSelect
-      : "appearance-none rounded-[8px] bg-[var(--bg-surface-muted)] py-[7px] pl-[8px] pr-[24px] text-[12px] font-semibold outline-none sm:py-[8px] sm:pl-[10px] sm:pr-[26px] sm:text-[13px]";
+      : "appearance-none rounded-[8px] border border-[var(--border-default)] bg-[var(--bg-input)] py-[7px] pl-[8px] pr-[24px] text-[12px] font-semibold text-[var(--text-primary)] outline-none sm:py-[8px] sm:pl-[10px] sm:pr-[26px] sm:text-[13px]";
 
   return (
     <span className="relative inline-flex">
@@ -223,7 +223,7 @@ function TimeSelect({
 }
 
 const inputClass =
-  "w-full rounded-[12px] border border-black/5 bg-[var(--bg-surface)] px-[16px] py-[14px] text-[15px] shadow-[0_1px_5px_rgba(15,23,42,0.05)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[#0a6af7]/30";
+  "w-full rounded-[12px] border border-[var(--border-default)] bg-[var(--bg-input)] px-[16px] py-[14px] text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[#0a6af7]/55 focus:ring-2 focus:ring-[#0a6af7]/30";
 
 const inputErrorClass =
   "border-[#e02424] ring-2 ring-[#e02424]/20 focus:ring-[#e02424]/20";
@@ -420,10 +420,19 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
       }
       onSaved();
     } catch (error) {
+      const isMissingBusiness =
+        error instanceof ApiError &&
+        (error.status === 404 ||
+          error.status === 403 ||
+          /business not found/i.test(error.message));
       const message =
-        error instanceof ApiError || error instanceof GeocodingError
+        error instanceof GeocodingError
           ? error.message
-          : t("businessErrors.saveFailed");
+          : isMissingBusiness
+            ? t("businessErrors.saveFailed")
+            : error instanceof ApiError
+              ? error.message
+              : t("businessErrors.saveFailed");
       alert(message);
     } finally {
       setSaving(false);
@@ -461,7 +470,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     const image = draft.gallery[index];
     const slotButtonClass = isDesktop
       ? desktop.gallerySlot
-      : "relative flex h-full min-h-[100px] w-full flex-col items-center justify-center gap-[8px] overflow-hidden rounded-[14px] border-2 border-[#0a6af7] bg-[var(--bg-surface)] transition hover:bg-[#f0f4ff]";
+      : "relative flex h-full min-h-[100px] w-full flex-col items-center justify-center gap-[8px] overflow-hidden rounded-[14px] border border-dashed border-[#0a6af7]/45 bg-[var(--bg-active-soft)] transition hover:border-[#0a6af7]/70 hover:bg-[var(--bg-hover)]";
 
     return (
       <div key={index} className={className} data-testid={`business-gallery-slot-${index}`}>
@@ -513,7 +522,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
   const sectionCardClass = isDesktop
     ? desktop.card
-    : "rounded-[18px] bg-[var(--bg-surface)] px-[16px] py-[20px] shadow-[0_1px_6px_rgba(15,23,42,0.04)] lg:rounded-[24px] lg:px-[28px] lg:py-[28px]";
+    : "rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[16px] py-[20px] shadow-[0_1px_6px_rgba(15,23,42,0.04)] lg:rounded-[24px] lg:px-[28px] lg:py-[28px]";
 
   const content = (
     <div
@@ -655,7 +664,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 <button
                   type="button"
                   onClick={() => profileInputRef.current?.click()}
-                  className="rounded-[10px] border border-[#0a6af7] py-[12px] text-[14px] font-semibold text-[#0a6af7] transition hover:bg-[#f0f4ff]"
+                  className="rounded-[10px] border border-[#0a6af7] py-[12px] text-[14px] font-semibold text-[#0a6af7] transition hover:bg-[var(--bg-active-soft)]"
                   data-testid="business-profile-photo-upload"
                 >
                   {t("businessModal.uploadPhoto")}
@@ -664,7 +673,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   type="button"
                   disabled={!draft.profilePhoto}
                   onClick={handleDeleteProfilePhoto}
-                  className="rounded-[10px] border border-[#e02424] py-[12px] text-[14px] font-semibold text-[#e02424] transition hover:bg-[#fde8e8] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-[10px] border border-[#e02424] py-[12px] text-[14px] font-semibold text-[#e02424] transition hover:bg-[rgba(224,36,36,0.12)] disabled:cursor-not-allowed disabled:opacity-40"
                   data-testid="business-profile-photo-delete"
                 >
                   {t("businessModal.deletePhoto")}
@@ -696,7 +705,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
         {submitAttempted && Object.values(formErrors).some(Boolean) ? (
           <div
             role="alert"
-            className="rounded-[12px] border border-[#e02424]/30 bg-[#fff1f1] px-4 py-3 text-[14px] font-semibold text-[#e02424]"
+            className="rounded-[12px] border border-[#e02424]/30 bg-[rgba(224,36,36,0.12)] px-4 py-3 text-[14px] font-semibold text-[#e02424]"
             data-testid="business-form-errors"
           >
             {t("businessErrors.formValidationSummary")}
@@ -1078,7 +1087,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                       >
                         {!isDesktop ? (
                           <span
-                            className="inline-flex rounded-[8px] bg-[#fde8e8] px-[12px] py-[7px] text-[12px] font-semibold text-[#e02424] sm:px-[14px] sm:py-[8px] sm:text-[13px]"
+                            className="inline-flex rounded-[8px] bg-[rgba(224,36,36,0.14)] px-[12px] py-[7px] text-[12px] font-semibold text-[#e02424] sm:px-[14px] sm:py-[8px] sm:text-[13px]"
                             data-testid={`business-schedule-closed-${day.key}`}
                           >
                             {t("businessModal.closed")}
@@ -1145,7 +1154,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   );
                 })}
               </ul>
-              <div className={isDesktop ? desktop.weeklyHoursBox : "mt-4 rounded-[14px] border border-[#0a6af7]/20 bg-[#f0f4ff] px-[14px] py-[12px] lg:mt-5"}>
+              <div className={isDesktop ? desktop.weeklyHoursBox : "mt-4 rounded-[14px] border border-[#0a6af7]/35 bg-[var(--bg-active-soft)] px-[14px] py-[12px] lg:mt-5"}>
                 {isDesktop ? <ClockIcon /> : null}
                 <p
                   className={isDesktop ? desktop.weeklyHoursText : "text-[13px] font-semibold text-[#0a6af7] lg:text-[14px]"}
@@ -1198,7 +1207,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             className={
               isDesktop
                 ? desktop.deleteButton
-                : "w-full rounded-[14px] border border-[#e02424] py-[15px] text-[16px] font-semibold text-[#e02424] transition hover:bg-[#fde8e8]"
+                : "w-full rounded-[14px] border border-[#e02424] py-[15px] text-[16px] font-semibold text-[#e02424] transition hover:bg-[rgba(224,36,36,0.12)]"
             }
           >
             {t("businessModal.delete")}

@@ -1,3 +1,4 @@
+import { formatUzbekPhoneInput, isValidUzbekPhone } from "@/lib/auth/validation";
 import { isValidEmailAddress } from "@/lib/email/validation";
 
 export type BookingFieldErrorCode =
@@ -19,8 +20,6 @@ export type BookingFormErrors = {
   email?: string;
 };
 
-const UZBEK_PHONE_PATTERN = /^\+998 \d{2} \d{3} \d{2} \d{2}$/;
-
 export function validateBookingName(name: string): BookingFieldErrorCode | undefined {
   const trimmed = name.trim();
 
@@ -36,13 +35,13 @@ export function validateBookingName(name: string): BookingFieldErrorCode | undef
 }
 
 export function validateBookingPhone(phone: string): BookingFieldErrorCode | undefined {
-  const trimmed = phone.trim();
+  const formatted = formatUzbekPhoneInput(phone);
 
-  if (!trimmed) {
+  if (!formatted) {
     return "phoneRequired";
   }
 
-  if (!UZBEK_PHONE_PATTERN.test(trimmed)) {
+  if (!isValidUzbekPhone(formatted) && !isValidUzbekPhone(phone)) {
     return "phoneInvalid";
   }
 

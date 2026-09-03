@@ -373,10 +373,9 @@ export const useBusinessStore = create<BusinessStore>()(
             (item) =>
               !apiIds.has(item.id) && !isPlaceholderDemoBusiness(item),
           );
-          const businesses =
-            merged.length > 0
-              ? [...merged, ...localOnly]
-              : localOnly;
+          const mergedList =
+            merged.length > 0 ? [...merged, ...localOnly] : localOnly;
+          const businesses = resolveBusinessesWithDemo(mergedList, existing);
 
           set({
             businesses,
@@ -623,7 +622,7 @@ export const useBusinessStore = create<BusinessStore>()(
     }),
     {
       name: "business-storage",
-      version: 4,
+      version: 5,
       migrate: (persisted) => {
         const state = persisted as {
           businesses?: SavedBusiness[];

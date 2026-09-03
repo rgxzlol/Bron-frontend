@@ -296,7 +296,7 @@ export const BookingCard = ({
             ) : (
               <>
                 <span
-                  className="rounded-full bg-[rgba(0,189,8,0.16)] px-[12px] py-[6px] text-[13px] font-semibold text-[#00bd08]"
+                  className="rounded-full bg-[var(--bg-surface)]/95 px-[12px] py-[6px] text-[13px] font-semibold text-[#008f05] shadow-[0_1px_4px_rgba(0,0,0,0.35)]"
                   data-testid={
                     bookingId != null
                       ? `booking-card-status-upcoming-${bookingId}`

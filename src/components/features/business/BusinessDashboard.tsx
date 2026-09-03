@@ -1786,12 +1786,28 @@ export default function BusinessDashboard({
         key={booking.id}
         booking={booking}
         dateLabel={bookingDateLabel}
-        onAccept={() =>
-          updateBookingStatus(businessId, booking.id, "accepted")
-        }
-        onCancel={() =>
-          updateBookingStatus(businessId, booking.id, "cancelled")
-        }
+        onAccept={() => {
+          void updateBookingStatus(businessId, booking.id, "accepted").catch(
+            (error) => {
+              const message =
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.itemSaveFailed");
+              showToast(t("business.acceptBooking"), message);
+            },
+          );
+        }}
+        onCancel={() => {
+          void updateBookingStatus(businessId, booking.id, "cancelled").catch(
+            (error) => {
+              const message =
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.itemSaveFailed");
+              showToast(t("business.cancelBooking"), message);
+            },
+          );
+        }}
       />
     );
   }

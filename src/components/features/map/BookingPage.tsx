@@ -240,8 +240,7 @@ export default function BookingPage({
     const prefilledName = profileFullName?.trim() ?? "";
     setForm({
       name: validateBookingForm(prefilledName, "").name ? "" : prefilledName,
-      // Real email only (e.g. Google); synthetic @bron.app placeholders stay empty.
-      email: toUserFacingEmail(profileEmail),
+      email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
   }, [step, profileFullName, profileEmail]);

@@ -141,6 +141,9 @@ export default function Support() {
                     width={28}
                     height={28}
                     className="h-[28px] w-[28px] lg:h-[36px] lg:w-[36px]"
+                    {...(card.id === "phone" || card.id === "email"
+                      ? { "data-header-icon": true }
+                      : {})}
                   />
                 </div>
 
@@ -156,7 +159,7 @@ export default function Support() {
                 <button
                   type="button"
                   onClick={card.onClick}
-                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
                   data-testid={card.testId}
                 >
                   {card.buttonText}
@@ -164,7 +167,7 @@ export default function Support() {
               ) : (
                 <a
                   href={card.href}
-                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[#0a6af7] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#0a6af7] px-[12px] py-[10px] text-center text-[12px] font-semibold leading-tight text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5 lg:px-[16px] lg:py-[12px] lg:text-[14px]"
                   data-testid={card.testId}
                   {...(card.external
                     ? { target: "_blank", rel: "noopener noreferrer" }

@@ -220,9 +220,9 @@ function ClockIcon({ size = 16 }: { size?: number }) {
 function PhotoIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="2" stroke="#0a6af7" strokeWidth="2" />
-      <circle cx="9" cy="10" r="2" fill="#0a6af7" />
-      <path d="M21 15l-5-5-4 4-2-2-5 5" stroke="#0a6af7" strokeWidth="2" />
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="var(--accent-fg)" strokeWidth="2" />
+      <circle cx="9" cy="10" r="2" fill="var(--accent-fg)" />
+      <path d="M21 15l-5-5-4 4-2-2-5 5" stroke="var(--accent-fg)" strokeWidth="2" />
     </svg>
   );
 }
@@ -802,6 +802,20 @@ function PhotoUploadField({
   onUploadError: (message: string) => void;
 }) {
   const inputId = useId();
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const previewPhoto =
+    !previewFailed &&
+    photo &&
+    (photo.startsWith("data:image/") ||
+      photo.startsWith("blob:") ||
+      /^https?:\/\//i.test(photo) ||
+      photo.startsWith("/"))
+      ? photo
+      : null;
+
+  useEffect(() => {
+    setPreviewFailed(false);
+  }, [photo]);
 
   async function handleFileChange(file: File | undefined) {
     if (!file) return;
@@ -834,21 +848,22 @@ function PhotoUploadField({
       <label
         htmlFor={inputId}
         data-testid={`${testIdPrefix}-photo-upload`}
-        data-has-photo={photo ? "true" : "false"}
+        data-has-photo={previewPhoto ? "true" : "false"}
         className="flex h-[150px] w-full cursor-pointer flex-col items-center justify-center gap-[10px] overflow-hidden rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)]"
       >
-        {photo ? (
+        {previewPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={photo}
+            src={previewPhoto}
             alt=""
             className="h-full w-full object-cover"
             data-testid={`${testIdPrefix}-photo-preview`}
+            onError={() => setPreviewFailed(true)}
           />
         ) : (
           <>
             <PhotoIcon />
-            <span className="text-[15px] font-semibold text-[#0a6af7] underline">
+            <span className="text-[15px] font-semibold text-[var(--accent-fg)] underline">
               {uploadLabel}
             </span>
           </>
@@ -1470,7 +1485,7 @@ function BookingCard({
 
       {isConfirmed && (
         <div
-          className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[#0a6af7]"
+          className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[var(--accent-fg)]"
           data-testid={`business-booking-accepted-${booking.id}`}
         >
           {t("business.accepted")}
@@ -1786,12 +1801,28 @@ export default function BusinessDashboard({
         key={booking.id}
         booking={booking}
         dateLabel={bookingDateLabel}
-        onAccept={() =>
-          updateBookingStatus(businessId, booking.id, "accepted")
-        }
-        onCancel={() =>
-          updateBookingStatus(businessId, booking.id, "cancelled")
-        }
+        onAccept={() => {
+          void updateBookingStatus(businessId, booking.id, "accepted").catch(
+            (error) => {
+              const message =
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.itemSaveFailed");
+              showToast(t("business.acceptBooking"), message);
+            },
+          );
+        }}
+        onCancel={() => {
+          void updateBookingStatus(businessId, booking.id, "cancelled").catch(
+            (error) => {
+              const message =
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.itemSaveFailed");
+              showToast(t("business.cancelBooking"), message);
+            },
+          );
+        }}
       />
     );
   }
@@ -1866,7 +1897,7 @@ export default function BusinessDashboard({
                   {categoryTags.map((tag, index) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[#0a6af7]"
+                      className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]"
                       data-testid={`business-category-tag-${index}`}
                     >
                       {tag}

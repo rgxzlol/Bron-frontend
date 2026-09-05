@@ -35,13 +35,13 @@ function ConfettiSparks() {
       aria-hidden="true"
       className="shrink-0 self-center"
     >
-      <path d="M5 11l4 2.6" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" />
+      <path d="M5 11l4 2.6" stroke="var(--accent-fg)" strokeWidth="2" strokeLinecap="round" />
       <path d="M13.5 4.5l1.4 4" stroke="#7eb1fb" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="21.5" cy="6" r="1.6" fill="#0a6af7" />
-      <path d="M28 10.5l4.4-2" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="21.5" cy="6" r="1.6" fill="var(--accent-fg)" />
+      <path d="M28 10.5l4.4-2" stroke="var(--accent-fg)" strokeWidth="2" strokeLinecap="round" />
       <circle cx="9.5" cy="20.5" r="1.5" fill="#7eb1fb" />
-      <path d="M19 17.5l3.2 3" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="30.5" cy="21.5" r="1.6" fill="#0a6af7" />
+      <path d="M19 17.5l3.2 3" stroke="var(--accent-fg)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="30.5" cy="21.5" r="1.6" fill="var(--accent-fg)" />
       <path d="M33 14.5h.01" stroke="#7eb1fb" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   );

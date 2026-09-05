@@ -30,7 +30,11 @@ export async function syncBusinessMediaFromDraft(
   if (draft.profilePhoto?.startsWith("data:")) {
     const file = dataUrlToFile(draft.profilePhoto, "logo.png");
     if (file) {
-      await businessesApi.uploadLogo(businessId, file, token);
+      try {
+        await businessesApi.uploadLogo(businessId, file, token);
+      } catch (error) {
+        console.warn("Business logo upload failed:", error);
+      }
     }
   }
 

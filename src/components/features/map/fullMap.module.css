@@ -262,7 +262,7 @@
 }
 
 .phone:hover {
-  color: #0a6af7;
+  color: var(--accent-fg);
 }
 
 .pricing {
@@ -444,7 +444,7 @@
   padding: 4px 12px;
   border-radius: 999px;
   background: var(--bg-active-soft);
-  color: var(--primary);
+  color: var(--accent-fg);
   font-size: 12px;
   font-weight: 600;
 }

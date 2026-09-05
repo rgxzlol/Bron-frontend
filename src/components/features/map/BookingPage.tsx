@@ -1103,7 +1103,7 @@ export default function BookingPage({
         <div className="mt-10 flex w-full flex-col gap-3">
           <Link
             href={routes.home}
-            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-center text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-center text-[16px] font-semibold text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5"
             data-testid="booking-go-home"
           >
             {t("booking.goHome")}
@@ -1111,7 +1111,7 @@ export default function BookingPage({
           <button
             type="button"
             onClick={() => setShowReviewModal(true)}
-            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-[16px] font-semibold text-[#0a6af7] transition hover:bg-[#0a6af7]/5"
+            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-[16px] font-semibold text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5"
             data-testid="booking-leave-review"
           >
             {t("booking.leaveReview")}

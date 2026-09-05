@@ -12,13 +12,14 @@ const photos: StaticImageData[] = [
 
 type Slot = "left" | "center" | "right";
 
+/** Positions are % of the carousel width so side cards stay on-screen. */
 const slotConfig: Record<
   Slot,
-  { offsetX: number; rotate: number; scale: number; zIndex: number }
+  { left: string; rotate: number; scale: number; zIndex: number }
 > = {
-  left: { offsetX: -120, rotate: -12, scale: 0.7, zIndex: 1 },
-  center: { offsetX: 0, rotate: 0, scale: 1, zIndex: 10 },
-  right: { offsetX: 120, rotate: 12, scale: 0.7, zIndex: 1 },
+  left: { left: "22%", rotate: -10, scale: 0.72, zIndex: 1 },
+  center: { left: "50%", rotate: 0, scale: 1, zIndex: 10 },
+  right: { left: "78%", rotate: 10, scale: 0.72, zIndex: 1 },
 };
 
 function getSlot(imageIndex: number, centerIndex: number): Slot {
@@ -46,30 +47,31 @@ export default function HeroPhotoCarousel() {
 
   return (
     <div
-      className="relative mx-auto h-[250px] w-[min(100%,400px)] shrink-0 lg:mx-0"
+      className="relative mx-auto h-[min(250px,58vw)] w-full max-w-[min(100%,360px)] shrink-0 lg:mx-0 lg:h-[250px] lg:max-w-[400px]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {photos.map((src, index) => {
         const slot = getSlot(index, centerIndex);
-        const { offsetX, rotate, scale, zIndex } = slotConfig[slot];
+        const { left, rotate, scale, zIndex } = slotConfig[slot];
 
         return (
           <div
             key={src.src || index}
-            className="absolute left-1/2 top-1/2 origin-center transition-all duration-700 ease-in-out will-change-transform"
+            className="absolute top-1/2 aspect-[157/242] w-[min(40%,157px)] origin-center transition-all duration-700 ease-in-out will-change-transform"
             style={{
+              left,
               zIndex,
-              transform: `translate(calc(-50% + ${offsetX}px), -50%) rotate(${rotate}deg) scale(${scale})`,
+              transform: `translate(-50%, -50%) rotate(${rotate}deg) scale(${scale})`,
             }}
           >
             <Image
               src={src}
               alt={`Пример сервиса ${index + 1}`}
-              width={157}
-              height={242}
+              fill
+              sizes="157px"
               priority
-              className="rounded-[32px] object-cover shadow-lg border border-transparent"
+              className="rounded-[clamp(18px,5vw,32px)] object-cover shadow-lg border border-transparent"
             />
           </div>
         );

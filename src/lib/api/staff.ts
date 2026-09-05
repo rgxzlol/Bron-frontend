@@ -2,7 +2,7 @@ import { apiRequest } from "./client";
 import type { Booking, Staff, StaffCreate, StaffListItem, StaffUpdate, WorkingHours } from "./types";
 
 export const staffApi = {
-  list: () => apiRequest<StaffListItem[]>("/staff/"),
+  list: () => apiRequest<StaffListItem[]>("/staff"),
 
   get: (staffId: number) =>
     apiRequest<Staff>(`/staff/${staffId}`),

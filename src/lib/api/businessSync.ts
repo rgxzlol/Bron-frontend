@@ -27,7 +27,7 @@ import { getAuthToken } from "@/lib/api/token";
 import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
 import type { BusinessDraft, BusinessService, SavedBusiness, BusinessBookingRequest } from "@/store/business.store";
 import type { Branch, Business as ApiBusiness, Booking } from "@/lib/api/types";
-import { getDemoBusinessBookingsForApi } from "@/lib/business/demoBookings";
+import { getFallbackBusinessBookings, isLocalDemoBookingId } from "@/lib/business/demoBookings";
 
 async function resolveCoordsForBusiness(
   business: ApiBusiness,
@@ -60,8 +60,9 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
       ),
     );
 
+  // Without auth, keep local demo cards that can be accepted/rejected offline.
   if (!token) {
-    return mapBookings(getDemoBusinessBookingsForApi(businessId));
+    return getFallbackBusinessBookings(services);
   }
 
   try {
@@ -69,10 +70,13 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
     if (bookings.length > 0) {
       return mapBookings(bookings);
     }
-    return mapBookings(getDemoBusinessBookingsForApi(businessId));
-  } catch {
-    return mapBookings(getDemoBusinessBookingsForApi(businessId));
+  } catch (error) {
+    console.warn("Failed to load business bookings from API:", error);
   }
+
+  // Empty/failed API must not inject fake numeric booking ids — approving those
+  // hits the real backend and returns "Booking not found".
+  return getFallbackBusinessBookings(services);
 }
 
 export async function fetchBusinessBookingsFromApi(
@@ -307,7 +311,13 @@ function isMissingBusinessError(error: unknown) {
 async function getOwnedApiBusinessId(businessId: string): Promise<number | null> {
   if (!/^\d+$/.test(businessId)) return null;
 
-  const userId = await getCurrentUserId();
+  let userId: number | null = null;
+  try {
+    userId = await getCurrentUserId();
+  } catch (error) {
+    console.warn("Failed to resolve current user for business ownership:", error);
+    return null;
+  }
   if (!userId) return null;
 
   try {
@@ -336,9 +346,25 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
     draftToBusinessUpdate(draft, coords),
     token,
   );
-  await syncWorkingHours(businessId, draft);
-  await ensureDefaultBranch(businessId, draft, coords);
-  await syncBusinessMediaFromDraft(businessId, draft);
+
+  try {
+    await syncWorkingHours(businessId, draft);
+  } catch (error) {
+    console.warn("Working hours sync failed:", error);
+  }
+
+  try {
+    await ensureDefaultBranch(businessId, draft, coords);
+  } catch (error) {
+    console.warn("Default branch sync failed:", error);
+  }
+
+  try {
+    await syncBusinessMediaFromDraft(businessId, draft);
+  } catch (error) {
+    console.warn("Business media sync failed:", error);
+  }
+
   return loadBusinessDetails(businessId);
 }
 
@@ -392,9 +418,19 @@ export async function ensureWritableBusinessId(
   businessId: string,
   draft: BusinessDraft,
 ) {
-  const ownedId = await getOwnedApiBusinessId(businessId);
-  if (ownedId != null) {
-    return { id: String(ownedId), created: false as const };
+  try {
+    const ownedId = await getOwnedApiBusinessId(businessId);
+    if (ownedId != null) {
+      return { id: String(ownedId), created: false as const };
+    }
+  } catch (error) {
+    // If ownership probe fails (proxy/HTML), still try to reuse a numeric id
+    // that already looks like an API business instead of recreating it.
+    if (/^\d+$/.test(businessId)) {
+      console.warn("Business ownership check failed, retrying with id:", error);
+      return { id: businessId, created: false as const };
+    }
+    throw error;
   }
 
   const created = await createBusinessFromDraft(draft);
@@ -415,6 +451,15 @@ export async function removeBusinessFromApi(businessId: string) {
     console.error("Ошибка удаления бизнеса:", error);
     throw error;
   }
+}
+
+function isRecoverableItemSyncError(error: unknown) {
+  if (!(error instanceof ApiError)) return true;
+  // Auth errors should surface to the UI.
+  if (error.status === 401 || error.status === 403) {
+    return false;
+  }
+  return true;
 }
 
 export async function createServiceOnApi(
@@ -440,6 +485,9 @@ export async function createServiceOnApi(
     return apiServiceToBusinessService(created);
   } catch (error) {
     console.warn("API service create failed, saving locally:", error);
+    if (!isRecoverableItemSyncError(error)) {
+      throw error;
+    }
     return null;
   }
 }
@@ -465,6 +513,9 @@ export async function createProductOnApi(
     return apiProductToBusinessService(created);
   } catch (error) {
     console.warn("API product create failed, saving locally:", error);
+    if (!isRecoverableItemSyncError(error)) {
+      throw error;
+    }
     return null;
   }
 }
@@ -530,13 +581,23 @@ export async function updateBusinessBookingStatusOnApi(
   status: "accepted" | "cancelled",
 ) {
   const token = getAuthToken();
-  if (!token || !/^\d+$/.test(bookingId)) return null;
+  // Local/demo booking cards use non-numeric ids and are stored only in the client.
+  if (!token || isLocalDemoBookingId(bookingId)) return null;
 
-  if (status === "accepted") {
-    return bookingsApi.approve(Number(bookingId), token);
+  try {
+    if (status === "accepted") {
+      return await bookingsApi.approve(Number(bookingId), token);
+    }
+
+    return await bookingsApi.reject(Number(bookingId), token);
+  } catch (error) {
+    // Stale/demo numeric ids or already-removed bookings should not block the UI.
+    if (error instanceof ApiError && error.status === 404) {
+      console.warn("Booking missing on API, keeping local status update:", bookingId);
+      return null;
+    }
+    throw error;
   }
-
-  return bookingsApi.reject(Number(bookingId), token);
 }
 
 export async function getCurrentUserId() {

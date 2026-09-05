@@ -81,7 +81,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             setIsOpen(false);
                         }}
                         className={`flex items-center gap-4 w-full px-[18px] py-[12px] hover:bg-[#FAFAFF] transition-all duration-200 rounded-[12px] ${selectedCategory === null
-                                ? 'bg-blue-50/50 text-[#0A6AF7]'
+                                ? 'bg-blue-50/50 text-[var(--accent-fg)]'
                                 : 'text-black'
                             }`}
                     >
@@ -92,7 +92,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             <span className="text-[16px] font-semibold">{t("headerFilters.allCategories")}</span>
                         </div>
                         {selectedCategory === null && (
-                            <span className="ml-auto text-[#0A6AF7] font-semibold animate-in zoom-in duration-200">✓</span>
+                            <span className="ml-auto text-[var(--accent-fg)] font-semibold animate-in zoom-in duration-200">✓</span>
                         )}
                     </button>
 
@@ -109,7 +109,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                                     setIsOpen(false);
                                 }}
                                 className={`flex items-center gap-4 w-full px-[18px] py-[12px] hover:bg-[#FAFAFF] transition-all duration-200 rounded-[12px] ${isSelected
-                                        ? 'bg-blue-50/50 text-[#0A6AF7]'
+                                        ? 'bg-blue-50/50 text-[var(--accent-fg)]'
                                         : 'text-black'
                                     }`}
                             >
@@ -126,7 +126,7 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                                     </span>
                                 </div>
                                 {isSelected && (
-                                    <span className="ml-auto text-[#0A6AF7] font-semibold animate-in zoom-in duration-200">✓</span>
+                                    <span className="ml-auto text-[var(--accent-fg)] font-semibold animate-in zoom-in duration-200">✓</span>
                                 )}
                             </button>
                         );

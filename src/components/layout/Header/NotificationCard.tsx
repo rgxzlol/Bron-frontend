@@ -26,7 +26,7 @@ export function NotificationCard({
           <Image src={icon} alt="" className="h-5 w-5 object-contain" />
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="truncate text-[14px] font-bold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--primary)]">
+          <h3 className="truncate text-[14px] font-bold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--accent-fg)]">
             {title}
           </h3>
           <p className="truncate text-[12px] font-medium text-[var(--text-secondary)]">{description}</p>

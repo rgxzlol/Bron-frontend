@@ -198,6 +198,10 @@ function updateBusiness(
   );
 }
 
+function countAcceptedBookings(bookings: BusinessBookingRequest[]) {
+  return bookings.filter((booking) => booking.status === "accepted").length;
+}
+
 function resolveBusinessesWithDemo(
   businesses: SavedBusiness[],
   previous: SavedBusiness[] = [],
@@ -438,12 +442,30 @@ export const useBusinessStore = create<BusinessStore>()(
           throw new Error("Business not found");
         }
 
-        const writable = await ensureWritableBusinessId(
-          businessId,
-          draftFromBusiness(current),
-        );
-        const targetId = writable.id;
-        const created = await createServiceOnApi(targetId, service);
+        let targetId = businessId;
+        let writableBusiness: SavedBusiness | undefined;
+        let canSyncToApi = false;
+
+        try {
+          const writable = await ensureWritableBusinessId(
+            businessId,
+            draftFromBusiness(current),
+          );
+          targetId = writable.id;
+          canSyncToApi = true;
+          if ("business" in writable) {
+            writableBusiness = writable.business;
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to ensure writable business for service, saving locally:",
+            error,
+          );
+        }
+
+        const created = canSyncToApi
+          ? await createServiceOnApi(targetId, service)
+          : null;
         const nextItem = created ?? {
           ...service,
           id: crypto.randomUUID(),
@@ -457,7 +479,7 @@ export const useBusinessStore = create<BusinessStore>()(
               ? state.businesses
               : replaceBusiness(state.businesses, businessId, {
                   ...current,
-                  ...("business" in writable ? writable.business : current),
+                  ...(writableBusiness ?? current),
                   id: targetId,
                 });
 
@@ -478,12 +500,30 @@ export const useBusinessStore = create<BusinessStore>()(
           throw new Error("Business not found");
         }
 
-        const writable = await ensureWritableBusinessId(
-          businessId,
-          draftFromBusiness(current),
-        );
-        const targetId = writable.id;
-        const created = await createProductOnApi(targetId, product);
+        let targetId = businessId;
+        let writableBusiness: SavedBusiness | undefined;
+        let canSyncToApi = false;
+
+        try {
+          const writable = await ensureWritableBusinessId(
+            businessId,
+            draftFromBusiness(current),
+          );
+          targetId = writable.id;
+          canSyncToApi = true;
+          if ("business" in writable) {
+            writableBusiness = writable.business;
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to ensure writable business for product, saving locally:",
+            error,
+          );
+        }
+
+        const created = canSyncToApi
+          ? await createProductOnApi(targetId, product)
+          : null;
         const nextItem = created ?? {
           ...product,
           id: crypto.randomUUID(),
@@ -497,7 +537,7 @@ export const useBusinessStore = create<BusinessStore>()(
               ? state.businesses
               : replaceBusiness(state.businesses, businessId, {
                   ...current,
-                  ...("business" in writable ? writable.business : current),
+                  ...(writableBusiness ?? current),
                   id: targetId,
                 });
 
@@ -604,9 +644,11 @@ export const useBusinessStore = create<BusinessStore>()(
       },
 
       updateBookingStatus: async (businessId, bookingId, status) => {
-        if (status === "accepted" || status === "cancelled") {
-          await updateBusinessBookingStatusOnApi(bookingId, status);
-        }
+        const business = get().businesses.find((item) => item.id === businessId);
+        const previousRequests = business?.bookingRequests ?? [];
+        const nextRequests = previousRequests.map((req) =>
+          req.id === bookingId ? { ...req, status } : req,
+        );
 
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (b) => ({
@@ -614,10 +656,25 @@ export const useBusinessStore = create<BusinessStore>()(
             bookingRequests: b.bookingRequests.map((req) =>
               req.id === bookingId ? { ...req, status } : req,
             ),
-            bookings:
-              status === "accepted" ? b.bookings + 1 : b.bookings,
+            bookings: countAcceptedBookings(nextRequests),
           })),
         }));
+
+        try {
+          if (status === "accepted" || status === "cancelled") {
+            await updateBusinessBookingStatusOnApi(bookingId, status);
+          }
+        } catch (error) {
+          console.warn("Failed to update booking status:", error);
+          set((state) => ({
+            businesses: updateBusiness(state.businesses, businessId, (b) => ({
+              ...b,
+              bookingRequests: previousRequests,
+              bookings: countAcceptedBookings(previousRequests),
+            })),
+          }));
+          throw error;
+        }
       },
     }),
     {

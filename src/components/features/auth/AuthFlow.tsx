@@ -166,7 +166,7 @@ function Field({
         className="text-[14px] font-semibold text-[var(--text-secondary)]"
       >
         {label}
-        {required && <span className="text-[#0a6af7]"> *</span>}
+        {required && <span className="text-[var(--accent-fg)]"> *</span>}
       </label>
       {password ? (
         <PasswordInput
@@ -342,13 +342,13 @@ function SuccessIllustration() {
   return (
     <div className="relative mx-auto flex h-[180px] w-[180px] items-center justify-center">
       <svg className="absolute inset-0" viewBox="0 0 180 180" fill="none" aria-hidden="true">
-        <g fill="#0a6af7">
+        <g fill="var(--accent-fg)">
           <circle cx="24" cy="70" r="4" />
           <circle cx="150" cy="54" r="5" />
           <circle cx="140" cy="120" r="4" />
           <circle cx="34" cy="126" r="3" />
         </g>
-        <g stroke="#0a6af7" strokeWidth="4" strokeLinecap="round">
+        <g stroke="var(--accent-fg)" strokeWidth="4" strokeLinecap="round">
           <path d="M150 92l10 6" />
           <path d="M20 44l8 5" />
           <path d="M120 20l4 9" />
@@ -816,7 +816,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
             <button
               type="button"
               onClick={() => go("forgot")}
-              className="self-start text-[14px] font-semibold text-[#0a6af7] hover:underline"
+              className="self-start text-[14px] font-semibold text-[var(--accent-fg)] hover:underline"
             >
               {t("auth.forgotPassword")}
             </button>
@@ -945,7 +945,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
             <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
               {t("auth.alreadyHaveAccount")}{" "}
-              <button type="button" onClick={() => go("login")} className="text-[#0a6af7] hover:underline">
+              <button type="button" onClick={() => go("login")} className="text-[var(--accent-fg)] hover:underline">
                 {t("auth.login")}
               </button>
             </p>

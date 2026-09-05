@@ -1007,21 +1007,21 @@ function MailEditIcon() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M21 11V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h6"
-        stroke="#0A6AF7"
+        stroke="var(--accent-fg)"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="m3.5 7 8.5 6 8.5-6"
-        stroke="#0A6AF7"
+        stroke="var(--accent-fg)"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="m19.6 13.2 1.7 1.7-5.2 5.2-2.3.6.6-2.3 5.2-5.2Z"
-        stroke="#0A6AF7"
+        stroke="var(--accent-fg)"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"

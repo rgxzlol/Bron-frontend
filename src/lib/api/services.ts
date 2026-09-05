@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 export const servicesApi = {
-  list: () => apiRequest<ServiceListItem[]>("/services/"),
+  list: () => apiRequest<ServiceListItem[]>("/services"),
 
   get: (serviceId: number) =>
     apiRequest<Service>(`/services/${serviceId}`),

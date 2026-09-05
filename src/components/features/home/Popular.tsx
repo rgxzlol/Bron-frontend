@@ -157,7 +157,7 @@ export default function Popular() {
             width={23}
           />
 
-          <span className="text-[20px] text-[#0a6af7] transition-colors duration-300 group-hover:text-[#0859d3]">
+          <span className="text-[20px] text-[var(--accent-fg)] transition-colors duration-300 group-hover:opacity-80">
             {t("common.viewAll")}
           </span>
         </Link>

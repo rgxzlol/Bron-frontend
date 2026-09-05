@@ -55,7 +55,7 @@ export default function GoogleOAuthCallbackClient() {
         </p>
         <Link
           href={routes.auth}
-          className="mt-8 inline-flex text-[15px] font-semibold text-[#0a6af7] hover:underline"
+          className="mt-8 inline-flex text-[15px] font-semibold text-[var(--accent-fg)] hover:underline"
         >
           {t("auth.googleOAuthBackToLogin")}
         </Link>

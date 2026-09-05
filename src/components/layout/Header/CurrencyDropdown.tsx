@@ -70,7 +70,7 @@ export const CurrencyDropdown: FC<CurrencyDropdownProps> = ({ value, onChange })
                                 }}
                                 className={`flex items-center justify-between w-full px-[14px] py-[10px] hover:bg-[#FAFAFF] transition-all duration-200 rounded-[12px] text-left ${
                                     isSelected
-                                        ? 'bg-blue-50/50 text-[#0A6AF7]'
+                                        ? 'bg-blue-50/50 text-[var(--accent-fg)]'
                                         : 'text-black'
                                 }`}
                             >
@@ -79,7 +79,7 @@ export const CurrencyDropdown: FC<CurrencyDropdownProps> = ({ value, onChange })
                                     <span className="text-[10px] opacity-60 font-medium">{opt.badge}</span>
                                 </div>
                                 {isSelected && (
-                                    <span className="text-[#0A6AF7] font-semibold text-[14px] animate-in zoom-in duration-200">
+                                    <span className="text-[var(--accent-fg)] font-semibold text-[14px] animate-in zoom-in duration-200">
                                         ✓
                                     </span>
                                 )}

@@ -10,7 +10,7 @@ export default function HeroSection() {
 
   return (
     <section
-      className={`${s.homeSection} flex flex-col items-center gap-[42px] rounded-[34px] bg-white px-5 py-8 lg:flex-row lg:items-start md:px-[32px] md:py-[38px]`}
+      className={`${s.homeSection} flex flex-col items-center gap-[42px] overflow-x-hidden rounded-[34px] bg-white px-5 py-8 lg:flex-row lg:items-start md:px-[32px] md:py-[38px]`}
     >
       <div className="flex w-full flex-col items-center lg:items-start md:max-w-[471px]">
         <h1 className="max-w-[350px] text-[28px] font-semibold mb-[15px] md:text-[36px]">

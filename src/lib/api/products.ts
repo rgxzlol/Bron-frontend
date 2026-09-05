@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 export const productsApi = {
-  list: () => apiRequest<ProductListItem[]>("/products/"),
+  list: () => apiRequest<ProductListItem[]>("/products"),
 
   get: (productId: number) =>
     apiRequest<Product>(`/products/${productId}`),

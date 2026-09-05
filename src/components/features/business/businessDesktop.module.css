@@ -139,7 +139,7 @@
 .scheduleStatusOpen {
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent-fg);
 }
 
 .scheduleStatusClosed {
@@ -169,7 +169,7 @@
 .weeklyHoursText {
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent-fg);
   line-height: 1.35;
 }
 
@@ -309,7 +309,7 @@
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent-fg);
 }
 
 .listName {

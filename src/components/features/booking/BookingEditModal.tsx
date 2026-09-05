@@ -213,7 +213,7 @@ export const BookingEditModal = ({
           </div>
           <div className="flex min-w-0 flex-col gap-[4px]">
             {shopType ? (
-              <span className="w-fit rounded-full bg-[var(--bg-active-soft)] px-[10px] py-[4px] text-[12px] font-semibold text-[var(--primary)]">
+              <span className="w-fit rounded-full bg-[var(--bg-active-soft)] px-[10px] py-[4px] text-[12px] font-semibold text-[var(--accent-fg)]">
                 {shopType}
               </span>
             ) : null}
@@ -233,7 +233,7 @@ export const BookingEditModal = ({
           type="button"
           onClick={() => setIsDateOpen((prev) => !prev)}
           aria-expanded={isDateOpen}
-          className="mt-[8px] flex w-full items-center gap-[10px] rounded-[12px] border-[1.5px] border-[var(--primary)] px-[14px] py-[13px] text-[var(--primary)] transition-colors duration-200 hover:bg-[var(--bg-active-soft)]"
+          className="mt-[8px] flex w-full items-center gap-[10px] rounded-[12px] border-[1.5px] border-[var(--primary)] px-[14px] py-[13px] text-[var(--accent-fg)] transition-colors duration-200 hover:bg-[var(--bg-active-soft)]"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="3" />

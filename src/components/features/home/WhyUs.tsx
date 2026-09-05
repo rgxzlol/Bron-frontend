@@ -45,7 +45,7 @@ export default function WhyUs() {
             className="flex flex-1 items-center justify-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5 lg:justify-start"
           >
             <p
-              className={`${s.iconCircle} h-[74px] w-[74px] shrink-0 rounded-full bg-[#f9f9fd] text-[32px] font-semibold leading-none text-blue-600`}
+              className={`${s.iconCircle} h-[74px] w-[74px] shrink-0 rounded-full bg-[#f9f9fd] text-[32px] font-semibold leading-none text-[var(--accent-fg)]`}
             >
               {step}
             </p>

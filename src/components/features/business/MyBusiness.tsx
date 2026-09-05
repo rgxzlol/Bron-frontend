@@ -128,7 +128,7 @@ export default function MyBusiness({
                 </div>
                 <div className="absolute right-[10px] top-[10px] z-10 flex items-center gap-[8px]">
                   {business.category && (
-                    <span className="rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[12px] font-semibold text-[#0a6af7]">
+                    <span className="rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]">
                       {business.category}
                     </span>
                   )}
@@ -208,7 +208,7 @@ export default function MyBusiness({
                 <button
                   type="button"
                   onClick={() => onEditBusiness(business.id)}
-                  className="mt-[10px] w-full rounded-[14px] border border-[#0a6af7] py-[13px] text-[14px] font-semibold text-[#0a6af7] transition hover:bg-[var(--bg-active-soft)]"
+                  className="mt-[10px] w-full rounded-[14px] border border-[#0a6af7] py-[13px] text-[14px] font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--bg-active-soft)]"
                   data-testid={`business-card-edit-profile-${business.id}`}
                 >
                   {t("businessCardMenu.editProfile")}

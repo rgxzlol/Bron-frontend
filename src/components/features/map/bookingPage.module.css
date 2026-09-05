@@ -64,7 +64,7 @@
   padding: 6px 12px;
   border-radius: 999px;
   background: var(--bg-active-soft);
-  color: #0a6af7;
+  color: var(--accent-fg);
   font-size: 13px;
   font-weight: 600;
 }
@@ -98,7 +98,7 @@
 
 .backBtn:hover {
   border-color: #0a6af7;
-  color: #0a6af7;
+  color: var(--accent-fg);
 }
 
 .contactRow {
@@ -506,7 +506,7 @@
 
 .backToMap:hover {
   border-color: #0a6af7;
-  color: #0a6af7;
+  color: var(--accent-fg);
 }
 
 .timeCard {
@@ -585,7 +585,7 @@
 .lockedScheduleEdit {
   border: none;
   background: transparent;
-  color: #0a6af7;
+  color: var(--accent-fg);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -681,6 +681,10 @@
 .whatsNextNotificationIcon {
   filter: brightness(0) saturate(100%) invert(37%) sepia(89%) saturate(2476%) hue-rotate(203deg)
     brightness(96%) contrast(96%);
+}
+
+:global([data-theme="dark"]) .whatsNextNotificationIcon {
+  filter: brightness(0) invert(1);
 }
 
 .whatsNextTimeIcon {
@@ -785,7 +789,7 @@
   border: 1.5px solid var(--primary);
   border-radius: 12px;
   background: var(--bg-surface);
-  color: var(--primary);
+  color: var(--accent-fg);
   font-size: 15px;
   font-weight: 600;
 }

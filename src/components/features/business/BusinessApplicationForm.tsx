@@ -64,7 +64,7 @@ function ApplicationField({
       >
         {label}
         {required ? (
-          <span className={error ? "text-[#e02424]" : "text-[#0a6af7]"}> *</span>
+          <span className={error ? "text-[#e02424]" : "text-[var(--accent-fg)]"}> *</span>
         ) : null}
       </label>
       <div
@@ -130,7 +130,7 @@ function BusinessApplicationReviewModal({ isOpen, onClose }: ReviewModalProps) {
         className="w-full max-w-[420px] rounded-[20px] bg-white px-4 py-6 text-center shadow-[0_20px_60px_rgba(15,23,42,0.2)] sm:rounded-[24px] sm:px-6 sm:py-8"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto mb-4 flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[#eef4ff] text-[#0a6af7]">
+        <div className="mx-auto mb-4 flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[#eef4ff] text-[var(--accent-fg)]">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M12 8v5l3 2"
@@ -398,7 +398,7 @@ export default function BusinessApplicationForm() {
             >
               {t("businessApplication.sphere")}
               <span
-                className={fieldErrors.sphere ? "text-[#e02424]" : "text-[#0a6af7]"}
+                className={fieldErrors.sphere ? "text-[#e02424]" : "text-[var(--accent-fg)]"}
               >
                 {" "}
                 *
@@ -465,7 +465,7 @@ export default function BusinessApplicationForm() {
             >
               {t("businessApplication.location")}
               <span
-                className={fieldErrors.location ? "text-[#e02424]" : "text-[#0a6af7]"}
+                className={fieldErrors.location ? "text-[#e02424]" : "text-[var(--accent-fg)]"}
               >
                 {" "}
                 *
@@ -534,7 +534,7 @@ export default function BusinessApplicationForm() {
             >
               {t("businessApplication.description")}
               <span
-                className={fieldErrors.description ? "text-[#e02424]" : "text-[#0a6af7]"}
+                className={fieldErrors.description ? "text-[#e02424]" : "text-[var(--accent-fg)]"}
               >
                 {" "}
                 *
@@ -602,7 +602,7 @@ export default function BusinessApplicationForm() {
             >
               {t("businessApplication.comments")}
               <span
-                className={fieldErrors.comments ? "text-[#e02424]" : "text-[#0a6af7]"}
+                className={fieldErrors.comments ? "text-[#e02424]" : "text-[var(--accent-fg)]"}
               >
                 {" "}
                 *

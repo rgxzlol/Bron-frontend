@@ -135,7 +135,7 @@ function TrashIcon({ className = "" }: { className?: string }) {
 function PhotoIcon({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="3" fill="#0a6af7" />
+      <rect x="3" y="5" width="18" height="14" rx="3" fill="var(--accent-fg)" />
       <circle cx="9" cy="10" r="1.6" fill="white" />
       <path
         d="M21 16l-4.5-4.5-4 4-2-2L5 19h14a2 2 0 002-2v-1z"
@@ -149,8 +149,8 @@ function PhotoIcon({ size = 26 }: { size?: number }) {
 function ClockIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="#0a6af7" strokeWidth="2" />
-      <path d="M12 7v5l3 2" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="9" stroke="var(--accent-fg)" strokeWidth="2" />
+      <path d="M12 7v5l3 2" stroke="var(--accent-fg)" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -507,7 +507,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <>
               <PhotoIcon />
               <span
-                className={`relative z-[1] text-[13px] font-semibold text-[#0a6af7] ${
+                className={`relative z-[1] text-[13px] font-semibold text-[var(--accent-fg)] ${
                   isDesktop ? "" : "underline"
                 }`}
               >
@@ -664,7 +664,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 <button
                   type="button"
                   onClick={() => profileInputRef.current?.click()}
-                  className="rounded-[10px] border border-[#0a6af7] py-[12px] text-[14px] font-semibold text-[#0a6af7] transition hover:bg-[var(--bg-active-soft)]"
+                  className="rounded-[10px] border border-[#0a6af7] py-[12px] text-[14px] font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--bg-active-soft)]"
                   data-testid="business-profile-photo-upload"
                 >
                   {t("businessModal.uploadPhoto")}
@@ -1157,7 +1157,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
               <div className={isDesktop ? desktop.weeklyHoursBox : "mt-4 rounded-[14px] border border-[#0a6af7]/35 bg-[var(--bg-active-soft)] px-[14px] py-[12px] lg:mt-5"}>
                 {isDesktop ? <ClockIcon /> : null}
                 <p
-                  className={isDesktop ? desktop.weeklyHoursText : "text-[13px] font-semibold text-[#0a6af7] lg:text-[14px]"}
+                  className={isDesktop ? desktop.weeklyHoursText : "text-[13px] font-semibold text-[var(--accent-fg)] lg:text-[14px]"}
                   data-testid="business-weekly-hours"
                 >
                   {t("businessModal.weeklyHours", { hours: weeklyHours })}

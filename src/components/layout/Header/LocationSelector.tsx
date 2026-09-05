@@ -26,7 +26,7 @@ const LocationOption: FC<LocationOptionProps> = ({
       onClick={onClick}
       className={`flex h-[72px] w-full cursor-pointer items-center gap-[17px] rounded-[17px] border-2 px-[18px] py-[24px] text-left transition-all duration-300 ${
         isActive
-          ? "border-[#0A6AF7] bg-blue-50/30 text-[#0A6AF7]"
+          ? "border-[#0A6AF7] bg-blue-50/30 text-[var(--accent-fg)]"
           : "border-transparent bg-[#FAFAFF] text-black hover:border-gray-200 hover:bg-gray-100"
       }`}
     >
@@ -43,7 +43,7 @@ const LocationOption: FC<LocationOptionProps> = ({
       </span>
       <span
         className={`text-[20px] font-medium transition-colors duration-300 ${
-          isActive ? "font-semibold text-[#0A6AF7]" : "text-black"
+          isActive ? "font-semibold text-[var(--accent-fg)]" : "text-black"
         }`}
       >
         {label}

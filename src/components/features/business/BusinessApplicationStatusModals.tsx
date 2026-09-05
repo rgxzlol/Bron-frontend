@@ -38,7 +38,7 @@ function StatusModal({
 
   if (!isOpen || !mounted) return null;
 
-  const accentClass = tone === "success" ? "bg-[#eef4ff] text-[#0a6af7]" : "bg-[#fff1f1] text-[#e02424]";
+  const accentClass = tone === "success" ? "bg-[#eef4ff] text-[var(--accent-fg)]" : "bg-[#fff1f1] text-[#e02424]";
 
   return createPortal(
     <div

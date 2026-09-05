@@ -27,6 +27,8 @@
 
   --primary: #0a6af7;
   --primary-hover: #0856c6;
+  /* Accent for text/icons only — keep --primary for filled button backgrounds */
+  --accent-fg: #0a6af7;
 
   --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.18);
   --backdrop: rgba(0, 0, 0, 0.45);
@@ -59,6 +61,7 @@
 
   --primary: #0a6af7;
   --primary-hover: #3d8df8;
+  --accent-fg: #ffffff;
 
   --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.45);
   --backdrop: rgba(0, 0, 0, 0.65);
@@ -148,8 +151,7 @@
 }
 
 [data-theme="dark"] img[data-header-icon] {
-  filter: brightness(0) saturate(100%) invert(36%) sepia(89%) saturate(4786%)
-    hue-rotate(206deg) brightness(98%) contrast(98%);
+  filter: brightness(0) invert(1);
   opacity: 1 !important;
 }
 
@@ -299,4 +301,12 @@
 
 [data-theme="dark"] .text-\[\#d1d5db\] {
   color: var(--text-muted) !important;
+}
+
+/* Blue text accents → white in dark (filled primary buttons untouched) */
+[data-theme="dark"] .text-\[\#0a6af7\],
+[data-theme="dark"] .text-\[\#0A6AF7\],
+[data-theme="dark"] .text-blue-600,
+[data-theme="dark"] .group-hover\:text-\[\#0859d3\]:is(:hover, :focus-within) {
+  color: var(--accent-fg) !important;
 }

@@ -64,7 +64,7 @@ export default function BottomNav() {
                 <span
                   className="h-6 w-6 [-webkit-mask-repeat:no-repeat] [mask-repeat:no-repeat] [-webkit-mask-size:contain] [mask-size:contain] [-webkit-mask-position:center] [mask-position:center]"
                   style={{
-                    backgroundColor: isActive ? "#0a6af7" : "#ffffff",
+                    backgroundColor: isActive ? "var(--accent-fg)" : "#ffffff",
                     WebkitMaskImage: `url(${item.icon.src})`,
                     maskImage: `url(${item.icon.src})`,
                   }}

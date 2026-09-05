@@ -113,8 +113,8 @@ export default function CardPaymentModal({ amountText, onClose, onPay }: CardPay
 
         <div className="mt-4 flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-muted)]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#0a6af7" strokeWidth="2" strokeLinejoin="round" />
-            <path d="M9 12l2 2 4-4" stroke="#0a6af7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="var(--accent-fg)" strokeWidth="2" strokeLinejoin="round" />
+            <path d="M9 12l2 2 4-4" stroke="var(--accent-fg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           Безопасное соединение
         </div>

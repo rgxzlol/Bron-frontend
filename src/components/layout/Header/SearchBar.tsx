@@ -52,7 +52,13 @@ export default function SearchBar() {
           className="mr-4 shrink-0"
           aria-label={t("common.search")}
         >
-          <Image src={assets.header.search} alt="" width={22} height={22} />
+          <Image
+            src={assets.header.search}
+            alt=""
+            width={22}
+            height={22}
+            data-header-icon
+          />
         </button>
         <input
           className="mr-1 h-[25px] w-full min-w-0 p-2 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
@@ -88,7 +94,7 @@ export default function SearchBar() {
             className="absolute right-5 text-gray-400 transition-colors hover:text-black"
             aria-label={t("common.clearSearch")}
           >
-            <Image src={assets.header.close} alt="" />
+            <Image src={assets.header.close} alt="" data-header-icon />
           </button>
         )}
       </label>
@@ -100,7 +106,13 @@ export default function SearchBar() {
         className="rounded-full bg-white p-[9px]"
         aria-label={t("map.categories")}
       >
-        <Image src={assets.header.filter} alt="" width={18} height={18} />
+        <Image
+          src={assets.header.filter}
+          alt=""
+          width={18}
+          height={18}
+          data-header-icon
+        />
       </button>
 
       {showSuggestions && suggestions.length > 0 ? (

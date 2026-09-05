@@ -442,12 +442,30 @@ export const useBusinessStore = create<BusinessStore>()(
           throw new Error("Business not found");
         }
 
-        const writable = await ensureWritableBusinessId(
-          businessId,
-          draftFromBusiness(current),
-        );
-        const targetId = writable.id;
-        const created = await createServiceOnApi(targetId, service);
+        let targetId = businessId;
+        let writableBusiness: SavedBusiness | undefined;
+        let canSyncToApi = false;
+
+        try {
+          const writable = await ensureWritableBusinessId(
+            businessId,
+            draftFromBusiness(current),
+          );
+          targetId = writable.id;
+          canSyncToApi = true;
+          if ("business" in writable) {
+            writableBusiness = writable.business;
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to ensure writable business for service, saving locally:",
+            error,
+          );
+        }
+
+        const created = canSyncToApi
+          ? await createServiceOnApi(targetId, service)
+          : null;
         const nextItem = created ?? {
           ...service,
           id: crypto.randomUUID(),
@@ -461,7 +479,7 @@ export const useBusinessStore = create<BusinessStore>()(
               ? state.businesses
               : replaceBusiness(state.businesses, businessId, {
                   ...current,
-                  ...("business" in writable ? writable.business : current),
+                  ...(writableBusiness ?? current),
                   id: targetId,
                 });
 
@@ -482,12 +500,30 @@ export const useBusinessStore = create<BusinessStore>()(
           throw new Error("Business not found");
         }
 
-        const writable = await ensureWritableBusinessId(
-          businessId,
-          draftFromBusiness(current),
-        );
-        const targetId = writable.id;
-        const created = await createProductOnApi(targetId, product);
+        let targetId = businessId;
+        let writableBusiness: SavedBusiness | undefined;
+        let canSyncToApi = false;
+
+        try {
+          const writable = await ensureWritableBusinessId(
+            businessId,
+            draftFromBusiness(current),
+          );
+          targetId = writable.id;
+          canSyncToApi = true;
+          if ("business" in writable) {
+            writableBusiness = writable.business;
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to ensure writable business for product, saving locally:",
+            error,
+          );
+        }
+
+        const created = canSyncToApi
+          ? await createProductOnApi(targetId, product)
+          : null;
         const nextItem = created ?? {
           ...product,
           id: crypto.randomUUID(),
@@ -501,7 +537,7 @@ export const useBusinessStore = create<BusinessStore>()(
               ? state.businesses
               : replaceBusiness(state.businesses, businessId, {
                   ...current,
-                  ...("business" in writable ? writable.business : current),
+                  ...(writableBusiness ?? current),
                   id: targetId,
                 });
 

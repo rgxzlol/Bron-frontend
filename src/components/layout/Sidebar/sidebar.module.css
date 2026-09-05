@@ -13,7 +13,7 @@
 
 .link:hover {
   background: var(--bg-hover);
-  color: var(--primary);
+  color: var(--accent-fg);
 }
 
 .link::after {
@@ -50,7 +50,7 @@
 
 .link:hover .icon,
 .active .icon {
-  background-color: var(--primary);
+  background-color: var(--accent-fg);
 }
 
 .title {
@@ -61,11 +61,11 @@
 
 .link:hover .title,
 .active .title {
-  color: var(--primary);
+  color: var(--accent-fg);
 }
 
 .active {
-  color: var(--primary);
+  color: var(--accent-fg);
   background: var(--bg-active-soft);
 }
 

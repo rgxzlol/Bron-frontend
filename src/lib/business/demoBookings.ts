@@ -67,3 +67,8 @@ export function getFallbackBusinessBookings(
     },
   ];
 }
+
+/** True for client-only demo cards that must never be sent to the API. */
+export function isLocalDemoBookingId(bookingId: string) {
+  return !/^\d+$/.test(bookingId) || bookingId.startsWith("demo-");
+}

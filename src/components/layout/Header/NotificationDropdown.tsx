@@ -130,7 +130,7 @@ export default function NotificationDropdown() {
       data-testid="notifications-delete-read"
     >
       <Image src={assets.notification.trash} alt="" className="h-5 w-5 object-contain" />
-      <span className="text-[15px] font-semibold text-[#0a6af7]">
+      <span className="text-[15px] font-semibold text-[var(--accent-fg)]">
         {t("headerFilters.clearRead")}
       </span>
     </button>

@@ -801,7 +801,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
               ${
                 activeFilter === filter
                   ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                  : "bg-[var(--bg-surface)] text-[var(--primary)] border-[var(--primary)]"
+                  : "bg-[var(--bg-surface)] text-[var(--accent-fg)] border-[var(--primary)]"
               }
             `}
           >
@@ -860,7 +860,13 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         data-testid="map-categories-open-desktop"
         className="absolute top-4 right-4 z-10 hidden lg:flex items-center gap-2 rounded-full border border-[var(--primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] px-4 py-2 font-semibold shadow-lg"
       >
-        <Image src={assets.header.filter} alt="" width={18} height={18} />
+        <Image
+          src={assets.header.filter}
+          alt=""
+          width={18}
+          height={18}
+          data-header-icon
+        />
         {t("map.categories")}
       </button>
 

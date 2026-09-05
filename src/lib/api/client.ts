@@ -159,9 +159,16 @@ async function handleDemoFallback<T>(
 ): Promise<T | null> {
   const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
   const upperMethod = method.toUpperCase();
+  const isBookingStatusWrite =
+    upperMethod === "PATCH" &&
+    (/\/bookings\/\d+\/cancel$/.test(cleanPath) ||
+      /\/bookings\/\d+\/approve$/.test(cleanPath) ||
+      /\/bookings\/\d+\/reject$/.test(cleanPath));
   const allowBookingWriteFallback =
     (upperMethod === "POST" && cleanPath === "/bookings/create") ||
-    (upperMethod === "PATCH" && /\/bookings\/\d+\/cancel$/.test(cleanPath));
+    (isBookingStatusWrite &&
+      (isBackendUnavailable(error) ||
+        (error instanceof ApiError && error.status === 404)));
 
   if (!isBackendUnavailable(error) && !allowBookingWriteFallback) {
     throw error;

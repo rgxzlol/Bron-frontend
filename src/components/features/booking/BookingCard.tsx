@@ -278,7 +278,7 @@ export const BookingCard = ({
             </>
           ) : null}
 
-          <span className="absolute left-[10px] top-[10px] rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[13px] font-semibold text-[var(--primary)]">
+          <span className="absolute left-[10px] top-[10px] rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[13px] font-semibold text-[var(--accent-fg)]">
             {shop.type}
           </span>
           <div className="absolute right-[10px] top-[10px] z-[2] flex items-center gap-[8px]">
@@ -393,7 +393,7 @@ export const BookingCard = ({
                   <button
                     type="button"
                     onClick={() => setIsReviewModalOpen(true)}
-                    className="w-full rounded-[12px] border border-[var(--primary)] px-[16px] py-[12px] text-[14px] font-semibold text-[var(--primary)] transition-colors duration-200 hover:bg-[var(--bg-active-soft)] active:scale-95"
+                    className="w-full rounded-[12px] border border-[var(--primary)] px-[16px] py-[12px] text-[14px] font-semibold text-[var(--accent-fg)] transition-colors duration-200 hover:bg-[var(--bg-active-soft)] active:scale-95"
                     data-testid={
                       bookingId != null
                         ? `booking-leave-review-${bookingId}`
@@ -467,7 +467,7 @@ export const BookingCard = ({
               <span className="text-[15px] font-bold text-[var(--text-primary)]">
                 {t("bookingsCard.orderComposition")}
               </span>
-              <span className="text-[14px] font-semibold text-[var(--primary)]">
+              <span className="text-[14px] font-semibold text-[var(--accent-fg)]">
                 {t("bookingsCard.itemsCount", { count: resolvedOrderItems.length })}
               </span>
             </span>

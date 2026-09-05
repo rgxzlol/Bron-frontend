@@ -217,7 +217,7 @@
   height: 28px;
   border-radius: 50%;
   border: 1.5px solid var(--primary);
-  color: var(--primary);
+  color: var(--accent-fg);
   background: transparent;
   font-size: 18px;
   font-weight: 700;

@@ -70,7 +70,7 @@ export default function DatePicker({
       <div className="flex items-center justify-between mb-4">
         <button
           type="button"
-          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--accent-fg)] transition-colors"
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
@@ -81,7 +81,7 @@ export default function DatePicker({
         <span className="text-[16px] font-bold capitalize text-[var(--text-primary)]">{getMonthLabel(viewMonth, locale)}</span>
         <button
           type="button"
-          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+          className="w-9 h-9 rounded-[10px] border border-[var(--border-default)] text-[18px] leading-none flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--accent-fg)] transition-colors"
           onClick={() =>
             onViewMonthChange(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }

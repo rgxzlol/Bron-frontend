@@ -160,6 +160,12 @@
   opacity: 1 !important;
 }
 
+[data-theme="dark"] img.notification-empty-image {
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+  opacity: 0.92;
+}
+
 [data-theme="dark"] .bg-white {
   background-color: var(--bg-surface) !important;
 }

@@ -9,23 +9,22 @@ export function NotificationEmpty() {
 
   return (
     <div
-      className="flex flex-col items-center px-6 pt-8 text-center"
+      className="flex flex-col items-center px-6 pt-8 text-center lg:px-4 lg:pt-3"
       data-testid="notifications-empty-state"
     >
       <Image
         src={assets.notification.emptyNotification}
         alt=""
-        data-theme-invert
-        className="mb-[31px] h-auto w-[220px] max-w-full"
+        className="notification-empty-image mb-[31px] h-auto w-[220px] max-w-full lg:mb-[38px] lg:w-[275px]"
       />
       <h1
-        className="mb-2 text-[22px] font-bold text-[var(--text-primary)]"
+        className="mb-2 text-[22px] font-bold leading-tight text-[var(--text-primary)] lg:text-[28px]"
         data-testid="notifications-empty-title"
       >
         {t("headerFilters.emptyTitle")}
       </h1>
       <p
-        className="mb-[50px] max-w-[280px] text-[15px] font-medium text-[var(--text-secondary)]"
+        className="mb-[50px] max-w-[280px] text-[15px] font-medium leading-[1.45] text-[var(--text-secondary)] lg:mb-[42px] lg:max-w-[360px] lg:text-[20px]"
         data-testid="notifications-empty-subtitle"
       >
         {t("headerFilters.emptySubtitle")}

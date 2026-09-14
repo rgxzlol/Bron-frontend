@@ -150,7 +150,7 @@ export default function NotificationDropdown() {
   );
 
   const closeButtonClassName =
-    "grid place-items-center rounded-full bg-[var(--bg-surface-muted)] p-[5px] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
+    "grid h-10 w-10 place-items-center rounded-full bg-[var(--bg-surface-muted)] p-0 transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -225,7 +225,7 @@ export default function NotificationDropdown() {
                   aria-label={t("common.close")}
                   data-testid="notifications-close"
                 >
-                  <Image src={assets.header.close} alt="" />
+                  <Image src={assets.header.close} alt="" data-header-icon />
                 </button>
               </div>
             </div>
@@ -234,14 +234,14 @@ export default function NotificationDropdown() {
           </div>
 
           <div
-            className="absolute right-0 top-full z-50 mt-[2px] hidden min-w-[650px] rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-5 py-4 shadow-lg lg:block"
+            className="absolute right-0 top-full z-50 mt-[2px] hidden w-[min(557px,calc(100vw-32px))] rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-5 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.16)] lg:block"
             id="notifications-panel"
             role="dialog"
             aria-modal="true"
             aria-label={t("header.notifications")}
             data-testid="notifications-panel"
           >
-            <div className="flex justify-between border-b-3 border-[var(--border-default)] pb-[19px]">
+            <div className="flex justify-between border-b border-[var(--border-default)] pb-[19px]">
               <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">
                 {t("header.notifications")}
               </h1>
@@ -252,7 +252,7 @@ export default function NotificationDropdown() {
                 aria-label={t("common.close")}
                 data-testid="notifications-close"
               >
-                <Image src={assets.header.close} alt="" />
+                <Image src={assets.header.close} alt="" data-header-icon />
               </button>
             </div>
             <div className="mt-4">{panelBody}</div>

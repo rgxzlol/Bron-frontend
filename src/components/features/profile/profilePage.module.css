@@ -280,6 +280,12 @@
   opacity: 0.55;
 }
 
+:global([data-theme="dark"]) .modal button:not(.logoutRow):not(.logoutConfirmBtn) img,
+:global([data-theme="dark"]) .modal button:not(.logoutRow):not(.logoutConfirmBtn) svg,
+:global([data-theme="dark"]) .modal .iconTile:not(.iconTileRed) img {
+  filter: brightness(0) invert(1);
+}
+
 .logoutRow {
   display: flex;
   align-items: center;

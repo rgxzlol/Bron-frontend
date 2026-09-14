@@ -277,7 +277,7 @@ export default function ProfilePageContent({
   }
 
   function handleBookingsClick() {
-    router.push(routes.bookings);
+    window.location.assign(routes.bookings);
   }
 
   function handleLogout() {

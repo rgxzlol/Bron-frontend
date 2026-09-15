@@ -115,6 +115,10 @@
   min-width: 0;
 }
 
+:global([data-theme="dark"]) .contactItem img {
+  filter: invert(1);
+}
+
 .contactText {
   display: flex;
   flex-direction: column;

@@ -13,11 +13,6 @@ import {
   updateBusinessBookingStatusOnApi,
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
-import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
-import {
-  getDemoSavedBusiness,
-  isPlaceholderDemoBusiness,
-} from "@/lib/business/demoBusiness";
 import { getAuthToken } from "@/lib/api/token";
 import { ApiError } from "@/lib/api/client";
 import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
@@ -27,6 +22,7 @@ import {
   type DaySchedule,
 } from "@/lib/business/schedule";
 import { mergeBusinessFromApi } from "@/lib/business/photos";
+import { isPlaceholderDemoBusiness } from "@/lib/business/demoBusiness";
 import {
   hasValidCoords,
   normalizeCoords,
@@ -202,18 +198,6 @@ function countAcceptedBookings(bookings: BusinessBookingRequest[]) {
   return bookings.filter((booking) => booking.status === "accepted").length;
 }
 
-function resolveBusinessesWithDemo(
-  businesses: SavedBusiness[],
-  previous: SavedBusiness[] = [],
-) {
-  if (businesses.length > 0) {
-    return businesses;
-  }
-
-  const previousDemo = previous.find(isPlaceholderDemoBusiness);
-  return [previousDemo ? normalizeBusiness(previousDemo) : getDemoSavedBusiness()];
-}
-
 function replaceBusiness(
   businesses: SavedBusiness[],
   previousId: string | null,
@@ -228,10 +212,10 @@ function replaceBusiness(
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
-      businesses: [getDemoSavedBusiness()],
+      businesses: [],
       draft: createEmptyDraft(),
       editingId: null,
-      showMyBusiness: true,
+      showMyBusiness: false,
       mapFocusBusinessId: null,
 
       updateDraft: (partial) =>
@@ -350,10 +334,9 @@ export const useBusinessStore = create<BusinessStore>()(
 
         set((state) => {
           const remaining = state.businesses.filter((b) => b.id !== id);
-          const businesses = resolveBusinessesWithDemo(remaining, state.businesses);
           return {
-            businesses,
-            showMyBusiness: businesses.length > 0,
+            businesses: remaining,
+            showMyBusiness: remaining.length > 0,
           };
         });
       },
@@ -374,22 +357,17 @@ export const useBusinessStore = create<BusinessStore>()(
           );
           const apiIds = new Set(merged.map((item) => item.id));
           const localOnly = existing.filter(
-            (item) =>
-              !apiIds.has(item.id) && !isPlaceholderDemoBusiness(item),
+            (item) => !apiIds.has(item.id),
           );
           const mergedList =
             merged.length > 0 ? [...merged, ...localOnly] : localOnly;
-          const businesses = resolveBusinessesWithDemo(mergedList, existing);
 
           set({
-            businesses,
-            showMyBusiness: businesses.length > 0,
+            businesses: mergedList,
+            showMyBusiness: mergedList.length > 0,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
-          const current = get().businesses;
-          const businesses = resolveBusinessesWithDemo(current, current);
-          set({ businesses, showMyBusiness: businesses.length > 0 });
         }
       },
 
@@ -408,10 +386,6 @@ export const useBusinessStore = create<BusinessStore>()(
           } catch (error) {
             console.error("Не удалось обновить бронирования:", error);
           }
-        }
-
-        if (bookingRequests.length === 0) {
-          bookingRequests = getFallbackBusinessBookings(business.services);
         }
 
         set((state) => ({
@@ -679,7 +653,7 @@ export const useBusinessStore = create<BusinessStore>()(
     }),
     {
       name: "business-storage",
-      version: 5,
+      version: 6,
       migrate: (persisted) => {
         const state = persisted as {
           businesses?: SavedBusiness[];
@@ -687,16 +661,14 @@ export const useBusinessStore = create<BusinessStore>()(
         };
         if (!state) return persisted;
 
-        const businesses = resolveBusinessesWithDemo(
-          (state.businesses ?? []).map((b) =>
-            normalizeBusiness(b as SavedBusiness),
-          ),
-        );
+        const businesses = (state.businesses ?? [])
+          .filter((business) => !isPlaceholderDemoBusiness(business))
+          .map((b) => normalizeBusiness(b as SavedBusiness));
 
         return {
           ...state,
           businesses,
-          showMyBusiness: businesses.length > 0 ? true : state.showMyBusiness,
+          showMyBusiness: businesses.length > 0,
         };
       },
       partialize: (state) => ({

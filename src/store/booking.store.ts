@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { bookingsApi } from "@/lib/api";
-import { getDemoMyBookings } from "@/lib/api/demo";
 import { normalizeBookingTime } from "@/lib/booking/classify";
 import type {
   Booking,
@@ -10,6 +9,7 @@ import type {
   BookingUpdate,
 } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
+import { useNotificationStore } from "@/store/notification.store";
 
 function toApiTime(value: string) {
   return normalizeBookingTime(value) ?? value.trim();
@@ -73,24 +73,6 @@ function toListItem(
     business_id: booking.business_id ?? extras?.business_id,
     guest_count: extras?.guest_count ?? booking.guest_count,
     items: extras?.items?.length ? extras.items : booking.items,
-  };
-}
-
-function buildLocalBooking(payload: BookingCreate): Booking {
-  return {
-    id: -Date.now(),
-    user_id: 0,
-    business_id: payload.business_id,
-    service_id: payload.service_id,
-    branch_id: payload.branch_id,
-    staff_id: payload.staff_id ?? null,
-    booking_date: payload.booking_date,
-    start_time: toApiTime(payload.start_time),
-    end_time: toApiTime(payload.end_time),
-    guest_count: payload.guest_count ?? 1,
-    total_price: payload.total_price ?? 0,
-    status: "confirmed",
-    items: payload.items,
   };
 }
 
@@ -243,13 +225,13 @@ export const useBookingStore = create<BookingStore>()(
                 ? merged
                 : get().bookings.length > 0
                   ? get().bookings
-                  : getDemoMyBookings(),
+                  : [],
             isLoading: false,
           });
         } catch {
           const local = get().bookings;
           set({
-            bookings: local.length > 0 ? local : getDemoMyBookings(),
+            bookings: local,
             isLoading: false,
             error: null,
           });
@@ -284,14 +266,26 @@ export const useBookingStore = create<BookingStore>()(
             total_price: booking.total_price || payload.total_price || 0,
           };
         } catch (error) {
-          console.warn("Booking API create failed, saving locally:", error);
-          booking = buildLocalBooking(payload);
+          set({ error: error instanceof Error ? error.message : "Не удалось создать бронирование" });
+          throw error;
         }
 
         const listItem = toListItem(booking, listExtras);
         set((state) => ({
           bookings: upsertBooking(state.bookings, listItem),
         }));
+
+        useNotificationStore.getState().addLocalNotification({
+          id: `local-booking-${booking.id}`,
+          type: "booking",
+          title: "Бронирование создано",
+          description: `Бронь на ${booking.booking_date} в ${booking.start_time} подтверждена`,
+        });
+        useNotificationStore.getState().addBookingReminder(
+          booking.id,
+          booking.booking_date,
+          booking.start_time,
+        );
 
         try {
           const remote = await bookingsApi.my();
@@ -324,15 +318,11 @@ export const useBookingStore = create<BookingStore>()(
       rescheduleBooking: async (bookingId, payload) => {
         const { booking_date, start_time, end_time } = payload;
 
-        try {
-          await bookingsApi.update(bookingId, {
-            booking_date,
-            start_time: start_time ? toApiTime(start_time) : start_time,
-            end_time: end_time ? toApiTime(end_time) : end_time,
-          });
-        } catch {
-          // Keep local UI in sync even if the remote API ignores date/time fields.
-        }
+        await bookingsApi.update(bookingId, {
+          booking_date,
+          start_time: start_time ? toApiTime(start_time) : start_time,
+          end_time: end_time ? toApiTime(end_time) : end_time,
+        });
 
         set((state) => ({
           bookings: state.bookings.map((booking) =>
@@ -352,11 +342,7 @@ export const useBookingStore = create<BookingStore>()(
         try {
           await bookingsApi.cancel(bookingId);
         } catch {
-          try {
-            await bookingsApi.remove(bookingId);
-          } catch {
-            // Still mark cancelled locally.
-          }
+          await bookingsApi.remove(bookingId);
         }
 
         set((state) => ({
@@ -370,11 +356,13 @@ export const useBookingStore = create<BookingStore>()(
     }),
     {
       name: "booking-storage",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
         const state = persisted as { bookings?: BookingListItem[] } | null;
         return {
-          bookings: Array.isArray(state?.bookings) ? state.bookings : [],
+          // Clear records from the former demo-booking flow. Real bookings
+          // are reloaded from the API after authentication.
+          bookings: [],
         };
       },
       partialize: (state) => ({ bookings: state.bookings }),

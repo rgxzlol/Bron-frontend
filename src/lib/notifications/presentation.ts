@@ -2,30 +2,48 @@ import { assets } from "@/lib/assets";
 import type { InAppNotificationType } from "@/lib/api/types";
 import type { Translator } from "@/lib/i18n/createTranslator";
 
+export function formatNotificationTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const formattedDate = new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  const formattedTime = new Intl.DateTimeFormat("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+
+  return `${formattedDate}\n${formattedTime}`;
+}
+
 export function getNotificationPresentation(
   type: InAppNotificationType,
   t: Translator,
+  notification?: { title?: string; description?: string },
 ) {
   switch (type) {
     case "booking":
       return {
         icon: assets.notification.calendar,
-        title: t("headerFilters.demoReminderTitle"),
-        description: t("headerFilters.demoReminderDesc"),
+        title: notification?.title ?? "Бронирование",
+        description: notification?.description ?? "",
         testId: "notification-card-booking",
       };
     case "payment":
       return {
         icon: assets.notification.card,
-        title: t("headerFilters.demoPaymentTitle"),
-        description: t("headerFilters.demoPaymentDesc"),
+        title: notification?.title ?? "Оплата",
+        description: notification?.description ?? "",
         testId: "notification-card-payment",
       };
     case "promotion":
       return {
         icon: assets.notification.discount,
-        title: t("headerFilters.demoPromoTitle"),
-        description: t("headerFilters.demoPromoDesc"),
+        title: notification?.title ?? "Уведомление",
+        description: notification?.description ?? "",
         testId: "notification-card-promotion",
       };
   }

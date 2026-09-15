@@ -162,7 +162,7 @@ export default function MapCategoriesModal({
                 setPriceInputInvalid(false);
               }}
             >
-              <option value="">{t("map.required")}</option>
+              <option value="">{t("map.filterAll")}</option>
               {BUSINESS_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
                   {translateBusinessCategory(t, category)}

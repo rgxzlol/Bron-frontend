@@ -1,5 +1,4 @@
 import { DEFAULT_SCHEDULE } from "@/lib/business/schedule";
-import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
 import type {
   Branch,
   Business,
@@ -53,7 +52,7 @@ export function getDemoSavedBusiness(): SavedBusiness {
     lat: 41.3111,
     lng: 69.2797,
     services: demoServices,
-    bookingRequests: getFallbackBusinessBookings(demoServices),
+    bookingRequests: [],
     defaultBranchId: 1,
   };
 }

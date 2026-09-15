@@ -52,6 +52,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
 import { useToastStore } from "@/store/toast.store";
+import { useNotificationStore } from "@/store/notification.store";
 import s from "./bookingPage.module.css";
 import {
   fetchAvailableSlots,
@@ -108,10 +109,14 @@ export default function BookingPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [slotConflictMessage, setSlotConflictMessage] = useState<string | null>(null);
   const didPrefillFormRef = useRef(false);
+  const paymentConfirmedRef = useRef(false);
   const { t, locale } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
   const showToast = useToastStore((state) => state.showToast);
+  const addLocalNotification = useNotificationStore(
+    (state) => state.addLocalNotification,
+  );
   const profileFullName = useProfileStore((state) => state.fullName);
   const profilePhone = useProfileStore((state) => state.phone);
   const profileEmail = useProfileStore((state) => state.email);
@@ -454,6 +459,11 @@ export default function BookingPage({
       return;
     }
 
+    if (paymentMethod === "card" && !paymentConfirmedRef.current) {
+      setShowCardModal(true);
+      return;
+    }
+
     const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
 
     setIsSubmitting(true);
@@ -526,6 +536,7 @@ export default function BookingPage({
         total_price: total,
       });
 
+      paymentConfirmedRef.current = false;
       completeBookingFlow();
     } catch (error) {
       if (slotKey) releaseSlot(slotKey);
@@ -1200,9 +1211,20 @@ export default function BookingPage({
         <CardPaymentModal
           amountText={formatPrice(total)}
           onClose={() => setShowCardModal(false)}
-          onPay={() => {
+          onPay={async () => {
+            paymentConfirmedRef.current = true;
             setShowCardModal(false);
-            completeBookingFlow();
+            try {
+              await finishExtras();
+              addLocalNotification({
+                id: `local-payment-${shop.apiBusinessId ?? shop.id}-${Date.now()}`,
+                type: "payment",
+                title: "Оплата бронирования подтверждена",
+                description: `Платёж на ${formatPrice(total)} сум успешно выполнен`,
+              });
+            } catch {
+              paymentConfirmedRef.current = false;
+            }
           }}
         />
       )}

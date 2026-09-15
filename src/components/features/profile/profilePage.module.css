@@ -928,6 +928,11 @@
   text-align: left;
 }
 
+:global([data-theme="dark"]) .logoutConfirmBtn {
+  background: #fff;
+  color: #111827;
+}
+
 .cancelBtn {
   width: 100%;
   min-height: 56px;

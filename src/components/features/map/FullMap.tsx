@@ -3,14 +3,9 @@
 import mapboxgl from "mapbox-gl"
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
 import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
-import {
-  businessMatchesBusinessCategory,
-  shopMatchesBusinessCategory,
-} from "@/lib/business/mapCategory"
-import { businessMatchesMapFilter } from "@/lib/business/coordinates"
+import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
 import { mergeBusinessFromApi } from "@/lib/business/photos"
 import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync"
@@ -21,7 +16,6 @@ import { useMapFilterStore } from "@/store/mapFilter.store"
 import { useProfileStore } from "@/store/profile.store"
 import { useAuthStore } from "@/store/auth.store"
 import type { MapLocationFilter } from "@/store/mapFilter.store"
-import type { SavedBusiness } from "@/store/business.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
@@ -81,35 +75,12 @@ function createShopMarkerElement(title: string, isHospital: boolean) {
   return el
 }
 
-function createUserBusinessMarkerElement(title: string) {
-  const el = document.createElement("div")
-  el.style.cssText = [
-    "padding:8px 16px",
-    "border-radius:9999px",
-    "background:#ede8ff",
-    "border:2px solid #6b4ee6",
-    "box-shadow:0 4px 14px rgba(107,78,230,0.25)",
-    "cursor:pointer",
-    "white-space:nowrap",
-    "color:#6b4ee6",
-    "font-weight:600",
-    "font-size:14px",
-    "line-height:1.2",
-  ].join(";")
-  el.textContent = title
-  return el
-}
-
 function getShopServices(shop: ShopsType) {
   return shop.services ?? []
 }
 
 function shouldOpenServiceSelection(shop: ShopsType) {
   return getShopServices(shop).length > 1
-}
-
-function businessHasActiveServices(business: SavedBusiness) {
-  return business.services.some((service) => service.active)
 }
 
 function shopHasActiveServices(shop: ShopsType) {
@@ -122,14 +93,6 @@ function getShopMinPrice(shop: ShopsType) {
   }
 
   return shop.price
-}
-
-function getBusinessMinPrice(business: SavedBusiness) {
-  const activeServices = business.services.filter((service) => service.active)
-  if (activeServices.length > 0) {
-    return Math.min(...activeServices.map((service) => service.price))
-  }
-  return 50000
 }
 
 function getUserLocationForDistanceFilter(
@@ -222,6 +185,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   const [activeFilter, setActiveFilter] = useState("Все")
   const [apiShops, setApiShops] = useState<ShopsType[]>([])
+  const [apiLoadCompleted, setApiLoadCompleted] = useState(false)
+  const [isMapLoading, setIsMapLoading] = useState(() => isMapboxConfigured())
+  const initialMapReadyRef = useRef(false)
+  const initialApiReadyRef = useRef(false)
+  const initialBusinessStoreReadyRef = useRef(false)
+  const initialLocationReadyRef = useRef(false)
   const theme = useProfileStore((s) => s.theme)
   const token = useAuthStore((s) => s.token)
   const businesses = useBusinessStore((s) => s.businesses)
@@ -283,6 +252,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         )
       })
       .catch((error) => console.error(error))
+      .finally(() => {
+        initialApiReadyRef.current = true
+        setApiLoadCompleted(true)
+      })
   }, [businessMapKey, businesses, token])
 
   function createUserMarkerElement() {
@@ -408,16 +381,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const userBusinessIds = new Set(businesses.map((business) => business.id))
-
-    const filteredShops = [...ShopsPlace, ...apiShops].filter((shop) => {
-      if (
-        shop.apiBusinessId != null &&
-        userBusinessIds.has(String(shop.apiBusinessId))
-      ) {
-        return false
-      }
-
+    const filteredShops = apiShops.filter((shop) => {
       if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
         return false
       }
@@ -428,43 +392,6 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         currentAppliedMaxPrice,
         currentAppliedLocation,
       )
-    })
-
-    const filteredUserBusinesses = businesses.filter((business) => {
-      if (!hasValidCoords(business)) return false
-      if (!businessHasActiveServices(business)) return false
-      if (!businessMatchesMapFilter(business.category || "Другое", activeFilter)) {
-        return false
-      }
-      if (
-        currentAppliedCategory &&
-        !businessMatchesBusinessCategory(business.category || "Другое", currentAppliedCategory)
-      ) {
-        return false
-      }
-
-      if (
-        currentAppliedMaxPrice != null &&
-        getBusinessMinPrice(business) > currentAppliedMaxPrice
-      ) {
-        return false
-      }
-
-      const userLocation = getUserLocationForDistanceFilter(userLocationRef.current)
-      if (
-        currentAppliedLocation &&
-        !matchesDistanceFilter(
-          userLocation.lat,
-          userLocation.lng,
-          business.lat,
-          business.lng,
-          currentAppliedLocation,
-        )
-      ) {
-        return false
-      }
-
-      return true
     })
 
     const markerCoordinates: [number, number][] = []
@@ -502,26 +429,6 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       markersRef.current.push(marker)
     })
 
-    filteredUserBusinesses.forEach((business) => {
-      const coords = normalizeCoords(business.lat, business.lng)
-      if (!coords) return
-
-      markerCoordinates.push([coords.lng, coords.lat])
-
-      const el = createUserBusinessMarkerElement(business.name || "Мой бизнес")
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([coords.lng, coords.lat])
-        .addTo(map)
-
-      marker.getElement().addEventListener("click", () => {
-        const shop = businessToShop(business, userLocationRef.current)
-        openShopOrServiceSelection(shop, map)
-      })
-
-      markersRef.current.push(marker)
-    })
-
     const viewportMode = mapViewportModeRef.current
     if (viewportMode === "user" && userLocationRef.current) {
       const { lat, lng } = userLocationRef.current
@@ -531,6 +438,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       fitMapToCoordinates(map, markerCoordinates)
       mapViewportModeRef.current = "idle"
     }
+
+    if (
+      initialMapReadyRef.current &&
+      initialApiReadyRef.current &&
+      initialBusinessStoreReadyRef.current &&
+      initialLocationReadyRef.current
+    ) {
+      setIsMapLoading(false)
+    }
   }, [
     activeFilter,
     businesses,
@@ -538,6 +454,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     appliedMaxPrice,
     appliedLocation,
     apiShops,
+    apiLoadCompleted,
   ])
 
   const syncMarkersRef = useRef(syncMarkers)
@@ -562,6 +479,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
     const handleMapReady = () => {
       if (cancelled || mapRef.current !== map) return
+      initialMapReadyRef.current = true
       syncMarkersRef.current()
     }
 
@@ -575,6 +493,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           const lng = position.coords.longitude
           const lat = position.coords.latitude
           userLocationRef.current = { lat, lng }
+          initialLocationReadyRef.current = true
 
           whenMapReady(map, () => {
             placeUserMarker(map, lng, lat)
@@ -592,6 +511,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         },
         (error) => {
           console.error(error)
+          initialLocationReadyRef.current = true
           locationFilterReadyRef.current = Boolean(
             useMapFilterStore.getState().appliedLocation,
           )
@@ -603,6 +523,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           enableHighAccuracy: true,
         },
       )
+    } else {
+      initialLocationReadyRef.current = true
     }
 
     return () => {
@@ -617,7 +539,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   }, [])
 
   useEffect(() => {
-    const sync = () => syncMarkersRef.current()
+    const sync = () => {
+      initialBusinessStoreReadyRef.current = true
+      syncMarkersRef.current()
+    }
 
     return onStoreHydrated(useBusinessStore, sync)
   }, [])
@@ -886,6 +811,23 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           borderRadius: "26px",
         }}
       />
+
+      {isMapLoading && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface)]"
+          style={{ height: "80dvh" }}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-3 text-[var(--text-secondary)]">
+            <span
+              className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--border-default)] border-t-[var(--primary)]"
+              aria-hidden="true"
+            />
+            <span className="text-[15px] font-semibold">{t("common.loading")}</span>
+          </div>
+        </div>
+      )}
 
       {!isMapboxConfigured() && (
         <div

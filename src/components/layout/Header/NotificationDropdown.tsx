@@ -5,10 +5,12 @@ import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getNotificationPresentation } from "@/lib/notifications/presentation";
+import { formatNotificationTime } from "@/lib/notifications/presentation";
 import { useNotificationStore } from "@/store/notification.store";
 import { useAuthStore } from "@/store/auth.store";
 import { NotificationCard } from "./NotificationCard";
 import { NotificationEmpty } from "./NotificationEmpty";
+import { useBookingStore } from "@/store/booking.store";
 
 export default function NotificationDropdown() {
   const { t } = useTranslation();
@@ -17,17 +19,45 @@ export default function NotificationDropdown() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const items = useNotificationStore((state) => state.items);
   const isLoading = useNotificationStore((state) => state.isLoading);
+  const hydrateNotifications = useNotificationStore(
+    (state) => state.hydrateNotifications,
+  );
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
   const deleteReadNotifications = useNotificationStore(
     (state) => state.deleteReadNotifications,
   );
   const token = useAuthStore((state) => state.token);
+  const bookings = useBookingStore((state) => state.bookings);
+  const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
+  const addBookingReminder = useNotificationStore(
+    (state) => state.addBookingReminder,
+  );
+
+  useEffect(() => {
+    hydrateNotifications();
+  }, [hydrateNotifications]);
 
   useEffect(() => {
     if (token) {
       void fetchNotifications();
+      void fetchMyBookings();
     }
+  }, [token, fetchNotifications, fetchMyBookings]);
+
+  useEffect(() => {
+    if (!token) return;
+    const refresh = () => void fetchNotifications();
+    const interval = window.setInterval(refresh, 60_000);
+    return () => window.clearInterval(interval);
   }, [token, fetchNotifications]);
+
+  useEffect(() => {
+    bookings.forEach((booking) => {
+      if (booking.status !== "cancelled" && booking.status !== "rejected") {
+        addBookingReminder(booking.id, booking.booking_date, booking.start_time);
+      }
+    });
+  }, [bookings, addBookingReminder]);
 
   useEffect(() => {
     if (isOpen) {
@@ -105,7 +135,7 @@ export default function NotificationDropdown() {
       </span>
       <ul className="mt-2.5 flex flex-col gap-3" data-testid="notifications-list">
         {items.map((item) => {
-          const presentation = getNotificationPresentation(item.type, t);
+          const presentation = getNotificationPresentation(item.type, t, item);
 
           return (
             <NotificationCard
@@ -113,7 +143,7 @@ export default function NotificationDropdown() {
               icon={presentation.icon}
               title={presentation.title}
               description={presentation.description}
-              time={item.time}
+              time={formatNotificationTime(item.time)}
               testId={presentation.testId}
             />
           );

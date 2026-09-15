@@ -44,6 +44,8 @@ export type InAppNotification = {
   type: InAppNotificationType;
   time: string;
   read: boolean;
+  title?: string;
+  description?: string;
 };
 
 export type UserProfile = {

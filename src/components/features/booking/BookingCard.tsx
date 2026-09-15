@@ -416,35 +416,21 @@ export const BookingCard = ({
                 ) : null}
               </div>
             ) : (
-              <>
-                <div className="flex flex-col">
-                  <span className="text-[14px] font-medium text-[var(--text-primary)]">
-                    {t("bookingsCard.total")}
-                  </span>
-                  <strong
-                    className="text-[18px] font-bold text-[var(--text-primary)]"
-                    data-testid={
-                      bookingId != null
-                        ? `booking-total-price-${bookingId}`
-                        : undefined
-                    }
-                  >
-                    {displayPrice}
-                  </strong>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCancelModalOpen(true)}
-                  className="rounded-[12px] border border-[var(--border-default)] px-[16px] py-[12px] text-[14px] font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-95"
+              <div className="flex flex-col">
+                <span className="text-[14px] font-medium text-[var(--text-primary)]">
+                  {t("bookingsCard.total")}
+                </span>
+                <strong
+                  className="text-[18px] font-bold text-[var(--text-primary)]"
                   data-testid={
                     bookingId != null
-                      ? `booking-cancel-button-${bookingId}`
+                      ? `booking-total-price-${bookingId}`
                       : undefined
                   }
                 >
-                  {t("bookings.cancelBooking")}
-                </button>
-              </>
+                  {displayPrice}
+                </strong>
+              </div>
             )}
           </div>
         </div>

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
+import { routes } from "@/config/routes";
 import { useSearchStore } from "@/store/search.store";
 import { SEARCH_QUERY_MAX_LENGTH } from "@/lib/search/sanitize";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -11,6 +13,7 @@ import { CategoryModal } from "./CategoryModal";
 
 export default function SearchBar() {
   const { t } = useTranslation();
+  const router = useRouter();
   const query = useSearchStore((state) => state.query);
   const suggestions = useSearchStore((state) => state.suggestions);
   const setQuery = useSearchStore((state) => state.setQuery);
@@ -35,12 +38,14 @@ export default function SearchBar() {
   function handleSubmit() {
     submitSearch();
     setShowSuggestions(false);
+    router.push(routes.home);
   }
 
   function handleSuggestionSelect(title: string) {
     setQuery(title);
     submitSearch(title);
     setShowSuggestions(false);
+    router.push(routes.home);
   }
 
   return (

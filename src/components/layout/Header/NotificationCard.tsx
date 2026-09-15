@@ -32,7 +32,12 @@ export function NotificationCard({
           <p className="truncate text-[12px] font-medium text-[var(--text-secondary)]">{description}</p>
         </div>
       </div>
-      <span className="shrink-0 text-[13px] font-medium text-[var(--text-muted)]">{time}</span>
+      <time
+        dateTime={time}
+        className="w-[88px] shrink-0 whitespace-pre-line text-right text-[12px] font-medium leading-tight text-[var(--text-muted)]"
+      >
+        {time}
+      </time>
     </li>
   );
 }

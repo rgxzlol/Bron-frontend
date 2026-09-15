@@ -40,6 +40,32 @@ function normalizeApiPath(path: string) {
   return search ? `${normalizedPathname}?${search}` : normalizedPathname;
 }
 
+function isBusinessDataPath(path: string) {
+  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
+  return (
+    cleanPath === "/businesses" ||
+    cleanPath.startsWith("/businesses/") ||
+    cleanPath.startsWith("/services/business/") ||
+    cleanPath.startsWith("/products/business/") ||
+    cleanPath.startsWith("/branches/business/") ||
+    cleanPath.startsWith("/working-hours/business/") ||
+    cleanPath.startsWith("/bookings/")
+  );
+}
+
+function isNotificationPath(path: string) {
+  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
+  return (
+    cleanPath === "/users/notifications" ||
+    cleanPath === "/users/notifications/read"
+  );
+}
+
+function isBookingPath(path: string) {
+  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
+  return cleanPath === "/bookings" || cleanPath.startsWith("/bookings/");
+}
+
 function buildUrl(path: string) {
   const base = getApiBaseUrl().replace(/\/+$/, "");
   const normalizedPath = normalizeApiPath(path);
@@ -125,7 +151,6 @@ async function tryDemoResponse<T>(
   path: string,
   method: string,
   body: unknown,
-  token?: string | null,
 ): Promise<T | null> {
   const { getDemoResponse } = await import("./demo");
   const demo = getDemoResponse(path, method, body);
@@ -144,8 +169,9 @@ async function resolveDemoResponse<T>(
   body: unknown,
   token?: string | null,
 ): Promise<T | null> {
+  if (isBusinessDataPath(path) || isNotificationPath(path) || isBookingPath(path)) return null;
   if (token === DEMO_TOKEN) {
-    return tryDemoResponse<T>(path, method, body, token);
+    return tryDemoResponse<T>(path, method, body);
   }
 
   return null;
@@ -157,6 +183,7 @@ async function handleDemoFallback<T>(
   body: unknown,
   error: unknown,
 ): Promise<T | null> {
+  if (isBusinessDataPath(path) || isNotificationPath(path) || isBookingPath(path)) throw error;
   const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
   const upperMethod = method.toUpperCase();
   const isBookingStatusWrite =

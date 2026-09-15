@@ -56,6 +56,18 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
+:global([data-theme="dark"]) .closeBtn img {
+  filter: none;
+}
+
+:global([data-theme="dark"]) .closeBtn {
+  background: #fff;
+}
+
+:global([data-theme="dark"]) .contactIcon {
+  filter: invert(1);
+}
+
 .slideCounter {
   position: absolute;
   left: 16px;

@@ -244,7 +244,7 @@ export function apiBusinessToSavedBusiness(
     id: String(business.id),
     status: "confirmed",
     bookings: extras?.stats?.total_bookings ?? 0,
-    views: extras?.stats?.approved_bookings ?? 0,
+    views: 0,
     profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",

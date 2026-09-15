@@ -25,9 +25,8 @@ import {
 } from "@/lib/api/mappers";
 import { getAuthToken } from "@/lib/api/token";
 import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
-import type { BusinessDraft, BusinessService, SavedBusiness, BusinessBookingRequest } from "@/store/business.store";
+import type { BusinessDraft, BusinessService, BusinessBookingRequest } from "@/store/business.store";
 import type { Branch, Business as ApiBusiness, Booking } from "@/lib/api/types";
-import { getFallbackBusinessBookings, isLocalDemoBookingId } from "@/lib/business/demoBookings";
 
 async function resolveCoordsForBusiness(
   business: ApiBusiness,
@@ -60,10 +59,7 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
       ),
     );
 
-  // Without auth, keep local demo cards that can be accepted/rejected offline.
-  if (!token) {
-    return getFallbackBusinessBookings(services);
-  }
+  if (!token) return [];
 
   try {
     const bookings = await bookingsApi.listByBusiness(businessId, token);
@@ -74,9 +70,7 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
     console.warn("Failed to load business bookings from API:", error);
   }
 
-  // Empty/failed API must not inject fake numeric booking ids — approving those
-  // hits the real backend and returns "Booking not found".
-  return getFallbackBusinessBookings(services);
+  return [];
 }
 
 export async function fetchBusinessBookingsFromApi(
@@ -582,7 +576,7 @@ export async function updateBusinessBookingStatusOnApi(
 ) {
   const token = getAuthToken();
   // Local/demo booking cards use non-numeric ids and are stored only in the client.
-  if (!token || isLocalDemoBookingId(bookingId)) return null;
+  if (!token || !/^\d+$/.test(bookingId)) return null;
 
   try {
     if (status === "accepted") {

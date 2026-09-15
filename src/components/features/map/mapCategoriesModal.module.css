@@ -111,6 +111,20 @@
   color: var(--bg-surface);
 }
 
+:global([data-theme="dark"]) .locationIcon {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+:global([data-theme="dark"]) .locationIcon svg {
+  stroke: #fff;
+}
+
+:global([data-theme="dark"]) .closeBtn {
+  background: #3a3a3a;
+  color: #fff;
+}
+
 .locationActive {
   border-color: var(--primary);
   background: var(--bg-active-soft);

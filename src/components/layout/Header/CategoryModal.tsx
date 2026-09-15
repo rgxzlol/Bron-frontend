@@ -77,7 +77,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
       onClick={handleClose}
     >
       <section
-        className="relative flex w-full max-w-[659px] animate-in fade-in zoom-in-95 flex-col rounded-[23px] bg-white p-6 shadow-2xl duration-200"
+      className="category-search-modal relative flex w-full max-w-[659px] animate-in fade-in zoom-in-95 flex-col rounded-[23px] bg-white p-6 shadow-2xl duration-200"
         aria-modal="true"
         role="dialog"
         aria-label={t("map.categories")}
@@ -88,7 +88,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
           <h2 className="text-[24px] font-medium text-black">{t("map.categories")}</h2>
           <button
             onClick={handleClose}
-            className="group absolute right-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#FAFAFF] text-black transition-all duration-200 hover:bg-[#EAEAEF]"
+            className="category-search-modal-close group absolute right-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#FAFAFF] text-black transition-all duration-200 hover:bg-[#EAEAEF]"
             aria-label={t("map.closeFilters")}
             type="button"
           >
@@ -97,6 +97,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                 src={assets.header.close}
                 alt=""
                 className="opacity-60 transition-opacity group-hover:opacity-100"
+                data-category-close-icon
               />
             </span>
           </button>
@@ -136,7 +137,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                     : "border-transparent focus:border-[#0A6AF7] focus:bg-white"
                 }`}
               >
-                <option value="">{t("map.required")}</option>
+                <option value="">                {t("map.filterAll")}</option>
                 {BUSINESS_CATEGORIES.map((category) => (
                   <option key={category} value={category}>
                     {translateBusinessCategory(t, category)}

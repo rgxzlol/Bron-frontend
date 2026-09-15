@@ -31,13 +31,14 @@ const LocationOption: FC<LocationOptionProps> = ({
       }`}
     >
       <span
-        className={`flex h-[43px] w-[43px] items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ${
+        className={`category-search-location-icon flex h-[43px] w-[43px] items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ${
           isActive ? "scale-105" : ""
         }`}
       >
         <Image
           src={assets.booking.gpsIcon}
           alt=""
+          data-category-location-icon
           className={`transition-opacity duration-300 ${isActive ? "opacity-100" : "opacity-60"}`}
         />
       </span>

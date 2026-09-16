@@ -122,8 +122,8 @@
 }
 
 :global([data-theme="dark"]) .closeBtn {
-  background: #fff;
-  color: #000;
+  background: #3a3a3a;
+  color: #fff;
 }
 
 .locationActive {

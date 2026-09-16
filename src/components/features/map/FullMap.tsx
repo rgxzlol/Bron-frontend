@@ -815,7 +815,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       {isMapLoading && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface)]"
-          style={{ height: "80vh" }}
+          style={{ height: "80dvh" }}
           role="status"
           aria-live="polite"
         >

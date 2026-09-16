@@ -156,17 +156,8 @@
 }
 
 [data-theme="dark"] .category-search-modal-close {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-[data-theme="dark"] .theme-close-button {
-  background: #ffffff !important;
-  color: #000000 !important;
-}
-
-[data-theme="dark"] .theme-close-button img {
-  filter: none !important;
+  background: var(--bg-surface-muted) !important;
+  color: #fff !important;
 }
 
 [data-theme="dark"] img[data-category-close-icon],

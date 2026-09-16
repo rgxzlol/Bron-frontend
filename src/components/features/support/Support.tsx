@@ -28,7 +28,7 @@ export default function Support() {
         id: "telegram",
         title: "Telegram",
         description: t("support.telegramDesc"),
-        buttonText: `@${supportContacts.telegram}`,
+        buttonText: supportContacts.telegram,
         icon: assets.support.tg,
         href: supportContacts.telegramHref,
         external: true,
@@ -38,7 +38,7 @@ export default function Support() {
         id: "email",
         title: "Email",
         description: t("support.emailDesc"),
-        buttonText: t("support.writeEmail"),
+        buttonText: supportContacts.email,
         icon: assets.support.email,
         onClick: () =>
           openSupportEmail({

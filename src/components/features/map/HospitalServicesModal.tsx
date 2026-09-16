@@ -124,7 +124,7 @@ export default function HospitalServicesModal({
               {t("map.hospitalServicesSubtitle")}
             </p>
           </div>
-          <button type="button" className={s.close} onClick={onClose} aria-label={t("common.close")}>
+          <button type="button" className={`${s.close} theme-close-button`} onClick={onClose} aria-label={t("common.close")}>
             ×
           </button>
         </div>

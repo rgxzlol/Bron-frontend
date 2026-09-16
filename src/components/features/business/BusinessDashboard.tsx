@@ -882,7 +882,7 @@ function AddItemScreen({
   kind: "service" | "product";
   initialItem?: BusinessService;
   onBack: () => void;
-  onSave: (data: ServiceFormData) => void;
+  onSave: (data: ServiceFormData) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const showToast = useToastStore((s) => s.showToast);
@@ -903,6 +903,7 @@ function AddItemScreen({
   const [times, setTimes] = useState<string[]>([]);
   const [date, setDate] = useState<Date>(() => new Date());
   const [durationMin, setDurationMin] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   function toggleTime(slot: string) {
     setTimes((prev) =>
@@ -1217,18 +1218,26 @@ function AddItemScreen({
           <button
             type="button"
             data-testid={`${fieldPrefix}-save-button`}
-            onClick={() => {
+            disabled={isSaving}
+            onClick={async () => {
               if (!validate()) return;
-              onSave({
-                ...form,
-                price: String(parsePrice(form.price)),
-                guestCapacity: form.guestCapacity ?? 1,
-                quantity: form.quantity ?? 1,
-              });
+              setIsSaving(true);
+              try {
+                await onSave({
+                  ...form,
+                  price: String(parsePrice(form.price)),
+                  guestCapacity: form.guestCapacity ?? 1,
+                  quantity: form.quantity ?? 1,
+                });
+              } finally {
+                setIsSaving(false);
+              }
             }}
-            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isService
+            {isSaving
+              ? t("common.loading")
+              : isService
               ? t("businessForms.saveService")
               : t("businessForms.saveServiceOrProduct")}
           </button>

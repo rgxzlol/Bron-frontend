@@ -117,7 +117,7 @@ export default function BookingExtrasModal({
           </div>
           <button
             type="button"
-            className={s.close}
+            className={`${s.close} theme-close-button`}
             onClick={onClose}
             disabled={isSubmitting}
             aria-label={t("common.close")}

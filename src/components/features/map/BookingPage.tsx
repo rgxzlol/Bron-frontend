@@ -1129,6 +1129,10 @@ export default function BookingPage({
           </button>
           <Link
             href={routes.bookings}
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.assign(routes.bookings);
+            }}
             className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-center text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
             data-testid="booking-go-bookings"
           >

@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import LangProvider from "@/components/providers/LangProvider";
 import ApiProvider from "@/components/providers/ApiProvider";
+import RapidClickGuard from "@/components/providers/RapidClickGuard";
 import { siteConfig, siteMetadata } from "@/config/site";
 
 const manrope = Manrope({
@@ -13,6 +14,11 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = siteMetadata;
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default function RootLayout({
   children,
@@ -33,7 +39,10 @@ export default function RootLayout({
       <body className={`${manrope.className} min-h-screen antialiased font-sans`}>
         <ThemeProvider>
           <LangProvider>
-            <ApiProvider>{children}</ApiProvider>
+            <ApiProvider>
+              <RapidClickGuard />
+              {children}
+            </ApiProvider>
           </LangProvider>
         </ThemeProvider>
       </body>

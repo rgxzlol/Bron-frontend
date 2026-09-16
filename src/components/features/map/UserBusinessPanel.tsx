@@ -58,7 +58,7 @@ export default function UserBusinessPanel({
           )}
           <button
             type="button"
-            className={s.closeBtn}
+            className={`${s.closeBtn} theme-close-button`}
             onClick={onClose}
             aria-label={t("common.close")}
           >

@@ -180,7 +180,7 @@ export default function NotificationDropdown() {
   );
 
   const closeButtonClassName =
-    "grid h-10 w-10 place-items-center rounded-full bg-[var(--bg-surface-muted)] p-0 transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
+    "theme-close-button grid h-10 w-10 place-items-center rounded-full bg-[var(--bg-surface-muted)] p-0 transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
 
   return (
     <div className="relative" ref={dropdownRef}>

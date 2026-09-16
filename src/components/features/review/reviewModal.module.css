@@ -45,6 +45,14 @@
   flex-shrink: 0;
 }
 
+:global([data-theme="dark"]) .closeBtn img {
+  filter: none;
+}
+
+:global([data-theme="dark"]) .closeBtn {
+  background: #fff;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -79,6 +87,11 @@
 }
 
 .starBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  cursor: pointer;
   font-size: 32px;
   line-height: 1;
   color: #d1d5e2;
@@ -90,7 +103,7 @@
 }
 
 .starActive {
-  color: var(--accent-fg);
+  color: #f5b900;
 }
 
 .textareaWrap {

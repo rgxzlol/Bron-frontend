@@ -40,6 +40,43 @@ export type AuthScreen =
   | "telegram"
   | "google-phone";
 
+const REGISTERED_NAMES_STORAGE_KEY = "bron-registered-profile-names";
+
+type RegisteredProfileNames = Record<string, string>;
+
+function readRegisteredProfileNames(): RegisteredProfileNames {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const stored = window.localStorage.getItem(REGISTERED_NAMES_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([key, value]) => key.trim() && typeof value === "string" && value.trim(),
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveRegisteredProfileName(userId: number, username: string, name: string) {
+  if (typeof window === "undefined" || !name.trim()) return;
+
+  const names = readRegisteredProfileNames();
+  names[`id:${userId}`] = name.trim();
+  if (username.trim()) names[`username:${username.trim()}`] = name.trim();
+  window.localStorage.setItem(REGISTERED_NAMES_STORAGE_KEY, JSON.stringify(names));
+}
+
+function findRegisteredProfileName(userId: number, username: string) {
+  const names = readRegisteredProfileNames();
+  return names[`id:${userId}`] ?? names[`username:${username.trim()}`];
+}
+
 /* ------------------------------ shared UI ------------------------------ */
 
 function AuthShell({ children }: { children: React.ReactNode }) {
@@ -409,7 +446,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const [screen, setScreen] = useState<AuthScreen>(initialScreen);
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState(UZBEK_PHONE_PREFIX);
-  const [loginName, setLoginName] = useState("");
+  const [loginName, setLoginName] = useState(UZBEK_PHONE_PREFIX);
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -490,6 +527,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       avatarUrl?: string | null;
     },
   ) {
+    const storedFullName =
+      profile?.fullName ?? findRegisteredProfileName(session.user_id, session.username);
+
     setSession({
       token: session.access_token,
       userId: session.user_id,
@@ -498,7 +538,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
     applyAuthProfile({
       fullName:
-        profile?.fullName ??
+        storedFullName ??
         (looksLikePhoneUsername(session.username) ? undefined : session.username),
       email: profile?.email,
       phone: profile?.phone,
@@ -670,6 +710,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         fullName: displayName,
         phone: normalizedPhone,
       });
+      saveRegisteredProfileName(session.user_id, session.username, displayName);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("auth.registerFailed"));
     } finally {
@@ -774,7 +815,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               placeholder="+998 99 999 99 99"
               value={loginName}
               onChange={(value) => {
-                setLoginName(formatUzbekPhoneInput(value));
+                setLoginName(formatUzbekPhoneInput(value, { keepPrefix: true }));
                 if (fieldErrors.loginName) {
                   setFieldErrors((current) => ({ ...current, loginName: undefined }));
                 }
@@ -943,7 +984,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </button>
             </div>
 
-            <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
+            <p className="w-full text-center text-[14px] font-semibold text-[var(--text-secondary)]">
               {t("auth.alreadyHaveAccount")}{" "}
               <button type="button" onClick={() => go("login")} className="text-[var(--accent-fg)] hover:underline">
                 {t("auth.login")}

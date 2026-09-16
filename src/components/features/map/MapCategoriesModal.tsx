@@ -110,7 +110,7 @@ export default function MapCategoriesModal({
 
         <div className={s.header}>
           <h2 className={s.title}>{t("map.categories")}</h2>
-          <button type="button" className={s.closeBtn} onClick={onClose} aria-label={t("map.closeFilters")}>
+          <button type="button" className={`${s.closeBtn} theme-close-button`} onClick={onClose} aria-label={t("map.closeFilters")}>
             ×
           </button>
         </div>

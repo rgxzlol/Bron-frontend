@@ -615,6 +615,11 @@
   transition: background 0.15s;
 }
 
+:global([data-theme="dark"]) .deleteCloseButton {
+  background: #fff;
+  color: #000;
+}
+
 .deleteCloseButton:hover {
   background: var(--bg-surface-muted);
 }

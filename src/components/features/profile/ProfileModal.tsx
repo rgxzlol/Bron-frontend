@@ -83,7 +83,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             <h1 className={s.title}>{t(sectionTitleKeys.main)}</h1>
             <button
               type="button"
-              className={s.closeBtn}
+              className={`${s.closeBtn} theme-close-button`}
               onClick={onClose}
               aria-label={t("common.close")}
             >
@@ -93,7 +93,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         ) : (
           <button
             type="button"
-            className={s.closeBtnFloating}
+            className={`${s.closeBtnFloating} theme-close-button`}
             onClick={onClose}
             aria-label={t("common.close")}
           >

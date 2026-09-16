@@ -156,8 +156,17 @@
 }
 
 [data-theme="dark"] .category-search-modal-close {
-  background: var(--bg-surface-muted) !important;
-  color: #fff !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .theme-close-button {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .theme-close-button img {
+  filter: none !important;
 }
 
 [data-theme="dark"] img[data-category-close-icon],

@@ -160,7 +160,7 @@ export default function ReviewModal({
           <h2 className={s.title}>{t("review.title")}</h2>
           <button
             type="button"
-            className={s.closeBtn}
+            className={`${s.closeBtn} theme-close-button`}
             onClick={onClose}
             aria-label={t("common.close")}
             data-testid="review-modal-close"
@@ -291,7 +291,12 @@ export default function ReviewModal({
                 data-testid="review-photo-upload"
               >
                 <span className={s.uploadIcon} aria-hidden>
-                  🖼
+                  <Image
+                    src={assets.profile.camera}
+                    alt=""
+                    width={24}
+                    height={22}
+                  />
                 </span>
                 {t("review.uploadPhoto")}
               </button>

@@ -805,9 +805,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       <div
         ref={mapContainer}
         data-testid="interactive-map"
+        className="h-[80vh] h-[80dvh]"
         style={{
           width: "100%",
-          height: "80dvh",
           borderRadius: "26px",
         }}
       />
@@ -815,7 +815,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       {isMapLoading && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface)]"
-          style={{ height: "80dvh" }}
+          style={{ height: "80vh" }}
           role="status"
           aria-live="polite"
         >
@@ -832,7 +832,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       {!isMapboxConfigured() && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface-muted)] px-6 text-center"
-          style={{ height: "80dvh" }}
+          style={{ height: "80vh" }}
         >
           <div className="max-w-md">
             <p className="text-[18px] font-semibold text-[var(--text-primary)]">

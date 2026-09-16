@@ -63,6 +63,16 @@
   flex-shrink: 0;
 }
 
+:global([data-theme="dark"]) .closeBtn,
+:global([data-theme="dark"]) .closeBtnFloating {
+  background: #fff;
+}
+
+:global([data-theme="dark"]) .closeBtn img,
+:global([data-theme="dark"]) .closeBtnFloating img {
+  filter: none !important;
+}
+
 .closeBtnFloating {
   position: absolute;
   top: 20px;
@@ -980,6 +990,7 @@
 
   .modal {
     width: 100%;
+    height: 100vh;
     height: 100dvh;
     max-height: none;
     border-radius: 0;

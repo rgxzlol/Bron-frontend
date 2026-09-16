@@ -316,7 +316,7 @@ async function getOwnedApiBusinessId(businessId: string): Promise<number | null>
 
   try {
     const detail = await businessesApi.get(Number(businessId));
-    if (detail.owner_id === userId) {
+    if (detail.owner_id != null && Number(detail.owner_id) === userId) {
       return detail.id;
     }
   } catch (error) {

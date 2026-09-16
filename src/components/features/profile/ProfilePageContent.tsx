@@ -559,7 +559,7 @@ export default function ProfilePageContent({
 
       {section === "payments" && (
         <div className={s.section}>
-          <h3 className={s.paymentsLabel}>Мои карты</h3>
+          <h3 className={s.paymentsLabel}>{t("profile.myCards")}</h3>
 
           <div className={s.cardsBox}>
             {staticCards.map((card) => (
@@ -582,16 +582,16 @@ export default function ProfilePageContent({
           </div>
 
           <button type="button" className={s.outlineBtn} onClick={() => goTo("addCard")}>
-            Добавить карту
+            {t("profile.addCard")}
           </button>
 
-          <h3 className={s.paymentsLabel}>История платежей</h3>
+          <h3 className={s.paymentsLabel}>{t("profile.paymentHistory")}</h3>
 
           <div className={s.historyList}>
             {staticHistory.map((item) => (
               <div className={s.historyItem} key={item.id}>
                 <div>
-                  <strong>{item.title}</strong>
+                  <strong>{t("profile.paymentBooking")}</strong>
                   <p>№{item.reference}</p>
                 </div>
                 <div className={s.historyPrice}>
@@ -604,7 +604,7 @@ export default function ProfilePageContent({
 
           <div className={s.viewAllWrap}>
             <button type="button" className={s.viewAllBtn}>
-              Смотреть все
+              {t("common.viewAll")}
             </button>
           </div>
         </div>
@@ -619,7 +619,7 @@ export default function ProfilePageContent({
             </div>
 
             <label className={s.field}>
-              <span>Номер карты</span>
+              <span>{t("profile.cardNumber")}</span>
               <input
                 inputMode="numeric"
                 placeholder="1234 5678 9012 3456"
@@ -629,7 +629,7 @@ export default function ProfilePageContent({
 
             <div className={s.addCardRow}>
               <label className={s.field}>
-                <span>Срок действия</span>
+                <span>{t("profile.cardExpiry")}</span>
                 <input
                   inputMode="numeric"
                   placeholder={t("profile.cardExpiryPlaceholder")}
@@ -652,13 +652,13 @@ export default function ProfilePageContent({
             </div>
 
             <label className={s.field}>
-              <span>Имя карты</span>
+              <span>{t("profile.cardName")}</span>
               <input placeholder={t("common.optional")} className={s.borderedInput} />
             </label>
           </div>
 
           <div className={s.saveCardRow}>
-            <span>Сохранить карту для будущих платежей</span>
+            <span>{t("profile.saveCardLabel")}</span>
             <button
               type="button"
               className={saveCardForFuture ? s.toggleOn : s.toggleOff}
@@ -673,7 +673,7 @@ export default function ProfilePageContent({
           <div className={s.spacer} aria-hidden />
 
           <button type="button" className={s.primaryBtn} onClick={() => goTo("payments")}>
-            Добавить карту
+            {t("profile.addCard")}
           </button>
         </div>
       )}

@@ -1,0 +1,63 @@
+.homePage {
+  width: 100%;
+}
+
+.iconCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 1023px) {
+  .homePage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .homePage > * {
+    width: 100%;
+    max-width: 1140px;
+  }
+
+  .homeSection {
+    width: 100%;
+    text-align: center;
+  }
+
+  .homeSection :global([class*="max-w-"]) {
+    margin-inline: auto;
+  }
+
+  .homeSection :global(.grid) {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .homePage {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .homePage > * {
+    width: 100%;
+    max-width: 1140px;
+  }
+
+  .homeSection {
+    width: 100%;
+    text-align: left;
+  }
+
+  .homeSection :global([class*="max-w-"]) {
+    margin-inline: 0;
+  }
+
+  .homeSection :global(.grid) {
+    width: 100%;
+  }
+}

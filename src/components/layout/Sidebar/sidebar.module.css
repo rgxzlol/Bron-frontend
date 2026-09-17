@@ -1,0 +1,90 @@
+.link {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0 14px 32px;
+  color: var(--text-secondary);
+  transition:
+    background-color 0.5s,
+    color 0.5s;
+}
+
+.link:hover {
+  background: var(--bg-hover);
+  color: var(--accent-fg);
+}
+
+.link::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -10px;
+  width: 9px;
+  height: 100%;
+  border-radius: 9px;
+  background: var(--primary);
+  opacity: 0;
+  transition:
+    opacity 0.5s,
+    right 0.5s;
+}
+
+.link:hover::after {
+  right: 0;
+  opacity: 1;
+}
+
+.icon {
+  flex-shrink: 0;
+  background-color: var(--icon-default);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+  transition: background-color 0.5s;
+}
+
+.link:hover .icon,
+.active .icon {
+  background-color: var(--accent-fg);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+  transition: color 0.5s;
+}
+
+.link:hover .title,
+.active .title {
+  color: var(--accent-fg);
+}
+
+.active {
+  color: var(--accent-fg);
+  background: var(--bg-active-soft);
+}
+
+.active::after {
+  right: 0;
+  opacity: 1;
+}
+
+.locked {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+@media (min-width: 1024px) {
+  .link {
+    padding: 22px 0 16px 64px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}

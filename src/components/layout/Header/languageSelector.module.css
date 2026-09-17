@@ -1,0 +1,35 @@
+.trigger {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--bg-surface-muted);
+  transition: background-color 0.2s ease;
+}
+
+.trigger:hover {
+  background: var(--bg-hover);
+}
+
+.label {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .trigger {
+    width: auto;
+    gap: 0.5rem;
+    overflow: visible;
+    padding-inline: 0.875rem;
+  }
+
+  .label {
+    display: inline;
+    font-size: 18px;
+    font-weight: 600;
+  }
+}

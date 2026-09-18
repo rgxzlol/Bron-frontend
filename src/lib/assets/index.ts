@@ -87,6 +87,8 @@ import bookandpen from "@/assets/images/bookandpen.svg";
 import clock from "@/assets/images/clock.svg";
 import securityIcon from "@/assets/images/securityIcon.svg";
 import profile from "@/assets/images/profile.jpg";
+import leftBarg from "@/assets/images/leftBarg.svg";
+import rightBarg from "@/assets/images/rightBarg.svg";
 
 
 export const assets = {
@@ -209,5 +211,7 @@ export const assets = {
     edit: editIcon,
     arrow: arrowDown,
     avatar: profile,
+    leftBarg,
+    rightBarg,
   },
 } as const;

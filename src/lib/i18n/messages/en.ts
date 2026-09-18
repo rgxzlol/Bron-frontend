@@ -172,6 +172,7 @@ export const en: MessageTree = {
     editAria: "Edit",
     cardExpiryPlaceholder: "MM\\ YY",
     saveCardAria: "Save card for future payments",
+    ratingLabel: "Rating",
   },
   auth: {
     loginTab: "Sign in",

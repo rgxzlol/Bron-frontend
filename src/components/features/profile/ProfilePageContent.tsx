@@ -65,6 +65,8 @@ const staticHistory = [
   { id: "3", title: "Оплата бронирования", reference: "123123", amount: "80 000 сум", date: "12 мая 2026" },
 ];
 
+const DEFAULT_PROFILE_RATING = 4.0;
+
 export default function ProfilePageContent({
   onClose,
   onSectionChange,
@@ -342,6 +344,9 @@ export default function ProfilePageContent({
               <button type="button" onClick={() => goTo("personal")} aria-label={t("profile.editAria")}>
                 <Image src={assets.profile.edit} alt="" width={16} height={15} />
               </button>
+            </div>
+            <div className={s.ratingNameBlock}>
+              <ProfileRatingBadge value={DEFAULT_PROFILE_RATING} />
             </div>
             <p className={s.phoneText}>{phone}</p>
           </div>
@@ -1042,6 +1047,25 @@ function InfoIcon() {
       />
       <circle cx="10" cy="6.3" r="1" fill="#9db4e8" />
     </svg>
+  );
+}
+
+function ProfileRatingBadge({ value }: { value: number }) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <span className={s.ratingBadge} data-testid="profile-rating-badge">
+        <span className={s.ratingBar}>
+          <Image src={assets.profile.leftBarg} alt="" width={11} height={19} />
+        </span>
+        <span className={s.ratingValue}>{value.toFixed(1)}</span>
+        <span className={s.ratingBar}>
+          <Image src={assets.profile.rightBarg} alt="" width={11} height={19} />
+        </span>
+      </span>
+      <span className={s.ratingCaption}>{t("profile.ratingLabel")}</span>
+    </>
   );
 }
 

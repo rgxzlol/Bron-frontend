@@ -172,6 +172,7 @@ export const ru: MessageTree = {
     editAria: "Редактировать",
     cardExpiryPlaceholder: "ММ\\ ГГ",
     saveCardAria: "Сохранить карту для будущих платежей",
+    ratingLabel: "Рейтинг",
   },
   auth: {
     loginTab: "Войти в аккаунт",

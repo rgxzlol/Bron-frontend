@@ -172,6 +172,7 @@ export const uz: MessageTree = {
     editAria: "Tahrirlash",
     cardExpiryPlaceholder: "OO\\ YY",
     saveCardAria: "Kelajakdagi to‘lovlar uchun kartani saqlash",
+    ratingLabel: "Reyting",
   },
   auth: {
     loginTab: "Hisobga kirish",

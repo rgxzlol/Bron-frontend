@@ -1,5 +1,6 @@
 import { businessesApi } from "./businesses";
 import { getCurrentUserId } from "./businessSync";
+import { ApiError } from "./client";
 import type { Business, BusinessApplication, BusinessApplicationCreate } from "./types";
 
 function mapBusinessToApplication(business: Business): BusinessApplication {
@@ -32,8 +33,11 @@ async function fetchOwnedBusinesses() {
       try {
         const detail = await businessesApi.get(item.id);
         return detail.owner_id === userId ? detail : null;
-      } catch {
-        return null;
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+          return null;
+        }
+        throw error;
       }
     }),
   );

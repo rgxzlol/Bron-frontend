@@ -3,6 +3,8 @@ import type { InAppNotification } from "@/lib/api/types";
 import { notificationsApi } from "@/lib/api/notifications";
 import { useAuthStore } from "@/store/auth.store";
 
+const reminderTimers = new Map<number, number>();
+
 type NotificationState = {
   items: InAppNotification[];
   isLoading: boolean;
@@ -10,6 +12,13 @@ type NotificationState = {
   fetchNotifications: () => Promise<void>;
   addLocalNotification: (notification: Omit<InAppNotification, "time" | "read">) => void;
   addBookingReminder: (bookingId: number, bookingDate: string, startTime: string) => void;
+  removeBookingReminder: (bookingId: number) => void;
+  addBookingStatusNotification: (
+    bookingId: number,
+    status: string,
+    bookingDate?: string,
+    startTime?: string,
+  ) => void;
   deleteReadNotifications: () => Promise<void>;
   resetNotifications: () => void;
 };
@@ -57,23 +66,67 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (get().items.some((item) => item.id === reminderId)) return;
 
     const bookingTime = new Date(`${bookingDate}T${startTime}:00`).getTime();
-    const reminderTime = bookingTime - 24 * 60 * 60 * 1000;
-    if (reminderTime <= Date.now()) return;
+    if (!Number.isFinite(bookingTime) || bookingTime <= Date.now()) return;
+    const reminderTime = bookingTime - 90 * 60 * 1000;
+
+    const previousTimer = reminderTimers.get(bookingId);
+    if (previousTimer != null) {
+      window.clearTimeout(previousTimer);
+    }
 
     const schedule = () => {
       const delay = reminderTime - Date.now();
       if (delay <= 0) {
+        reminderTimers.delete(bookingId);
         get().addLocalNotification({
           id: reminderId,
           type: "booking",
           title: "Напоминание о бронировании",
-          description: `Завтра у вас бронирование в ${startTime}`,
+          description: `У вас бронирование сегодня в ${startTime}`,
         });
         return;
       }
-      window.setTimeout(schedule, Math.min(delay, 60 * 60 * 1000));
+      const timer = window.setTimeout(schedule, Math.min(delay, 60 * 60 * 1000));
+      reminderTimers.set(bookingId, timer);
     };
     schedule();
+  },
+
+  removeBookingReminder: (bookingId) => {
+    const reminderId = `local-booking-reminder-${bookingId}`;
+    const timer = reminderTimers.get(bookingId);
+    if (timer != null) {
+      window.clearTimeout(timer);
+      reminderTimers.delete(bookingId);
+    }
+    const next = get().items.filter((item) => item.id !== reminderId);
+    saveLocalNotifications(next.filter((entry) => entry.id.startsWith("local-")));
+    set({ items: next });
+  },
+
+  addBookingStatusNotification: (bookingId, status, bookingDate, startTime) => {
+    const normalizedStatus = status.toLowerCase();
+    const content =
+      normalizedStatus === "approved" || normalizedStatus === "accepted"
+        ? {
+            title: "Бронирование подтверждено",
+            description: `Бронь${bookingDate ? ` на ${bookingDate}` : ""}${startTime ? ` в ${startTime}` : ""} подтверждена бизнесом`,
+          }
+        : normalizedStatus === "cancelled" || normalizedStatus === "rejected"
+          ? {
+              title: "Бронирование отменено",
+              description: `Бизнес отменил вашу бронь${bookingDate ? ` на ${bookingDate}` : ""}${startTime ? ` в ${startTime}` : ""}`,
+            }
+          : {
+              title: "Статус бронирования изменён",
+              description: `Статус брони${bookingDate ? ` на ${bookingDate}` : ""} изменён`,
+            };
+
+    get().addLocalNotification({
+      id: `local-booking-status-${bookingId}-${normalizedStatus}`,
+      type: "booking",
+      ...content,
+    });
   },
 
   deleteReadNotifications: async () => {

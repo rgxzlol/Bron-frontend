@@ -249,7 +249,7 @@ export function apiBusinessToSavedBusiness(
     name: business.name,
     description: business.description ?? "",
     category: apiCategoryToUi(business.category),
-    website: "",
+    website: business.website ?? "",
     phone: business.phone,
     address: business.address,
     gallery: photosToGallerySlots(photoUrls),

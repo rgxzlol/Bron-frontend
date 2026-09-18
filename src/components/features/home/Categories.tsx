@@ -40,7 +40,7 @@ export default function Categories() {
       <Link
         key={category.id}
         href={buildMapCategoryHref(category.id)}
-        className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8]"
+        className="min-w-40 w-40 flex-none gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-col items-center rounded-2xl text-center bg-white transition-all duration-300 hover:bg-[#F4F4F8] lg:flex-1"
       >
         <div
           style={{ backgroundColor: category.color }}
@@ -71,13 +71,13 @@ export default function Categories() {
       </h2>
 
       <div className="flex w-full flex-col gap-4">
-        <div className="flex flex-wrap justify-center gap-4 lg:justify-start">
-          {categories.slice(0, 5).map(renderCategoryCard)}
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:justify-start lg:overflow-visible lg:pb-0">
+          {(isExpanded ? categories : categories.slice(0, 5)).map(renderCategoryCard)}
 
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="min-w-40 gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-1 flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2]"
+            className="min-w-40 w-40 flex-none gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2] lg:flex-1"
             aria-expanded={isExpanded}
           >
             <div className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full bg-[#ffebd3]`}>
@@ -99,12 +99,6 @@ export default function Categories() {
             </span>
           </button>
         </div>
-
-        {isExpanded && (
-          <div className="flex flex-wrap justify-center gap-4 lg:justify-start">
-            {categories.slice(5).map(renderCategoryCard)}
-          </div>
-        )}
       </div>
     </section>
   );

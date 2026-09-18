@@ -26,6 +26,8 @@ function toApiCreatePayload(payload: BookingCreate): BookingCreate {
     end_time: toApiTime(payload.end_time),
     guest_count: payload.guest_count ?? 1,
     product_ids: payload.product_ids ?? [],
+    ...(payload.items?.length ? { items: payload.items } : {}),
+    ...(payload.total_price != null ? { total_price: payload.total_price } : {}),
   };
 }
 
@@ -218,6 +220,20 @@ export const useBookingStore = create<BookingStore>()(
 
         try {
           const remote = await bookingsApi.my();
+          const previousById = new Map(
+            get().bookings.map((booking) => [booking.id, booking]),
+          );
+          remote.forEach((booking) => {
+            const previous = previousById.get(booking.id);
+            if (previous && previous.status !== booking.status) {
+              useNotificationStore.getState().addBookingStatusNotification(
+                booking.id,
+                booking.status,
+                booking.booking_date,
+                booking.start_time,
+              );
+            }
+          });
           const merged = mergeBookings(remote, get().bookings);
           set({
             bookings:
@@ -278,8 +294,15 @@ export const useBookingStore = create<BookingStore>()(
         useNotificationStore.getState().addLocalNotification({
           id: `local-booking-${booking.id}`,
           type: "booking",
-          title: "Бронирование создано",
-          description: `Бронь на ${booking.booking_date} в ${booking.start_time} подтверждена`,
+          title:
+            booking.status === "approved" || booking.status === "accepted"
+              ? "Бронирование подтверждено"
+              : "Бронирование создано",
+          description: `Бронь на ${booking.booking_date} в ${booking.start_time}${
+            booking.status === "approved" || booking.status === "accepted"
+              ? " подтверждена"
+              : " отправлена бизнесу на подтверждение"
+          }`,
         });
         useNotificationStore.getState().addBookingReminder(
           booking.id,
@@ -336,6 +359,16 @@ export const useBookingStore = create<BookingStore>()(
               : booking,
           ),
         }));
+
+        const updated = get().bookings.find((booking) => booking.id === bookingId);
+        if (updated) {
+          useNotificationStore.getState().removeBookingReminder(bookingId);
+          useNotificationStore.getState().addBookingReminder(
+            bookingId,
+            updated.booking_date,
+            updated.start_time,
+          );
+        }
       },
 
       cancelBooking: async (bookingId) => {
@@ -352,13 +385,19 @@ export const useBookingStore = create<BookingStore>()(
               : booking,
           ),
         }));
+
+        useNotificationStore.getState().addLocalNotification({
+          id: `local-booking-status-${bookingId}-cancelled-by-user`,
+          type: "booking",
+          title: "Бронирование отменено",
+          description: "Вы отменили бронирование",
+        });
       },
     }),
     {
       name: "booking-storage",
       version: 4,
-      migrate: (persisted) => {
-        const state = persisted as { bookings?: BookingListItem[] } | null;
+      migrate: () => {
         return {
           // Clear records from the former demo-booking flow. Real bookings
           // are reloaded from the API after authentication.

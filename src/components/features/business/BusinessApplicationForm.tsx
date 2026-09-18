@@ -498,7 +498,6 @@ export default function BusinessApplicationForm() {
             value={form.website}
             onChange={(value) => updateField("website", value)}
             error={fieldErrors.website}
-            required
             disabled={locked}
             placeholder={t("businessApplication.websitePlaceholder")}
           />
@@ -509,7 +508,6 @@ export default function BusinessApplicationForm() {
             value={form.socialTelegram}
             onChange={(value) => updateField("socialTelegram", value)}
             error={fieldErrors.socialTelegram}
-            required
             disabled={locked}
             placeholder={t("businessApplication.socialTelegramPlaceholder")}
           />
@@ -520,7 +518,6 @@ export default function BusinessApplicationForm() {
             value={form.socialInstagram}
             onChange={(value) => updateField("socialInstagram", value)}
             error={fieldErrors.socialInstagram}
-            required
             disabled={locked}
             placeholder={t("businessApplication.socialInstagramPlaceholder")}
           />
@@ -533,12 +530,6 @@ export default function BusinessApplicationForm() {
               }`}
             >
               {t("businessApplication.description")}
-              <span
-                className={fieldErrors.description ? "text-[#e02424]" : "text-[var(--accent-fg)]"}
-              >
-                {" "}
-                *
-              </span>
             </label>
             <div
               className={`relative rounded-[14px] border bg-[var(--bg-surface-muted)] transition-all focus-within:bg-[var(--bg-surface)] ${

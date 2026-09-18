@@ -32,6 +32,7 @@ import DeleteBusinessModal from "./DeleteBusinessModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useToastStore } from "@/store/toast.store";
+import { reviewsApi } from "@/lib/api/reviews";
 import s from "./businessModal.module.css";
 import desktop from "./businessDesktop.module.css";
 
@@ -56,14 +57,6 @@ const DAY_SHORT_I18N_KEYS: Record<DayKey, string> = {
   sat: "businessModal.daySatShort",
   sun: "businessModal.daySunShort",
 };
-
-const REVIEW_DISTRIBUTION = [
-  { stars: 5, percent: 72 },
-  { stars: 4, percent: 18 },
-  { stars: 3, percent: 6 },
-  { stars: 2, percent: 3 },
-  { stars: 1, percent: 1 },
-];
 
 type Props = {
   onClose: () => void;
@@ -267,7 +260,7 @@ function ScheduleToggle({
 }
 
 export default function BusinessModal({ onClose, onSaved }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const draft = useBusinessStore((s2) => s2.draft);
   const updateDraft = useBusinessStore((s2) => s2.updateDraft);
   const setDraftSchedule = useBusinessStore((s2) => s2.setDraftSchedule);
@@ -275,6 +268,47 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   const saveDraft = useBusinessStore((s2) => s2.saveDraft);
   const removeBusiness = useBusinessStore((s2) => s2.removeBusiness);
   const editingId = useBusinessStore((s2) => s2.editingId);
+  const [reviews, setReviews] = useState<
+    Awaited<ReturnType<typeof reviewsApi.listByBusiness>>
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!editingId || !/^\d+$/.test(editingId)) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void reviewsApi
+      .listByBusiness(Number(editingId))
+      .then((result) => {
+        if (!cancelled) setReviews(result);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setReviews([]);
+          console.error("Не удалось загрузить отзывы бизнеса:", error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingId]);
+
+  const reviewAverage =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+  const reviewDistribution = [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviews.filter((review) => review.rating === stars).length;
+    return {
+      stars,
+      percent: reviews.length > 0 ? (count / reviews.length) * 100 : 0,
+    };
+  });
   const showToast = useToastStore((s2) => s2.showToast);
 
   const profileInputRef = useRef<HTMLInputElement>(null);
@@ -1175,14 +1209,19 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <div className="shrink-0">
               <div className="flex items-center gap-[10px]">
                 <StarIcon size={isDesktop ? 36 : 32} />
-                <span className="text-[28px] font-bold leading-none lg:text-[42px]">4,6</span>
+                <span className="text-[28px] font-bold leading-none lg:text-[42px]">
+                  {reviewAverage.toLocaleString(locale, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+                </span>
               </div>
               <p className="mt-[10px] text-[13px] text-[var(--text-muted)] lg:text-[15px]">
-                {t("businessModal.reviewsCount")}
+                {t("businessModal.reviewsCount", { count: reviews.length })}
               </p>
             </div>
             <div className="hidden min-w-0 flex-1 flex-col gap-[8px] lg:flex">
-              {REVIEW_DISTRIBUTION.map((row) => (
+              {reviewDistribution.map((row) => (
                 <div key={row.stars} className={desktop.reviewBarRow}>
                   <span className={desktop.reviewBarLabel}>
                     {row.stars}

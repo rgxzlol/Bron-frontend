@@ -72,29 +72,69 @@
 
 @media (max-width: 1023px) {
   .cards {
-    width: calc(100% + 32px);
-    margin-left: -16px;
-    padding-inline: 15px;
+    width: 100%;
+    flex-direction: column;
+    gap: 18px;
   }
 
   .card {
+    display: flex;
+    flex-direction: row;
+    height: 202px;
+    min-height: 202px;
     max-width: none;
-    flex-basis: 100%;
+    flex: none;
+    width: 100%;
+  }
+
+  .cardImage {
+    width: 41%;
+    min-width: 0;
+    height: 100% !important;
   }
 
   .cardBody {
-    align-items: center;
-    text-align: center;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 18px 14px 15px;
+    text-align: left;
   }
 
   .cardBody > div {
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
-    text-align: center;
+    text-align: left;
+  }
+
+  .cardBody > div > span {
+    min-height: 0;
+    font-size: 20px;
+    line-height: 1.25;
   }
 
   .cardBody > div > div {
-    align-items: center;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .description {
+    display: none;
+  }
+
+  .bookLink {
+    margin-top: 12px;
+  }
+
+  .bookButton {
+    padding: 14px 8px;
+    font-size: 16px;
+  }
+
+  .seeAll {
+    height: 80px;
+    min-height: 80px;
+    flex-direction: row;
+    padding: 20px;
   }
 }
 

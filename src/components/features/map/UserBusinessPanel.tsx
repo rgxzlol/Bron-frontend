@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { SavedBusiness } from "@/store/business.store";
 import Image from "next/image";
+import { useState } from "react";
 import s from "./fullMap.module.css";
 
 type UserBusinessPanelProps = {
@@ -20,11 +21,14 @@ export default function UserBusinessPanel({
   onBook,
 }: UserBusinessPanelProps) {
   const { t } = useTranslation();
-  const previewImage =
-    business.gallery.find(Boolean) ??
-    business.profilePhoto ??
-    assets.map.photo1;
-  const isDataUrl = typeof previewImage === "string";
+  const gallery = [
+    ...(business.profilePhoto ? [business.profilePhoto] : []),
+    ...business.gallery.filter((photo): photo is string => Boolean(photo)),
+  ].filter((photo, index, photos) => photos.indexOf(photo) === index);
+  const [imageIndex, setImageIndex] = useState(0);
+  const images = gallery.length > 0 ? gallery : [assets.map.photo1];
+  const previewImage = images[imageIndex] ?? images[0];
+  const isRemoteImage = typeof previewImage === "string";
   const activeServices = business.services.filter((s) => s.active);
   const minPrice =
     activeServices.length > 0
@@ -40,7 +44,7 @@ export default function UserBusinessPanel({
     >
       <div className={s.panelScroll}>
         <div className={s.imageWrap}>
-          {isDataUrl ? (
+          {isRemoteImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               className={s.image}
@@ -56,6 +60,33 @@ export default function UserBusinessPanel({
               priority
             />
           )}
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                className={`${s.galleryNav} ${s.galleryNavPrev}`}
+                onClick={() =>
+                  setImageIndex((index) => (index > 0 ? index - 1 : images.length - 1))
+                }
+                aria-label="Предыдущее фото"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className={`${s.galleryNav} ${s.galleryNavNext}`}
+                onClick={() =>
+                  setImageIndex((index) => (index + 1) % images.length)
+                }
+                aria-label="Следующее фото"
+              >
+                ›
+              </button>
+            </>
+          )}
+          <span className={s.slideCounter}>
+            {imageIndex + 1}/{images.length}
+          </span>
           <button
             type="button"
             className={`${s.closeBtn} theme-close-button`}

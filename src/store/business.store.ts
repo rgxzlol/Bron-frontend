@@ -14,6 +14,7 @@ import {
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
 import { getAuthToken } from "@/lib/api/token";
+import { useNotificationStore } from "@/store/notification.store";
 import { ApiError } from "@/lib/api/client";
 import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
 import { GeocodingError } from "@/lib/geocoding";
@@ -198,6 +199,31 @@ function countAcceptedBookings(bookings: BusinessBookingRequest[]) {
   return bookings.filter((booking) => booking.status === "accepted").length;
 }
 
+function notifyBusinessBookingStatus(
+  businessId: string,
+  booking: BusinessBookingRequest,
+  status: string,
+) {
+  const normalized = status.toLowerCase();
+  const isCancelled = normalized === "cancelled" || normalized === "rejected";
+  const isConfirmed = normalized === "accepted" || normalized === "approved";
+
+  useNotificationStore.getState().addLocalNotification({
+    id: `local-business-booking-${businessId}-${booking.id}-${normalized}`,
+    type: "booking",
+    title: isCancelled
+      ? "Пользователь отменил бронирование"
+      : isConfirmed
+        ? "Бронирование подтверждено"
+        : "Новое бронирование",
+    description: isCancelled
+      ? `${booking.customerName} отменил бронирование на ${booking.time}`
+      : isConfirmed
+        ? `Бронирование клиента ${booking.customerName} подтверждено`
+        : `Клиент ${booking.customerName} ожидает подтверждения`,
+  });
+}
+
 function replaceBusiness(
   businesses: SavedBusiness[],
   previousId: string | null,
@@ -355,6 +381,20 @@ export const useBusinessStore = create<BusinessStore>()(
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
+          merged.forEach((item) => {
+            const previous = existingById.get(item.id);
+            const previousBookings = new Map(
+              previous?.bookingRequests.map((booking) => [booking.id, booking]) ?? [],
+            );
+            item.bookingRequests.forEach((booking) => {
+              const oldBooking = previousBookings.get(booking.id);
+              if (oldBooking && oldBooking.status !== booking.status) {
+                notifyBusinessBookingStatus(item.id, booking, booking.status);
+              } else if (!oldBooking) {
+                notifyBusinessBookingStatus(item.id, booking, "pending");
+              }
+            });
+          });
           const apiIds = new Set(merged.map((item) => item.id));
           const localOnly = existing.filter(
             (item) => !apiIds.has(item.id),
@@ -388,6 +428,7 @@ export const useBusinessStore = create<BusinessStore>()(
           }
         }
 
+        const previousBookings = business.bookingRequests;
         set((state) => ({
           businesses: updateBusiness(state.businesses, businessId, (item) => ({
             ...item,
@@ -397,6 +438,13 @@ export const useBusinessStore = create<BusinessStore>()(
             ).length,
           })),
         }));
+
+        bookingRequests.forEach((booking) => {
+          const previous = previousBookings.find((item) => item.id === booking.id);
+          if (previous && previous.status !== booking.status) {
+            notifyBusinessBookingStatus(businessId, booking, booking.status);
+          }
+        });
       },
 
       setShowMyBusiness: (value) => set({ showMyBusiness: value }),
@@ -584,6 +632,7 @@ export const useBusinessStore = create<BusinessStore>()(
           }));
           throw error;
         }
+
       },
 
       toggleService: async (businessId, serviceId, active) => {
@@ -648,6 +697,11 @@ export const useBusinessStore = create<BusinessStore>()(
             })),
           }));
           throw error;
+        }
+
+        const updatedBooking = nextRequests.find((booking) => booking.id === bookingId);
+        if (updatedBooking) {
+          notifyBusinessBookingStatus(businessId, updatedBooking, status);
         }
       },
     }),

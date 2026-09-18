@@ -66,6 +66,13 @@ function isBookingPath(path: string) {
   return cleanPath === "/bookings" || cleanPath.startsWith("/bookings/");
 }
 
+function isAuthPath(path: string) {
+  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
+  return cleanPath === "/auth/login" ||
+    cleanPath === "/auth/register" ||
+    cleanPath === "/auth/me";
+}
+
 function buildUrl(path: string) {
   const base = getApiBaseUrl().replace(/\/+$/, "");
   const normalizedPath = normalizeApiPath(path);
@@ -183,6 +190,7 @@ async function handleDemoFallback<T>(
   body: unknown,
   error: unknown,
 ): Promise<T | null> {
+  if (isAuthPath(path)) throw error;
   if (isBusinessDataPath(path) || isNotificationPath(path) || isBookingPath(path)) throw error;
   const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
   const upperMethod = method.toUpperCase();
@@ -265,6 +273,9 @@ export async function apiRequest<T>(
   { method = "GET", body, auth = false, token, skipDemo = false }: RequestOptions = {},
 ): Promise<T> {
   const authToken = token ?? (auth ? getAuthToken() : null);
+  if (auth && !authToken) {
+    throw new ApiError(401, "Требуется авторизация");
+  }
   if (!skipDemo) {
     const demo = await resolveDemoResponse<T>(path, method, body, authToken);
     if (demo !== null) return demo;

@@ -35,7 +35,7 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
     "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105";
 
   return (
-    <div className="relative h-[169px] w-full shrink-0 overflow-hidden">
+    <div className={`${popularStyles.cardImage} relative h-[169px] w-full shrink-0 overflow-hidden`}>
       {isRemoteShopImage(place.img) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img className={imageClassName} src={place.img} alt={place.title} />

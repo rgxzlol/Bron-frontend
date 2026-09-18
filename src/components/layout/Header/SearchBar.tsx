@@ -50,7 +50,7 @@ export default function SearchBar() {
 
   return (
     <div ref={rootRef} className="relative flex w-full items-center rounded-[38px] bg-[#f4f4f8] px-5 py-[6px] lg:max-w-[720px]">
-      <label className="relative flex min-w-0 flex-1 items-center pb-1">
+      <label className="relative flex min-w-0 flex-1 items-center">
         <button
           type="button"
           onClick={handleSubmit}
@@ -108,7 +108,7 @@ export default function SearchBar() {
         onClick={() => setIsFiltersOpen(true)}
         type="button"
         data-testid="search-filter-open"
-        className="rounded-full bg-white p-[9px]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white p-0"
         aria-label={t("map.categories")}
       >
         <Image

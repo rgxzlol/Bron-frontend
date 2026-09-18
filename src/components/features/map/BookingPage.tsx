@@ -1200,6 +1200,9 @@ export default function BookingPage({
       {showExtrasModal && (
         <BookingExtrasModal
           baseItems={baseLineItems}
+          apiProductImages={(shop.services ?? [])
+            .filter((service) => service.kind === "product")
+            .map((service) => (typeof service.icon === "string" ? service.icon : null))}
           extraQuantities={extraQuantities}
           onAddExtra={addExtra}
           onRemoveExtra={removeExtra}

@@ -105,25 +105,13 @@ export function validateBusinessApplication(
   }
 
   const description = data.description.trim();
-  if (!description) {
-    errors.description = messages.descriptionRequired;
-  } else if (description.length > BUSINESS_DESCRIPTION_MAX_LENGTH) {
+  if (description.length > BUSINESS_DESCRIPTION_MAX_LENGTH) {
     errors.description = messages.descriptionLimitReached;
   }
 
   const website = data.website.trim();
-  if (!website) {
-    errors.website = messages.websiteRequired;
-  } else if (!WEBSITE_PATTERN.test(website)) {
+  if (website && !WEBSITE_PATTERN.test(website)) {
     errors.website = messages.websiteInvalid;
-  }
-
-  if (!data.socialTelegram.trim()) {
-    errors.socialTelegram = messages.socialTelegramRequired;
-  }
-
-  if (!data.socialInstagram.trim()) {
-    errors.socialInstagram = messages.socialInstagramRequired;
   }
 
   const comments = data.comments.trim();

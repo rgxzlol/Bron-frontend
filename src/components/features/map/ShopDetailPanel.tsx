@@ -58,7 +58,7 @@ export default function ShopDetailPanel({
   const shopReviewStats = useReviewStore((state) => state.shopReviewStats);
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(null);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
@@ -68,12 +68,6 @@ export default function ShopDetailPanel({
     if (!businessId) return;
     await toggleFavorite(businessId);
   }
-
-  useEffect(() => {
-    setImageIndex(0);
-    setExpanded(false);
-    setApiRating(null);
-  }, [shop.id]);
 
   useEffect(() => {
     if (!token) return;
@@ -177,11 +171,34 @@ export default function ShopDetailPanel({
         <div className={s.sheetCard}>
           <div className={s.sheetPhoto}>
             <GalleryImage
-              image={gallery[0] ?? shop.img}
+              image={currentImage}
               alt={shop.title}
               className={s.photoImg}
               sizes="104px"
             />
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={`${s.galleryNav} ${s.galleryNavPrev}`}
+                  onClick={showPrevImage}
+                  aria-label="Предыдущее фото"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className={`${s.galleryNav} ${s.galleryNavNext}`}
+                  onClick={showNextImage}
+                  aria-label="Следующее фото"
+                >
+                  ›
+                </button>
+              </>
+            )}
+            <span className={s.slideCounter}>
+              {imageIndex + 1}/{gallery.length}
+            </span>
           </div>
           <div className={s.sheetInfo}>
             <span className={s.sheetTag}>{shop.type}</span>

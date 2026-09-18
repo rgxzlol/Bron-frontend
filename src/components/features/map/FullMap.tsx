@@ -859,6 +859,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       {selectedShop && (
         <ShopDetailPanel
+          key={selectedShop.id}
           shop={selectedShop}
           onClose={() => setSelectedShop(null)}
           onBook={handleShopBook}

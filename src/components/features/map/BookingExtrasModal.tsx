@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { bookingExtras, type BookingExtra } from "@/data/bookingExtras";
@@ -28,6 +27,7 @@ type BookingExtrasModalProps = {
   onContinue: () => void;
   onClose: () => void;
   isSubmitting?: boolean;
+  apiProductImages?: (string | null)[];
 };
 
 export default function BookingExtrasModal({
@@ -40,6 +40,7 @@ export default function BookingExtrasModal({
   onContinue,
   onClose,
   isSubmitting = false,
+  apiProductImages = [],
 }: BookingExtrasModalProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -138,9 +139,10 @@ export default function BookingExtrasModal({
           </button>
 
           <div className={s.carousel} ref={scrollRef}>
-            {bookingExtras.map((extra: BookingExtra) => {
+            {bookingExtras.map((extra: BookingExtra, index) => {
               const quantity = extraQuantities[extra.id] ?? 0;
               const labels = getBookingExtraLabels(extra.id, t);
+              const apiImage = apiProductImages[index];
               return (
                 <article
                   key={extra.id}
@@ -148,13 +150,14 @@ export default function BookingExtrasModal({
                   data-testid={`booking-extra-product-${extra.id}`}
                 >
                   <div className={s.productImageWrap}>
-                    <Image
-                      src={extra.image}
-                      alt={labels.name}
-                      fill
-                      sizes="180px"
-                      className={s.productImage}
-                    />
+                    {apiImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={apiImage}
+                        alt={labels.name}
+                        className={s.productImage}
+                      />
+                    ) : null}
                   </div>
                   <div className={s.productBody}>
                     <h3 className={s.productName}>{labels.name}</h3>

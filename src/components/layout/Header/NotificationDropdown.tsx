@@ -11,6 +11,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { NotificationCard } from "./NotificationCard";
 import { NotificationEmpty } from "./NotificationEmpty";
 import { useBookingStore } from "@/store/booking.store";
+import { useBusinessStore } from "@/store/business.store";
 
 export default function NotificationDropdown() {
   const { t } = useTranslation();
@@ -29,6 +30,10 @@ export default function NotificationDropdown() {
   const token = useAuthStore((state) => state.token);
   const bookings = useBookingStore((state) => state.bookings);
   const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
+  const businesses = useBusinessStore((state) => state.businesses);
+  const refreshBusinessBookings = useBusinessStore(
+    (state) => state.refreshBusinessBookings,
+  );
   const addBookingReminder = useNotificationStore(
     (state) => state.addBookingReminder,
   );
@@ -46,10 +51,22 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     if (!token) return;
-    const refresh = () => void fetchNotifications();
+    const refresh = () => {
+      void fetchNotifications();
+      void fetchMyBookings();
+      businesses.forEach((business) => {
+        void refreshBusinessBookings(business.id);
+      });
+    };
     const interval = window.setInterval(refresh, 60_000);
     return () => window.clearInterval(interval);
-  }, [token, fetchNotifications]);
+  }, [
+    token,
+    fetchNotifications,
+    fetchMyBookings,
+    businesses,
+    refreshBusinessBookings,
+  ]);
 
   useEffect(() => {
     bookings.forEach((booking) => {

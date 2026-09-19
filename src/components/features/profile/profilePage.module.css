@@ -149,6 +149,45 @@
   flex-shrink: 0;
 }
 
+.ratingFrame {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+}
+
+.ratingFrameSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ratingFrameTrack,
+.ratingFrameProgress {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ratingFrameTrack {
+  stroke: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+}
+
+.ratingFrameProgress {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease, stroke 300ms ease;
+}
+
+.ratingFrameAvatar {
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  border-radius: 50%;
+  transform: scale(0.94);
+}
+
 .avatarImage,
 .avatarImageLarge {
   border-radius: 50%;
@@ -168,6 +207,16 @@
 
 /* Десктоп: крупнее аватар и модалка (QA pl003) */
 @media (min-width: 1024px) {
+  .ratingFrame {
+    width: 144px;
+    height: 144px;
+  }
+
+  .ratingFrameAvatar {
+    width: 128px;
+    height: 128px;
+  }
+
   .avatarImage {
     width: 128px;
     height: 128px;
@@ -228,6 +277,10 @@
 .ratingBar {
   display: inline-flex;
   align-items: center;
+}
+
+:global([data-theme="dark"]) .ratingBar img {
+  filter: brightness(0) invert(1);
 }
 
 .ratingValue {

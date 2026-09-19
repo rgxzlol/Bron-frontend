@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
+import { reviewsApi } from "@/lib/api/reviews";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -22,6 +23,8 @@ export type PaymentHistoryItem = {
   amount: number;
   date: string;
 };
+
+const DEFAULT_PROFILE_RATING = 4;
 
 function mapApiLanguage(language: string): ProfileLanguage {
   if (language === "uz" || language === "en") return language;
@@ -42,6 +45,10 @@ function applyProfileToState(profile: UserProfile, currentFullName: string) {
     phone: profile.phone,
     email: toUserFacingEmail(profile.email),
     language: mapApiLanguage(profile.language),
+    rating:
+      typeof profile.rating === "number" && Number.isFinite(profile.rating)
+        ? profile.rating
+        : DEFAULT_PROFILE_RATING,
   };
 }
 
@@ -49,6 +56,8 @@ type ProfileState = {
   fullName: string;
   phone: string;
   email: string;
+  rating: number;
+  reviewCount: number;
   avatarUrl: string | null;
   language: ProfileLanguage;
   theme: ProfileTheme;
@@ -108,6 +117,8 @@ export const useProfileStore = create<ProfileState>()(
       fullName: "",
       phone: "",
       email: "",
+      rating: DEFAULT_PROFILE_RATING,
+      reviewCount: 0,
       avatarUrl: null,
       language: "ru",
       theme: "light",
@@ -130,6 +141,20 @@ export const useProfileStore = create<ProfileState>()(
             avatarUrl: state.avatarUrl,
             isProfileLoading: false,
           }));
+          const userId = useAuthStore.getState().userId;
+          if (userId != null) {
+            try {
+              const customerRating = await reviewsApi.getCustomerRating(userId, token);
+              set({
+                rating: Number.isFinite(customerRating.rating)
+                  ? customerRating.rating
+                  : DEFAULT_PROFILE_RATING,
+                reviewCount: customerRating.reviews_count,
+              });
+            } catch {
+              // Profile data remains usable when rating is unavailable.
+            }
+          }
         } catch (error) {
           set({
             isProfileLoading: false,
@@ -243,6 +268,8 @@ export const useProfileStore = create<ProfileState>()(
           fullName: "",
           phone: "",
           email: "",
+          rating: DEFAULT_PROFILE_RATING,
+          reviewCount: 0,
           avatarUrl: null,
           isProfileLoading: false,
           profileError: null,
@@ -250,11 +277,13 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 6,
+      version: 7,
       partialize: (state) => ({
         fullName: state.fullName,
         phone: state.phone,
         email: state.email,
+        rating: state.rating,
+        reviewCount: state.reviewCount,
         avatarUrl: state.avatarUrl,
         language: state.language,
         theme: state.theme,
@@ -270,6 +299,14 @@ export const useProfileStore = create<ProfileState>()(
             ? ""
             : String(rest.fullName ?? ""),
           email: toUserFacingEmail(String(rest.email ?? "")),
+          rating:
+            typeof rest.rating === "number" && Number.isFinite(rest.rating)
+              ? rest.rating
+              : DEFAULT_PROFILE_RATING,
+          reviewCount:
+            typeof rest.reviewCount === "number" && Number.isFinite(rest.reviewCount)
+              ? rest.reviewCount
+              : 0,
           avatarUrl: (rest.avatarUrl as string | null | undefined) ?? null,
           paymentHistory: (
             (rest.paymentHistory as PaymentHistoryItem[] | undefined) ??

@@ -277,6 +277,9 @@ export function apiBookingToBusinessBookingRequest(
 ): BusinessBookingRequest {
   return {
     id: String(booking.id),
+    customerId: booking.user_id,
+    bookingId: booking.id,
+    bookingDate: booking.booking_date,
     time: booking.start_time.slice(0, 5),
     customerName,
     serviceName,

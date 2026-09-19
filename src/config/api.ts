@@ -1,4 +1,4 @@
-const FALLBACK_API_URL = "https://uzbalpha.pythonanywhere.com/api";
+const FALLBACK_API_URL = "https://bronofficial.com/api";
 
 function readEnvUrl(value: string | undefined) {
   const trimmed = value?.trim();

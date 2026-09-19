@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
@@ -65,8 +65,6 @@ const staticHistory = [
   { id: "3", title: "Оплата бронирования", reference: "123123", amount: "80 000 сум", date: "12 мая 2026" },
 ];
 
-const DEFAULT_PROFILE_RATING = 4.0;
-
 export default function ProfilePageContent({
   onClose,
   onSectionChange,
@@ -80,6 +78,8 @@ export default function ProfilePageContent({
     fullName,
     phone,
     email,
+    rating,
+    reviewCount,
     avatarUrl,
     language,
     theme,
@@ -317,18 +317,20 @@ export default function ProfilePageContent({
         <div className={s.mainSection}>
           <div className={s.profileHead}>
             <div className={s.avatarWrap}>
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className={s.avatarImage} />
-              ) : (
-                <Image
-                  src={assets.profile.avatar}
-                  alt=""
-                  width={104}
-                  height={104}
-                  className={s.avatarImage}
-                />
-              )}
+              <ProfileRatingFrame value={rating}>
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className={s.avatarImage} />
+                ) : (
+                  <Image
+                    src={assets.profile.avatar}
+                    alt=""
+                    width={104}
+                    height={104}
+                    className={s.avatarImage}
+                  />
+                )}
+              </ProfileRatingFrame>
               <button
                 type="button"
                 className={s.cameraBtn}
@@ -346,7 +348,7 @@ export default function ProfilePageContent({
               </button>
             </div>
             <div className={s.ratingNameBlock}>
-              <ProfileRatingBadge value={DEFAULT_PROFILE_RATING} />
+              <ProfileRatingBadge value={rating} reviewCount={reviewCount} />
             </div>
             <p className={s.phoneText}>{phone}</p>
           </div>
@@ -1050,7 +1052,13 @@ function InfoIcon() {
   );
 }
 
-function ProfileRatingBadge({ value }: { value: number }) {
+function ProfileRatingBadge({
+  value,
+  reviewCount,
+}: {
+  value: number;
+  reviewCount: number;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -1064,8 +1072,47 @@ function ProfileRatingBadge({ value }: { value: number }) {
           <Image src={assets.profile.rightBarg} alt="" width={11} height={19} />
         </span>
       </span>
-      <span className={s.ratingCaption}>{t("profile.ratingLabel")}</span>
+      <span className={s.ratingCaption}>
+        {t("profile.ratingLabel")} ({reviewCount})
+      </span>
     </>
+  );
+}
+
+function ProfileRatingFrame({
+  value,
+  children,
+}: {
+  value: number;
+  children: ReactNode;
+}) {
+  const normalizedRating = Math.min(5, Math.max(0, Number.isFinite(value) ? value : 0));
+  const progress = normalizedRating / 5;
+  const color =
+    normalizedRating < 2.5
+      ? "#e53935"
+      : normalizedRating < 4
+        ? "#f2b705"
+        : "#19b63b";
+  const radius = 56;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <div className={s.ratingFrame} data-rating={normalizedRating.toFixed(1)}>
+      <svg className={s.ratingFrameSvg} viewBox="0 0 128 128" aria-hidden>
+        <circle className={s.ratingFrameTrack} cx="64" cy="64" r={radius} />
+        <circle
+          className={s.ratingFrameProgress}
+          cx="64"
+          cy="64"
+          r={radius}
+          stroke={color}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+        />
+      </svg>
+      <div className={s.ratingFrameAvatar}>{children}</div>
+    </div>
   );
 }
 

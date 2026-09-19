@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
 import { useToastStore } from "@/store/toast.store";
+import CustomerReviewModal from "@/components/features/review/CustomerReviewModal";
 import Image from "next/image";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
@@ -1417,15 +1418,20 @@ function BookingCard({
   dateLabel,
   onAccept,
   onCancel,
+  onReviewCustomer,
 }: {
   booking: BusinessBookingRequest;
   dateLabel: string;
   onAccept: () => void;
   onCancel: () => void;
+  onReviewCustomer: () => void;
 }) {
   const { t } = useTranslation();
   const isConfirmed =
     booking.status === "accepted" || booking.status === "waiting";
+  const isCompleted =
+    Boolean(booking.bookingDate) &&
+    new Date(`${booking.bookingDate}T23:59:59`).getTime() < Date.now();
 
   return (
     <div
@@ -1493,12 +1499,24 @@ function BookingCard({
       )}
 
       {isConfirmed && (
-        <div
-          className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[var(--accent-fg)]"
-          data-testid={`business-booking-accepted-${booking.id}`}
-        >
-          {t("business.accepted")}
-        </div>
+        <>
+          <div
+            className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[var(--accent-fg)]"
+            data-testid={`business-booking-accepted-${booking.id}`}
+          >
+            {t("business.accepted")}
+          </div>
+          {isCompleted && (
+            <button
+              type="button"
+              onClick={onReviewCustomer}
+              className="rounded-[12px] bg-[#f2b705] py-[12px] text-[14px] font-semibold text-white"
+              data-testid={`business-booking-review-customer-${booking.id}`}
+            >
+              Оценить клиента
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -1539,6 +1557,11 @@ export default function BusinessDashboard({
 
   const [view, setView] = useState<View>("servicesStaff");
   const [bookingTab, setBookingTab] = useState<BookingTab>("all");
+  const [customerReviewBooking, setCustomerReviewBooking] =
+    useState<BusinessBookingRequest | null>(null);
+  const [reviewedCustomerBookingIds, setReviewedCustomerBookingIds] = useState<
+    string[]
+  >([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [itemMenuId, setItemMenuId] = useState<string | null>(null);
@@ -1832,6 +1855,7 @@ export default function BusinessDashboard({
             },
           );
         }}
+        onReviewCustomer={() => setCustomerReviewBooking(booking)}
       />
     );
   }
@@ -2129,6 +2153,22 @@ export default function BusinessDashboard({
           onClose();
         }}
       />
+
+      {customerReviewBooking &&
+        !reviewedCustomerBookingIds.includes(customerReviewBooking.id) && (
+          <CustomerReviewModal
+            customerId={customerReviewBooking.customerId}
+            bookingId={customerReviewBooking.bookingId}
+            customerName={customerReviewBooking.customerName}
+            onClose={() => setCustomerReviewBooking(null)}
+            onSubmitted={() => {
+              setReviewedCustomerBookingIds((current) => [
+                ...current,
+                customerReviewBooking.id,
+              ]);
+            }}
+          />
+        )}
     </>
   );
 }

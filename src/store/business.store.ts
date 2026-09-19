@@ -62,6 +62,9 @@ export type BusinessService = {
 
 export type BusinessBookingRequest = {
   id: string;
+  bookingId: number;
+  customerId: number;
+  bookingDate?: string;
   time: string;
   customerName: string;
   serviceName: string;

@@ -53,6 +53,8 @@ export type UserProfile = {
   username: string;
   email: string;
   phone: string;
+  rating?: number | null;
+  reviews_count?: number | null;
   telegram_id: number | null;
   role: string;
   language: string;
@@ -363,6 +365,9 @@ export type Review = {
   user_id: number;
   user_username: string;
   business_id: number;
+  customer_id?: number | null;
+  booking_id?: number | null;
+  review_type?: string;
   rating: number;
   comment: string;
   created_at: string;
@@ -372,6 +377,19 @@ export type ReviewCreate = {
   business_id: number;
   rating: number;
   comment: string;
+};
+
+export type CustomerReviewCreate = {
+  booking_id: number;
+  rating: number;
+  comment?: string | null;
+};
+
+export type CustomerRating = {
+  user_id: number;
+  username: string;
+  rating: number;
+  reviews_count: number;
 };
 
 export type ReviewUpdate = {

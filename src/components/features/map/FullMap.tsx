@@ -3,6 +3,7 @@
 import mapboxgl from "mapbox-gl"
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
+import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
 import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
 import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
@@ -39,6 +40,22 @@ const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
 const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
+const DEMO_MAP_SHOPS: ShopsType[] = [
+  {
+    ...ShopsPlace[3],
+    id: 10001,
+    title: "Demo Beauty Salon",
+    lat: 41.3198,
+    lng: 69.2925,
+  },
+  {
+    ...ShopsPlace[4],
+    id: 10002,
+    title: "Demo Garden Restaurant",
+    lat: 41.3028,
+    lng: 69.2645,
+  },
+]
 
 function createShopMarkerElement(title: string, isHospital: boolean) {
   const el = document.createElement("div")
@@ -381,7 +398,13 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const filteredShops = apiShops.filter((shop) => {
+    const mapShops = [...apiShops, ...DEMO_MAP_SHOPS]
+
+    const filteredShops = mapShops.filter((shop) => {
+      if (DEMO_MAP_SHOPS.some((demoShop) => demoShop.id === shop.id)) {
+        return true
+      }
+
       if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
         return false
       }
@@ -480,6 +503,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const handleMapReady = () => {
       if (cancelled || mapRef.current !== map) return
       initialMapReadyRef.current = true
+      setIsMapLoading(false)
       syncMarkersRef.current()
     }
 

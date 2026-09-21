@@ -1,5 +1,13 @@
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 import type { InAppNotification } from "./types";
+
+export function isNotificationsEndpointUnavailable(error: unknown) {
+  return (
+    error instanceof ApiError &&
+    (error.status === 404 || error.status === 502) &&
+    error.message.includes("Upstream API returned HTML instead of JSON")
+  );
+}
 
 export const notificationsApi = {
   list: (token?: string) =>

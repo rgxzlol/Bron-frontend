@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
 import { useNotificationStore } from "@/store/notification.store";
+import { ApiError } from "@/lib/api/client";
 
 function toApiTime(value: string) {
   return normalizeBookingTime(value) ?? value.trim();
@@ -194,6 +195,7 @@ type BookingStore = {
   isLoading: boolean;
   error: string | null;
   fetchMyBookings: () => Promise<void>;
+  addLocalBooking: (booking: BookingListItem) => void;
   createBooking: (payload: BookingCreate) => Promise<Booking>;
   updateBooking: (
     bookingId: number,
@@ -210,7 +212,18 @@ export const useBookingStore = create<BookingStore>()(
       isLoading: false,
       error: null,
 
+      addLocalBooking: (booking) => {
+        set((state) => ({
+          bookings: upsertBooking(state.bookings, {
+            ...booking,
+            status: booking.status || "confirmed",
+          }),
+        }));
+      },
+
       fetchMyBookings: async () => {
+        if (get().isLoading) return;
+
         const hasLocal = get().bookings.length > 0;
         if (!hasLocal) {
           set({ isLoading: true, error: null });
@@ -244,12 +257,15 @@ export const useBookingStore = create<BookingStore>()(
                   : [],
             isLoading: false,
           });
-        } catch {
+        } catch (error) {
           const local = get().bookings;
           set({
             bookings: local,
             isLoading: false,
-            error: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Не удалось загрузить бронирования",
           });
         }
       },
@@ -374,7 +390,13 @@ export const useBookingStore = create<BookingStore>()(
       cancelBooking: async (bookingId) => {
         try {
           await bookingsApi.cancel(bookingId);
-        } catch {
+        } catch (error) {
+          if (
+            !(error instanceof ApiError) ||
+            (error.status !== 404 && error.status !== 405)
+          ) {
+            throw error;
+          }
           await bookingsApi.remove(bookingId);
         }
 

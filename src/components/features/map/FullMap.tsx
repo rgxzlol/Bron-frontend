@@ -254,10 +254,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   }, [applyCategoryFromNavigation])
 
   useEffect(() => {
+    let cancelled = false
     const localById = new Map(businesses.map((business) => [business.id, business]))
 
     void fetchPublicBusinessesFromApi()
       .then((items) => {
+        if (cancelled) return
         setApiShops(
           items.map((business) => {
             const local = localById.get(business.id)
@@ -270,9 +272,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       })
       .catch((error) => console.error(error))
       .finally(() => {
+        if (cancelled) return
         initialApiReadyRef.current = true
         setApiLoadCompleted(true)
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [businessMapKey, businesses, token])
 
   function createUserMarkerElement() {
@@ -401,10 +408,6 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     const mapShops = [...apiShops, ...DEMO_MAP_SHOPS]
 
     const filteredShops = mapShops.filter((shop) => {
-      if (DEMO_MAP_SHOPS.some((demoShop) => demoShop.id === shop.id)) {
-        return true
-      }
-
       if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
         return false
       }

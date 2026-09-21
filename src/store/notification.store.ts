@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { InAppNotification } from "@/lib/api/types";
-import { notificationsApi } from "@/lib/api/notifications";
+import {
+  isNotificationsEndpointUnavailable,
+  notificationsApi,
+} from "@/lib/api/notifications";
 import { useAuthStore } from "@/store/auth.store";
 
 const reminderTimers = new Map<number, number>();
@@ -38,6 +41,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({ items: [] });
       return;
     }
+    if (get().isLoading) return;
 
     set({ isLoading: true });
 
@@ -45,7 +49,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const items = await notificationsApi.list(token);
       const localItems = loadLocalNotifications();
       set({ items: mergeNotifications(items, localItems), isLoading: false });
-    } catch {
+    } catch (error) {
+      if (isNotificationsEndpointUnavailable(error)) {
+        const localItems = loadLocalNotifications();
+        set((state) => ({
+          items: mergeNotifications(state.items, localItems),
+          isLoading: false,
+        }));
+        return;
+      }
+
+      console.error("Не удалось загрузить уведомления:", error);
       set({ isLoading: false });
     }
   },
@@ -138,7 +152,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ items: [] });
 
     if (!token) return;
-    await notificationsApi.deleteRead(token).catch(() => undefined);
+    try {
+      await notificationsApi.deleteRead(token);
+    } catch (error) {
+      if (isNotificationsEndpointUnavailable(error)) return;
+      console.error("Не удалось удалить уведомления:", error);
+    }
   },
 
   resetNotifications: () => set({ items: [] }),

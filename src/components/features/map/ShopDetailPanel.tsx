@@ -20,6 +20,7 @@ import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
 import s from "./fullMap.module.css";
+import { translateLocation } from "@/lib/i18n/location";
 
 type ShopDetailPanelProps = {
   shop: ShopsType;
@@ -50,7 +51,7 @@ export default function ShopDetailPanel({
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
   const isFavorite = useFavoriteStore((state) => state.isFavorite);
@@ -63,6 +64,8 @@ export default function ShopDetailPanel({
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
   const businessId = shop.apiBusinessId;
+  const localizedAddress = translateLocation(shop.address, language);
+  const localizedDistrict = translateLocation(shop.district, language);
 
   async function handleToggleFavorite() {
     if (!businessId) return;
@@ -213,7 +216,7 @@ export default function ShopDetailPanel({
               {shop.hours}
             </p>
             <p className={s.sheetAddress} data-testid="map-vendor-address">
-              {shop.address}
+              {localizedAddress}
             </p>
           </div>
         </div>
@@ -272,8 +275,8 @@ export default function ShopDetailPanel({
                   height={20}
                 />
                 <div className={s.addressText}>
-                  <span className={s.addressMain}>{shop.address}</span>
-                  <span className={s.addressSub}>{shop.district}</span>
+                  <span className={s.addressMain}>{localizedAddress}</span>
+                  <span className={s.addressSub}>{localizedDistrict}</span>
                 </div>
               </div>
 
@@ -485,9 +488,9 @@ export default function ShopDetailPanel({
                 />
                 <div className={s.addressText}>
                   <span className={s.addressMain} data-testid="map-vendor-address">
-                    {shop.address}
+                    {localizedAddress}
                   </span>
-                  <span className={s.addressSub}>{shop.district}</span>
+                  <span className={s.addressSub}>{localizedDistrict}</span>
                 </div>
                 <span className={s.distance}>{shop.distance}</span>
               </div>

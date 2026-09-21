@@ -41,7 +41,7 @@ import {
   resolveBookingTargetIds,
 } from "@/lib/booking/payload";
 import { getBookingExtraLabels } from "@/lib/booking/extras";
-import type { BookingOrderItem } from "@/lib/api/types";
+import type { BookingListItem, BookingOrderItem } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
@@ -61,6 +61,7 @@ import {
   isBookingDateUnavailable,
   type BookingApiContext,
 } from "@/lib/booking/apiContext";
+import { translateLocation } from "@/lib/i18n/location";
 
 type BookingPageProps = {
   shop: ShopsType;
@@ -110,9 +111,10 @@ export default function BookingPage({
   const [slotConflictMessage, setSlotConflictMessage] = useState<string | null>(null);
   const didPrefillFormRef = useRef(false);
   const paymentConfirmedRef = useRef(false);
-  const { t, locale } = useTranslation();
+  const { t, locale, language } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
+  const addLocalBooking = useBookingStore((state) => state.addLocalBooking);
   const showToast = useToastStore((state) => state.showToast);
   const addLocalNotification = useNotificationStore(
     (state) => state.addLocalNotification,
@@ -341,6 +343,8 @@ export default function BookingPage({
   const backLabel = origin === "home" ? t("common.close") : t("booking.backToMap");
   const activeDate = lockedSchedule?.date ?? selectedDate;
   const activeTime = lockedSchedule?.time ?? selectedTime;
+  const localizedAddress = translateLocation(shop.address, language);
+  const localizedDistrict = translateLocation(shop.district, language);
 
   function handleContinueFromStep1() {
     setLockedSchedule({
@@ -455,6 +459,17 @@ export default function BookingPage({
     }
 
     if (!shop.apiBusinessId) {
+      const bookingDate = formatBookingDate(activeDate);
+      addLocalBooking({
+        id: -Date.now(),
+        booking_date: bookingDate,
+        start_time: activeTime,
+        end_time: addMinutesToTime(activeTime, 60),
+        status: "confirmed",
+        total_price: total,
+        business_id: shop.id,
+        guest_count: guests,
+      } satisfies BookingListItem);
       completeBookingFlow();
       return;
     }
@@ -641,8 +656,8 @@ export default function BookingPage({
             <div className={s.contactItem}>
               <Image src={assets.map.geoMark} alt="" width={20} height={20} />
               <div className={s.contactText}>
-                <span>{shop.address}</span>
-                <span className={s.contactSub}>{shop.district}</span>
+                <span>{localizedAddress}</span>
+                <span className={s.contactSub}>{localizedDistrict}</span>
               </div>
             </div>
             <div className={s.contactItem}>

@@ -16,6 +16,7 @@ import {
 import { BookingDropdown } from "./BookingDropdown";
 import { BookingCancelModal } from "./BookingCancelModal";
 import { BookingEditModal } from "./BookingEditModal";
+import { translateLocation } from "@/lib/i18n/location";
 
 interface BookingCardProps {
   status?: "upcoming" | "past";
@@ -163,6 +164,7 @@ export const BookingCard = ({
   const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
   const shopId = String(shop.id);
   const shopName = shop.title;
+  const localizedAddress = translateLocation(shop.address, language);
   const displayDate = formatBookingDate(bookingDate, locale);
   const displayTime = formatBookingTimeRange(bookingTime, bookingEndTime);
   const currencySuffix = language === "en" ? "UZS" : language === "uz" ? "so‘m" : "сум";
@@ -340,7 +342,7 @@ export const BookingCard = ({
               bookingId != null ? `booking-vendor-address-${bookingId}` : undefined
             }
           >
-            {shop.address}
+            {localizedAddress}
           </p>
 
           <div className="mt-[12px] flex flex-wrap gap-[8px]">
@@ -509,7 +511,7 @@ export const BookingCard = ({
         bookingId={bookingId}
         bookingDate={bookingDate}
         shopName={shop.title}
-        shopAddress={shop.address}
+        shopAddress={localizedAddress}
         shopImage={shop.img}
       />
       <BookingEditModal
@@ -520,7 +522,7 @@ export const BookingCard = ({
         bookingTime={bookingTime}
         hours={shop.hours}
         shopName={shop.title}
-        shopAddress={shop.address}
+        shopAddress={localizedAddress}
         shopType={shop.type}
         shopImage={shop.img}
       />

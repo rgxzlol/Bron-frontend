@@ -33,17 +33,17 @@ export const CurrencyDropdown: FC<CurrencyDropdownProps> = ({ value, onChange })
     const selectedOption = options.find((opt) => opt.id === value) || options[0];
 
     return (
-        <div className="relative w-[130px]" ref={dropdownRef}>
+        <div className="relative w-[100px]" ref={dropdownRef}>
             {/* Trigger Button */}
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full h-[72px] rounded-[17px] bg-[#FAFAFF] border-2 transition-all duration-300 flex items-center justify-between px-[18px] cursor-pointer text-left ${
+                className={`w-full h-[60px] rounded-[15px] bg-[#FAFAFF] border-2 transition-all duration-300 flex items-center justify-between px-[14px] cursor-pointer text-left ${
                     isOpen ? 'border-[#0A6AF7] bg-white shadow-sm' : 'border-transparent hover:border-gray-200'
                 }`}
             >
                 <div className="flex flex-col">
-                    <span className="text-[18px] font-semibold text-black leading-tight">
+                    <span className="text-[16px] font-semibold text-black leading-tight">
                         {selectedOption.label}
                     </span>
                     <span className="text-[11px] font-medium text-gray-400">

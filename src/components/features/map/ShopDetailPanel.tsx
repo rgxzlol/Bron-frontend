@@ -151,7 +151,7 @@ export default function ShopDetailPanel({
 
       <button
         type="button"
-        className={s.sheetClose}
+        className={`${s.sheetClose} theme-close-button`}
         onClick={onClose}
         aria-label={t("common.close")}
       >

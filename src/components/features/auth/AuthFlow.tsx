@@ -706,11 +706,11 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         },
         { username: apiUsername, password },
       );
+      saveRegisteredProfileName(session.user_id, session.username, displayName);
       await completeAuthSession(session, {
         fullName: displayName,
         phone: normalizedPhone,
       });
-      saveRegisteredProfileName(session.user_id, session.username, displayName);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("auth.registerFailed"));
     } finally {

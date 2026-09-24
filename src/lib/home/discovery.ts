@@ -1,5 +1,5 @@
-import { assets } from "@/lib/assets";
 import { branchesApi, businessesApi, servicesApi, workingHoursApi } from "@/lib/api";
+import { assets } from "@/lib/assets";
 import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync";
 import {
   apiBusinessToShop,
@@ -11,9 +11,8 @@ import { resolveMediaUrl } from "@/lib/api/media";
 import { workingHoursToRangeString } from "@/lib/booking/timeSlots";
 import { getHomeCategoryMapTarget } from "@/lib/category/homeCategoryMap";
 import { categories as staticCategories } from "@/data/categories";
-import { popularPlaces as fallbackPopularPlaces } from "@/data/popular";
 import { ShopsPlace } from "@/data/shops";
-import { canShowBusinessOnMap, canShowShopOnMap } from "@/lib/map/mapVisibility";
+import { canShowBusinessOnMap } from "@/lib/map/mapVisibility";
 import type { SearchCatalogItem } from "@/lib/search/catalog";
 import type { Category } from "@/types/category";
 import type { PopularPlace } from "@/types/popular";
@@ -21,16 +20,6 @@ import type { ShopsType } from "@/types/shops.types";
 import type { SavedBusiness } from "@/store/business.store";
 
 const POPULAR_LIMIT = 3;
-
-function fallbackPlacesWithMapMarkers(): PopularPlace[] {
-  const mappableShopIds = new Set(
-    ShopsPlace.filter(canShowShopOnMap).map((shop) => shop.id),
-  );
-
-  return fallbackPopularPlaces.filter(
-    (place) => place.shopId != null && mappableShopIds.has(place.shopId),
-  );
-}
 
 function savedBusinessToPopularPlace(
   business: SavedBusiness,
@@ -56,31 +45,22 @@ function savedBusinessToPopularPlace(
 }
 
 export async function fetchPopularPlaces(): Promise<PopularPlace[]> {
-  const fallback = fallbackPlacesWithMapMarkers();
-
   try {
     const businesses = await fetchPublicBusinessesFromApi();
     const mappableBusinesses = businesses.filter(canShowBusinessOnMap);
 
-    if (mappableBusinesses.length === 0) {
-      return fallback;
-    }
+    if (mappableBusinesses.length === 0) return [];
 
     const places = mappableBusinesses
       .slice(0, POPULAR_LIMIT)
       .map((business) => {
-        const fallbackImage =
-          fallback.find((place) => place.id === Number(business.id))?.img ??
-          fallback[0]?.img ??
-          assets.popular.photo1;
-
-        return savedBusinessToPopularPlace(business, fallbackImage);
+        return savedBusinessToPopularPlace(business, assets.popular.photo1);
       })
       .filter((place) => place.shopId != null);
 
-    return places.length > 0 ? places : fallback;
+    return places;
   } catch {
-    return fallback;
+    return [];
   }
 }
 

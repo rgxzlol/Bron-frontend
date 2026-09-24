@@ -77,35 +77,35 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
       onClick={handleClose}
     >
       <section
-      className="category-search-modal relative flex w-full max-w-[659px] animate-in fade-in zoom-in-95 flex-col rounded-[23px] bg-white p-6 shadow-2xl duration-200"
+      className="category-search-modal relative flex w-full max-w-[568px] animate-in fade-in zoom-in-95 flex-col rounded-[22px] bg-white p-5 shadow-2xl duration-200"
         aria-modal="true"
         role="dialog"
         aria-label={t("map.categories")}
         data-testid="map-categories-modal"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="relative mb-6 flex w-full items-center justify-center">
-          <h2 className="text-[24px] font-medium text-black">{t("map.categories")}</h2>
+        <div className="relative mb-4 flex w-full items-center justify-center">
+          <h2 className="text-[21px] font-medium text-black">{t("map.categories")}</h2>
           <button
             onClick={handleClose}
-            className="category-search-modal-close group absolute right-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#FAFAFF] text-black transition-all duration-200 hover:bg-[#EAEAEF]"
+            className="category-search-modal-close group absolute right-0"
             aria-label={t("map.closeFilters")}
             type="button"
           >
-            <span className="flex h-4 w-4 items-center justify-center">
-              <Image
-                src={assets.header.close}
-                alt=""
-                className="opacity-60 transition-opacity group-hover:opacity-100"
-                data-category-close-icon
-              />
-            </span>
+            <Image
+              src={assets.header.close}
+              alt=""
+              width={28}
+              height={28}
+              className="opacity-100 transition-opacity"
+              data-category-close-icon
+            />
           </button>
         </div>
 
-        <form className="flex flex-col gap-[16px]" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-[12px]" onSubmit={handleSubmit}>
           <div className="flex flex-col" data-testid="map-proximity-block">
-            <h3 className="mb-[9px] text-[16px] font-medium text-black">
+            <h3 className="mb-[7px] text-[14px] font-medium text-black">
               {t("map.byProximity")}
             </h3>
             <LocationSelector
@@ -117,7 +117,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
           <div className="flex flex-col">
             <label
               htmlFor="header-business-category"
-              className="mb-[9px] text-[16px] font-medium text-black"
+              className="mb-[7px] text-[14px] font-medium text-black"
             >
               {t("map.businessCategory")}
             </label>
@@ -131,7 +131,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                   setSubmitError(null);
                   setPriceInputInvalid(false);
                 }}
-                className={`h-[72px] w-full appearance-none rounded-[17px] border-2 bg-[#FAFAFF] px-[18px] text-[18px] font-semibold text-black outline-none transition-all duration-300 ${
+                className={`h-[60px] w-full appearance-none rounded-[15px] border-2 bg-[#FAFAFF] px-[16px] text-[16px] font-semibold text-black outline-none transition-all duration-300 ${
                   submitError
                     ? "border-[#e02424]"
                     : "border-transparent focus:border-[#0A6AF7] focus:bg-white"
@@ -144,8 +144,8 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-[18px] top-1/2 -translate-y-1/2">
-                <Image src={assets.booking.arrowDown} alt="" width={20} height={20} />
+              <span className="pointer-events-none absolute right-[16px] top-1/2 -translate-y-1/2">
+              <Image src={assets.booking.arrowDown} alt="" width={18} height={18} />
               </span>
             </div>
           </div>
@@ -153,14 +153,14 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
           <div className="flex flex-col">
             <label
               htmlFor="price-input"
-              className="mb-[9px] text-[16px] font-medium text-black"
+              className="mb-[7px] text-[14px] font-medium text-black"
             >
               {t("map.approxPrice")}
             </label>
 
             <div className="flex w-full items-center gap-[12px]">
               <div
-                className={`flex h-[72px] flex-1 items-center rounded-[17px] border-2 bg-[#FAFAFF] px-[18px] py-[24px] transition-all duration-200 focus-within:border-[#0A6AF7] focus-within:bg-white ${
+                className={`flex h-[60px] flex-1 items-center rounded-[15px] border-2 bg-[#FAFAFF] px-[16px] py-[18px] transition-all duration-200 focus-within:border-[#0A6AF7] focus-within:bg-white ${
                   submitError === "invalid_price"
                     ? "border-[#e02424]"
                     : "border-transparent"
@@ -172,7 +172,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
                   type="text"
                   inputMode="numeric"
                   placeholder={t("map.pricePlaceholder")}
-                  className="w-full bg-transparent text-[18px] font-semibold text-black outline-none placeholder:font-normal placeholder:text-gray-400"
+                  className="w-full bg-transparent text-[16px] font-semibold text-black outline-none placeholder:font-normal placeholder:text-gray-400"
                   value={draftMaxPrice}
                   onKeyDown={(event) =>
                     handlePriceInputKeyDown(event, () => {
@@ -225,7 +225,7 @@ export const CategoryModal: FC<CategoryModalProps> = ({ handleClose }) => {
           <button
             type="submit"
             data-testid="map-filter-apply"
-            className="mt-4 w-full cursor-pointer rounded-[23px] bg-[#0A6AF7] py-[20px] text-[20px] font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#0859d4] hover:shadow-lg active:scale-[0.98]"
+            className="mt-3 w-full cursor-pointer rounded-[20px] bg-[#0A6AF7] py-[16px] text-[18px] font-semibold text-white shadow-md transition-all duration-200 hover:bg-[#0859d4] hover:shadow-lg active:scale-[0.98]"
           >
             {t("map.apply")}
           </button>

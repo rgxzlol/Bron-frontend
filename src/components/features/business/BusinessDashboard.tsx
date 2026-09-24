@@ -581,10 +581,10 @@ function PriceField({
   return (
     <div className="flex flex-col gap-[8px]">
       <span className="text-[14px] font-semibold">{label}</span>
-      <div className="flex items-stretch gap-[8px]">
+      <div className="relative">
         <input
           type="text"
-          className={`${inputClass} min-w-0 flex-1 ${error ? "border-[#e02424]" : ""}`}
+          className={`${inputClass} w-full ${error ? "border-[#e02424]" : ""}`}
           placeholder={placeholder}
           inputMode="numeric"
           autoComplete="off"
@@ -593,18 +593,6 @@ function PriceField({
           aria-invalid={error || undefined}
           onChange={(e) => onChange(formatPriceInputOnChange(e.target.value))}
         />
-        <div className="relative w-[96px] shrink-0">
-          <select
-            className="h-full w-full appearance-none rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[14px] pl-[16px] pr-[32px] text-[15px] font-semibold text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
-            defaultValue="sum"
-            aria-label="Currency"
-          >
-            <option value="sum">UZS</option>
-          </select>
-          <span className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[var(--text-primary)]">
-            <ChevronDownIcon />
-          </span>
-        </div>
       </div>
       <FieldError show={error} message={errorMessage} testId={errorTestId} />
     </div>
@@ -904,6 +892,8 @@ function AddItemScreen({
   const [times, setTimes] = useState<string[]>([]);
   const [date, setDate] = useState<Date>(() => new Date());
   const [durationMin, setDurationMin] = useState<number | null>(null);
+  const [showOnlyFree, setShowOnlyFree] = useState(true);
+  const [rules, setRules] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   function toggleTime(slot: string) {
@@ -940,7 +930,7 @@ function AddItemScreen({
   }
 
   return (
-    <div data-testid={formTestId}>
+    <div className="business-item-screen" data-testid={formTestId}>
       <ScreenHeader
         title={
           isService
@@ -954,13 +944,19 @@ function AddItemScreen({
         onBack={onBack}
       />
 
-      <p className="mb-[16px] text-[14px] text-[var(--text-secondary)]">
+      <p className="business-item-subtitle mb-[16px] text-[14px] text-[var(--text-secondary)]">
         {isService
           ? t("businessForms.addServiceSubtitle")
           : t("businessForms.addProductSubtitle")}
       </p>
 
-      <div className="flex flex-col gap-[18px]">
+      <div
+        className={
+          isService
+            ? "business-service-form-grid"
+            : "business-product-form-grid"
+        }
+      >
         {submitAttempted && hasFormFieldErrors(fieldErrors) ? (
           <div
             role="alert"
@@ -971,7 +967,7 @@ function AddItemScreen({
           </div>
         ) : null}
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="name">
           <span className="text-[14px] font-semibold">
             {isService
               ? t("businessForms.serviceName")
@@ -1000,23 +996,25 @@ function AddItemScreen({
           />
         </label>
 
-        <PriceField
-          label={
-            isService ? t("businessForms.servicePrice") : t("businessForms.price")
-          }
-          value={form.price}
-          error={fieldErrors.price}
-          errorMessage={t("businessForms.required")}
-          placeholder={t("businessForms.pricePlaceholder")}
-          testId={`${fieldPrefix}-price-input`}
-          errorTestId={`${fieldPrefix}-price-error`}
-          onChange={(price) => {
-            setForm((current) => ({ ...current, price }));
-            if (parsePrice(price) > 0) clearFieldError("price");
-          }}
-        />
+        <div data-field="price">
+          <PriceField
+            label={
+              isService ? t("businessForms.servicePrice") : t("businessForms.price")
+            }
+            value={form.price}
+            error={fieldErrors.price}
+            errorMessage={t("businessForms.required")}
+            placeholder={t("businessForms.pricePlaceholder")}
+            testId={`${fieldPrefix}-price-input`}
+            errorTestId={`${fieldPrefix}-price-error`}
+            onChange={(price) => {
+              setForm((current) => ({ ...current, price }));
+              if (parsePrice(price) > 0) clearFieldError("price");
+            }}
+          />
+        </div>
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="category">
           <span className="text-[14px] font-semibold">
             {t("businessForms.category")}
           </span>
@@ -1038,51 +1036,55 @@ function AddItemScreen({
         </label>
 
         {isService ? (
-          <QuantityStepperField
-            label={t("businessForms.guestCapacity")}
-            value={form.guestCapacity}
-            error={fieldErrors.guestCapacity}
-            errorMessage={t("businessForms.required")}
-            placeholder={t("businessForms.guestCapacityPlaceholder")}
-            decreaseLabel={t("businessForms.guestCapacityDecrease")}
-            increaseLabel={t("businessForms.guestCapacityIncrease")}
-            testId="business-service-guest-capacity"
-            decreaseTestId="business-service-guest-decrease"
-            increaseTestId="business-service-guest-increase"
-            countTestId="business-service-guest-count"
-            errorTestId="business-service-guest-capacity-error"
-            onChange={(guestCapacity) => {
-              setForm((current) => ({ ...current, guestCapacity }));
-              if (guestCapacity != null && guestCapacity > 0) {
-                clearFieldError("guestCapacity");
-              }
-            }}
-          />
+          <div data-field="quantity">
+            <QuantityStepperField
+              label={t("businessForms.guestCapacity")}
+              value={form.guestCapacity}
+              error={fieldErrors.guestCapacity}
+              errorMessage={t("businessForms.required")}
+              placeholder={t("businessForms.guestCapacityPlaceholder")}
+              decreaseLabel={t("businessForms.guestCapacityDecrease")}
+              increaseLabel={t("businessForms.guestCapacityIncrease")}
+              testId="business-service-guest-capacity"
+              decreaseTestId="business-service-guest-decrease"
+              increaseTestId="business-service-guest-increase"
+              countTestId="business-service-guest-count"
+              errorTestId="business-service-guest-capacity-error"
+              onChange={(guestCapacity) => {
+                setForm((current) => ({ ...current, guestCapacity }));
+                if (guestCapacity != null && guestCapacity > 0) {
+                  clearFieldError("guestCapacity");
+                }
+              }}
+            />
+          </div>
         ) : (
-          <QuantityStepperField
-            label={t("businessForms.productQuantity")}
-            value={form.quantity}
-            error={fieldErrors.quantity}
-            errorMessage={t("businessForms.required")}
-            placeholder={t("businessForms.productQuantityPlaceholder")}
-            decreaseLabel={t("businessForms.productQuantityDecrease")}
-            increaseLabel={t("businessForms.productQuantityIncrease")}
-            testId="business-product-quantity"
-            decreaseTestId="business-product-quantity-decrease"
-            increaseTestId="business-product-quantity-increase"
-            countTestId="business-product-quantity-count"
-            errorTestId="business-product-quantity-error"
-            max={999}
-            onChange={(quantity) => {
-              setForm((current) => ({ ...current, quantity }));
-              if (quantity != null && quantity > 0) {
-                clearFieldError("quantity");
-              }
-            }}
-          />
+          <div data-field="quantity">
+            <QuantityStepperField
+              label={t("businessForms.productQuantity")}
+              value={form.quantity}
+              error={fieldErrors.quantity}
+              errorMessage={t("businessForms.required")}
+              placeholder={t("businessForms.productQuantityPlaceholder")}
+              decreaseLabel={t("businessForms.productQuantityDecrease")}
+              increaseLabel={t("businessForms.productQuantityIncrease")}
+              testId="business-product-quantity"
+              decreaseTestId="business-product-quantity-decrease"
+              increaseTestId="business-product-quantity-increase"
+              countTestId="business-product-quantity-count"
+              errorTestId="business-product-quantity-error"
+              max={999}
+              onChange={(quantity) => {
+                setForm((current) => ({ ...current, quantity }));
+                if (quantity != null && quantity > 0) {
+                  clearFieldError("quantity");
+                }
+              }}
+            />
+          </div>
         )}
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="description">
           <span className="text-[14px] font-semibold">
             {isService
               ? t("businessForms.serviceDescription")
@@ -1130,10 +1132,33 @@ function AddItemScreen({
 
         {isService ? (
           <>
-            <div className="flex flex-col gap-[12px]" data-testid="business-service-time-slots">
-              <span className="text-[14px] font-semibold">
-                {t("businessForms.freeTimeLabel")}
-              </span>
+            <div className="flex flex-col gap-[12px]" data-field="time" data-testid="business-service-time-slots">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="text-[14px] font-semibold">
+                    {t("businessForms.freeTimeLabel")}
+                  </span>
+                  <p className="text-[12px] font-semibold text-[var(--text-muted)]">
+                    {t("businessForms.freeTimeHint")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showOnlyFree}
+                  aria-label={t("businessForms.freeTimeToggle")}
+                  onClick={() => setShowOnlyFree((value) => !value)}
+                  className={`relative h-[24px] w-[48px] shrink-0 rounded-full transition ${
+                    showOnlyFree ? "bg-[#0a6af7]" : "bg-[var(--border-default)]"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition ${
+                      showOnlyFree ? "right-[3px]" : "left-[3px]"
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-[10px]">
                 {TIME_SLOTS.map((slot) => {
                   const selected = times.includes(slot);
@@ -1156,9 +1181,19 @@ function AddItemScreen({
                   );
                 })}
               </div>
+              <div className="business-service-time-legend" aria-label={t("businessForms.timeLegend")}>
+                <span>
+                  <i className="business-service-time-legend-dot business-service-time-legend-dot-free" />
+                  {t("businessForms.availableTime")}
+                </span>
+                <span>
+                  <i className="business-service-time-legend-dot business-service-time-legend-dot-busy" />
+                  {t("businessForms.busyTime")}
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[8px]" data-field="date">
               <span className="text-[14px] font-semibold">
                 {t("businessForms.dateLabel")}
               </span>
@@ -1170,7 +1205,7 @@ function AddItemScreen({
               />
             </div>
 
-            <label className="flex flex-col gap-[8px]">
+            <label className="flex flex-col gap-[8px]" data-field="duration">
               <span className="text-[14px] font-semibold">
                 {t("businessForms.bookingDuration")}
               </span>
@@ -1197,25 +1232,39 @@ function AddItemScreen({
                 </span>
               </div>
             </label>
+
+            <label className="flex flex-col gap-[8px]" data-field="rules">
+              <span className="text-[14px] font-semibold">
+                {t("businessForms.bookingRules")}
+              </span>
+              <textarea
+                className={`${inputClass} min-h-[90px] resize-none`}
+                placeholder={t("businessForms.bookingRulesPlaceholder")}
+                value={rules}
+                onChange={(event) => setRules(event.target.value)}
+              />
+            </label>
           </>
         ) : null}
 
-        <PhotoUploadField
-          label={
-            isService
-              ? t("businessForms.photo")
-              : t("businessForms.photoServiceOrProduct")
-          }
-          uploadLabel={t("businessForms.uploadPhoto")}
-          testIdPrefix={fieldPrefix}
-          photo={form.photo}
-          onPhotoChange={(photo) => setForm((current) => ({ ...current, photo }))}
-          onUploadError={(messageKey) => {
-            showToast(t("businessForms.uploadPhoto"), t(messageKey));
-          }}
-        />
+        <div data-field="photo">
+          <PhotoUploadField
+            label={
+              isService
+                ? t("businessForms.photo")
+                : t("businessForms.photoServiceOrProduct")
+            }
+            uploadLabel={t("businessForms.uploadPhoto")}
+            testIdPrefix={fieldPrefix}
+            photo={form.photo}
+            onPhotoChange={(photo) => setForm((current) => ({ ...current, photo }))}
+            onUploadError={(messageKey) => {
+              showToast(t("businessForms.uploadPhoto"), t(messageKey));
+            }}
+          />
+        </div>
 
-        <div className="mt-[10px] flex flex-col gap-[10px]">
+        <div className="mt-[10px] flex flex-col gap-[10px]" data-field="actions">
           <button
             type="button"
             data-testid={`${fieldPrefix}-save-button`}
@@ -1870,7 +1919,14 @@ export default function BusinessDashboard({
   return (
     <>
       <div
-        className="mx-auto flex w-full max-w-[640px] flex-col pb-[24px]"
+        className={`mx-auto flex w-full flex-col pb-[24px] ${
+          view === "addService" ||
+          view === "addProduct" ||
+          view === "editService" ||
+          view === "editProduct"
+            ? "max-w-none"
+            : "max-w-[640px]"
+        }`}
         data-testid="business-dashboard"
       >
         {view === "servicesStaff" && (

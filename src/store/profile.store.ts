@@ -25,15 +25,37 @@ export type PaymentHistoryItem = {
 };
 
 const DEFAULT_PROFILE_RATING = 4;
+const REGISTERED_NAMES_STORAGE_KEY = "bron-registered-profile-names";
 
 function mapApiLanguage(language: string): ProfileLanguage {
   if (language === "uz" || language === "en") return language;
   return "ru";
 }
 
-function resolveDisplayFullName(apiUsername: string, fallbackFullName: string) {
+function findStoredProfileName(userId: number, username: string) {
+  if (typeof window === "undefined") return "";
+
+  try {
+    const stored = window.localStorage.getItem(REGISTERED_NAMES_STORAGE_KEY);
+    if (!stored) return "";
+    const names: unknown = JSON.parse(stored);
+    if (!names || typeof names !== "object" || Array.isArray(names)) return "";
+
+    const record = names as Record<string, unknown>;
+    const value = record[`id:${userId}`] ?? record[`username:${username.trim()}`];
+    return typeof value === "string" ? value.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+function resolveDisplayFullName(
+  apiUsername: string,
+  fallbackFullName: string,
+  userId?: number,
+) {
   if (looksLikePhoneUsername(apiUsername)) {
-    return fallbackFullName;
+    return fallbackFullName || (userId != null ? findStoredProfileName(userId, apiUsername) : "");
   }
 
   return apiUsername || fallbackFullName;
@@ -41,7 +63,7 @@ function resolveDisplayFullName(apiUsername: string, fallbackFullName: string) {
 
 function applyProfileToState(profile: UserProfile, currentFullName: string) {
   return {
-    fullName: resolveDisplayFullName(profile.username, currentFullName),
+    fullName: resolveDisplayFullName(profile.username, currentFullName, profile.id),
     phone: profile.phone,
     email: toUserFacingEmail(profile.email),
     language: mapApiLanguage(profile.language),
@@ -78,6 +100,7 @@ type ProfileState = {
     phone: string;
     email: string;
   }) => Promise<void>;
+  savePhone: (phone: string) => Promise<void>;
   updatePersonalInfo: (payload: {
     fullName?: string;
     phone?: string;
@@ -245,6 +268,21 @@ export const useProfileStore = create<ProfileState>()(
           fullName: trimmedName || state.fullName,
           phone: trimmedPhone || updated.phone,
           email: trimmedEmail || toUserFacingEmail(updated.email),
+        }));
+      },
+
+      savePhone: async (phone) => {
+        const token = useAuthStore.getState().token;
+        if (!token) {
+          throw new Error("Требуется авторизация");
+        }
+
+        const trimmedPhone = phone.trim();
+        const updated = await usersApi.updateProfile({ phone: trimmedPhone }, token);
+
+        set((state) => ({
+          ...state,
+          phone: trimmedPhone || updated.phone,
         }));
       },
 

@@ -24,14 +24,14 @@ const LocationOption: FC<LocationOptionProps> = ({
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className={`flex h-[72px] w-full cursor-pointer items-center gap-[17px] rounded-[17px] border-2 px-[18px] py-[24px] text-left transition-all duration-300 ${
+      className={`flex h-[60px] w-full cursor-pointer items-center gap-[14px] rounded-[15px] border-2 px-[16px] py-[12px] text-left transition-all duration-300 ${
         isActive
           ? "border-[#0A6AF7] bg-blue-50/30 text-[var(--accent-fg)]"
           : "border-transparent bg-[#FAFAFF] text-black hover:border-gray-200 hover:bg-gray-100"
       }`}
     >
       <span
-        className={`category-search-location-icon flex h-[43px] w-[43px] items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ${
+        className={`category-search-location-icon flex h-[36px] w-[36px] items-center justify-center rounded-full bg-white shadow-sm transition-all duration-300 ${
           isActive ? "scale-105" : ""
         }`}
       >
@@ -43,7 +43,7 @@ const LocationOption: FC<LocationOptionProps> = ({
         />
       </span>
       <span
-        className={`text-[20px] font-medium transition-colors duration-300 ${
+        className={`text-[17px] font-medium transition-colors duration-300 ${
           isActive ? "font-semibold text-[var(--accent-fg)]" : "text-black"
         }`}
       >

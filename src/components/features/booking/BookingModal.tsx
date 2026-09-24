@@ -54,7 +54,7 @@ export default function BookingModal({ isOpen, shop, onClose }: BookingModalProp
       <div className={s.sheet} onClick={(event) => event.stopPropagation()}>
         <button
           type="button"
-          className={`${s.closeBtn} theme-close-button`}
+          className={`${s.closeBtn} category-search-modal-close`}
           onClick={onClose}
           aria-label={t("common.close")}
         >

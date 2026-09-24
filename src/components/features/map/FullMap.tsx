@@ -47,6 +47,24 @@ const DEMO_MAP_SHOPS: ShopsType[] = [
     title: "Demo Beauty Salon",
     lat: 41.3198,
     lng: 69.2925,
+    services: [
+      {
+        id: "demo-beauty-haircut",
+        title: "Стрижка и укладка",
+        description: "Демо-услуга салона красоты",
+        priceFrom: 150000,
+        durationMin: 60,
+        kind: "service",
+      },
+      {
+        id: "demo-beauty-manicure",
+        title: "Маникюр",
+        description: "Демо-услуга для проверки бронирования",
+        priceFrom: 90000,
+        durationMin: 45,
+        kind: "service",
+      },
+    ],
   },
   {
     ...ShopsPlace[4],
@@ -54,6 +72,24 @@ const DEMO_MAP_SHOPS: ShopsType[] = [
     title: "Demo Garden Restaurant",
     lat: 41.3028,
     lng: 69.2645,
+    services: [
+      {
+        id: "demo-garden-table",
+        title: "Столик в ресторане",
+        description: "Демо-бронирование столика",
+        priceFrom: 95000,
+        durationMin: 90,
+        kind: "service",
+      },
+      {
+        id: "demo-garden-terrace",
+        title: "Столик на террасе",
+        description: "Демо-услуга для проверки бизнес-страницы",
+        priceFrom: 120000,
+        durationMin: 90,
+        kind: "service",
+      },
+    ],
   },
 ]
 
@@ -210,7 +246,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const initialLocationReadyRef = useRef(false)
   const theme = useProfileStore((s) => s.theme)
   const token = useAuthStore((s) => s.token)
-  const businesses = useBusinessStore((s) => s.businesses)
+  const businesses = useBusinessStore((s) =>
+    Array.isArray(s.businesses) ? s.businesses : [],
+  )
   const mapFocusBusinessId = useBusinessStore((s) => s.mapFocusBusinessId)
   const clearMapFocus = useBusinessStore((s) => s.clearMapFocus)
   const businessMapKey = businesses
@@ -405,7 +443,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const mapShops = [...apiShops, ...DEMO_MAP_SHOPS]
+    const localShops = businesses.map((business) => businessToShop(business))
+    const mapShops = [...apiShops, ...localShops, ...DEMO_MAP_SHOPS]
 
     const filteredShops = mapShops.filter((shop) => {
       if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
@@ -739,6 +778,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     )
   }
 
+  const fallbackShops = [
+    ...businesses.map((business) => businessToShop(business)),
+    ...DEMO_MAP_SHOPS,
+  ].filter((shop, index, shops) => shops.findIndex((item) => item.id === shop.id) === index)
+
   return (
     <div className="relative">
       <div className="absolute top-4 left-4 z-10 flex max-w-[calc(100%-32px)] gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:max-w-[70%]">
@@ -857,21 +901,27 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       )}
 
       {!isMapboxConfigured() && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface-muted)] px-6 text-center"
-          style={{ height: "80vh" }}
-        >
-          <div className="max-w-md">
-            <p className="text-[18px] font-semibold text-[var(--text-primary)]">
-              Карта недоступна
+        <div className="absolute inset-0 z-20 rounded-[26px] bg-[var(--bg-surface-muted)] p-6">
+          <div className="mb-4 rounded-[14px] bg-[var(--bg-surface)] px-4 py-3 text-center shadow-sm">
+            <p className="text-[16px] font-semibold text-[var(--text-primary)]">
+              Демо-бизнесы на карте
             </p>
-            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
-              Укажите реальный токен Mapbox в файле{" "}
-              <code className="rounded bg-[var(--bg-surface)] px-1 py-0.5">.env.local</code>:
+            <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
+              Для полноценной карты добавьте NEXT_PUBLIC_MAPBOX_TOKEN в .env.local
             </p>
-            <pre className="mt-3 overflow-x-auto rounded-[12px] bg-[var(--bg-surface)] p-3 text-left text-[13px] text-[var(--text-primary)]">
-              NEXT_PUBLIC_MAPBOX_TOKEN=pk.ваш_токен
-            </pre>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {fallbackShops.map((shop) => (
+              <button
+                key={`fallback-map-shop-${shop.id}`}
+                type="button"
+                className="rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 text-[14px] font-semibold text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition hover:border-[var(--primary)] hover:text-[var(--accent-fg)]"
+                data-testid={`fallback-map-marker-${shop.id}`}
+                onClick={() => setSelectedShop(shop)}
+              >
+                {shop.title}
+              </button>
+            ))}
           </div>
         </div>
       )}

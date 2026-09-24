@@ -104,6 +104,7 @@ export default function ProfilePageContent({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveCardForFuture, setSaveCardForFuture] = useState(true);
 
   const [nameDraft, setNameDraft] = useState(
@@ -233,6 +234,10 @@ export default function ProfilePageContent({
     }
   }
 
+  function requestDeleteAccount() {
+    setDeleteConfirmOpen(true);
+  }
+
   async function handleSavePersonalInfo() {
     const validationErrors = validateProfilePersonalInfo(
       nameDraft,
@@ -305,7 +310,6 @@ export default function ProfilePageContent({
     <div className={s.content}>
       <SectionHeader
         title={t(sectionTitleKeys[section])}
-        mobileOnly={section === "main"}
         onBack={
           section === "main"
             ? () => onClose?.()
@@ -393,14 +397,6 @@ export default function ProfilePageContent({
               <Image src={assets.profile.quit} alt="" width={17} height={21} />
             </span>
             {t("profile.logout")}
-          </button>
-          <button
-            type="button"
-            className={s.cancelBtn}
-            onClick={() => onClose?.()}
-            data-testid="profile-close"
-          >
-            {t("common.cancel")}
           </button>
         </div>
       )}
@@ -845,24 +841,52 @@ export default function ProfilePageContent({
             </span>
             {t("profile.logout")}
           </button>
-          <button
-            type="button"
-            className={s.cancelBtn}
-            onClick={() => goTo("main")}
-            data-testid="profile-logout-cancel"
-          >
-            {t("common.cancel")}
-          </button>
           {token && (
             <button
               type="button"
-              className={`${s.deleteAccountBtn} ${s.desktopOnly}`}
-              onClick={() => void handleDeleteAccount()}
+              className={s.deleteAccountBtn}
+              onClick={requestDeleteAccount}
               disabled={deleting}
             >
               {deleting ? t("common.deleting") : t("profile.deleteAccount")}
             </button>
           )}
+        </div>
+      )}
+      {deleteConfirmOpen && (
+        <div
+          className={s.deleteConfirmBackdrop}
+          role="presentation"
+          onClick={() => setDeleteConfirmOpen(false)}
+        >
+          <div
+            className={s.deleteConfirmModal}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="profile-delete-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="profile-delete-confirm-title">{t("profile.deleteAccount")}</h3>
+            <p>{t("profile.deleteAccountConfirm")}</p>
+            <div className={s.deleteConfirmActions}>
+              <button
+                type="button"
+                className={s.deleteCancelBtn}
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleting}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                className={s.deleteDangerBtn}
+                onClick={() => void handleDeleteAccount()}
+                disabled={deleting}
+              >
+                {deleting ? t("common.deleting") : t("profile.deleteAccount")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <input

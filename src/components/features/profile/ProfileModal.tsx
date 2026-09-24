@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
-import { assets } from "@/lib/assets";
 import ProfilePageContent from "./ProfilePageContent";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import s from "./profilePage.module.css";
@@ -78,29 +76,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       aria-label={t(sectionTitleKeys[section])}
     >
       <div className={s.modal} onClick={(event) => event.stopPropagation()}>
-        {section === "main" ? (
-          <div className={s.modalHead}>
-            <h1 className={s.title}>{t(sectionTitleKeys.main)}</h1>
-            <button
-              type="button"
-              className={`${s.closeBtn} theme-close-button`}
-              onClick={onClose}
-              aria-label={t("common.close")}
-            >
-              <Image src={assets.header.close} alt="" width={18} height={18} />
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={`${s.closeBtnFloating} theme-close-button`}
-            onClick={onClose}
-            aria-label={t("common.close")}
-          >
-            <Image src={assets.header.close} alt="" width={18} height={18} />
-          </button>
-        )}
-
         <div className={s.modalBody}>
           <ProfilePageContent onClose={onClose} onSectionChange={setSection} />
         </div>

@@ -7,7 +7,7 @@ import { assets } from "@/lib/assets";
 import { formatPrice, formatRating } from "@/lib/formatPrice";
 import { pluralizeReviews } from "@/lib/pluralize";
 import { getShopGallery, isRemoteShopImage } from "@/lib/business/shopImages";
-import { bookingExtras } from "@/data/bookingExtras";
+import type { BookingExtra } from "@/data/bookingExtras";
 import { routes } from "@/config/routes";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
@@ -40,14 +40,13 @@ import {
   pickBookableShopService,
   resolveBookingTargetIds,
 } from "@/lib/booking/payload";
-import { getBookingExtraLabels } from "@/lib/booking/extras";
 import type { BookingListItem, BookingOrderItem } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
-import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
+import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
@@ -78,6 +77,12 @@ type LockedSchedule = {
   time: string;
 };
 
+function getExtraLabels(
+  extra: BookingExtra,
+) {
+  return { name: extra.name, description: extra.description };
+}
+
 export default function BookingPage({
   shop,
   selectedServiceIds = [],
@@ -105,6 +110,7 @@ export default function BookingPage({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [form, setForm] = useState({
     name: "",
+    phone: "",
     email: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,6 +128,7 @@ export default function BookingPage({
   const profileFullName = useProfileStore((state) => state.fullName);
   const profilePhone = useProfileStore((state) => state.phone);
   const profileEmail = useProfileStore((state) => state.email);
+  const savePhone = useProfileStore((state) => state.savePhone);
   const [apiContext, setApiContext] = useState<BookingApiContext | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
@@ -247,10 +254,11 @@ export default function BookingPage({
     const prefilledName = profileFullName?.trim() ?? "";
     setForm({
       name: validateBookingForm(prefilledName, "").name ? "" : prefilledName,
+      phone: profilePhone?.trim() ?? "",
       email: profileEmail?.trim() ?? "",
     });
     setFormErrors({});
-  }, [step, profileFullName, profileEmail]);
+  }, [step, profileFullName, profilePhone, profileEmail]);
 
   const selectedServices = useMemo(() => {
     if (!shop.services?.length || !selectedServiceIds.length) return [];
@@ -300,14 +308,27 @@ export default function BookingPage({
     [baseBookingName, bookingPrice, guests, t],
   );
 
+  const availableExtras = useMemo<BookingExtra[]>(
+    () =>
+      (shop.services ?? [])
+        .filter((service) => service.kind === "product")
+        .map((service) => ({
+          id: service.id,
+          name: service.title,
+          description: service.description,
+          price: service.priceFrom,
+        })),
+    [shop.services],
+  );
+
   const extraLineItems = useMemo(
     () =>
       Object.entries(extraQuantities).flatMap(([id, quantity]) => {
         if (quantity <= 0) return [];
-        const extra = bookingExtras.find((item) => item.id === id);
+        const extra = availableExtras.find((item) => item.id === id);
         if (!extra) return [];
 
-        const labels = getBookingExtraLabels(id, t);
+        const labels = getExtraLabels(extra);
 
         return [
           {
@@ -319,7 +340,7 @@ export default function BookingPage({
           },
         ];
       }),
-    [extraQuantities, t],
+    [availableExtras, extraQuantities, t],
   );
 
   const allLineItems = useMemo(
@@ -407,22 +428,14 @@ export default function BookingPage({
   }
 
   function validateForm() {
-    const codes = validateBookingForm(form.name, form.email, profilePhone ?? "");
-    const { phone: phoneCode, ...visibleCodes } = codes;
-    const errors = mapValidationCodesToMessages(visibleCodes);
+    const codes = validateBookingForm(form.name, form.email, form.phone);
+    const errors = mapValidationCodesToMessages(codes);
     setFormErrors(errors);
-
-    if (phoneCode) {
-      showToast(
-        t(BOOKING_ERROR_MESSAGE_KEYS[phoneCode]),
-        t("booking.errorPhone"),
-      );
-    }
 
     return Object.keys(codes).length === 0;
   }
 
-  function handlePay() {
+  function handleContinueFromDetails() {
     setSubmitAttempted(true);
 
     if (!validateForm()) {
@@ -430,7 +443,12 @@ export default function BookingPage({
       return;
     }
 
-    setShowExtrasModal(true);
+    if (availableExtras.length > 0) {
+      setShowExtrasModal(true);
+      return;
+    }
+
+    void finishExtras();
   }
 
   function completeBookingFlow() {
@@ -525,12 +543,12 @@ export default function BookingPage({
         },
         ...Object.entries(extraQuantities).flatMap(([id, quantity]) => {
           if (quantity <= 0) return [];
-          const extra = bookingExtras.find((item) => item.id === id);
+          const extra = availableExtras.find((item) => item.id === id);
           if (!extra) return [];
           return [
             {
               id,
-              name: getBookingExtraLabels(id, t).name,
+              name: getExtraLabels(extra).name,
               price: extra.price,
               quantity,
               kind: "extra" as const,
@@ -538,6 +556,10 @@ export default function BookingPage({
           ];
         }),
       ];
+
+      if (form.phone.trim() !== profilePhone.trim()) {
+        await savePhone(form.phone);
+      }
 
       await createBooking({
         business_id: shop.apiBusinessId,
@@ -641,7 +663,7 @@ export default function BookingPage({
                 </span>
               </div>
             </div>
-            {step > 1 ? (
+            {step === 2 ? (
               <button
                 type="button"
                 className={s.backBtn}
@@ -848,19 +870,23 @@ export default function BookingPage({
     payButtonText: string,
     onPay?: () => void,
     paid = false,
+    showPaymentMethods = true,
+    title = t("booking.paymentTitle"),
   ) {
     return (
       <aside className={s.payCard} data-testid="booking-payment-panel">
-        <h2 className={s.payTitle}>{t("booking.paymentTitle")}</h2>
+        <h2 className={s.payTitle}>{title}</h2>
 
-        {items.map((item) => (
-          <div key={item.id} className={s.lineItem}>
-            <span className={s.lineName}>{item.name}</span>
-            <span className={s.linePrice}>
-              {t("booking.priceSum", { price: formatPrice(item.price) })}
-            </span>
-          </div>
-        ))}
+        <div className={s.orderItems} data-testid="booking-order-items">
+          {items.map((item) => (
+            <div key={item.id} className={s.lineItem}>
+              <span className={s.lineName}>{item.name}</span>
+              <span className={s.linePrice}>
+                {t("booking.priceSum", { price: formatPrice(item.price) })}
+              </span>
+            </div>
+          ))}
+        </div>
 
         <div className={s.total}>
           <span>{t("booking.total")}</span>
@@ -869,7 +895,7 @@ export default function BookingPage({
           </span>
         </div>
 
-        {!paid && (
+        {!paid && showPaymentMethods && (
           <div
             className={s.payMethods}
             role="radiogroup"
@@ -949,7 +975,7 @@ export default function BookingPage({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            handlePay();
+            handleContinueFromDetails();
           }}
           data-validation-state={hasFormErrors ? "invalid" : "valid"}
         >
@@ -992,6 +1018,42 @@ export default function BookingPage({
                 data-testid="booking-name-error"
               >
                 {formErrors.name}
+              </span>
+            )}
+          </label>
+
+          <label className={s.field}>
+            <span className={s.label}>
+              {t("booking.phoneLabel")} <span className={s.required}>*</span>
+            </span>
+            <input
+              className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
+              type="tel"
+              value={form.phone}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  phone: formatUzbekPhoneInput(e.target.value, { preserveOverflow: true }),
+                }));
+                if (formErrors.phone) {
+                  setFormErrors((prev) => ({ ...prev, phone: undefined }));
+                }
+              }}
+              placeholder="+998 90 000 00 00"
+              autoComplete="tel"
+              required
+              aria-invalid={!!formErrors.phone}
+              aria-describedby={formErrors.phone ? "booking-phone-error" : undefined}
+              data-testid="booking-phone-input"
+            />
+            {formErrors.phone && (
+              <span
+                id="booking-phone-error"
+                className={s.fieldError}
+                role="alert"
+                data-testid="booking-phone-error"
+              >
+                {formErrors.phone}
               </span>
             )}
           </label>
@@ -1063,7 +1125,77 @@ export default function BookingPage({
           </div>
         </form>
 
-        {renderPaymentSummary(baseLineItems, bookingPrice, t("booking.pay"), handlePay)}
+        {renderPaymentSummary(
+          allLineItems,
+          total,
+          t("common.continue"),
+          handleContinueFromDetails,
+          false,
+          false,
+          t("booking.orderSummary"),
+        )}
+      </div>
+    );
+  }
+
+  function renderPendingStep3() {
+    return (
+      <div className={s.confirmLayout} data-testid="booking-confirm-step">
+        <section className={s.confirmStatus}>
+          <div className={s.pendingIcon} aria-hidden="true">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
+              <path d="M12 6v6l4 2.5M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M17 3v4h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h2 className={s.confirmTitle} data-testid="booking-confirm-title">
+            {t("booking.pendingTitle")}
+          </h2>
+          <div className={s.whatsNext}>
+            <h3 className={s.whatsNextTitle}>{t("booking.whatsNext")}</h3>
+            <div className={s.whatsNextRow}>
+              <span className={s.whatsNextIcon} aria-hidden="true">●</span>
+              <p className={s.whatsNextList}>{t("booking.arriveEarly")}</p>
+            </div>
+            <div className={s.whatsNextRow}>
+              <span className={s.whatsNextIcon} aria-hidden="true">◷</span>
+              <p className={s.whatsNextList}>{t("booking.cancelPolicy")}</p>
+            </div>
+          </div>
+          <div className={s.confirmActions}>
+            <Link
+              href={routes.bookings}
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign(routes.bookings);
+              }}
+              className={s.secondaryBtn}
+              data-testid="booking-go-bookings"
+            >
+              {t("booking.viewBooking")}
+            </Link>
+            <Link href={routes.home} className={`${s.primaryLink} ${s.primaryLinkBtn}`}>
+              {t("booking.goHome")}
+            </Link>
+          </div>
+        </section>
+        <section className={s.confirmOrder} data-testid="booking-confirm-summary">
+          <h2>{t("booking.totalCost")}</h2>
+          <div className={s.orderLines}>
+            {allLineItems.map((item) => (
+              <div key={item.id} className={s.orderLine}>
+                <span>{item.name}</span>
+                <strong>{t("booking.priceSum", { price: formatPrice(item.price) })}</strong>
+              </div>
+            ))}
+          </div>
+          <div className={s.orderTotal}>
+            <span>{t("booking.total")}</span>
+            <strong data-testid="booking-confirm-total">
+              {t("booking.priceSum", { price: formatPrice(total) })}
+            </strong>
+          </div>
+        </section>
       </div>
     );
   }
@@ -1195,12 +1327,12 @@ export default function BookingPage({
         </div>
       )}
 
-      {step < 3 && renderTopCard()}
+      {renderTopCard()}
       {renderStepper()}
 
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
-      {step === 3 && renderStep3()}
+      {step === 3 && renderPendingStep3()}
 
       {step < 3 && (
         <div className={s.security}>
@@ -1215,16 +1347,17 @@ export default function BookingPage({
       {showExtrasModal && (
         <BookingExtrasModal
           baseItems={baseLineItems}
-          apiProductImages={(shop.services ?? [])
-            .filter((service) => service.kind === "product")
-            .map((service) => (typeof service.icon === "string" ? service.icon : null))}
+          extras={availableExtras}
+          apiProductImages={availableExtras.map((extra) => {
+            const service = shop.services?.find((item) => item.id === extra.id);
+            return typeof service?.icon === "string" ? service.icon : null;
+          })}
           extraQuantities={extraQuantities}
           onAddExtra={addExtra}
           onRemoveExtra={removeExtra}
           onClearExtra={clearExtra}
           onSkip={finishExtras}
           onContinue={finishExtras}
-          onClose={() => setShowExtrasModal(false)}
           isSubmitting={isSubmitting}
         />
       )}

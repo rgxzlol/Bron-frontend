@@ -57,6 +57,41 @@ export function getDemoSavedBusiness(): SavedBusiness {
   };
 }
 
+export function getDemoPreviewBusiness(): SavedBusiness {
+  return {
+    id: "demo-preview-business",
+    status: "confirmed",
+    bookings: 8,
+    views: 156,
+    profilePhoto: null,
+    name: "Demo Business Studio",
+    description: "Демо-бизнес для проверки страницы бизнеса и бронирований.",
+    category: "Спорт зал",
+    website: "",
+    phone: "+998 90 123 45 67",
+    address: "ул. Афросиаб 45, Ташкент",
+    gallery: [null, null, null, null, null, null],
+    schedule: DEFAULT_SCHEDULE.map((day) => ({ ...day })),
+    lat: 41.315,
+    lng: 69.27,
+    services: [
+      {
+        id: "demo-preview-service",
+        name: "Демонстрационная тренировка",
+        category: "Тренировка",
+        price: 100000,
+        description: "Тестовая услуга для просмотра бизнес-страницы.",
+        photo: null,
+        active: true,
+        type: "service",
+        guestCapacity: 8,
+      },
+    ],
+    bookingRequests: [],
+    defaultBranchId: 1,
+  };
+}
+
 export function getDemoOwnedBusinessRecord(): Business {
   return {
     id: DEMO_BUSINESS_ID,

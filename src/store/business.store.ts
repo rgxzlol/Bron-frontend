@@ -23,7 +23,10 @@ import {
   type DaySchedule,
 } from "@/lib/business/schedule";
 import { mergeBusinessFromApi } from "@/lib/business/photos";
-import { isPlaceholderDemoBusiness } from "@/lib/business/demoBusiness";
+import {
+  getDemoPreviewBusiness,
+  isPlaceholderDemoBusiness,
+} from "@/lib/business/demoBusiness";
 import {
   hasValidCoords,
   normalizeCoords,
@@ -238,10 +241,17 @@ function replaceBusiness(
   return [...next, saved];
 }
 
+function ensureDemoBusiness(businesses: SavedBusiness[]) {
+  const demoBusiness = getDemoPreviewBusiness();
+  return businesses.some((business) => business.id === demoBusiness.id)
+    ? businesses
+    : [demoBusiness, ...businesses];
+}
+
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
-      businesses: [],
+      businesses: [getDemoPreviewBusiness()],
       draft: createEmptyDraft(),
       editingId: null,
       showMyBusiness: false,
@@ -710,7 +720,7 @@ export const useBusinessStore = create<BusinessStore>()(
     }),
     {
       name: "business-storage",
-      version: 6,
+      version: 7,
       migrate: (persisted) => {
         const state = persisted as {
           businesses?: SavedBusiness[];
@@ -721,11 +731,27 @@ export const useBusinessStore = create<BusinessStore>()(
         const businesses = (state.businesses ?? [])
           .filter((business) => !isPlaceholderDemoBusiness(business))
           .map((b) => normalizeBusiness(b as SavedBusiness));
+        const businessesWithDemo = ensureDemoBusiness(businesses);
 
         return {
           ...state,
+          businesses: businessesWithDemo,
+          showMyBusiness: businessesWithDemo.length > 0,
+        };
+      },
+      merge: (persisted, current) => {
+        const state = persisted as Partial<BusinessStore> | undefined;
+        const businesses = ensureDemoBusiness(
+          (state?.businesses ?? []).map((business) =>
+            normalizeBusiness(business),
+          ),
+        );
+
+        return {
+          ...current,
+          ...state,
           businesses,
-          showMyBusiness: businesses.length > 0,
+          showMyBusiness: true,
         };
       },
       partialize: (state) => ({

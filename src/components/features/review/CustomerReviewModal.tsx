@@ -72,7 +72,7 @@ export default function CustomerReviewModal({
               {customerName}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="text-[24px] text-[var(--text-muted)]" aria-label="Закрыть">
+          <button type="button" onClick={onClose} className="theme-close-button" aria-label="Закрыть">
             ×
           </button>
         </div>

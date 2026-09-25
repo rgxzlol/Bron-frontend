@@ -6,6 +6,7 @@ import ThemeProvider from "@/components/providers/ThemeProvider";
 import LangProvider from "@/components/providers/LangProvider";
 import ApiProvider from "@/components/providers/ApiProvider";
 import RapidClickGuard from "@/components/providers/RapidClickGuard";
+import AgentationProvider from "@/components/providers/AgentationProvider";
 import { siteConfig, siteMetadata } from "@/config/site";
 
 const manrope = Manrope({
@@ -41,6 +42,7 @@ export default function RootLayout({
           <LangProvider>
             <ApiProvider>
               <RapidClickGuard />
+              <AgentationProvider />
               {children}
             </ApiProvider>
           </LangProvider>

@@ -118,58 +118,6 @@ function DotsVerticalIcon() {
   );
 }
 
-function PencilIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 20h4L18.5 9.5a2.1 2.1 0 000-3L16.5 4.5a2.1 2.1 0 00-3 0L3 15v5h1z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 8h14l-1 12H6L5 8z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 10V6a3 3 0 016 0v4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function LayersIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 3l9 5-9 5-9-5 9-5z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3 13l9 5 9-5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function CalendarIcon({ size = 20 }: { size?: number }) {
   return (
     <svg
@@ -324,18 +272,38 @@ function ScreenHeader({
   title,
   onBack,
   action,
+  sticky = false,
 }: {
   title: string;
   onBack: () => void;
   action?: React.ReactNode;
+  sticky?: boolean;
 }) {
+  const [isBackFixed, setIsBackFixed] = useState(false);
+
+  useEffect(() => {
+    if (!sticky) return;
+
+    const handleScroll = () => {
+      setIsBackFixed(window.scrollY > 80);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [sticky]);
+
   return (
-    <div className="relative mb-[18px] flex min-h-[44px] items-center justify-center">
+    <div
+      className="relative mb-[18px] flex min-h-[44px] items-center justify-center"
+    >
       <button
         type="button"
         onClick={onBack}
         aria-label="Назад"
-        className="absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
+        className={`absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)] ${
+          isBackFixed ? "business-item-screen-sticky-back" : ""
+        }`}
       >
         <ChevronLeftIcon />
       </button>
@@ -425,6 +393,7 @@ type ServiceFormData = {
   category: string;
   description: string;
   photo: string | null;
+  duration?: number;
   guestCapacity: number | null;
   quantity: number | null;
 };
@@ -446,6 +415,7 @@ function serviceToFormData(item: BusinessService): ServiceFormData {
     category: item.category,
     description: item.description,
     photo: item.photo,
+    duration: item.duration,
     guestCapacity: item.guestCapacity ?? null,
     quantity: item.quantity ?? null,
   };
@@ -694,79 +664,118 @@ function CalendarField({
 
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
 
-  const isSelected = (day: number) =>
-    value.getFullYear() === year &&
-    value.getMonth() === monthIndex &&
-    value.getDate() === day;
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const prevMonthDays = new Date(year, monthIndex, 0).getDate();
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const days: { date: Date; inMonth: boolean }[] = [];
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, monthIndex - 1, prevMonthDays - i),
+        inMonth: false,
+      });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        date: new Date(year, monthIndex, day),
+        inMonth: true,
+      });
+    }
+
+    while (days.length % 7 !== 0) {
+      const nextDay = days.length - startOffset - daysInMonth + 1;
+      days.push({
+        date: new Date(year, monthIndex + 1, nextDay),
+        inMonth: false,
+      });
+    }
+
+    return days;
+  }, [monthIndex, year]);
+
+  const isSelected = (date: Date) =>
+    value.getFullYear() === date.getFullYear() &&
+    value.getMonth() === date.getMonth() &&
+    value.getDate() === date.getDate();
 
   return (
     <div
-      className="rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[16px]"
+      className="rounded-[20px] bg-[#f3f3f2] p-[12px] sm:p-[14px]"
       data-testid="business-service-calendar"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[17px] font-bold">
-          {RU_MONTHS[monthIndex]} {year}
+      <div className="mb-[10px] flex items-center justify-between gap-[10px]">
+        <button
+          type="button"
+          aria-label={prevMonthLabel}
+          data-testid="business-service-calendar-prev"
+          onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
+          className="flex h-[36px] w-[36px] items-center justify-center text-[22px] leading-none text-[#7a7a7a] transition hover:text-[#0a6af7]"
+        >
+          <ChevronLeftIcon />
+        </button>
+
+        <span className="text-center text-[30px] font-bold tracking-[-0.03em] text-white">
+          {RU_MONTHS[monthIndex]}
         </span>
-        <div className="flex items-center gap-[4px]">
-          <button
-            type="button"
-            aria-label={prevMonthLabel}
-            data-testid="business-service-calendar-prev"
-            onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
-          >
+
+        <button
+          type="button"
+          aria-label={nextMonthLabel}
+          data-testid="business-service-calendar-next"
+          onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
+          className="flex h-[36px] w-[36px] items-center justify-center text-[22px] leading-none text-[#7a7a7a] transition hover:text-[#0a6af7]"
+        >
+          <span className="rotate-180">
             <ChevronLeftIcon />
-          </button>
-          <button
-            type="button"
-            aria-label={nextMonthLabel}
-            data-testid="business-service-calendar-next"
-            onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
-          >
-            <span className="rotate-180">
-              <ChevronLeftIcon />
-            </span>
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
 
-      <div className="mb-[14px] mt-[10px] border-b border-[var(--border-default)]" />
-
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-x-[8px] gap-y-[8px]">
         {RU_WEEKDAYS.map((day) => (
           <span
             key={day}
-            className="pb-[10px] text-center text-[11px] font-semibold tracking-[0.06em] text-[var(--text-muted)]"
+            className="pb-[6px] text-center text-[14px] font-medium text-[#5d5d5d]"
           >
             {day}
           </span>
         ))}
-        {Array.from({ length: offset }).map((_, i) => (
-          <span key={`empty-${i}`} />
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const selected = isSelected(day);
+
+        {calendarDays.map(({ date, inMonth }) => {
+          const selected = isSelected(date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const day = new Date(date);
+          day.setHours(0, 0, 0, 0);
+          const isPast = day < today;
+
           return (
             <button
-              key={day}
+              key={date.toISOString()}
               type="button"
-              data-testid={`business-service-calendar-day-${day}`}
+              data-testid={`business-service-calendar-day-${date.getDate()}`}
               data-selected={selected ? "true" : "false"}
+              data-in-month={inMonth ? "true" : "false"}
+              data-date-state={
+                isPast ? "past" : day.getTime() === today.getTime() ? "today" : "future"
+              }
               aria-pressed={selected}
-              onClick={() => onChange(new Date(year, monthIndex, day))}
-              className={`mx-auto my-[3px] flex h-[36px] w-[36px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
-                selected
-                  ? "bg-[#2596a5] text-white"
-                  : "text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)]"
+              aria-disabled={isPast}
+              disabled={isPast}
+              onClick={() => onChange(date)}
+              className={`mx-auto flex h-[42px] w-[42px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
+                selected && !isPast
+                  ? "bg-[#0a6af7] text-white shadow-sm"
+                  : isPast
+                    ? "text-[#7a7a7a]"
+                    : "text-white hover:bg-[var(--bg-hover)]"
               }`}
             >
-              {day}
+              {date.getDate()}
             </button>
           );
         })}
@@ -802,12 +811,9 @@ function PhotoUploadField({
       ? photo
       : null;
 
-  useEffect(() => {
-    setPreviewFailed(false);
-  }, [photo]);
-
   async function handleFileChange(file: File | undefined) {
     if (!file) return;
+    setPreviewFailed(false);
     const result = await validateGalleryImageFile(file);
     if (!result.ok) {
       onUploadError(`businessErrors.${result.errorKey}`);
@@ -891,7 +897,9 @@ function AddItemScreen({
   const [descriptionLimitHit, setDescriptionLimitHit] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [date, setDate] = useState<Date>(() => new Date());
-  const [durationMin, setDurationMin] = useState<number | null>(null);
+  const [durationMin, setDurationMin] = useState<number | null>(
+    () => initialItem?.duration ?? null,
+  );
   const [showOnlyFree, setShowOnlyFree] = useState(true);
   const [rules, setRules] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -942,6 +950,7 @@ function AddItemScreen({
               : t("businessForms.addProductTitle")
         }
         onBack={onBack}
+        sticky
       />
 
       <p className="business-item-subtitle mb-[16px] text-[14px] text-[var(--text-secondary)]">
@@ -1004,7 +1013,7 @@ function AddItemScreen({
             value={form.price}
             error={fieldErrors.price}
             errorMessage={t("businessForms.required")}
-            placeholder={t("businessForms.pricePlaceholder")}
+            placeholder={t("businessForms.servicePricePlaceholder")}
             testId={`${fieldPrefix}-price-input`}
             errorTestId={`${fieldPrefix}-price-error`}
             onChange={(price) => {
@@ -1276,6 +1285,7 @@ function AddItemScreen({
                 await onSave({
                   ...form,
                   price: String(parsePrice(form.price)),
+                  duration: isService ? durationMin ?? undefined : undefined,
                   guestCapacity: form.guestCapacity ?? 1,
                   quantity: form.quantity ?? 1,
                 });
@@ -1480,7 +1490,7 @@ function BookingCard({
     booking.status === "accepted" || booking.status === "waiting";
   const isCompleted =
     Boolean(booking.bookingDate) &&
-    new Date(`${booking.bookingDate}T23:59:59`).getTime() < Date.now();
+    new Date(`${booking.bookingDate}T23:59:59`) < new Date();
 
   return (
     <div
@@ -1679,6 +1689,7 @@ export default function BusinessDashboard({
         price: parsePrice(data.price),
         description: data.description,
         photo: data.photo,
+        duration: data.duration,
         guestCapacity: data.guestCapacity ?? undefined,
         type: "service",
       });
@@ -1743,6 +1754,9 @@ export default function BusinessDashboard({
         price: parsePrice(data.price),
         description: data.description,
         photo: data.photo,
+        ...(editingItem.type === "service"
+          ? { duration: data.duration }
+          : {}),
         ...(editingItem.type === "service"
           ? { guestCapacity: data.guestCapacity ?? undefined }
           : { quantity: data.quantity ?? undefined }),

@@ -434,6 +434,13 @@
    display: none;
  }
 
+ .business-item-screen-sticky-back {
+   position: fixed !important;
+   top: 16px;
+   left: max(16px, calc(50% - 320px + 16px));
+   z-index: 21;
+ }
+
  .business-item-subtitle {
    margin-left: 0;
    margin-bottom: 28px !important;
@@ -455,6 +462,10 @@
   gap: 22px 40px;
 }
 
+.business-service-form-grid {
+  row-gap: 0 !important;
+}
+
 .business-item-screen label,
 .business-item-screen [data-field] > span {
   font-size: 12px;
@@ -469,6 +480,19 @@
   background: var(--bg-surface-muted);
   padding: 12px 16px;
   font-size: 13px;
+}
+
+.business-item-screen [data-field="name"],
+.business-item-screen [data-field="category"],
+.business-item-screen [data-field="description"],
+.business-item-screen [data-field="duration"],
+.business-item-screen [data-field="price"],
+.business-item-screen [data-field="quantity"],
+.business-item-screen [data-field="rules"],
+.business-item-screen [data-field="photo"],
+.business-item-screen [data-field="date"],
+.business-item-screen [data-field="time"] {
+  align-self: start;
 }
 
 .business-item-screen textarea {
@@ -493,6 +517,11 @@
 .business-item-screen [data-testid="business-product-calendar"] span,
 .business-item-screen [data-testid="business-product-calendar"] button {
   font-size: 11px;
+}
+
+.business-item-screen [data-testid="business-service-calendar"] > div:first-child > span {
+  color: #fff !important;
+  font-size: 20px !important;
 }
 
 .business-item-screen [data-testid="business-service-calendar"] button,
@@ -779,6 +808,14 @@
       "time time time date date date"
       "actions actions actions actions actions actions";
     column-gap: 16px;
+    row-gap: 0 !important;
+    align-items: start;
+  }
+
+  .business-service-form-grid > [data-field="category"],
+  .business-service-form-grid > [data-field="description"],
+  .business-service-form-grid > [data-field="time"] {
+    align-self: start;
   }
 
   .business-service-form-grid > [data-field="actions"] {
@@ -832,9 +869,14 @@
 
 @media (max-width: 768px) {
   .business-service-form-grid {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px !important;
+    row-gap: 20px !important;
+  }
+
+  .business-service-form-grid > [data-field] {
+    margin-bottom: 0 !important;
   }
 
   .business-service-form-grid > [data-field="actions"] {
@@ -864,4 +906,56 @@
   [data-theme="dark"] .business-item-screen [data-testid="business-service-time-slots"] {
     min-height: 0;
   }
+}
+
+@media (min-width: 769px) {
+  .business-service-form-grid > [data-field="duration"],
+  .business-service-form-grid > [data-field="price"],
+  .business-service-form-grid > [data-field="quantity"] {
+    align-self: start;
+  }
+
+  .business-service-form-grid > [data-field="quantity"] > [data-testid="business-service-guest-capacity"] > div {
+    min-height: 44px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .business-service-form-grid > [data-field="quantity"] > [data-testid="business-service-guest-capacity"] > div > button {
+    height: 28px;
+    width: 28px;
+  }
+
+  .business-service-form-grid > [data-field="duration"] {
+    transform: translateY(-14px);
+  }
+
+  .business-service-form-grid > [data-field="category"] {
+    transform: translateY(-35px);
+  }
+
+  .business-service-form-grid > [data-field="description"] {
+    transform: translateY(-109px);
+  }
+
+  .business-service-form-grid > [data-field="time"] {
+    transform: translateY(-97px);
+  }
+
+  .business-service-form-grid > [data-field="date"] {
+    transform: translateY(-75px);
+  }
+
+  .business-service-form-grid > [data-field="actions"] {
+    transform: translateY(-90px);
+  }
+
+  .business-service-form-grid > [data-field] {
+    margin-bottom: 20px !important;
+  }
+}
+
+.business-item-screen [data-field="photo"] > [data-testid$="-photo-section"] {
+  background: transparent !important;
+  border: 0 !important;
 }

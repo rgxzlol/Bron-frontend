@@ -59,6 +59,7 @@ export type BusinessService = {
   photo: string | null;
   active: boolean;
   type: "service" | "product";
+  duration?: number;
   guestCapacity?: number;
   quantity?: number;
 };
@@ -465,10 +466,13 @@ export const useBusinessStore = create<BusinessStore>()(
       clearMapFocus: () => set({ mapFocusBusinessId: null }),
 
       clearBusinesses: () =>
-        set({
-          businesses: [],
-          showMyBusiness: false,
-          mapFocusBusinessId: null,
+        set(() => {
+          const businesses = ensureDemoBusiness([]);
+          return {
+            businesses,
+            showMyBusiness: businesses.length > 0,
+            mapFocusBusinessId: "demo-preview-business",
+          };
         }),
 
       addService: async (businessId, service) => {

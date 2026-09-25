@@ -155,6 +155,7 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     photo: resolveMediaUrl(service.image),
     active: service.is_active ?? true,
     type: "service",
+    duration: service.duration,
   };
 }
 
@@ -170,6 +171,7 @@ export function apiServiceListItemToBusinessService(
     photo: resolveMediaUrl(service.image),
     active: service.is_active ?? true,
     type: "service",
+    duration: service.duration,
   };
 }
 

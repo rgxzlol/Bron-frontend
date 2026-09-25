@@ -10,6 +10,7 @@
 
   --bg-page: #fafaff;
   --bg-surface: #ffffff;
+  --bg-block: #F9F9FD;
   --bg-surface-muted: #f4f4f8;
   --bg-surface-soft: #fafaff;
   --bg-input: #fafaff;
@@ -36,7 +37,7 @@
   --icon-default: #000000;
 
   /* Auth flow input/box fill (light-blue on white) */
-  --auth-box: #f0f4ff;
+  --auth-box: #ffffff;
 }
 
 [data-theme="dark"] {

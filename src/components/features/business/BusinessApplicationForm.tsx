@@ -484,24 +484,17 @@ export default function BusinessApplicationForm() {
       return;
     }
 
+    const latitude = form.latitude;
+    const longitude = form.longitude;
+    if (latitude == null || longitude == null) {
+      setSubmitError(t("businessApplication.errors.locationCoordsRequired"));
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const latitude = form.latitude;
-      const longitude = form.longitude;
-
-      // COMMENTED OUT: location/coords are required by the current API
-      // payload below but the address field is hidden on this mockup, so
-      // this guard would always block submission. Left here for when the
-      // location field (or a replacement) comes back.
-      // if (latitude == null || longitude == null) {
-      //   setFieldErrors({
-      //     location: t("businessApplication.errors.locationCoordsRequired"),
-      //   });
-      //   return;
-      // }
-
       const result = await businessApplicationsApi.create(
         {
           company_name: form.companyName.trim(),

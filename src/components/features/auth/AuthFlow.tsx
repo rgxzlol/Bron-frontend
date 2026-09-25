@@ -82,7 +82,7 @@ function findRegisteredProfileName(userId: number, username: string) {
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen justify-center bg-[var(--bg-page)] sm:items-center sm:p-6">
-      <div className="flex w-full max-w-[440px] flex-col bg-[var(--bg-surface)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
+      <div className="flex w-full max-w-[700px] flex-col bg-[var(--bg-block)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
         {children}
       </div>
     </div>
@@ -278,7 +278,7 @@ function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[17px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
+      className="w-full rounded-[25px] bg-[#0a6af7] py-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
     >
       {children}
     </button>
@@ -1022,77 +1022,55 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     );
   }
 
-  if (screen === "forgot") {
+    if (screen === "forgot") {
     return (
       <AuthShell>
-        <StepHeader title={t("auth.forgotTitle")} onBack={() => go("login")} />
-        <form
-          className="mt-6 flex flex-1 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleSaveNewPassword();
-          }}
-          noValidate
-        >
-          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">{t("auth.newPasswordTitle")}</h2>
-          <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            {t("auth.newPasswordSubtitle")}
-          </p>
+        <div className="flex flex-1 flex-col">
+          <h1 className="text-center text-[32px] font-semibold text-[var(--text-primary)]">
+            {t("auth.cantLoginTitle")}
+          </h1>
 
           <div className="mt-6 flex flex-col gap-5">
-            {errorBanner}
-            <Field
-              id="recovery-new-password"
-              label={t("auth.newPasswordLabel")}
-              required
-              placeholder={t("auth.passwordPlaceholder")}
-              value={newPassword}
-              inputRef={newPasswordInputRef}
-              onChange={(value) => {
-                setNewPassword(value);
-                if (recoveryErrors.newPassword || recoveryErrors.form) {
-                  setRecoveryErrors((current) => ({
-                    ...current,
-                    newPassword: undefined,
-                    form: undefined,
-                  }));
-                  setError(null);
-                }
-              }}
-              password
-              autoComplete="new-password"
-              maxLength={AUTH_FIELD_LIMITS.password}
-              error={recoveryErrors.newPassword}
-            />
-            <Field
-              id="recovery-confirm-password"
-              label={t("auth.confirmPassword")}
-              required
-              placeholder={t("auth.confirmPasswordPlaceholder")}
-              value={confirmNewPassword}
-              inputRef={confirmPasswordInputRef}
-              onChange={(value) => {
-                setConfirmNewPassword(value);
-                if (recoveryErrors.confirmPassword || recoveryErrors.form) {
-                  setRecoveryErrors((current) => ({
-                    ...current,
-                    confirmPassword: undefined,
-                    form: undefined,
-                  }));
-                  setError(null);
-                }
-              }}
-              password
-              autoComplete="new-password"
-              maxLength={AUTH_FIELD_LIMITS.password}
-              error={recoveryErrors.confirmPassword}
-            />
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.telegramLabel")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportTelegramValue")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.phone")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportPhoneValue")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.emailLabel")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportEmailValue")}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="mt-auto pt-8">
-            <PrimaryButton type="submit">{t("common.save")}</PrimaryButton>
+            <PrimaryButton onClick={() => go("login")}>
+              {t("common.close")}
+            </PrimaryButton>
           </div>
-        </form>
+        </div>
       </AuthShell>
     );
   }

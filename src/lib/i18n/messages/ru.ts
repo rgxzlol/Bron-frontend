@@ -290,6 +290,7 @@ export const ru: MessageTree = {
     myBusiness: "Мой бизнес",
     untitled: "Без названия",
     confirmed: "Подтверждено",
+    pendingApproval: "На рассмотрении",
     bookingsLabel: "Бронирования",
     viewsLabel: "Просмотров",
     dashboard: "Панель управления",

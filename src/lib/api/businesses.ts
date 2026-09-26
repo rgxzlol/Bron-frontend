@@ -13,6 +13,8 @@ import { assertApiImage } from "./media";
 export const businessesApi = {
   list: () => apiRequest<BusinessListItem[]>("/businesses"),
 
+  my: () => apiRequest<Business[]>("/businesses/my", { auth: true }),
+
   search: (query: string) =>
     apiRequest<Business[]>(
       `/businesses/search?q=${encodeURIComponent(query)}`,

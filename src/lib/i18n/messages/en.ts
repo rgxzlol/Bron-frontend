@@ -289,6 +289,7 @@ export const en: MessageTree = {
     myBusiness: "My business",
     untitled: "Untitled",
     confirmed: "Verified",
+    pendingApproval: "Under review",
     bookingsLabel: "Bookings",
     viewsLabel: "Views",
     dashboard: "Dashboard",

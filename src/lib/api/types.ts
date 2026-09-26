@@ -143,7 +143,7 @@ export type BusinessSocialLinks = {
 export type Business = {
   id: number;
   owner_id: number;
-  owner_username: string;
+  owner_username?: string;
   name: string;
   description: string | null;
   logo: string | null;

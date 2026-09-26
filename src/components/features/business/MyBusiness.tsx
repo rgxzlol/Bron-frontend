@@ -43,6 +43,7 @@ function useBusinessCards() {
       id: business.id,
       name: business.name,
       category: business.category,
+      approvalStatus: business.approvalStatus,
       address: business.address,
       coverPhoto,
       photoCount: Math.max(galleryPhotos.length, 1),
@@ -168,10 +169,16 @@ export default function MyBusiness({
                     {business.name || t("business.untitled")}
                   </h3>
                   <span
-                    className="shrink-0 rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]"
+                    className={`shrink-0 rounded-full px-[12px] py-[5px] text-[12px] font-semibold ${
+                      business.approvalStatus === "pending"
+                        ? "bg-[#fff4d6] text-[#9a6700]"
+                        : "bg-[#e7f8ef] text-[#00bd08]"
+                    }`}
                     data-testid={`business-card-status-${business.id}`}
                   >
-                    {t("business.confirmed")}
+                    {business.approvalStatus === "pending"
+                      ? t("business.pendingApproval")
+                      : t("business.confirmed")}
                   </span>
                 </div>
 
@@ -291,7 +298,9 @@ export default function MyBusiness({
               <div className={desktop.listAside}>
                 <div className={desktop.listStatusRow}>
                   <span className={desktop.listStatus} data-testid={`business-card-status-${business.id}`}>
-                    • {t("business.confirmed")}
+                    • {business.approvalStatus === "pending"
+                      ? t("business.pendingApproval")
+                      : t("business.confirmed")}
                   </span>
                   <div
                     ref={(el) => {

@@ -8,6 +8,8 @@ export type RegisterRequest = {
   email: string;
   phone: string;
   password: string;
+  first_name?: string;
+  last_name?: string;
 };
 
 export type RegisterResponse = {
@@ -27,6 +29,9 @@ export type UserOut = {
   username: string;
   email: string;
   phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  avatar?: string | null;
   role?: string;
 };
 
@@ -37,7 +42,14 @@ export type UserNotificationSettings = {
   promotions: boolean;
 };
 
-export type InAppNotificationType = "booking" | "payment" | "promotion";
+export type InAppNotificationType =
+  | "booking"
+  | "payment"
+  | "promotion"
+  | "booking_created"
+  | "booking_confirmed"
+  | "booking_rejected"
+  | "booking_cancelled";
 
 export type InAppNotification = {
   id: string;
@@ -46,6 +58,22 @@ export type InAppNotification = {
   read: boolean;
   title?: string;
   description?: string;
+  booking_id?: number | null;
+};
+
+export type ApiNotification = {
+  id: number;
+  notification_type: InAppNotificationType;
+  title: string;
+  message: string;
+  is_read: boolean;
+  booking_id: number | null;
+  created_at: string;
+};
+
+export type NotificationsResponse = {
+  items: ApiNotification[];
+  count: number;
 };
 
 export type UserProfile = {
@@ -53,6 +81,10 @@ export type UserProfile = {
   username: string;
   email: string;
   phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  avatar?: string | null;
   rating?: number | null;
   reviews_count?: number | null;
   telegram_id: number | null;
@@ -66,6 +98,8 @@ export type UserProfileUpdate = {
   username?: string | null;
   email?: string | null;
   phone?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   language?: string | null;
   telegram_id?: number | null;
   notification_settings?: UserNotificationSettings;
@@ -80,11 +114,22 @@ export type BusinessListItem = {
   id: number;
   owner_id?: number;
   name: string;
-  category: string;
+  category: BusinessCategory | string;
   address: string;
   phone: string;
   logo: string | null;
+  views_count?: number;
 };
+
+export type BusinessCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  business_count?: number;
+};
+
+export type Category = BusinessCategory;
 
 export type Business = {
   id: number;
@@ -93,34 +138,49 @@ export type Business = {
   name: string;
   description: string | null;
   logo: string | null;
-  category: string;
+  category: BusinessCategory | string;
   address: string;
   phone: string;
   latitude: number | null;
   longitude: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, unknown>;
+  social_links?: Record<string, string | null | undefined>;
   comments?: string | null;
   status?: string | null;
   created_at: string;
+  email?: string | null;
+  owner_name?: string | null;
+  views_count?: number;
 };
 
 export type BusinessCreate = {
   name: string;
+  category_id: number;
   description?: string | null;
-  category: string;
   address: string;
   phone: string;
+  email: string;
+  owner_name: string;
   latitude?: number | null;
   longitude?: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, unknown>;
+  social_links?: Record<string, string | null | undefined>;
   comments?: string | null;
 };
 
 export type BusinessUpdate = Partial<BusinessCreate>;
+
+export type BusinessCreateResponse = {
+  message: string;
+  business_id: number;
+};
+
+export type BusinessViewResponse = {
+  counted: boolean;
+  views_count: number;
+};
 
 export type BusinessStats = {
   total_bookings: number;
@@ -140,6 +200,7 @@ export type Service = {
   price: number | string;
   is_active: boolean;
   image?: string | null;
+  capacity?: number;
 };
 
 export type ServiceListItem = {
@@ -151,6 +212,7 @@ export type ServiceListItem = {
   description?: string | null;
   is_active?: boolean;
   image?: string | null;
+  capacity?: number;
 };
 
 export type ServiceCreate = {
@@ -160,11 +222,29 @@ export type ServiceCreate = {
   category: string;
   duration: number;
   price: number;
+  capacity?: number;
 };
 
 export type ServiceUpdate = Partial<
-  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active">
+  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active" | "capacity">
 >;
+
+export type ServiceAvailableDate = {
+  date: string;
+  free_slots: number;
+};
+
+export type ServiceAvailabilitySlot = {
+  start_time: string;
+  end_time: string;
+  available_spots: number;
+  is_available: boolean;
+};
+
+export type ServiceAvailability = {
+  slots: ServiceAvailabilitySlot[];
+  capacity: number;
+};
 
 export type Product = {
   id: number;
@@ -341,11 +421,23 @@ export type BookingCreate = {
 };
 
 export type BookingUpdate = {
-  status?: string | null;
   staff_id?: number | null;
-  booking_date?: string;
-  start_time?: string;
-  end_time?: string;
+};
+
+export type BookingAttendanceUpdate = {
+  status: string;
+  extra_wait_minutes?: number;
+};
+
+export type BookingReschedule = {
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type BookingAvailableSlotsResponse = {
+  slots: ServiceAvailabilitySlot[];
+  capacity: number;
 };
 
 export type BusinessGalleryImage = {
@@ -428,20 +520,25 @@ export type BusinessApplication = {
   website?: string | null;
   social_links?: Record<string, unknown>;
   comments?: string | null;
+  email?: string | null;
+  owner_name?: string | null;
+  category_id?: number | null;
   status: BusinessApplicationStatusValue | string;
   created_at: string;
 };
 
 export type BusinessApplicationCreate = {
-  company_name: string;
-  tin: string;
-  sphere: string;
-  location: string;
+  name: string;
+  category_id: number;
+  address: string;
   phone: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  website: string;
-  social_links: Record<string, string>;
-  comments: string;
+  email: string;
+  owner_name: string;
+  tin?: string | null;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  website?: string | null;
+  social_links?: Record<string, string | null | undefined>;
+  comments?: string | null;
 };

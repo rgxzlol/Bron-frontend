@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import { useMemo, useRef, useState, type TouchEvent } from "react";
 import Image, { type StaticImageData } from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -141,13 +141,21 @@ export const BookingCard = ({
   orderItems,
 }: BookingCardProps) => {
   const { t, language, locale } = useTranslation();
+  const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOrderOpen, setIsOrderOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoIdentity, setPhotoIdentity] = useState(`${shop.id}:${bookingId}`);
   const touchStartX = useRef<number | null>(null);
+
+  const currentPhotoIdentity = `${shop.id}:${bookingId}`;
+  if (photoIdentity !== currentPhotoIdentity) {
+    setPhotoIdentity(currentPhotoIdentity);
+    setPhotoIndex(0);
+  }
 
   const hasReviewedBooking = useReviewStore((state) => state.hasReviewedBooking);
 
@@ -161,7 +169,6 @@ export const BookingCard = ({
     bookingId != null &&
     !hasReviewedBooking(bookingId) &&
     !reviewSubmitted;
-  const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
   const shopId = String(shop.id);
   const shopName = shop.title;
   const localizedAddress = translateLocation(shop.address, language);
@@ -202,13 +209,9 @@ export const BookingCard = ({
     [orderItems, shop, totalPrice, t],
   );
 
-  useEffect(() => {
-    setPhotoIndex(0);
-  }, [shop.id, bookingId]);
-
   function goToPhoto(next: number) {
     if (gallery.length === 0) return;
-    setPhotoIndex((prev) => (next + gallery.length) % gallery.length);
+    setPhotoIndex((next + gallery.length) % gallery.length);
   }
 
   function handleTouchStart(event: TouchEvent) {
@@ -514,18 +517,21 @@ export const BookingCard = ({
         shopAddress={localizedAddress}
         shopImage={shop.img}
       />
-      <BookingEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        bookingId={bookingId}
-        bookingDate={bookingDate}
-        bookingTime={bookingTime}
-        hours={shop.hours}
-        shopName={shop.title}
-        shopAddress={localizedAddress}
-        shopType={shop.type}
-        shopImage={shop.img}
-      />
+      {isEditModalOpen ? (
+        <BookingEditModal
+          key={`${bookingId}-${bookingDate}-${bookingTime}`}
+          isOpen
+          onClose={() => setIsEditModalOpen(false)}
+          bookingId={bookingId}
+          bookingDate={bookingDate}
+          bookingTime={bookingTime}
+          hours={shop.hours}
+          shopName={shop.title}
+          shopAddress={localizedAddress}
+          shopType={shop.type}
+          shopImage={shop.img}
+        />
+      ) : null}
       <ReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}

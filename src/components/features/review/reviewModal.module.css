@@ -281,6 +281,11 @@
   grid-column: 1 / -1;
 }
 
+:global([data-theme="dark"]) .validationSummary {
+  background: rgba(224, 36, 36, 0.14);
+  color: #ffb4b4;
+}
+
 .submitBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

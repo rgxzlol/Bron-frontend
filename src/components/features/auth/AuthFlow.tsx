@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
-import { authApi, ApiError } from "@/lib/api";
+import { authApi, ApiError, usersApi } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { Logo } from "@/components/shared/Logo";
@@ -691,6 +691,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setRegisterFieldErrors({});
     setSubmitting(true);
     const displayName = firstName.trim();
+    const [apiFirstName = "", ...apiLastNameParts] = displayName.split(/\s+/);
     const normalizedPhone = normalizePhoneForApi(phone);
     const apiUsername = normalizedPhone;
     // Synthetic email is API-only; booking/profile UI leave the field empty.
@@ -703,8 +704,17 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           email: syntheticEmail,
           phone: normalizedPhone,
           password,
+          first_name: apiFirstName,
+          last_name: apiLastNameParts.join(" "),
         },
         { username: apiUsername, password },
+      );
+      await usersApi.updateProfile(
+        {
+          first_name: apiFirstName,
+          last_name: apiLastNameParts.join(" "),
+        },
+        session.access_token,
       );
       saveRegisteredProfileName(session.user_id, session.username, displayName);
       await completeAuthSession(session, {

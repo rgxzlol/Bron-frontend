@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { routes } from "@/config/routes";
+import { bookingsApi } from "@/lib/api/bookings";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -14,18 +17,27 @@ import { useBookingStore } from "@/store/booking.store";
 import { useBusinessStore } from "@/store/business.store";
 
 export default function NotificationDropdown() {
+  const router = useRouter();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const items = useNotificationStore((state) => state.items);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   const isLoading = useNotificationStore((state) => state.isLoading);
   const hydrateNotifications = useNotificationStore(
     (state) => state.hydrateNotifications,
   );
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
-  const deleteReadNotifications = useNotificationStore(
-    (state) => state.deleteReadNotifications,
+  const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
+  const markNotificationRead = useNotificationStore(
+    (state) => state.markNotificationRead,
+  );
+  const deleteNotification = useNotificationStore(
+    (state) => state.deleteNotification,
+  );
+  const markAllNotificationsRead = useNotificationStore(
+    (state) => state.markAllNotificationsRead,
   );
   const token = useAuthStore((state) => state.token);
   const bookings = useBookingStore((state) => state.bookings);
@@ -38,6 +50,19 @@ export default function NotificationDropdown() {
     (state) => state.addBookingReminder,
   );
 
+  async function openNotification(notificationId: string, bookingId?: number | null) {
+    await markNotificationRead(notificationId);
+    if (bookingId == null) return;
+
+    try {
+      await bookingsApi.get(bookingId);
+      setIsOpen(false);
+      router.push(`${routes.bookings}?booking_id=${bookingId}`);
+    } catch (error) {
+      console.error("Не удалось открыть бронирование из уведомления:", error);
+    }
+  }
+
   useEffect(() => {
     hydrateNotifications();
   }, [hydrateNotifications]);
@@ -45,14 +70,16 @@ export default function NotificationDropdown() {
   useEffect(() => {
     if (token) {
       void fetchNotifications();
+      void fetchUnreadCount();
       void fetchMyBookings();
     }
-  }, [token, fetchNotifications, fetchMyBookings]);
+  }, [token, fetchNotifications, fetchUnreadCount, fetchMyBookings]);
 
   useEffect(() => {
     if (!token) return;
     const refresh = () => {
       void fetchNotifications();
+      void fetchUnreadCount();
       void fetchMyBookings();
       businesses.forEach((business) => {
         void refreshBusinessBookings(business.id);
@@ -63,6 +90,7 @@ export default function NotificationDropdown() {
   }, [
     token,
     fetchNotifications,
+    fetchUnreadCount,
     fetchMyBookings,
     businesses,
     refreshBusinessBookings,
@@ -79,8 +107,9 @@ export default function NotificationDropdown() {
   useEffect(() => {
     if (isOpen) {
       void fetchNotifications();
+      void fetchUnreadCount();
     }
-  }, [isOpen, fetchNotifications]);
+  }, [isOpen, fetchNotifications, fetchUnreadCount]);
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
@@ -161,6 +190,9 @@ export default function NotificationDropdown() {
               title={presentation.title}
               description={presentation.description}
               time={formatNotificationTime(item.time)}
+              onClick={() => void openNotification(item.id, item.booking_id)}
+              onDelete={() => void deleteNotification(item.id)}
+              deleteLabel={t("common.delete")}
               testId={presentation.testId}
             />
           );
@@ -172,7 +204,7 @@ export default function NotificationDropdown() {
   const clearButton = (
     <button
       type="button"
-      onClick={() => void deleteReadNotifications()}
+      onClick={() => void markAllNotificationsRead()}
       className="mx-auto flex items-center gap-2.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-7 py-[15px] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95"
       data-testid="notifications-delete-read"
     >
@@ -219,12 +251,12 @@ export default function NotificationDropdown() {
             data-header-icon
             className="opacity-60"
           />
-          {hasNotifications ? (
+          {unreadCount > 0 ? (
             <span
               className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e02424] px-1 text-[11px] font-bold text-white"
               data-testid="notifications-count"
             >
-              {items.length}
+              {unreadCount}
             </span>
           ) : null}
         </span>

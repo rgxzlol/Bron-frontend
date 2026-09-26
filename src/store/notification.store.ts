@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { InAppNotification } from "@/lib/api/types";
 import {
   isNotificationsEndpointUnavailable,
+  mapApiNotification,
   notificationsApi,
 } from "@/lib/api/notifications";
 import { useAuthStore } from "@/store/auth.store";
@@ -10,6 +11,7 @@ const reminderTimers = new Map<number, number>();
 
 type NotificationState = {
   items: InAppNotification[];
+  unreadCount: number;
   isLoading: boolean;
   hydrateNotifications: () => void;
   fetchNotifications: () => Promise<void>;
@@ -22,12 +24,16 @@ type NotificationState = {
     bookingDate?: string,
     startTime?: string,
   ) => void;
-  deleteReadNotifications: () => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
   resetNotifications: () => void;
 };
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   items: [],
+  unreadCount: 0,
   isLoading: false,
 
   hydrateNotifications: () => {
@@ -39,6 +45,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const token = useAuthStore.getState().token;
     if (!token) {
       set({ items: [] });
+      set({ unreadCount: 0 });
       return;
     }
     if (get().isLoading) return;
@@ -46,8 +53,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const items = await notificationsApi.list(token);
+      const response = await notificationsApi.list(token);
       const localItems = loadLocalNotifications();
+      const items = response.items.map(mapApiNotification);
       set({ items: mergeNotifications(items, localItems), isLoading: false });
     } catch (error) {
       if (isNotificationsEndpointUnavailable(error)) {
@@ -62,6 +70,94 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       console.error("Не удалось загрузить уведомления:", error);
       set({ isLoading: false });
     }
+  },
+
+  fetchUnreadCount: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      set({ unreadCount: 0 });
+      return;
+    }
+
+    try {
+      const result = await notificationsApi.unreadCount(token);
+      set({ unreadCount: result.count });
+    } catch (error) {
+      if (isNotificationsEndpointUnavailable(error)) return;
+      console.error("Не удалось загрузить количество непрочитанных уведомлений:", error);
+    }
+  },
+
+  markNotificationRead: async (notificationId) => {
+    const token = useAuthStore.getState().token;
+    const numericId = Number(notificationId);
+    if (token && Number.isInteger(numericId) && numericId > 0) {
+      try {
+        await notificationsApi.markRead(numericId, token);
+      } catch (error) {
+        if (!isNotificationsEndpointUnavailable(error)) {
+          console.error("Не удалось отметить уведомление прочитанным:", error);
+          return;
+        }
+      }
+    }
+
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.id === notificationId ? { ...item, read: true } : item,
+      ),
+      unreadCount: Math.max(
+        0,
+        state.unreadCount -
+          (state.items.some((item) => item.id === notificationId && !item.read)
+            ? 1
+            : 0),
+      ),
+    }));
+  },
+
+  markAllNotificationsRead: async () => {
+    const token = useAuthStore.getState().token;
+    if (token) {
+      try {
+        await notificationsApi.markAllRead(token);
+      } catch (error) {
+        if (!isNotificationsEndpointUnavailable(error)) {
+          console.error("Не удалось отметить уведомления прочитанными:", error);
+          return;
+        }
+      }
+    }
+
+    const next = get().items.map((item) => ({ ...item, read: true }));
+    saveLocalNotifications(next.filter((entry) => entry.id.startsWith("local-")));
+    set({ items: next, unreadCount: 0 });
+  },
+
+  deleteNotification: async (notificationId) => {
+    const token = useAuthStore.getState().token;
+    const numericId = Number(notificationId);
+    if (token && Number.isInteger(numericId) && numericId > 0) {
+      try {
+        await notificationsApi.remove(numericId, token);
+      } catch (error) {
+        if (!isNotificationsEndpointUnavailable(error)) {
+          console.error("Не удалось удалить уведомление:", error);
+          return;
+        }
+      }
+    }
+
+    const item = get().items.find((notification) => notification.id === notificationId);
+    const next = get().items.filter((notification) => notification.id !== notificationId);
+    saveLocalNotifications(next.filter((entry) => entry.id.startsWith("local-")));
+    set({
+      items: next,
+      unreadCount: Math.max(
+        0,
+        get().unreadCount - (item && !item.read ? 1 : 0),
+      ),
+    });
   },
 
   addLocalNotification: (notification) => {
@@ -143,24 +239,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
   },
 
-  deleteReadNotifications: async () => {
-    const token = useAuthStore.getState().token;
-
-    // The UI has no separate read action, so every displayed notification is
-    // considered read when the user explicitly clears the list.
-    saveLocalNotifications([]);
-    set({ items: [] });
-
-    if (!token) return;
-    try {
-      await notificationsApi.deleteRead(token);
-    } catch (error) {
-      if (isNotificationsEndpointUnavailable(error)) return;
-      console.error("Не удалось удалить уведомления:", error);
-    }
-  },
-
-  resetNotifications: () => set({ items: [] }),
+  resetNotifications: () => set({ items: [], unreadCount: 0 }),
 }));
 
 function localStorageKey() {

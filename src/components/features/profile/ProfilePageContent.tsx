@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
-import { readImageFile } from "@/lib/readImageFile";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
@@ -295,8 +294,31 @@ export default function ProfilePageContent({
   }
 
   async function handleAvatarUpload(file: File) {
-    const url = await readImageFile(file);
-    if (url) setAvatarUrl(url);
+    try {
+      if (!token) throw new Error("Требуется авторизация");
+      const profile = await usersApi.uploadAvatar(file, token);
+      setAvatarUrl(profile.avatar ?? null);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : t("businessApplication.submitError"),
+      );
+    }
+  }
+
+  async function handleAvatarDelete() {
+    try {
+      if (!token) throw new Error("Требуется авторизация");
+      const profile = await usersApi.deleteAvatar(token);
+      setAvatarUrl(profile.avatar ?? null);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : t("businessApplication.submitError"),
+      );
+    }
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
@@ -434,6 +456,15 @@ export default function ProfilePageContent({
                 <Image src={assets.profile.camera} alt="" width={16} height={16} />
               </button>
             </div>
+            {avatarUrl ? (
+              <button
+                type="button"
+                className="mt-2 text-sm font-semibold text-[#e02424]"
+                onClick={() => void handleAvatarDelete()}
+              >
+                {t("profile.removePhoto")}
+              </button>
+            ) : null}
           </div>
 
           <label className={`${s.field} ${personalFieldErrors.fullName ? s.fieldError : ""}`}>
@@ -892,7 +923,7 @@ export default function ProfilePageContent({
       <input
         ref={avatarInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className={s.hiddenFileInput}
         onChange={async (event) => {
           const file = event.target.files?.[0];

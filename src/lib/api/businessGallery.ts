@@ -1,4 +1,5 @@
 import { apiUploadRequest, apiRequest } from "./client";
+import { assertApiImage } from "./media";
 
 export const businessGalleryApi = {
   listByBusiness: (businessId: number) =>
@@ -7,6 +8,7 @@ export const businessGalleryApi = {
     ),
 
   upload: (businessId: number, image: File | Blob, token?: string) => {
+    assertApiImage(image);
     const formData = new FormData();
     formData.append("image", image);
     return apiUploadRequest<import("./types").BusinessGalleryImage>(

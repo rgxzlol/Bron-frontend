@@ -2,10 +2,13 @@ import { apiRequest, apiUploadRequest } from "./client";
 import type {
   Business,
   BusinessCreate,
+  BusinessCreateResponse,
   BusinessListItem,
   BusinessStats,
   BusinessUpdate,
+  BusinessViewResponse,
 } from "./types";
+import { assertApiImage } from "./media";
 
 export const businessesApi = {
   list: () => apiRequest<BusinessListItem[]>("/businesses"),
@@ -35,15 +38,20 @@ export const businessesApi = {
       token,
     }),
 
-  create: async (body: BusinessCreate, token?: string) => {
-    const result = await apiRequest<Business | null>("/businesses/create", {
+  recordView: (businessId: number, token?: string) =>
+    apiRequest<BusinessViewResponse>(`/businesses/${businessId}/view`, {
+      method: "POST",
+      auth: Boolean(token),
+      token,
+    }),
+
+  create: (body: BusinessCreate, token?: string) =>
+    apiRequest<BusinessCreateResponse>("/businesses/create", {
       method: "POST",
       body,
       auth: true,
       token,
-    });
-    return result;
-  },
+    }),
 
   update: (businessId: number, body: BusinessUpdate, token?: string) =>
     apiRequest<Business>(`/businesses/${businessId}`, {
@@ -61,6 +69,7 @@ export const businessesApi = {
     }),
 
   uploadLogo: (businessId: number, image: File | Blob, token?: string) => {
+    assertApiImage(image);
     const formData = new FormData();
     formData.append("image", image);
     return apiUploadRequest<import("./types").BusinessLogoResponse>(

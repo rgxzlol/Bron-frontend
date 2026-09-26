@@ -13,6 +13,7 @@ export default function BookingsPageClient() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") === "past" ? "past" : "upcoming";
+  const selectedBookingId = searchParams.get("booking_id");
   const token = useAuthStore((state) => state.token);
   const { bookings, isLoading, error, fetchMyBookings } = useBookingStore();
 
@@ -35,6 +36,14 @@ export default function BookingsPageClient() {
       const order = compareBookingsByTime(a, b);
       return isPastTab ? -order : order;
     });
+
+  useEffect(() => {
+    if (!selectedBookingId) return;
+    const target = document.querySelector(
+      `[data-testid="booking-card-${CSS.escape(selectedBookingId)}"]`,
+    );
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectedBookingId, filtered.length]);
 
   if (!token) {
     return (

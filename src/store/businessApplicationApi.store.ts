@@ -8,6 +8,7 @@ type BusinessApplicationApiState = {
   application: BusinessApplication | null;
   status: BusinessApplicationStatus;
   isLoading: boolean;
+  setApplication: (application: BusinessApplication) => void;
   fetchApplication: () => Promise<void>;
   reset: () => void;
 };
@@ -17,11 +18,25 @@ export const useBusinessApplicationApiStore = create<BusinessApplicationApiState
     application: null,
     status: "none",
     isLoading: false,
+    setApplication: (application) =>
+      set({
+        application,
+        status: mapApiApplicationStatus(application.status),
+      }),
     fetchApplication: async () => {
       set({ isLoading: true });
 
       try {
         const application = await businessApplicationsApi.getMy();
+        if (!application) {
+          set((state) =>
+            state.application?.status === "pending"
+              ? { isLoading: false }
+              : { application: null, status: "none", isLoading: false },
+          );
+          return;
+        }
+
         const status = application
           ? mapApiApplicationStatus(application.status)
           : "none";

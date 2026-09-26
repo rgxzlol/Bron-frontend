@@ -93,8 +93,6 @@ export function validateBusinessApplication(
     errors.location = messages.locationRequired;
   } else if (INVALID_SYMBOLS_PATTERN.test(location)) {
     errors.location = messages.locationInvalid;
-  } else if (data.latitude == null || data.longitude == null) {
-    errors.location = messages.locationCoordsRequired;
   }
 
   const phone = data.phone.trim();
@@ -112,6 +110,14 @@ export function validateBusinessApplication(
   const website = data.website.trim();
   if (website && !WEBSITE_PATTERN.test(website)) {
     errors.website = messages.websiteInvalid;
+  }
+
+  const urlPattern = /^https?:\/\/\S+$/i;
+  if (data.socialTelegram.trim() && !urlPattern.test(data.socialTelegram.trim())) {
+    errors.socialTelegram = messages.websiteInvalid;
+  }
+  if (data.socialInstagram.trim() && !urlPattern.test(data.socialInstagram.trim())) {
+    errors.socialInstagram = messages.websiteInvalid;
   }
 
   const comments = data.comments.trim();

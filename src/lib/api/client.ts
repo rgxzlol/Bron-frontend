@@ -13,6 +13,25 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
   }
+
+}
+
+export function getApiFieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || !error.data || typeof error.data !== "object") {
+    return {};
+  }
+
+  const detail = (error.data as { detail?: unknown }).detail;
+  if (!Array.isArray(detail)) return {};
+
+  return detail.reduce<Record<string, string>>((errors, issue) => {
+    if (!issue || typeof issue !== "object") return errors;
+    const { loc, msg } = issue as { loc?: unknown; msg?: unknown };
+    if (!Array.isArray(loc) || typeof msg !== "string") return errors;
+    const field = loc[loc.length - 1];
+    if (typeof field === "string") errors[field] = msg;
+    return errors;
+  }, {});
 }
 
 type RequestOptions = {
@@ -55,10 +74,7 @@ function isBusinessDataPath(path: string) {
 
 function isNotificationPath(path: string) {
   const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  return (
-    cleanPath === "/users/notifications" ||
-    cleanPath === "/users/notifications/read"
-  );
+  return cleanPath === "/notifications" || cleanPath.startsWith("/notifications/");
 }
 
 function isBookingPath(path: string) {

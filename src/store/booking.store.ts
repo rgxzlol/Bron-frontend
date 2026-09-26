@@ -6,6 +6,7 @@ import type {
   Booking,
   BookingCreate,
   BookingListItem,
+  BookingReschedule,
   BookingUpdate,
 } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
@@ -201,7 +202,7 @@ type BookingStore = {
     bookingId: number,
     payload: Parameters<typeof bookingsApi.update>[1],
   ) => Promise<Booking>;
-  rescheduleBooking: (bookingId: number, payload: BookingUpdate) => Promise<void>;
+  rescheduleBooking: (bookingId: number, payload: BookingReschedule) => Promise<void>;
   cancelBooking: (bookingId: number) => Promise<void>;
 };
 
@@ -356,12 +357,12 @@ export const useBookingStore = create<BookingStore>()(
 
       rescheduleBooking: async (bookingId, payload) => {
         const { booking_date, start_time, end_time } = payload;
-
-        await bookingsApi.update(bookingId, {
-          booking_date,
-          start_time: start_time ? toApiTime(start_time) : start_time,
-          end_time: end_time ? toApiTime(end_time) : end_time,
-        });
+        if (bookingId > 0) {
+          throw new ApiError(
+            405,
+            "Изменение даты и времени подтверждённого бронирования через API не поддерживается.",
+          );
+        }
 
         set((state) => ({
           bookings: state.bookings.map((booking) =>

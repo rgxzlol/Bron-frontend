@@ -26,6 +26,10 @@ export function getNotificationPresentation(
 ) {
   switch (type) {
     case "booking":
+    case "booking_created":
+    case "booking_confirmed":
+    case "booking_rejected":
+    case "booking_cancelled":
       return {
         icon: assets.notification.calendar,
         title: notification?.title ?? "Бронирование",

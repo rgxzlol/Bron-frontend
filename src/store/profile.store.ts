@@ -62,8 +62,15 @@ function resolveDisplayFullName(
 }
 
 function applyProfileToState(profile: UserProfile, currentFullName: string) {
+  const fullName =
+    profile.full_name?.trim() ||
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
   return {
-    fullName: resolveDisplayFullName(profile.username, currentFullName, profile.id),
+    fullName: resolveDisplayFullName(
+      fullName || profile.username,
+      currentFullName,
+      profile.id,
+    ),
     phone: profile.phone,
     email: toUserFacingEmail(profile.email),
     language: mapApiLanguage(profile.language),
@@ -161,7 +168,7 @@ export const useProfileStore = create<ProfileState>()(
 
           set((state) => ({
             ...applyProfileToState(profile, state.fullName),
-            avatarUrl: state.avatarUrl,
+            avatarUrl: profile.avatar ?? null,
             isProfileLoading: false,
           }));
           const userId = useAuthStore.getState().userId;
@@ -258,6 +265,8 @@ export const useProfileStore = create<ProfileState>()(
           {
             phone: trimmedPhone,
             email: trimmedEmail,
+            first_name: trimmedName.split(/\s+/)[0] ?? "",
+            last_name: trimmedName.split(/\s+/).slice(1).join(" "),
             language: get().language,
           },
           token,

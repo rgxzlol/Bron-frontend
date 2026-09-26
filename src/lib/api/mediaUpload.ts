@@ -3,9 +3,10 @@ import {
   businessesApi,
 } from "@/lib/api";
 import { getAuthToken } from "@/lib/api/token";
+import { resolveMediaUrl } from "@/lib/api/media";
 import type { BusinessDraft } from "@/store/business.store";
 
-function dataUrlToFile(dataUrl: string, filename: string) {
+export function dataUrlToFile(dataUrl: string, filename: string) {
   const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) return null;
 
@@ -27,15 +28,31 @@ export async function syncBusinessMediaFromDraft(
   const token = getAuthToken();
   if (!token) return;
 
+  const [business, gallery] = await Promise.all([
+    businessesApi.get(businessId),
+    businessGalleryApi.listByBusiness(businessId),
+  ]);
+
+  if (!draft.profilePhoto && business.logo) {
+    await businessesApi.deleteLogo(businessId, token);
+  }
+
+  const retainedGallery = new Set(
+    draft.gallery
+      .filter((photo): photo is string => Boolean(photo && !photo.startsWith("data:")))
+      .map((photo) => resolveMediaUrl(photo))
+      .filter((photo): photo is string => photo != null),
+  );
+  await Promise.all(
+    gallery
+      .filter((image) => !retainedGallery.has(resolveMediaUrl(image.image) ?? image.image))
+      .map((image) => businessGalleryApi.remove(image.id, token)),
+  );
+
   if (draft.profilePhoto?.startsWith("data:")) {
     const file = dataUrlToFile(draft.profilePhoto, "logo.png");
-    if (file) {
-      try {
-        await businessesApi.uploadLogo(businessId, file, token);
-      } catch (error) {
-        console.warn("Business logo upload failed:", error);
-      }
-    }
+    if (!file) throw new Error("Не удалось обработать логотип бизнеса.");
+    await businessesApi.uploadLogo(businessId, file, token);
   }
 
   const uploads = draft.gallery
@@ -46,9 +63,7 @@ export async function syncBusinessMediaFromDraft(
     })
     .filter((promise): promise is ReturnType<typeof businessGalleryApi.upload> => promise != null);
 
-  if (uploads.length > 0) {
-    await Promise.allSettled(uploads);
-  }
+  await Promise.all(uploads);
 }
 
 export async function fetchBusinessGalleryUrls(businessId: number) {

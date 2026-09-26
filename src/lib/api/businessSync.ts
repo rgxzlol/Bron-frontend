@@ -167,7 +167,13 @@ async function loadBusinessDetails(
     withOwnerData
       ? Promise.all([
           loadBusinessStats(businessId),
-          loadBusinessBookings(businessId, mappedItems),
+          loadBusinessBookings(businessId, mappedItems).catch((error) => {
+            console.error(
+              `Не удалось загрузить бронирования бизнеса ${businessId}:`,
+              error,
+            );
+            return [];
+          }),
         ])
       : Promise.resolve<[undefined, BusinessBookingRequest[]]>([undefined, []]),
     branches[0]?.id
@@ -193,11 +199,21 @@ async function loadBusinessDetails(
 
 export async function fetchMyBusinessesFromApi() {
   const businesses = await businessesApi.my();
-  return Promise.all(
+  const results = await Promise.allSettled(
     businesses.map((business) =>
       loadBusinessDetails(business.id, true, business),
     ),
   );
+
+  return results.flatMap((result, index) => {
+    if (result.status === "fulfilled") return [result.value];
+
+    console.error(
+      `Не удалось загрузить данные бизнеса владельца ${businesses[index].id}:`,
+      result.reason,
+    );
+    return [];
+  });
 }
 
 export async function fetchPublicBusinessesFromApi() {

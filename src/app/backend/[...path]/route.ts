@@ -101,7 +101,7 @@ async function proxyRequest(request: NextRequest) {
   if (looksLikeNonJsonPayload(text, upstreamType)) {
     return NextResponse.json(
       {
-        detail: `Upstream API returned HTML instead of JSON (${response.status}). Check that the remote API is running.`,
+        detail: "Сервер временно недоступен. Попробуйте позже.",
       },
       { status: response.status === 404 ? 502 : response.status },
     );

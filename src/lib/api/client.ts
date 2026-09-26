@@ -93,19 +93,42 @@ function extractErrorMessage(data: unknown, fallback: string) {
 
   const record = data as Record<string, unknown>;
 
-  if (typeof record.detail === "string") return record.detail;
-  if (Array.isArray(record.detail) && record.detail.length > 0) {
-    const first = record.detail[0];
-    if (typeof first === "string") return first;
-    if (first && typeof first === "object" && "msg" in first) {
-      return String((first as { msg: unknown }).msg);
+  const detailCandidates: unknown[] = [];
+  if (typeof record.detail === "string") detailCandidates.push(record.detail);
+  if (Array.isArray(record.detail)) detailCandidates.push(...record.detail);
+  if (typeof record.message === "string") detailCandidates.push(record.message);
+
+  for (const candidate of detailCandidates) {
+    if (typeof candidate === "string") {
+      if (/^Upstream API returned HTML instead of JSON/i.test(candidate)) {
+        return "Сервер временно недоступен. Попробуйте позже.";
+      }
+      return candidate;
+    }
+
+    if (candidate && typeof candidate === "object" && "msg" in candidate) {
+      const msg = String((candidate as { msg: unknown }).msg);
+      if (/^Upstream API returned HTML instead of JSON/i.test(msg)) {
+        return "Сервер временно недоступен. Попробуйте позже.";
+      }
+      return msg;
     }
   }
-  if (typeof record.message === "string") return record.message;
 
   for (const value of Object.values(record)) {
-    if (typeof value === "string") return value;
-    if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+    if (typeof value === "string") {
+      if (/^Upstream API returned HTML instead of JSON/i.test(value)) {
+        return "Сервер временно недоступен. Попробуйте позже.";
+      }
+      return value;
+    }
+    if (Array.isArray(value) && typeof value[0] === "string") {
+      const first = value[0];
+      if (/^Upstream API returned HTML instead of JSON/i.test(first)) {
+        return "Сервер временно недоступен. Попробуйте позже.";
+      }
+      return first;
+    }
   }
 
   return fallback;

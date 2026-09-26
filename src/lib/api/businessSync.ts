@@ -199,21 +199,11 @@ async function loadBusinessDetails(
 
 export async function fetchMyBusinessesFromApi() {
   const businesses = await businessesApi.my();
-  const results = await Promise.allSettled(
+  return Promise.all(
     businesses.map((business) =>
       loadBusinessDetails(business.id, true, business),
     ),
   );
-
-  return results.flatMap((result, index) => {
-    if (result.status === "fulfilled") return [result.value];
-
-    console.error(
-      `Не удалось загрузить данные бизнеса владельца ${businesses[index].id}:`,
-      result.reason,
-    );
-    return [];
-  });
 }
 
 export async function fetchPublicBusinessesFromApi() {

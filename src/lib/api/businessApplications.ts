@@ -34,7 +34,7 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
       typeof business.category === "string"
         ? null
         : business.category.id,
-    status: business.status ?? "pending",
+    status: business.status ?? "approved",
     created_at: business.created_at,
   };
 }

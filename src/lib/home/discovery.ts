@@ -1,4 +1,10 @@
-import { branchesApi, businessesApi, servicesApi, workingHoursApi } from "@/lib/api";
+import {
+  branchesApi,
+  businessesApi,
+  categoriesApi,
+  servicesApi,
+  workingHoursApi,
+} from "@/lib/api";
 import { assets } from "@/lib/assets";
 import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync";
 import {
@@ -66,27 +72,19 @@ export async function fetchPopularPlaces(): Promise<PopularPlace[]> {
 
 export async function fetchCategoriesWithCounts(): Promise<Category[]> {
   try {
-    const businesses = await businessesApi.list();
-    if (businesses.length === 0) return staticCategories;
-
-    const counts = new Map(staticCategories.map((category) => [category.id, 0]));
-
-    for (const business of businesses) {
-      const uiCategory = apiCategoryToUi(business.category);
-
-      for (const category of staticCategories) {
-        const target = getHomeCategoryMapTarget(category.id);
-        if (target?.businessCategory === uiCategory) {
-          counts.set(category.id, (counts.get(category.id) ?? 0) + 1);
-        }
-      }
-    }
+    const apiCategories = await categoriesApi.list();
+    if (apiCategories.length === 0) return staticCategories;
 
     return staticCategories.map((category) => {
-      const count = counts.get(category.id) ?? 0;
+      const target = getHomeCategoryMapTarget(category.id);
+      const match = apiCategories.find(
+        (item) =>
+          target != null &&
+          apiCategoryToUi(item.slug) === target.businessCategory,
+      );
       return {
         ...category,
-        count: count > 0 ? count : category.count,
+        count: match?.business_count ?? 0,
       };
     });
   } catch {
@@ -103,7 +101,9 @@ export async function searchBusinessesFromApi(
       id: `api-business-${business.id}`,
       title: business.name,
       description:
-        business.description?.trim() || business.address || business.category,
+        business.description?.trim() ||
+        business.address ||
+        apiCategoryToUi(business.category),
       shopId: business.id,
       keywords: [],
     }));

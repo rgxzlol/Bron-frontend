@@ -52,9 +52,13 @@ import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
 import { useToastStore } from "@/store/toast.store";
 import { useNotificationStore } from "@/store/notification.store";
+import { servicesApi } from "@/lib/api/services";
+import type {
+  ServiceAvailability,
+  ServiceAvailableDate,
+} from "@/lib/api/types";
 import s from "./bookingPage.module.css";
 import {
-  fetchAvailableSlots,
   fetchBookingApiContext,
   getShopHoursForDate,
   isBookingDateUnavailable,
@@ -77,6 +81,10 @@ type LockedSchedule = {
   time: string;
 };
 
+function createLocalBookingId() {
+  return -Date.now();
+}
+
 function getExtraLabels(
   extra: BookingExtra,
 ) {
@@ -98,7 +106,7 @@ export default function BookingPage({
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
-  const [selectedTime, setSelectedTime] = useState(() => {
+  const [requestedTime, setRequestedTime] = useState(() => {
     const slots = buildTimeGroupsFromHours(shop.hours).flatMap((group) => group.slots);
     const todayDate = startOfDay(new Date());
     return getDefaultBookingTime(slots, todayDate, new Date());
@@ -116,7 +124,6 @@ export default function BookingPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [slotConflictMessage, setSlotConflictMessage] = useState<string | null>(null);
   const didPrefillFormRef = useRef(false);
-  const paymentConfirmedRef = useRef(false);
   const { t, locale, language } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
@@ -130,17 +137,52 @@ export default function BookingPage({
   const profileEmail = useProfileStore((state) => state.email);
   const savePhone = useProfileStore((state) => state.savePhone);
   const [apiContext, setApiContext] = useState<BookingApiContext | null>(null);
+  const [apiContextBusinessId, setApiContextBusinessId] = useState<number | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
-  const [apiAvailableSlots, setApiAvailableSlots] = useState<string[] | null>(null);
+  const [apiAvailabilityState, setApiAvailabilityState] = useState<{
+    key: string;
+    availability: ServiceAvailability | null;
+    status: "loading" | "ready" | "error";
+  } | null>(null);
+  const [apiAvailableDatesState, setApiAvailableDatesState] = useState<{
+    key: string;
+    dates: Set<string>;
+  } | null>(null);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
   const today = useMemo(() => startOfDay(new Date()), []);
+  const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
+  const serviceId =
+    bookableService?.id && /^\d+$/.test(bookableService.id)
+      ? Number(bookableService.id)
+      : null;
+  const currentApiContext =
+    shop.apiBusinessId != null && apiContextBusinessId === shop.apiBusinessId
+      ? apiContext
+      : null;
+  const availableDatesKey =
+    shop.apiBusinessId != null && serviceId != null
+      ? `${shop.apiBusinessId}:${serviceId}:${selectedStaffId ?? ""}`
+      : null;
+  const apiAvailableDates =
+    availableDatesKey != null && apiAvailableDatesState?.key === availableDatesKey
+      ? apiAvailableDatesState.dates
+      : null;
+  const availabilityKey =
+    shop.apiBusinessId != null && serviceId != null
+      ? `${shop.apiBusinessId}:${serviceId}:${formatBookingDate(selectedDate)}:${selectedStaffId ?? ""}:${availabilityRefreshKey}`
+      : null;
+  const currentAvailabilityState =
+    availabilityKey != null && apiAvailabilityState?.key === availabilityKey
+      ? apiAvailabilityState
+      : null;
+  const apiAvailability = currentAvailabilityState?.availability ?? null;
+  const availabilityStatus = currentAvailabilityState?.status ??
+    (shop.apiBusinessId && serviceId == null ? "error" : shop.apiBusinessId ? "loading" : "idle");
 
   useEffect(() => {
     if (!shop.apiBusinessId) {
-      setApiContext(null);
-      setSelectedBranchId(null);
-      setSelectedStaffId(null);
       return;
     }
 
@@ -149,6 +191,7 @@ export default function BookingPage({
     void fetchBookingApiContext(shop.apiBusinessId).then((context) => {
       if (cancelled) return;
       setApiContext(context);
+      setApiContextBusinessId(shop.apiBusinessId!);
       const preferredBranchId = shop.apiBranchId;
       const liveBranchId = context.branches.some((branch) => branch.id === preferredBranchId)
         ? preferredBranchId
@@ -163,59 +206,94 @@ export default function BookingPage({
   }, [shop.apiBusinessId, shop.apiBranchId]);
 
   useEffect(() => {
-    if (!shop.apiBusinessId || !selectedBranchId) {
-      setApiAvailableSlots(null);
-      return;
-    }
-
-    const bookableService = pickBookableShopService(shop.services, selectedServiceIds);
-    const serviceId = bookableService?.id;
-    if (!serviceId || !/^\d+$/.test(serviceId)) {
-      setApiAvailableSlots(null);
+    if (!shop.apiBusinessId || serviceId == null || availableDatesKey == null) {
       return;
     }
 
     let cancelled = false;
+    void servicesApi
+      .availableDates(serviceId, 60, selectedStaffId ?? undefined)
+      .then(
+        (dates: ServiceAvailableDate[]) => {
+          if (cancelled) return;
+          const available = new Set(dates.map((item) => item.date.slice(0, 10)));
+          setApiAvailableDatesState({ key: availableDatesKey, dates: available });
+        },
+        (error: unknown) => {
+          if (!cancelled) {
+            console.warn("Не удалось загрузить доступные даты:", error);
+            setApiAvailableDatesState({ key: availableDatesKey, dates: new Set() });
+            setSlotConflictMessage(
+              error instanceof Error ? error.message : t("booking.errorSlotUnavailable"),
+            );
+          }
+        },
+      );
 
-    void fetchAvailableSlots({
-      businessId: shop.apiBusinessId,
-      serviceId: Number(serviceId),
-      branchId: selectedBranchId,
-      date: formatBookingDate(selectedDate),
-      staffId: selectedStaffId,
-    }).then((slots) => {
-      if (!cancelled) {
-        setApiAvailableSlots(slots);
-      }
-    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shop.apiBusinessId, shop.services, selectedServiceIds, selectedStaffId, availableDatesKey, serviceId, t]);
+
+  useEffect(() => {
+    if (serviceId == null || availabilityKey == null) {
+      return;
+    }
+
+    let cancelled = false;
+    void servicesApi
+      .availability(serviceId, formatBookingDate(selectedDate), selectedStaffId ?? undefined)
+      .then((availability) => {
+        if (!cancelled) {
+          setApiAvailabilityState({ key: availabilityKey, availability, status: "ready" });
+          setSlotConflictMessage(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          console.warn("Не удалось загрузить доступные слоты:", error);
+          setApiAvailabilityState({
+            key: availabilityKey,
+            availability: null,
+            status: "error",
+          });
+          setSlotConflictMessage(
+            error instanceof Error ? error.message : t("booking.errorSlotUnavailable"),
+          );
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [
-    shop.apiBusinessId,
-    shop.services,
-    selectedServiceIds,
-    selectedBranchId,
+    serviceId,
+    availabilityKey,
     selectedDate,
     selectedStaffId,
+    t,
   ]);
 
   const resolvedHours = useMemo(
-    () => getShopHoursForDate(apiContext, shop.hours, selectedDate),
-    [apiContext, shop.hours, selectedDate],
+    () => getShopHoursForDate(currentApiContext, shop.hours, selectedDate),
+    [currentApiContext, shop.hours, selectedDate],
   );
 
   const timeGroups = useMemo(() => {
-    if (apiAvailableSlots?.length) {
-      return groupTimeSlots(apiAvailableSlots);
+    if (shop.apiBusinessId) {
+      if (availabilityStatus !== "ready" || !apiAvailability) return [];
+      return groupTimeSlots(apiAvailability.slots.map((slot) => slot.start_time.slice(0, 5)));
     }
     return buildTimeGroupsFromHours(resolvedHours);
-  }, [apiAvailableSlots, resolvedHours]);
+  }, [apiAvailability, availabilityStatus, resolvedHours, shop.apiBusinessId]);
 
   const isDateDisabled = useCallback(
-    (date: Date) => isBookingDateUnavailable(apiContext, date),
-    [apiContext],
+    (date: Date) =>
+      isBookingDateUnavailable(currentApiContext, date) ||
+      (shop.apiBusinessId && apiAvailableDates == null) ||
+      (apiAvailableDates != null &&
+        !apiAvailableDates.has(formatBookingDate(date))),
+    [currentApiContext, apiAvailableDates, shop.apiBusinessId],
   );
 
   const allTimeSlots = useMemo(
@@ -226,25 +304,41 @@ export default function BookingPage({
   const disabledTimeSlots = useMemo(() => {
     const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
     const availableSet = new Set(available);
-    return new Set(allTimeSlots.filter((slot) => !availableSet.has(slot)));
-  }, [allTimeSlots, selectedDate]);
+    const occupied = new Set(
+      (apiAvailability?.slots ?? [])
+        .filter((slot) => !slot.is_available || slot.available_spots <= 0)
+        .map((slot) => slot.start_time.slice(0, 5)),
+    );
+    return new Set(
+      allTimeSlots.filter((slot) => !availableSet.has(slot) || occupied.has(slot)),
+    );
+  }, [allTimeSlots, selectedDate, apiAvailability]);
 
   const hourlyTimeSlots = useMemo(
-    () => allTimeSlots.filter((slot) => slot.endsWith(":00")),
-    [allTimeSlots],
+    () =>
+      shop.apiBusinessId && availabilityStatus === "ready" && apiAvailability
+        ? apiAvailability.slots.map((slot) => slot.start_time.slice(0, 5))
+        : shop.apiBusinessId
+          ? []
+          : allTimeSlots.filter((slot) => slot.endsWith(":00")),
+    [allTimeSlots, apiAvailability, availabilityStatus, shop.apiBusinessId],
   );
-
-  useEffect(() => {
-    const available = getAvailableSlotsForDate(allTimeSlots, selectedDate, new Date());
-    if (!available.includes(selectedTime)) {
-      setSelectedTime(getDefaultBookingTime(allTimeSlots, selectedDate, new Date()));
-    }
-  }, [allTimeSlots, selectedDate, selectedTime]);
+  const availableHourlySlots = hourlyTimeSlots.filter(
+    (slot) => !disabledTimeSlots.has(slot) &&
+      getAvailableSlotsForDate([slot], selectedDate, new Date()).length > 0,
+  );
+  const selectedTime =
+    availableHourlySlots.length > 0 && !availableHourlySlots.includes(requestedTime)
+      ? availableHourlySlots[0] ??
+        getDefaultBookingTime(allTimeSlots, selectedDate, new Date())
+      : requestedTime;
+  const selectedAvailabilitySlot = apiAvailability?.slots.find(
+    (slot) => slot.start_time.slice(0, 5) === selectedTime,
+  );
 
   useEffect(() => {
     if (step !== 2) {
       didPrefillFormRef.current = false;
-      setSubmitAttempted(false);
       return;
     }
 
@@ -290,22 +384,27 @@ export default function BookingPage({
       : t("booking.durationOneHour");
   }, [selectedServices, shop, t]);
 
-  const maxGuests = 20;
-
-  const bookingPrice = useMemo(() => basePrice * guests, [basePrice, guests]);
+  const maxGuests = Math.max(
+    1,
+    selectedAvailabilitySlot?.available_spots ??
+      apiAvailability?.capacity ??
+      20,
+  );
+  const guestCount = Math.min(guests, maxGuests);
+  const bookingPrice = useMemo(() => basePrice * guestCount, [basePrice, guestCount]);
 
   const baseLineItems = useMemo<OrderLineItem[]>(
     () => [
       {
         id: "booking-base",
         name:
-          guests > 1
-            ? t("booking.guestSuffix", { name: baseBookingName, guests })
+          guestCount > 1
+            ? t("booking.guestSuffix", { name: baseBookingName, guests: guestCount })
             : baseBookingName,
         price: bookingPrice,
       },
     ],
-    [baseBookingName, bookingPrice, guests, t],
+    [baseBookingName, bookingPrice, guestCount, t],
   );
 
   const availableExtras = useMemo<BookingExtra[]>(
@@ -340,7 +439,7 @@ export default function BookingPage({
           },
         ];
       }),
-    [availableExtras, extraQuantities, t],
+    [availableExtras, extraQuantities],
   );
 
   const allLineItems = useMemo(
@@ -360,7 +459,6 @@ export default function BookingPage({
   const priceLabel = t("booking.priceFrom", { price: formatPrice(shop.price) });
   const priceSubLabel =
     shop.type === "Больница" ? t("booking.perVisit") : t("booking.perHour");
-  const displayEmail = form.email.trim() || "Ivan.Petrov@gmail.com";
   const backLabel = origin === "home" ? t("common.close") : t("booking.backToMap");
   const activeDate = lockedSchedule?.date ?? selectedDate;
   const activeTime = lockedSchedule?.time ?? selectedTime;
@@ -368,10 +466,20 @@ export default function BookingPage({
   const localizedDistrict = translateLocation(shop.district, language);
 
   function handleContinueFromStep1() {
+    if (
+      shop.apiBusinessId &&
+      (!selectedAvailabilitySlot?.is_available ||
+        (selectedAvailabilitySlot?.available_spots ?? 0) < guestCount)
+    ) {
+      setSlotConflictMessage(t("booking.errorSlotUnavailable"));
+      return;
+    }
+
     setLockedSchedule({
       date: startOfDay(selectedDate),
       time: selectedTime,
     });
+    setSubmitAttempted(false);
     setStep(2);
   }
 
@@ -379,6 +487,7 @@ export default function BookingPage({
     if (stepNumber > 1) {
       if (stepNumber === 2) {
         setLockedSchedule(null);
+        setSubmitAttempted(false);
       }
       setStep((current) => (current - 1) as BookingStep);
       return;
@@ -462,15 +571,17 @@ export default function BookingPage({
   }
 
   function handleSlotConflict() {
+    setAvailabilityRefreshKey((key) => key + 1);
     setShowExtrasModal(false);
     setShowCardModal(false);
     setLockedSchedule(null);
+    setSubmitAttempted(false);
     setStep(1);
     setSlotConflictMessage(t("booking.errorSlotUnavailable"));
     showToast(t("booking.errorSlotUnavailable"), t("booking.errorSlotUnavailableHint"));
   }
 
-  async function finishExtras() {
+  async function finishExtras(isPaymentConfirmed = false) {
     if (!token) {
       alert(t("booking.errorLoginRequired"));
       return;
@@ -479,20 +590,20 @@ export default function BookingPage({
     if (!shop.apiBusinessId) {
       const bookingDate = formatBookingDate(activeDate);
       addLocalBooking({
-        id: -Date.now(),
+        id: createLocalBookingId(),
         booking_date: bookingDate,
         start_time: activeTime,
         end_time: addMinutesToTime(activeTime, 60),
         status: "confirmed",
         total_price: total,
         business_id: shop.id,
-        guest_count: guests,
+        guest_count: guestCount,
       } satisfies BookingListItem);
       completeBookingFlow();
       return;
     }
 
-    if (paymentMethod === "card" && !paymentConfirmedRef.current) {
+    if (paymentMethod === "card" && !isPaymentConfirmed) {
       setShowCardModal(true);
       return;
     }
@@ -524,6 +635,13 @@ export default function BookingPage({
       }
 
       const { serviceId, branchId, durationMin } = resolved.targets;
+      if (
+        !selectedAvailabilitySlot?.is_available ||
+        selectedAvailabilitySlot.available_spots < guestCount
+      ) {
+        handleSlotConflict();
+        return;
+      }
 
       const bookingDate = formatBookingDate(activeDate);
       slotKey = buildSlotKey(shop.apiBusinessId, branchId, bookingDate, activeTime);
@@ -567,13 +685,14 @@ export default function BookingPage({
         branch_id: branchId,
         booking_date: bookingDate,
         start_time: activeTime,
-        end_time: addMinutesToTime(activeTime, durationMin),
-        guest_count: guests,
+        end_time:
+          selectedAvailabilitySlot?.end_time ??
+          addMinutesToTime(activeTime, durationMin),
+        guest_count: guestCount,
         items: orderItems,
         total_price: total,
       });
 
-      paymentConfirmedRef.current = false;
       completeBookingFlow();
     } catch (error) {
       if (slotKey) releaseSlot(slotKey);
@@ -730,7 +849,7 @@ export default function BookingPage({
             />
             <TimePicker
               selectedTime={selectedTime}
-              onSelectedTimeChange={setSelectedTime}
+              onSelectedTimeChange={setRequestedTime}
               timeGroups={timeGroups}
               disabledSlots={disabledTimeSlots}
             />
@@ -794,6 +913,9 @@ export default function BookingPage({
               {hourlyTimeSlots.map((slot) => {
                 const disabled = disabledTimeSlots.has(slot);
                 const selected = selectedTime === slot;
+                const slotAvailability = apiAvailability?.slots.find(
+                  (item) => item.start_time.slice(0, 5) === slot,
+                );
                 return (
                   <button
                     key={slot}
@@ -802,11 +924,18 @@ export default function BookingPage({
                     className={`${s.timeChip} ${selected ? s.timeChipActive : ""}`}
                     data-testid={toBookingTimeTestId(slot)}
                     onClick={() => {
-                      setSelectedTime(slot);
+                      setRequestedTime(slot);
                       setSlotConflictMessage(null);
                     }}
                   >
                     {slot}
+                    {apiAvailability && apiAvailability.capacity > 1 && slotAvailability?.is_available ? (
+                      <span className="ml-1 text-[11px]">
+                        {t("booking.spotsRemaining", {
+                          count: slotAvailability.available_spots,
+                        })}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -961,6 +1090,7 @@ export default function BookingPage({
               className={s.lockedScheduleEdit}
               onClick={() => {
                 setLockedSchedule(null);
+                setSubmitAttempted(false);
                 setStep(1);
               }}
             >
@@ -1101,20 +1231,20 @@ export default function BookingPage({
                   type="button"
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.max(1, n - 1))}
-                  disabled={guests <= 1}
+                  disabled={guestCount <= 1}
                   aria-label={t("booking.guestsDecrease")}
                   data-testid="booking-guests-decrease"
                 >
                   −
                 </button>
                 <span className={s.counterValue} data-testid="booking-guests-count">
-                  {guests}
+                  {guestCount}
                 </span>
                 <button
                   type="button"
                   className={s.counterBtn}
                   onClick={() => setGuests((n) => Math.min(maxGuests, n + 1))}
-                  disabled={guests >= maxGuests}
+                  disabled={guestCount >= maxGuests}
                   aria-label={t("booking.guestsIncrease")}
                   data-testid="booking-guests-increase"
                 >
@@ -1200,96 +1330,6 @@ export default function BookingPage({
     );
   }
 
-  function renderStep3() {
-    return (
-      <div
-        className="mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center py-8 text-center"
-        data-testid="booking-confirm-step"
-      >
-        <div className="relative flex h-[150px] w-[150px] items-center justify-center">
-          <span className="absolute inset-0 rounded-full bg-[#16a34a]/10" />
-          <span className="absolute inset-5 rounded-full bg-[#16a34a]/20" />
-          <span className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#16a34a] shadow-[0_12px_28px_-6px_rgba(22,163,74,0.6)]">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </div>
-
-        <h2
-          className="mt-6 text-[24px] font-semibold text-[var(--text-primary)]"
-          data-testid="booking-confirm-title"
-        >
-          {t("booking.confirmTitle")}
-        </h2>
-        <p className="mt-2 text-[15px] font-semibold text-[var(--text-secondary)]">
-          {t("booking.confirmEmailSent")}
-        </p>
-        <span className="mt-3 rounded-full bg-[var(--bg-surface-muted)] px-4 py-1.5 text-[14px] font-semibold text-[var(--text-primary)]">
-          {displayEmail}
-        </span>
-
-        <div
-          className="mt-8 w-full rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface-muted)] p-4 text-left"
-          data-testid="booking-confirm-summary"
-        >
-          <h3 className="mb-3 text-[16px] font-bold text-[var(--text-primary)]">
-            {t("booking.confirmSummaryTitle")}
-          </h3>
-          <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
-            {formatBookingDateLabel(activeDate, locale)}, {activeTime}
-          </p>
-          {allLineItems.map((item) => (
-            <div
-              key={item.id}
-              className="mt-2 flex items-center justify-between gap-3 text-[14px]"
-            >
-              <span className="text-[var(--text-secondary)]">{item.name}</span>
-              <span className="font-semibold text-[var(--text-primary)]">
-                {t("booking.priceSum", { price: formatPrice(item.price) })}
-              </span>
-            </div>
-          ))}
-          <div className="mt-4 flex items-center justify-between border-t border-[var(--border-default)] pt-3 text-[16px] font-bold">
-            <span>{t("booking.total")}</span>
-            <span data-testid="booking-confirm-total">
-              {t("booking.priceSum", { price: formatPrice(total) })}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-10 flex w-full flex-col gap-3">
-          <Link
-            href={routes.home}
-            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-center text-[16px] font-semibold text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5"
-            data-testid="booking-go-home"
-          >
-            {t("booking.goHome")}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowReviewModal(true)}
-            className="w-full rounded-[14px] border border-[#0a6af7] py-4 text-[16px] font-semibold text-[var(--accent-fg)] transition hover:bg-[#0a6af7]/5"
-            data-testid="booking-leave-review"
-          >
-            {t("booking.leaveReview")}
-          </button>
-          <Link
-            href={routes.bookings}
-            onClick={(event) => {
-              event.preventDefault();
-              window.location.assign(routes.bookings);
-            }}
-            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-center text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
-            data-testid="booking-go-bookings"
-          >
-            {t("booking.viewBooking")}
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`${s.page} ${variant === "sheet" ? s.pageSheet : ""}`}
@@ -1367,10 +1407,9 @@ export default function BookingPage({
           amountText={formatPrice(total)}
           onClose={() => setShowCardModal(false)}
           onPay={async () => {
-            paymentConfirmedRef.current = true;
             setShowCardModal(false);
             try {
-              await finishExtras();
+              await finishExtras(true);
               addLocalNotification({
                 id: `local-payment-${shop.apiBusinessId ?? shop.id}-${Date.now()}`,
                 type: "payment",
@@ -1378,7 +1417,7 @@ export default function BookingPage({
                 description: `Платёж на ${formatPrice(total)} сум успешно выполнен`,
               });
             } catch {
-              paymentConfirmedRef.current = false;
+              return;
             }
           }}
         />

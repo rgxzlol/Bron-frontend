@@ -100,6 +100,7 @@ export const uz: MessageTree = {
     sectionLogout: "Hisobdan chiqish",
     addCard: "Karta qo'shish",
     changePhoto: "Suratni o‘zgartirish",
+    removePhoto: "Suratni o‘chirish",
     personalInformation: "Shaxsiy ma’lumot",
     personalData: "Shaxsiy ma’lumotlar",
     personalDataSubtitle: "Ma’lumotlarni tahrirlash",

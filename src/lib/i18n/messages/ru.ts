@@ -100,6 +100,7 @@ export const ru: MessageTree = {
     sectionLogout: "Выйти из аккаунта",
     addCard: "Добавить карту",
     changePhoto: "Изменить фото",
+    removePhoto: "Удалить фото",
     personalInformation: "Персональная информация",
     personalData: "Персональные данные",
     personalDataSubtitle: "Редактирование данных",

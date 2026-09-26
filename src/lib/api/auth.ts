@@ -77,10 +77,32 @@ export const authApi = {
     registerBody: RegisterRequest,
     loginBody: LoginRequest,
   ) => {
-    const response = await apiRequest<RegisterResponse>("/auth/register", {
-      method: "POST",
-      body: registerBody,
-    });
+    let response: RegisterResponse;
+    try {
+      response = await apiRequest<RegisterResponse>("/auth/register", {
+        method: "POST",
+        body: registerBody,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) ||
+        error.status !== 400 ||
+        !/already exists|already registered|already taken/i.test(error.message)
+      ) {
+        throw error;
+      }
+
+      try {
+        return await withAuthErrorMapping(() =>
+          apiRequest<LoginResponse>("/auth/login", { method: "POST", body: loginBody }),
+        );
+      } catch (loginError) {
+        if (loginError instanceof ApiError && loginError.status === 401) {
+          throw new ApiError(409, error.message, error.data);
+        }
+        throw loginError;
+      }
+    }
 
     if (isDuplicateRegistrationResponse(response)) {
       try {

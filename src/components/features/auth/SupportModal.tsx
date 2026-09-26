@@ -28,7 +28,7 @@ export const SupportModal = () => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full rounded-3xl border-2 border-white bg-white p-4 text-[20px] font-semibold text-black transition-all duration-200 hover:bg-[#f2f2f7] active:scale-[0.98]"
+        className="w-full rounded-3xl border-2 border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[20px] font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-[0.98]"
       >
         Тех.Поддержка
       </button>

@@ -1,6 +1,18 @@
 import { REMOTE_API_URL } from "@/config/api";
 
 const MEDIA_ORIGIN = REMOTE_API_URL.replace(/\/api\/?$/, "");
+const MAX_API_IMAGE_SIZE = 5 * 1024 * 1024;
+const API_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+export function assertApiImage(image: File | Blob) {
+  if (!API_IMAGE_TYPES.has(image.type.toLowerCase())) {
+    throw new Error("Изображение должно быть в формате JPEG, PNG или WEBP.");
+  }
+
+  if (image.size > MAX_API_IMAGE_SIZE) {
+    throw new Error("Размер изображения не должен превышать 5 МБ.");
+  }
+}
 
 export function resolveMediaUrl(
   value?: string | null,

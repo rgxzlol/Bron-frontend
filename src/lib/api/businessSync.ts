@@ -3,11 +3,17 @@ import {
   bookingsApi,
   branchesApi,
   businessesApi,
+  categoriesApi,
   productsApi,
   servicesApi,
+  usersApi,
   workingHoursApi,
 } from "@/lib/api";
-import { fetchBusinessGalleryUrls, syncBusinessMediaFromDraft } from "@/lib/api/mediaUpload";
+import {
+  dataUrlToFile,
+  fetchBusinessGalleryUrls,
+  syncBusinessMediaFromDraft,
+} from "@/lib/api/mediaUpload";
 import { resolveMediaUrl } from "@/lib/api/media";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -21,6 +27,7 @@ import {
   draftToBusinessUpdate,
   resolveApiBusinessCoords,
   scheduleToWorkingHoursPayload,
+  uiCategoryToApi,
   workingHoursToSchedule,
 } from "@/lib/api/mappers";
 import { getAuthToken } from "@/lib/api/token";
@@ -335,9 +342,16 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
   }
 
   const coords = await resolveDraftCoords(draft);
+  const categories = await categoriesApi.list();
+  const categorySlug = uiCategoryToApi(draft.category).toLowerCase();
+  const category = categories.find((item) => item.slug.toLowerCase() === categorySlug);
+  if (!category) {
+    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+  }
+
   await businessesApi.update(
     businessId,
-    draftToBusinessUpdate(draft, coords),
+    draftToBusinessUpdate(draft, coords, category.id),
     token,
   );
 
@@ -369,8 +383,29 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
   }
 
   const coords = await resolveDraftCoords(draft);
+  const [categories, profile] = await Promise.all([
+    categoriesApi.list(),
+    usersApi.getProfile(token),
+  ]);
+  const categorySlug = uiCategoryToApi(draft.category).toLowerCase();
+  const category = categories.find((item) => item.slug.toLowerCase() === categorySlug);
+  if (!category) {
+    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+  }
+
+  const ownerName =
+    profile.full_name?.trim() ||
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+    profile.username;
+  if (!profile.email.trim() || !ownerName.trim()) {
+    throw new Error("Заполните email и имя в профиле перед созданием бизнеса.");
+  }
+
   const created = await businessesApi.create(
-    draftToBusinessCreate(draft, coords),
+    draftToBusinessCreate(draft, coords, category.id, {
+      email: profile.email,
+      name: ownerName,
+    }),
     token,
   );
 
@@ -379,7 +414,8 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
     throw new Error("Не удалось определить пользователя");
   }
 
-  const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));
+  const businessId =
+    created.business_id ?? (await resolveCreatedBusinessId(draft, userId));
   return persistBusinessToApi(draft, businessId);
 }
 
@@ -472,17 +508,23 @@ export async function createServiceOnApi(
         category: service.category,
         duration: service.duration ?? 60,
         price: service.price,
+        capacity: service.guestCapacity ?? 1,
       },
       token,
     );
 
+    if (service.photo?.startsWith("data:")) {
+      const image = dataUrlToFile(service.photo, "service.png");
+      if (!image) throw new Error("Не удалось обработать фото услуги.");
+      return apiServiceToBusinessService(
+        await servicesApi.uploadImage(created.id, image, token),
+      );
+    }
+
     return apiServiceToBusinessService(created);
   } catch (error) {
-    console.warn("API service create failed, saving locally:", error);
-    if (!isRecoverableItemSyncError(error)) {
-      throw error;
-    }
-    return null;
+    console.error("API service create failed:", error);
+    throw error;
   }
 }
 
@@ -545,13 +587,31 @@ export async function updateServiceOnApi(
         duration: partial.duration,
         price: partial.price,
         is_active: partial.active,
+        capacity: partial.guestCapacity,
       },
       token,
     );
+    if (partial.photo?.startsWith("data:")) {
+      const image = dataUrlToFile(partial.photo, "service.png");
+      if (!image) throw new Error("Не удалось обработать фото услуги.");
+      return apiServiceToBusinessService(
+        await servicesApi.uploadImage(Number(serviceId), image, token),
+      );
+    }
+
+    if (partial.photo === null) {
+      const current = await servicesApi.get(Number(serviceId));
+      if (current.image) {
+        return apiServiceToBusinessService(
+          await servicesApi.deleteImage(Number(serviceId), token),
+        );
+      }
+    }
+
     return apiServiceToBusinessService(updated);
   } catch (error) {
-    console.warn("API item update failed, keeping local changes:", error);
-    return null;
+    console.error("API item update failed:", error);
+    throw error;
   }
 }
 

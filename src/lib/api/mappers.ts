@@ -52,9 +52,11 @@ export function uiCategoryToApi(category: string) {
   return UI_TO_API_CATEGORY[category] ?? category;
 }
 
-export function apiCategoryToUi(category: string) {
-  const normalized = category.trim().toLowerCase();
-  return API_TO_UI_CATEGORY[normalized] ?? category;
+export function apiCategoryToUi(category: ApiBusiness["category"]) {
+  const value =
+    typeof category === "string" ? category : category.slug || category.name;
+  const normalized = value.trim().toLowerCase();
+  return API_TO_UI_CATEGORY[normalized] ?? value;
 }
 
 function parsePrice(value: number | string) {
@@ -115,13 +117,21 @@ export function workingHoursToSchedule(hours: WorkingHours[]): DaySchedule[] {
 export function draftToBusinessCreate(
   draft: BusinessDraft,
   coords?: { lat: number; lng: number },
+  categoryId?: number,
+  owner?: { email: string; name: string },
 ): ApiBusinessCreate {
+  if (categoryId == null || !owner?.email.trim() || !owner.name.trim()) {
+    throw new Error("Для создания бизнеса нужны категория, email и имя владельца.");
+  }
+
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: uiCategoryToApi(draft.category),
+    category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
+    email: owner.email.trim(),
+    owner_name: owner.name.trim(),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
     website: draft.website?.trim() || null,
@@ -132,11 +142,16 @@ export function draftToBusinessCreate(
 export function draftToBusinessUpdate(
   draft: BusinessDraft,
   coords?: { lat: number; lng: number },
+  categoryId?: number,
 ): ApiBusinessUpdate {
+  if (categoryId == null) {
+    throw new Error("Не удалось определить категорию бизнеса.");
+  }
+
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: uiCategoryToApi(draft.category),
+    category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
@@ -156,6 +171,7 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     active: service.is_active ?? true,
     type: "service",
     duration: service.duration,
+    guestCapacity: service.capacity ?? 1,
   };
 }
 
@@ -172,6 +188,7 @@ export function apiServiceListItemToBusinessService(
     active: service.is_active ?? true,
     type: "service",
     duration: service.duration,
+    guestCapacity: service.capacity ?? 1,
   };
 }
 
@@ -246,7 +263,7 @@ export function apiBusinessToSavedBusiness(
     id: String(business.id),
     status: "confirmed",
     bookings: extras?.stats?.total_bookings ?? 0,
-    views: 0,
+    views: business.views_count ?? 0,
     profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",

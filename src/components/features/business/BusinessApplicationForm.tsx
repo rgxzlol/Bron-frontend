@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/shared/Button";
-import { BUSINESS_CATEGORIES } from "@/store/business.store";
+import { categoriesApi } from "@/lib/api";
+import { getApiFieldErrors } from "@/lib/api/client";
+import type { Category } from "@/lib/api/types";
 import { businessApplicationsApi } from "@/lib/api/businessApplications";
 import { BUSINESS_DESCRIPTION_MAX_LENGTH } from "@/lib/business/validation";
 import {
@@ -11,7 +13,6 @@ import {
   clampBusinessApplicationComments,
   clampBusinessApplicationDescription,
   formatBusinessApplicationPhone,
-  formatBusinessApplicationTin,
   getSocialLinkValue,
   normalizeBusinessApplicationWebsite,
   validateBusinessApplication,
@@ -19,12 +20,10 @@ import {
   type BusinessApplicationFormData,
 } from "@/lib/business/applicationValidation";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { translateBusinessCategory } from "@/lib/i18n/labels";
 import { useAuthStore } from "@/store/auth.store";
 import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 import { useBusinessStore } from "@/store/business.store";
 import { useProfileStore } from "@/store/profile.store";
-import AddressAutocomplete from "./AddressAutocomplete";
 import { assets } from "@/lib/assets";
 
 type ApplicationFieldProps = {
@@ -109,13 +108,7 @@ type ReviewModalProps = {
 
 function BusinessApplicationReviewModal({ isOpen, onClose }: ReviewModalProps) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!isOpen || !mounted) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   return createPortal(
     <div
@@ -335,58 +328,110 @@ export default function BusinessApplicationForm() {
   const { t } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const profilePhone = useProfileStore((state) => state.phone);
+  const profileFullName = useProfileStore((state) => state.fullName);
+  const profileEmail = useProfileStore((state) => state.email);
   const application = useBusinessApplicationApiStore((state) => state.application);
   const status = useBusinessApplicationApiStore((state) => state.status);
-  const fetchApplication = useBusinessApplicationApiStore(
-    (state) => state.fetchApplication,
+  const setApplication = useBusinessApplicationApiStore(
+    (state) => state.setApplication,
   );
   const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
 
   const [form, setForm] = useState<BusinessApplicationFormData>(EMPTY_FORM);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [ownerName, setOwnerName] = useState("");
   const [fieldErrors, setFieldErrors] = useState<BusinessApplicationFieldErrors>({});
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const locked = status === "pending";
 
-  // ADDED: "Email" is on the mockup but doesn't exist in BusinessApplicationFormData /
-  // the backend payload yet, so it's tracked as its own local field for now.
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | undefined>(undefined);
+  const [ownerNameError, setOwnerNameError] = useState<string | undefined>(undefined);
+  const [previousApplication, setPreviousApplication] =
+    useState<typeof application>(null);
+  const [previousProfile, setPreviousProfile] = useState<{
+    phone: typeof profilePhone;
+    fullName: typeof profileFullName;
+    email: typeof profileEmail;
+  } | null>(null);
 
-  useEffect(() => {
-    if (!application) return;
+  if (
+    application !== previousApplication ||
+    (application && previousProfile?.phone !== profilePhone)
+  ) {
+    setPreviousApplication(application);
+    if (application) {
+      setForm({
+        companyName: application.company_name,
+        tin: application.tin?.trim() ?? "",
+        sphere: application.sphere,
+        location: application.location,
+        phone: application.phone || formatBusinessApplicationPhone(profilePhone ?? ""),
+        description: application.description?.trim() ?? "",
+        latitude:
+          application.latitude != null && Number.isFinite(application.latitude)
+            ? application.latitude
+            : null,
+        longitude:
+          application.longitude != null && Number.isFinite(application.longitude)
+            ? application.longitude
+            : null,
+        website: application.website?.trim() ?? "",
+        socialTelegram: getSocialLinkValue(application.social_links, "telegram"),
+        socialInstagram: getSocialLinkValue(application.social_links, "instagram"),
+        comments: application.comments?.trim() ?? "",
+      });
+      setCategoryId(application.category_id ?? null);
+      setOwnerName(application.owner_name ?? "");
+      setEmail(application.email ?? "");
+    }
+  }
 
-    setForm({
-      companyName: application.company_name,
-      tin: application.tin?.trim() ?? "",
-      sphere: application.sphere,
-      location: application.location,
-      phone: application.phone || formatBusinessApplicationPhone(profilePhone ?? ""),
-      description: application.description?.trim() ?? "",
-      latitude:
-        application.latitude != null && Number.isFinite(application.latitude)
-          ? application.latitude
-          : null,
-      longitude:
-        application.longitude != null && Number.isFinite(application.longitude)
-          ? application.longitude
-          : null,
-      website: application.website?.trim() ?? "",
-      socialTelegram: getSocialLinkValue(application.social_links, "telegram"),
-      socialInstagram: getSocialLinkValue(application.social_links, "instagram"),
-      comments: application.comments?.trim() ?? "",
+  if (
+    previousProfile === null ||
+    application !== previousApplication ||
+    previousProfile.phone !== profilePhone ||
+    previousProfile.fullName !== profileFullName ||
+    previousProfile.email !== profileEmail
+  ) {
+    setPreviousProfile({
+      phone: profilePhone,
+      fullName: profileFullName,
+      email: profileEmail,
     });
-  }, [application, profilePhone]);
+    if (!application) {
+      if (!ownerName && profileFullName) setOwnerName(profileFullName);
+      if (!email && profileEmail) setEmail(profileEmail);
+      const phone = formatBusinessApplicationPhone(profilePhone ?? "");
+      if (phone && !form.phone) {
+        setForm((current) =>
+          current.phone ? current : { ...current, phone },
+        );
+      }
+    }
+  }
 
   useEffect(() => {
-    if (application) return;
-    const phone = formatBusinessApplicationPhone(profilePhone ?? "");
-    if (!phone) return;
-    setForm((current) =>
-      current.phone ? current : { ...current, phone },
+    let cancelled = false;
+    void categoriesApi.list().then(
+      (items) => {
+        if (!cancelled) setCategories(items);
+      },
+      (error: unknown) => {
+        if (!cancelled) {
+          setSubmitError(
+            error instanceof Error ? error.message : t("businessApplication.submitError"),
+          );
+        }
+      },
     );
-  }, [application, profilePhone]);
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   function updateField<K extends keyof BusinessApplicationFormData>(
     key: K,
@@ -460,22 +505,27 @@ export default function BusinessApplicationForm() {
     // backend/API contract is updated to match the simplified mockup fields.
     const HIDDEN_FIELD_KEYS: (keyof BusinessApplicationFieldErrors)[] = [
       "tin",
-      "sphere",
-      "location",
-      "website",
       "description",
-      "socialInstagram",
+      "comments",
     ];
     const visibleErrors = { ...errors };
     HIDDEN_FIELD_KEYS.forEach((key) => {
       delete visibleErrors[key];
     });
 
-    // ADDED: simple local required-check for the new Email field.
-    const nextEmailError = email.trim() ? undefined : t("businessApplication.errors.emailRequired");
+    const nextEmailError =
+      !email.trim()
+        ? t("businessApplication.errors.emailRequired")
+        : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+          ? undefined
+          : t("businessApplication.errors.emailInvalid");
     setEmailError(nextEmailError);
+    const nextOwnerNameError = ownerName.trim()
+      ? undefined
+      : t("businessApplication.errors.ownerNameRequired");
+    setOwnerNameError(nextOwnerNameError);
 
-    if (Object.keys(visibleErrors).length > 0 || nextEmailError) {
+    if (Object.keys(visibleErrors).length > 0 || nextEmailError || nextOwnerNameError) {
       const { phone: phoneError, ...displayableErrors } = visibleErrors;
       setFieldErrors(displayableErrors);
       if (phoneError) {
@@ -484,10 +534,8 @@ export default function BusinessApplicationForm() {
       return;
     }
 
-    const latitude = form.latitude;
-    const longitude = form.longitude;
-    if (latitude == null || longitude == null) {
-      setSubmitError(t("businessApplication.errors.locationCoordsRequired"));
+    if (categoryId == null || !categories.some((category) => category.id === categoryId)) {
+      setSubmitError(t("businessApplication.errors.sphereRequired"));
       return;
     }
 
@@ -497,33 +545,57 @@ export default function BusinessApplicationForm() {
     try {
       const result = await businessApplicationsApi.create(
         {
-          company_name: form.companyName.trim(),
-          tin: form.tin.trim(),
-          sphere: form.sphere.trim(),
-          location: form.location.trim(),
+          name: form.companyName.trim(),
+          category_id: categoryId,
+          address: form.location.trim(),
           phone: formWithPhone.phone.trim(),
-          description: form.description.trim(),
-          latitude,
-          longitude,
-          website: normalizeBusinessApplicationWebsite(form.website),
+          email: email.trim(),
+          owner_name: ownerName.trim(),
+          ...(form.description.trim() ? { description: form.description.trim() } : {}),
+          ...(form.latitude != null ? { latitude: form.latitude } : {}),
+          ...(form.longitude != null ? { longitude: form.longitude } : {}),
+          ...(form.website.trim()
+            ? { website: normalizeBusinessApplicationWebsite(form.website) }
+            : {}),
           social_links: {
-            telegram: form.socialTelegram.trim(),
-            instagram: form.socialInstagram.trim(),
+            telegram: form.socialTelegram.trim() || null,
+            instagram: form.socialInstagram.trim() || null,
+            facebook: null,
+            tiktok: null,
+            youtube: null,
           },
-          comments: form.comments.trim(),
+          ...(form.tin.trim() ? { tin: form.tin.trim() } : {}),
+          ...(form.comments.trim() ? { comments: form.comments.trim() } : {}),
         },
         token ?? undefined,
       );
 
-      if (!result) {
-        setSubmitError(t("businessApplication.submitError"));
-        return;
-      }
-
-      await Promise.all([fetchApplication(), fetchBusinessesFromApi()]);
+      setApplication(result);
+      await fetchBusinessesFromApi();
       setShowReviewModal(true);
-    } catch {
-      setSubmitError(t("businessApplication.submitError"));
+    } catch (error) {
+      const apiFieldErrors = getApiFieldErrors(error);
+      const mappedErrors = {
+        companyName: apiFieldErrors.name,
+        sphere: apiFieldErrors.category_id,
+        location: apiFieldErrors.address,
+        phone: apiFieldErrors.phone,
+        socialTelegram: apiFieldErrors.telegram,
+        socialInstagram: apiFieldErrors.instagram,
+      };
+      setFieldErrors((current) => ({ ...current, ...mappedErrors }));
+      setEmailError(apiFieldErrors.email);
+      setOwnerNameError(apiFieldErrors.owner_name);
+      const hasFieldError = Object.values(mappedErrors).some(Boolean) ||
+        Boolean(apiFieldErrors.email) ||
+        Boolean(apiFieldErrors.owner_name);
+      setSubmitError(
+        hasFieldError
+          ? null
+          : error instanceof Error
+            ? error.message
+            : t("businessApplication.submitError"),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -554,10 +626,9 @@ export default function BusinessApplicationForm() {
             onSubmit={handleSubmit}
             noValidate
           >
-            {/* KEPT (relabeled per mockup: "Полное имя") */}
             <ApplicationField
               id="company-name"
-              label={t("businessApplication.fullName")}
+              label={t("businessApplication.companyName")}
               value={form.companyName}
               onChange={(value) => updateField("companyName", value)}
               error={fieldErrors.companyName}
@@ -566,20 +637,20 @@ export default function BusinessApplicationForm() {
               placeholder={t("businessApplication.fullNamePlaceholder")}
             />
 
-            {/* COMMENTED OUT: TIN field — not in the mockup */}
-            {/*
             <ApplicationField
-              id="tin"
-              label={t("businessApplication.tin")}
-              value={form.tin}
-              onChange={(value) => updateField("tin", formatBusinessApplicationTin(value))}
-              error={fieldErrors.tin}
+              id="owner-name"
+              label={t("businessApplication.fullName")}
+              value={ownerName}
+              onChange={(value) => {
+                setOwnerName(value);
+                setOwnerNameError(undefined);
+                setSubmitError(null);
+              }}
+              error={ownerNameError}
               required
               disabled={locked}
-              placeholder={t("businessApplication.tinPlaceholder")}
-              inputMode="numeric"
+              placeholder={t("businessApplication.fullNamePlaceholder")}
             />
-            */}
 
             {/* KEPT */}
             <ApplicationField
@@ -595,8 +666,6 @@ export default function BusinessApplicationForm() {
               type="tel"
             />
 
-            {/* ADDED: Email field — not part of BusinessApplicationFormData yet,
-                tracked locally (see the `email`/`setEmail` state above). */}
             <ApplicationField
               id="email"
               label={t("businessApplication.email")}
@@ -607,9 +676,70 @@ export default function BusinessApplicationForm() {
                 setSubmitError(null);
               }}
               error={emailError}
+              required
               disabled={locked}
-              placeholder="@Bron_Suport"
+              placeholder="name@example.com"
               type="email"
+            />
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="sphere"
+                className={`text-[20px] font-semibold ${
+                  fieldErrors.sphere ? "text-[#e02424]" : "text-[var(--text-secondary)]"
+                }`}
+              >
+                {t("businessApplication.sphere")}
+                <span className="text-[var(--accent-fg)]"> *</span>
+              </label>
+              <select
+                id="sphere"
+                name="sphere"
+                value={categoryId ?? ""}
+                disabled={locked || categories.length === 0}
+                aria-invalid={fieldErrors.sphere ? true : undefined}
+                className="w-full rounded-[14px] border border-transparent bg-white px-3 py-3 text-[18px] font-semibold text-[var(--text-primary)] outline-none focus:border-[#0a6af7] disabled:opacity-70 sm:px-6 sm:py-4"
+                onChange={(event) => {
+                  const selected = categories.find(
+                    (category) => category.id === Number(event.target.value),
+                  );
+                  setCategoryId(selected?.id ?? null);
+                  updateField("sphere", selected?.slug ?? "");
+                }}
+              >
+                <option value="">{t("businessApplication.spherePlaceholder")}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.sphere ? (
+                <p role="alert" className="text-[13px] font-semibold text-[#e02424]">
+                  {fieldErrors.sphere}
+                </p>
+              ) : null}
+            </div>
+
+            <ApplicationField
+              id="location"
+              label={t("businessApplication.location")}
+              value={form.location}
+              onChange={(value) => updateField("location", value)}
+              error={fieldErrors.location}
+              required
+              disabled={locked}
+              placeholder={t("businessApplication.locationPlaceholder")}
+            />
+
+            <ApplicationField
+              id="website"
+              label={t("businessApplication.website")}
+              value={form.website}
+              onChange={(value) => updateField("website", value)}
+              error={fieldErrors.website}
+              disabled={locked}
+              placeholder={t("businessApplication.websitePlaceholder")}
             />
 
             {/* COMMENTED OUT: sphere/category select — not in the mockup */}
@@ -734,22 +864,16 @@ export default function BusinessApplicationForm() {
             />
             */}
 
-            {/* KEPT, but merged: mockup has a single "Instagram / Telegram"
-                field, so it's mapped onto the existing `socialTelegram`
-                state. `socialInstagram` is commented out below. */}
             <ApplicationField
               id="social-telegram"
-              label={t("businessApplication.socialCombined")}
+              label={t("businessApplication.socialTelegram")}
               value={form.socialTelegram}
               onChange={(value) => updateField("socialTelegram", value)}
               error={fieldErrors.socialTelegram}
               disabled={locked}
-              placeholder="@Bron_Suport"
+              placeholder="https://t.me/your-business"
             />
 
-            {/* COMMENTED OUT: separate Instagram field — merged into the
-                single "Instagram / Telegram" field above per the mockup */}
-            {/*
             <ApplicationField
               id="social-instagram"
               label={t("businessApplication.socialInstagram")}
@@ -757,9 +881,8 @@ export default function BusinessApplicationForm() {
               onChange={(value) => updateField("socialInstagram", value)}
               error={fieldErrors.socialInstagram}
               disabled={locked}
-              placeholder={t("businessApplication.socialInstagramPlaceholder")}
+              placeholder="https://instagram.com/your-business"
             />
-            */}
 
             {/* COMMENTED OUT: description field — not in the mockup */}
             {/*

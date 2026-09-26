@@ -123,7 +123,10 @@ export function getDemoBusinessApplication(): BusinessApplication {
     user_id: business.owner_id,
     company_name: business.name,
     tin: business.tin,
-    sphere: business.category,
+    sphere:
+      typeof business.category === "string"
+        ? business.category
+        : business.category.slug,
     location: business.address,
     phone: business.phone,
     description: business.description,

@@ -550,16 +550,30 @@
   font-weight: 600;
 }
 
+:global([data-theme="dark"]) .validationSummary {
+  background: rgba(224, 36, 36, 0.14);
+  color: #ffb4b4;
+}
+
 .errorText {
   color: #e02424;
   font-size: 14px;
   font-weight: 600;
 }
 
+:global([data-theme="dark"]) .errorText,
+:global([data-theme="dark"]) .fieldErrorMessage {
+  color: #ff8080;
+}
+
 .successText {
   color: #16a34a;
   font-size: 14px;
   font-weight: 600;
+}
+
+:global([data-theme="dark"]) .successText {
+  color: #4ade80;
 }
 
 .blockTitle {

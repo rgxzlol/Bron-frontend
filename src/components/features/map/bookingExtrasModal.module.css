@@ -268,6 +268,11 @@
   line-height: 1;
 }
 
+:global([data-theme="dark"]) .removeBtn {
+  background: rgba(224, 36, 36, 0.16);
+  color: #ffb4b4;
+}
+
 .totalRow {
   display: flex;
   justify-content: space-between;

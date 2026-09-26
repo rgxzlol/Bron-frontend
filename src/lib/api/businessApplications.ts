@@ -1,4 +1,5 @@
 import { businessesApi } from "./businesses";
+import { categoriesApi } from "./categories";
 import { getCurrentUserId } from "./businessSync";
 import { ApiError } from "./client";
 import type { Business, BusinessApplication, BusinessApplicationCreate } from "./types";
@@ -9,7 +10,10 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
     user_id: business.owner_id,
     company_name: business.name,
     tin: business.tin,
-    sphere: business.category,
+    sphere:
+      typeof business.category === "string"
+        ? business.category
+        : business.category.slug,
     location: business.address,
     phone: business.phone,
     description: business.description,
@@ -18,6 +22,12 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
     website: business.website,
     social_links: business.social_links,
     comments: business.comments,
+    email: business.email,
+    owner_name: business.owner_name,
+    category_id:
+      typeof business.category === "string"
+        ? null
+        : business.category.id,
     status: business.status ?? "pending",
     created_at: business.created_at,
   };
@@ -58,33 +68,39 @@ export const businessApplicationsApi = {
   },
 
   create: async (body: BusinessApplicationCreate, token?: string) => {
-    const business = await businessesApi.create(
-      {
-        name: body.company_name,
-        description: body.description.trim(),
-        category: body.sphere,
-        address: body.location,
-        phone: body.phone,
-        latitude: body.latitude,
-        longitude: body.longitude,
-        tin: body.tin,
-        website: body.website,
-        social_links: body.social_links,
-        comments: body.comments,
-      },
-      token,
-    );
+    const categories = await categoriesApi.list();
+    const category = categories.find((item) => item.id === body.category_id);
 
-    if (!business) {
-      const owned = await fetchOwnedBusinesses();
-      const latest = owned.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )[0];
-
-      if (!latest) return null;
-      return mapBusinessToApplication(latest);
+    if (!category) {
+      throw new ApiError(404, "Выбранная категория больше недоступна.");
     }
 
-    return mapBusinessToApplication(business);
+    const userId = await getCurrentUserId();
+    if (userId == null) {
+      throw new ApiError(401, "Не удалось определить пользователя. Войдите снова.");
+    }
+
+    const result = await businessesApi.create(body, token);
+
+    return {
+      id: result.business_id,
+      user_id: userId,
+      company_name: body.name,
+      tin: body.tin,
+      sphere: category.slug,
+      location: body.address,
+      phone: body.phone,
+      description: body.description,
+      latitude: body.latitude,
+      longitude: body.longitude,
+      website: body.website,
+      social_links: body.social_links,
+      comments: body.comments,
+      email: body.email,
+      owner_name: body.owner_name,
+      category_id: category.id,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    } satisfies BusinessApplication;
   },
 };

@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type {
   Booking,
+  BookingAttendanceUpdate,
   BookingCreate,
   BookingListItem,
   BookingUpdate,
@@ -19,7 +20,7 @@ export const bookingsApi = {
     apiRequest<BookingListItem[]>("/bookings/my", { auth: true, token }),
 
   get: (bookingId: number) =>
-    apiRequest<Booking>(`/bookings/${bookingId}`),
+    apiRequest<Booking>(`/bookings/${bookingId}`, { auth: true }),
 
   update: (bookingId: number, body: BookingUpdate, token?: string) =>
     apiRequest<Booking>(`/bookings/${bookingId}`, {
@@ -86,6 +87,18 @@ export const bookingsApi = {
   reject: (bookingId: number, token?: string) =>
     apiRequest<Booking>(`/bookings/${bookingId}/reject`, {
       method: "PATCH",
+      auth: true,
+      token,
+    }),
+
+  attendance: (
+    bookingId: number,
+    body: BookingAttendanceUpdate,
+    token?: string,
+  ) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/attendance`, {
+      method: "PATCH",
+      body,
       auth: true,
       token,
     }),

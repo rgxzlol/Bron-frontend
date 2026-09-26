@@ -14,6 +14,7 @@ export function isSlotConflictError(error: unknown): boolean {
 
   const message = error.message.toLowerCase();
   return (
+    message.includes("only ") && message.includes("places left") ||
     message.includes("slot") ||
     message.includes("no longer available") ||
     message.includes("недоступ") ||

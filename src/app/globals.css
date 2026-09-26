@@ -45,6 +45,7 @@
 
   --bg-page: #1c1c1c;
   --bg-surface: #2b2b2b;
+  --bg-block: #2b2b2b;
   --bg-surface-muted: #363636;
   --bg-surface-soft: #333333;
   --bg-input: #333333;
@@ -70,6 +71,14 @@
   --icon-default: #ffffff;
 
   --auth-box: #2a2e37;
+}
+
+[data-theme="dark"] .bg-\[\#fdecec\] {
+  background-color: rgba(224, 36, 36, 0.14) !important;
+}
+
+[data-theme="dark"] .bg-\[\#e8f7ee\] {
+  background-color: rgba(31, 138, 76, 0.16) !important;
 }
 
 @layer base {

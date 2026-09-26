@@ -8,6 +8,7 @@ import { pluralizeReviews } from "@/lib/pluralize";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { localizeSearchItem } from "@/lib/search/localize";
 import { useSearchStore } from "@/store/search.store";
+import { buildMapCategoryHref } from "@/lib/category/homeCategoryMap";
 import s from "./homePage.module.css";
 
 export default function SearchResults() {
@@ -35,7 +36,13 @@ export default function SearchResults() {
             return (
               <Link
                 key={item.id}
-                href={`${routes.map}?shopId=${item.shopId}`}
+                href={
+                  item.shopId != null
+                    ? `${routes.map}?shopId=${item.shopId}`
+                    : item.categoryId != null
+                      ? buildMapCategoryHref(item.categoryId)
+                      : routes.map
+                }
                 className="rounded-[18px] bg-white p-5 transition-all duration-200 hover:shadow-lg"
               >
                 <h3 className="text-[20px] font-semibold text-[var(--text-primary)]">

@@ -4,7 +4,6 @@ import Image, { type StaticImageData } from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import ReviewModal from "@/components/features/review/ReviewModal";
-import { ShopsPlace } from "@/data/shops";
 import { useReviewStore } from "@/store/review.store";
 import { getShopGallery, isRemoteShopImage } from "@/lib/business/shopImages";
 import { formatPrice } from "@/lib/formatPrice";
@@ -27,6 +26,10 @@ interface BookingCardProps {
   totalPrice?: number;
   guestsCount?: number;
   businessId?: number;
+  businessName?: string;
+  businessAddress?: string;
+  businessCategory?: string;
+  businessLogo?: string | null;
   bookingStatus?: string;
   orderItems?: BookingOrderItem[];
 }
@@ -136,12 +139,47 @@ export const BookingCard = ({
   bookingEndTime,
   totalPrice,
   guestsCount = 1,
-  businessId = 1,
+  businessId,
+  businessName,
+  businessAddress,
+  businessCategory,
+  businessLogo,
   bookingStatus,
   orderItems,
 }: BookingCardProps) => {
   const { t, language, locale } = useTranslation();
-  const shop = ShopsPlace.find((item) => item.id === businessId) ?? ShopsPlace[0];
+  const shop = useMemo(
+    () => ({
+      id: businessId ?? 0,
+      title: businessName || "Бизнес",
+      lat: 0,
+      lng: 0,
+      img: businessLogo || assets.profile.avatar,
+      profilePhoto: businessLogo ?? null,
+      gallery: businessLogo ? [businessLogo] : [],
+      type: businessCategory || "",
+      desc: "",
+      rating: 0,
+      reviews: 0,
+      hours: "",
+      freeSeats: 0,
+      price: totalPrice ?? 0,
+      address: businessAddress || "",
+      district: "",
+      phone: "",
+      category: businessCategory || "",
+      distance: "",
+      time: 60,
+    }),
+    [
+      businessAddress,
+      businessCategory,
+      businessId,
+      businessLogo,
+      businessName,
+      totalPrice,
+    ],
+  );
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOrderOpen, setIsOrderOpen] = useState(false);
@@ -169,7 +207,7 @@ export const BookingCard = ({
     bookingId != null &&
     !hasReviewedBooking(bookingId) &&
     !reviewSubmitted;
-  const shopId = String(shop.id);
+  const shopId = String(businessId ?? "");
   const shopName = shop.title;
   const localizedAddress = translateLocation(shop.address, language);
   const displayDate = formatBookingDate(bookingDate, locale);
@@ -308,7 +346,11 @@ export const BookingCard = ({
                       : undefined
                   }
                 >
-                  {t("bookings.statusConfirmed")}
+                  {(bookingStatus ?? "").toLowerCase() === "pending"
+                    ? t("businessDashboard.bookingStatusPending")
+                    : isCancelled
+                      ? t("bookings.statusCancelled")
+                      : t("bookings.statusConfirmed")}
                 </span>
                 <BookingDropdown
                   bookingId={bookingId}

@@ -1,18 +1,38 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { readImageFile } from "@/lib/readImageFile";
 import { useProfileStore } from "@/store/profile.store";
+import { reviewsApi } from "@/lib/api";
+import { getAuthToken } from "@/lib/api/token";
 import {
   REVIEW_MAX_LENGTH,
   REVIEW_TAGS,
   useReviewStore,
 } from "@/store/review.store";
 import s from "./reviewModal.module.css";
+
+function subscribeToClientMount() {
+  return () => {};
+}
+
+function getClientMountedSnapshot() {
+  return true;
+}
+
+function getServerMountedSnapshot() {
+  return false;
+}
 
 type ReviewModalProps = {
   isOpen: boolean;
@@ -32,8 +52,14 @@ export default function ReviewModal({
   onSubmitted,
 }: ReviewModalProps) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToClientMount,
+    getClientMountedSnapshot,
+    getServerMountedSnapshot,
+  );
   const [limitReached, setLimitReached] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     rating?: string;
     text?: string;
@@ -50,15 +76,15 @@ export default function ReviewModal({
   const addPhoto = useReviewStore((state) => state.addPhoto);
   const removePhoto = useReviewStore((state) => state.removePhoto);
   const submitReview = useReviewStore((state) => state.submitReview);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const closeModal = useCallback(() => {
+    setLimitReached(false);
+    setFieldErrors({});
+    setSubmitError(null);
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) {
-      setLimitReached(false);
-      setFieldErrors({});
       return;
     }
 
@@ -70,7 +96,7 @@ export default function ReviewModal({
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeModal();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -79,13 +105,7 @@ export default function ReviewModal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose, fullName, draft.authorName, setAuthorName]);
-
-  useEffect(() => {
-    if (draft.text.length < REVIEW_MAX_LENGTH) {
-      setLimitReached(false);
-    }
-  }, [draft.text.length]);
+  }, [isOpen, closeModal, fullName, draft.authorName, setAuthorName]);
 
   if (!isOpen || !mounted) return null;
 
@@ -98,9 +118,7 @@ export default function ReviewModal({
 
   function handleTextChange(value: string) {
     const next = value.slice(0, REVIEW_MAX_LENGTH);
-    if (value.length > REVIEW_MAX_LENGTH) {
-      setLimitReached(true);
-    }
+    setLimitReached(value.length > REVIEW_MAX_LENGTH);
     setText(next);
   }
 
@@ -120,7 +138,8 @@ export default function ReviewModal({
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (isSubmitting) return;
     const errors: { rating?: string; text?: string; authorName?: string } = {};
 
     if (draft.rating <= 0) {
@@ -138,18 +157,49 @@ export default function ReviewModal({
       return;
     }
 
-    const submitted = submitReview({ shopId, shopName, bookingId });
-    if (!submitted) return;
+    const businessId = Number(shopId);
+    const token = getAuthToken();
+    if (!Number.isInteger(businessId) || businessId <= 0 || !token) {
+      setSubmitError(t("review.submitError"));
+      return;
+    }
 
-    setFieldErrors({});
-    onSubmitted?.();
-    onClose();
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await reviewsApi.create(
+        {
+          business_id: businessId,
+          booking_id: bookingId ?? null,
+          rating: draft.rating,
+          comment: draft.text.trim() || null,
+        },
+        token,
+      );
+      const submitted = submitReview({
+        shopId,
+        shopName,
+        bookingId,
+        persistedRemotely: true,
+      });
+      if (!submitted) throw new Error(t("review.submitError"));
+
+      setFieldErrors({});
+      onSubmitted?.();
+      closeModal();
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : t("review.submitError"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return createPortal(
     <div
       className={s.backdrop}
-      onClick={onClose}
+      onClick={closeModal}
       role="dialog"
       aria-modal="true"
       aria-label={t("review.title")}
@@ -161,7 +211,7 @@ export default function ReviewModal({
           <button
             type="button"
             className={`${s.closeBtn} theme-close-button`}
-            onClick={onClose}
+            onClick={closeModal}
             aria-label={t("common.close")}
             data-testid="review-modal-close"
           >
@@ -179,6 +229,11 @@ export default function ReviewModal({
               {t("review.validationSummary")}
             </p>
           )}
+          {submitError ? (
+            <p className={s.validationSummary} role="alert" data-testid="review-submit-error">
+              {submitError}
+            </p>
+          ) : null}
           <div className={s.column}>
             <div>
               <span className={s.label}>{t("review.yourRating")}</span>
@@ -357,10 +412,11 @@ export default function ReviewModal({
         <button
           type="button"
           className={s.submitBtn}
-          onClick={handleSubmit}
+          disabled={isSubmitting}
+          onClick={() => void handleSubmit()}
           data-testid="review-submit"
         >
-          {t("review.publish")}
+          {isSubmitting ? "Сохранение..." : t("review.publish")}
         </button>
       </div>
     </div>,

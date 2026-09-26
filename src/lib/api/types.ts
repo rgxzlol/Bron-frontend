@@ -49,7 +49,8 @@ export type InAppNotificationType =
   | "booking_created"
   | "booking_confirmed"
   | "booking_rejected"
-  | "booking_cancelled";
+  | "booking_cancelled"
+  | "booking_rescheduled";
 
 export type InAppNotification = {
   id: string;
@@ -131,6 +132,14 @@ export type BusinessCategory = {
 
 export type Category = BusinessCategory;
 
+export type BusinessSocialLinks = {
+  instagram?: string | null;
+  telegram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+};
+
 export type Business = {
   id: number;
   owner_id: number;
@@ -145,7 +154,7 @@ export type Business = {
   longitude: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, string | null | undefined>;
+  social_links?: BusinessSocialLinks;
   comments?: string | null;
   status?: string | null;
   created_at: string;
@@ -166,7 +175,7 @@ export type BusinessCreate = {
   longitude?: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, string | null | undefined>;
+  social_links?: BusinessSocialLinks;
   comments?: string | null;
 };
 
@@ -378,6 +387,8 @@ export type BookingOrderItem = {
   kind?: "service" | "extra" | "product";
 };
 
+export type BookingAttendanceStatus = "on_time" | "late" | "no_show";
+
 export type Booking = {
   id: number;
   user_id: number;
@@ -391,6 +402,8 @@ export type Booking = {
   guest_count: number;
   total_price: number;
   status: string;
+  attendance_status: BookingAttendanceStatus;
+  extra_wait_minutes: number;
   items?: BookingOrderItem[];
 };
 
@@ -403,7 +416,13 @@ export type BookingListItem = {
   total_price: number;
   business_id?: number;
   guest_count?: number;
+  attendance_status?: BookingAttendanceStatus;
+  extra_wait_minutes?: number;
   items?: BookingOrderItem[];
+  business_name?: string;
+  business_address?: string;
+  business_category?: string;
+  business_logo?: string | null;
 };
 
 export type BookingCreate = {
@@ -425,7 +444,7 @@ export type BookingUpdate = {
 };
 
 export type BookingAttendanceUpdate = {
-  status: string;
+  status: BookingAttendanceStatus;
   extra_wait_minutes?: number;
 };
 
@@ -467,8 +486,9 @@ export type Review = {
 
 export type ReviewCreate = {
   business_id: number;
+  booking_id?: number | null;
   rating: number;
-  comment: string;
+  comment?: string | null;
 };
 
 export type CustomerReviewCreate = {
@@ -539,6 +559,6 @@ export type BusinessApplicationCreate = {
   latitude?: number | null;
   longitude?: number | null;
   website?: string | null;
-  social_links?: Record<string, string | null | undefined>;
+  social_links?: BusinessSocialLinks;
   comments?: string | null;
 };

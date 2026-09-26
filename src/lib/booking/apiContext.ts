@@ -84,7 +84,7 @@ export async function fetchAvailableSlots({
   staffId,
 }: AvailableSlotsParams) {
   try {
-    const slots = await bookingsApi.availableSlots({
+    const response = await bookingsApi.availableSlots({
       business_id: businessId,
       service_id: serviceId,
       branch_id: branchId,
@@ -92,6 +92,11 @@ export async function fetchAvailableSlots({
       staff_id: staffId ?? undefined,
     });
 
+    const slots = Array.isArray(response)
+      ? response
+      : response.slots
+          .filter((slot) => slot.is_available)
+          .map((slot) => slot.start_time);
     return slots
       .map((slot) => slot.slice(0, 5))
       .filter((slot) => /^\d{2}:\d{2}$/.test(slot));

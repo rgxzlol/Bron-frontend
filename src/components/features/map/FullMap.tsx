@@ -1,9 +1,8 @@
 "use client"
 
 import mapboxgl from "mapbox-gl"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import Image from "next/image"
-import { ShopsPlace } from "@/data/shops"
 import { ShopsType } from "@/types/shops.types"
 import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
 import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
@@ -40,58 +39,18 @@ const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
 const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
-const DEMO_MAP_SHOPS: ShopsType[] = [
-  {
-    ...ShopsPlace[3],
-    id: 10001,
-    title: "Demo Beauty Salon",
-    lat: 41.3198,
-    lng: 69.2925,
-    services: [
-      {
-        id: "demo-beauty-haircut",
-        title: "Стрижка и укладка",
-        description: "Демо-услуга салона красоты",
-        priceFrom: 150000,
-        durationMin: 60,
-        kind: "service",
-      },
-      {
-        id: "demo-beauty-manicure",
-        title: "Маникюр",
-        description: "Демо-услуга для проверки бронирования",
-        priceFrom: 90000,
-        durationMin: 45,
-        kind: "service",
-      },
-    ],
-  },
-  {
-    ...ShopsPlace[4],
-    id: 10002,
-    title: "Demo Garden Restaurant",
-    lat: 41.3028,
-    lng: 69.2645,
-    services: [
-      {
-        id: "demo-garden-table",
-        title: "Столик в ресторане",
-        description: "Демо-бронирование столика",
-        priceFrom: 95000,
-        durationMin: 90,
-        kind: "service",
-      },
-      {
-        id: "demo-garden-terrace",
-        title: "Столик на террасе",
-        description: "Демо-услуга для проверки бизнес-страницы",
-        priceFrom: 120000,
-        durationMin: 90,
-        kind: "service",
-      },
-    ],
-  },
-]
+function subscribeToMapNavigation(onChange: () => void) {
+  window.addEventListener("popstate", onChange)
+  return () => window.removeEventListener("popstate", onChange)
+}
+
+function getMapNavigationFilter() {
+  return new URLSearchParams(window.location.search).get("filter") ?? "Все"
+}
+
+function getServerMapNavigationFilter() {
+  return "Все"
+}
 
 function createShopMarkerElement(title: string, isHospital: boolean) {
   const el = document.createElement("div")
@@ -236,7 +195,13 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     useState<ShopsType | null>(null)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
-  const [activeFilter, setActiveFilter] = useState("Все")
+  const navigationFilter = useSyncExternalStore(
+    subscribeToMapNavigation,
+    getMapNavigationFilter,
+    getServerMapNavigationFilter,
+  )
+  const [activeFilterOverride, setActiveFilterOverride] = useState<string | null>(null)
+  const activeFilter = activeFilterOverride ?? navigationFilter
   const [apiShops, setApiShops] = useState<ShopsType[]>([])
   const [apiLoadCompleted, setApiLoadCompleted] = useState(false)
   const [isMapLoading, setIsMapLoading] = useState(() => isMapboxConfigured())
@@ -279,14 +244,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     }
 
     if (filter) {
-      setActiveFilter(filter)
       mapViewportModeRef.current = "fit-markers"
     }
 
     if (category || filter) {
       const url = new URL(window.location.href)
       url.searchParams.delete("category")
-      url.searchParams.delete("filter")
       window.history.replaceState({}, "", url.pathname + url.search)
     }
   }, [applyCategoryFromNavigation])
@@ -444,7 +407,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current = []
 
     const localShops = businesses.map((business) => businessToShop(business))
-    const mapShops = [...apiShops, ...localShops, ...DEMO_MAP_SHOPS]
+    const mapShops = [...apiShops, ...localShops].filter(
+      (shop, index, shops) =>
+        shops.findIndex(
+          (item) =>
+            item.apiBusinessId != null &&
+            item.apiBusinessId === shop.apiBusinessId,
+        ) === index ||
+        shop.apiBusinessId == null,
+    )
 
     const filteredShops = mapShops.filter((shop) => {
       if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
@@ -523,7 +494,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   ])
 
   const syncMarkersRef = useRef(syncMarkers)
-  syncMarkersRef.current = syncMarkers
+  useEffect(() => {
+    syncMarkersRef.current = syncMarkers
+  }, [syncMarkers])
 
   useEffect(() => {
     if (!mapContainer.current || !isMapboxConfigured()) return
@@ -672,7 +645,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   function handleFilterSelect(filter: string) {
     mapViewportModeRef.current = "fit-markers"
-    setActiveFilter((prev) => (prev === filter ? "Все" : filter))
+    setActiveFilterOverride((previous) => {
+      const current = previous ?? navigationFilter
+      return current === filter ? "Все" : filter
+    })
   }
 
   function handleOpenCategories() {
@@ -779,8 +755,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   }
 
   const fallbackShops = [
+    ...apiShops,
     ...businesses.map((business) => businessToShop(business)),
-    ...DEMO_MAP_SHOPS,
   ].filter((shop, index, shops) => shops.findIndex((item) => item.id === shop.id) === index)
 
   return (
@@ -904,7 +880,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         <div className="absolute inset-0 z-20 rounded-[26px] bg-[var(--bg-surface-muted)] p-6">
           <div className="mb-4 rounded-[14px] bg-[var(--bg-surface)] px-4 py-3 text-center shadow-sm">
             <p className="text-[16px] font-semibold text-[var(--text-primary)]">
-              Демо-бизнесы на карте
+              Бизнесы рядом
             </p>
             <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
               Для полноценной карты добавьте NEXT_PUBLIC_MAPBOX_TOKEN в .env.local
@@ -922,6 +898,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
                 {shop.title}
               </button>
             ))}
+            {fallbackShops.length === 0 ? (
+              <p className="text-center text-[14px] text-[var(--text-secondary)]">
+                {t("map.emptyBusinesses")}
+              </p>
+            ) : null}
           </div>
         </div>
       )}

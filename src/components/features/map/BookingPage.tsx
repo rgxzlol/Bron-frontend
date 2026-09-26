@@ -40,7 +40,7 @@ import {
   pickBookableShopService,
   resolveBookingTargetIds,
 } from "@/lib/booking/payload";
-import type { BookingListItem, BookingOrderItem } from "@/lib/api/types";
+import type { BookingOrderItem } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
 import CardPaymentModal from "./CardPaymentModal";
@@ -80,10 +80,6 @@ type LockedSchedule = {
   date: Date;
   time: string;
 };
-
-function createLocalBookingId() {
-  return -Date.now();
-}
 
 function getExtraLabels(
   extra: BookingExtra,
@@ -127,7 +123,6 @@ export default function BookingPage({
   const { t, locale, language } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
-  const addLocalBooking = useBookingStore((state) => state.addLocalBooking);
   const showToast = useToastStore((state) => state.showToast);
   const addLocalNotification = useNotificationStore(
     (state) => state.addLocalNotification,
@@ -588,18 +583,7 @@ export default function BookingPage({
     }
 
     if (!shop.apiBusinessId) {
-      const bookingDate = formatBookingDate(activeDate);
-      addLocalBooking({
-        id: createLocalBookingId(),
-        booking_date: bookingDate,
-        start_time: activeTime,
-        end_time: addMinutesToTime(activeTime, 60),
-        status: "confirmed",
-        total_price: total,
-        business_id: shop.id,
-        guest_count: guestCount,
-      } satisfies BookingListItem);
-      completeBookingFlow();
+      showToast(t("booking.errorBusinessUnavailable"));
       return;
     }
 

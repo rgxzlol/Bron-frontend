@@ -17,7 +17,6 @@ import { resolveMediaUrl } from "@/lib/api/media";
 import { workingHoursToRangeString } from "@/lib/booking/timeSlots";
 import { getHomeCategoryMapTarget } from "@/lib/category/homeCategoryMap";
 import { categories as staticCategories } from "@/data/categories";
-import { ShopsPlace } from "@/data/shops";
 import { canShowBusinessOnMap } from "@/lib/map/mapVisibility";
 import type { SearchCatalogItem } from "@/lib/search/catalog";
 import type { Category } from "@/types/category";
@@ -37,20 +36,21 @@ function savedBusinessToPopularPlace(
     null;
 
   const businessId = Number.parseInt(business.id, 10);
+  const validBusinessId =
+    Number.isInteger(businessId) && businessId > 0 ? businessId : undefined;
 
   return {
-    id: Number.isFinite(businessId) ? businessId : 0,
-    shopId: Number.isFinite(businessId) ? businessId : undefined,
+    id: validBusinessId ?? 0,
+    shopId: validBusinessId,
     title: business.name,
-    rating: 0,
-    reviews: 0,
-    time: 60,
     desc: business.description?.trim() || business.address || business.category,
     img: remoteImage ?? fallbackImage,
   };
 }
 
-export async function fetchPopularPlaces(): Promise<PopularPlace[]> {
+export async function fetchPopularPlaces(): Promise<
+  Array<PopularPlace & { shopId: number }>
+> {
   try {
     const businesses = await fetchPublicBusinessesFromApi();
     const mappableBusinesses = businesses.filter(canShowBusinessOnMap);
@@ -62,7 +62,10 @@ export async function fetchPopularPlaces(): Promise<PopularPlace[]> {
       .map((business) => {
         return savedBusinessToPopularPlace(business, assets.popular.photo1);
       })
-      .filter((place) => place.shopId != null);
+      .filter(
+        (place): place is PopularPlace & { shopId: number } =>
+          place.shopId != null,
+      );
 
     return places;
   } catch {
@@ -113,9 +116,6 @@ export async function searchBusinessesFromApi(
 }
 
 export async function resolveShopById(shopId: number): Promise<ShopsType | null> {
-  const mockShop = ShopsPlace.find((shop) => shop.id === shopId);
-  if (mockShop) return mockShop;
-
   try {
     const [business, services, branches] = await Promise.all([
       businessesApi.get(shopId),

@@ -1,12 +1,11 @@
 import { categories } from "@/data/categories";
-import { popularPlaces } from "@/data/popular";
-import { ShopsPlace } from "@/data/shops";
 
 export type SearchCatalogItem = {
   id: string;
   title: string;
   description: string;
-  shopId: number;
+  shopId?: number;
+  categoryId?: number;
   rating?: number;
   reviews?: number;
   keywords: string[];
@@ -52,31 +51,11 @@ function buildCatalog(): SearchCatalogItem[] {
     id: `category-${category.id}`,
     title: category.title,
     description: `${category.count} услуг`,
-    shopId: 1,
+    categoryId: category.id,
     keywords: buildKeywords(category.title),
   }));
 
-  const shopItems = ShopsPlace.map((shop) => ({
-    id: `shop-${shop.id}`,
-    title: shop.title,
-    description: shop.type,
-    shopId: shop.id,
-    rating: shop.rating,
-    reviews: shop.reviews,
-    keywords: buildKeywords(shop.title, shop.type, shop.category, shop.desc),
-  }));
-
-  const popularItems = popularPlaces.map((place) => ({
-    id: `popular-${place.id}`,
-    title: place.title,
-    description: place.desc,
-    shopId: place.shopId ?? 1,
-    rating: place.rating,
-    reviews: place.reviews,
-    keywords: buildKeywords(place.title, place.desc),
-  }));
-
-  return [...categoryItems, ...shopItems, ...popularItems];
+  return categoryItems;
 }
 
 export const SEARCH_CATALOG = buildCatalog();

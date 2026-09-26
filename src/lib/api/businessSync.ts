@@ -33,7 +33,12 @@ import {
 import { getAuthToken } from "@/lib/api/token";
 import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
 import type { BusinessDraft, BusinessService, BusinessBookingRequest } from "@/store/business.store";
-import type { Branch, Business as ApiBusiness, Booking } from "@/lib/api/types";
+import type {
+  BookingAttendanceStatus,
+  Branch,
+  Business as ApiBusiness,
+  Booking,
+} from "@/lib/api/types";
 
 async function resolveCoordsForBusiness(
   business: ApiBusiness,
@@ -62,22 +67,14 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
       apiBookingToBusinessBookingRequest(
         booking,
         serviceMap.get(String(booking.service_id)) ?? "Услуга",
-        booking.customer_name ?? "Клиент",
+        booking.customer_name ?? `Клиент #${booking.user_id}`,
       ),
     );
 
   if (!token) return [];
 
-  try {
-    const bookings = await bookingsApi.listByBusiness(businessId, token);
-    if (bookings.length > 0) {
-      return mapBookings(bookings);
-    }
-  } catch (error) {
-    console.warn("Failed to load business bookings from API:", error);
-  }
-
-  return [];
+  const bookings = await bookingsApi.listByBusiness(businessId, token);
+  return mapBookings(bookings);
 }
 
 export async function fetchBusinessBookingsFromApi(
@@ -646,13 +643,20 @@ export async function updateBusinessBookingStatusOnApi(
 
     return await bookingsApi.reject(Number(bookingId), token);
   } catch (error) {
-    // Stale/demo numeric ids or already-removed bookings should not block the UI.
-    if (error instanceof ApiError && error.status === 404) {
-      console.warn("Booking missing on API, keeping local status update:", bookingId);
-      return null;
-    }
     throw error;
   }
+}
+
+export async function updateBusinessBookingAttendanceOnApi(
+  bookingId: string,
+  status: BookingAttendanceStatus,
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(bookingId)) {
+    throw new ApiError(401, "Не удалось подтвердить авторизацию для отметки посещения.");
+  }
+
+  return bookingsApi.attendance(Number(bookingId), { status }, token);
 }
 
 export async function getCurrentUserId() {

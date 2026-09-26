@@ -82,11 +82,18 @@ export default function ShopDetailPanel({
   useEffect(() => {
     if (!businessId) return;
 
-    void fetchBusinessReviewStats(businessId).then(({ stats }) => {
-      if (stats.reviews > 0) {
-        setApiRating(stats);
-      }
-    });
+    let cancelled = false;
+    void fetchBusinessReviewStats(businessId).then(
+      ({ stats }) => {
+        if (!cancelled) setApiRating(stats);
+      },
+      (error: unknown) => {
+        console.error("Не удалось загрузить рейтинг бизнеса:", error);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [businessId]);
 
   useEffect(() => {

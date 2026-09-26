@@ -4,9 +4,9 @@ export type PopularPlace = {
   id: number;
   shopId?: number;
   title: string;
-  rating: number;
-  time: number;
-  reviews: number;
+  rating?: number;
+  time?: number;
+  reviews?: number;
   desc: string;
   img: StaticImageData | string;
 };

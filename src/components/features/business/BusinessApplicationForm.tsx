@@ -1,30 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/shared/Button";
-import { categoriesApi } from "@/lib/api";
-import { getApiFieldErrors } from "@/lib/api/client";
-import type { Category } from "@/lib/api/types";
+import { ApiError, getApiFieldErrors } from "@/lib/api/client";
 import { businessApplicationsApi } from "@/lib/api/businessApplications";
-import { BUSINESS_DESCRIPTION_MAX_LENGTH } from "@/lib/business/validation";
 import {
   BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH,
   clampBusinessApplicationComments,
-  clampBusinessApplicationDescription,
   formatBusinessApplicationPhone,
-  getSocialLinkValue,
-  normalizeBusinessApplicationWebsite,
-  validateBusinessApplication,
-  type BusinessApplicationFieldErrors,
-  type BusinessApplicationFormData,
 } from "@/lib/business/applicationValidation";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuthStore } from "@/store/auth.store";
-import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
-import { useBusinessStore } from "@/store/business.store";
 import { useProfileStore } from "@/store/profile.store";
 import { assets } from "@/lib/assets";
+import { supportContacts } from "@/data/support";
 
 type ApplicationFieldProps = {
   id: string;
@@ -37,6 +27,7 @@ type ApplicationFieldProps = {
   placeholder?: string;
   inputMode?: "text" | "tel" | "numeric" | "decimal";
   type?: "text" | "tel" | "email";
+  maxLength?: number;
 };
 
 function ApplicationField({
@@ -50,6 +41,7 @@ function ApplicationField({
   placeholder,
   inputMode = "text",
   type = "text",
+  maxLength,
 }: ApplicationFieldProps) {
   const inputClassName =
     "w-full min-w-0 bg-transparent px-3 py-3 text-[20px] font-semibold text-[var(--text-primary)] outline-none placeholder:font-semibold placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-4";
@@ -68,7 +60,7 @@ function ApplicationField({
         ) : null}
       </label>
       <div
-        className={`relative flex items-center rounded-[14px] border bg-white transition-all ${
+        className={`relative flex items-center rounded-[14px] border bg-[var(--bg-form-input)] transition-all ${
           error
             ? "border-[#e02424] focus-within:border-[#e02424]"
             : "border-transparent focus-within:border-[#0a6af7]"
@@ -79,6 +71,7 @@ function ApplicationField({
           name={id}
           type={type}
           inputMode={inputMode}
+          maxLength={maxLength}
           value={value}
           disabled={disabled}
           placeholder={placeholder}
@@ -121,10 +114,10 @@ function BusinessApplicationReviewModal({ isOpen, onClose }: ReviewModalProps) {
         aria-modal="true"
         aria-labelledby="business-application-review-title"
         data-testid="business-application-review-modal"
-        className="w-full max-w-[420px] rounded-[20px] bg-white px-4 py-6 text-center shadow-[0_20px_60px_rgba(15,23,42,0.2)] sm:rounded-[24px] sm:px-6 sm:py-8"
+        className="w-full max-w-[420px] rounded-[20px] bg-[var(--bg-surface)] px-4 py-6 text-center shadow-[var(--shadow-modal)] sm:rounded-[24px] sm:px-6 sm:py-8"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto mb-4 flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[#eef4ff] text-[var(--accent-fg)]">
+        <div className="mx-auto mb-4 flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[var(--bg-active-soft)] text-[var(--accent-fg)]">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M12 8v5l3 2"
@@ -162,17 +155,23 @@ function BusinessApplicationReviewModal({ isOpen, onClose }: ReviewModalProps) {
 type ContactRowProps = {
   icon: React.ReactNode;
   label: string;
+  href: string;
+  external?: boolean;
 };
 
-function ContactRow({ icon, label }: ContactRowProps) {
+function ContactRow({ icon, label, href, external = false }: ContactRowProps) {
   return (
-    <div className="flex flex-col items-center gap-3 text-center">
+    <a
+      href={href}
+      className="flex flex-col items-center gap-3 text-center transition-opacity hover:opacity-75"
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
       {/* icon "button" background — forced white per the mockup */}
-      <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-white text-[var(--text-primary)]">
+      <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--bg-surface)] text-[var(--text-primary)]">
         {icon}
       </div>
       <span className="text-[20px] font-semibold text-[var(--text-primary)]">{label}</span>
-    </div>
+    </a>
   );
 }
 
@@ -195,8 +194,15 @@ function iconSrc(icon: unknown): string {
 }
 
 function BronLogo() {
+  const theme = useProfileStore((state) => state.theme);
+
   return (
-    <div className="flex items-end gap-1" role="img" aria-label="Bron">
+    <div
+      className="flex items-end gap-1"
+      role="img"
+      aria-label="Bron"
+      style={{ filter: theme === "dark" ? "brightness(0) invert(1)" : undefined }}
+    >
       <div className="flex w-full flex-col">
         <img src={iconSrc(assets.bussines.btop)} alt="" className="w-[87px]" />
         <img src={iconSrc(assets.bussines.bbottom)} alt="" className="-mt-[26px] w-[95px]" />
@@ -223,7 +229,8 @@ function BusinessApplicationContactInfo() {
 
       <div className="grid w-full grid-cols-2 gap-x-6 gap-y-8">
         <ContactRow
-          label="+998 99 999 99 99"
+          label={supportContacts.phone}
+          href={supportContacts.phoneHref}
           icon={
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -237,7 +244,8 @@ function BusinessApplicationContactInfo() {
           }
         />
         <ContactRow
-          label="support@bron.uz"
+          label={supportContacts.email}
+          href={`mailto:${supportContacts.email}`}
           icon={
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
               <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
@@ -246,7 +254,9 @@ function BusinessApplicationContactInfo() {
           }
         />
         <ContactRow
-          label="@Bron_Support"
+          label={`@${supportContacts.instagram}`}
+          href={supportContacts.instagramHref}
+          external
           icon={
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
               <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" />
@@ -256,7 +266,9 @@ function BusinessApplicationContactInfo() {
           }
         />
         <ContactRow
-          label="@Bron_Support"
+          label={`@${supportContacts.telegram}`}
+          href={supportContacts.telegramHref}
+          external
           icon={
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
@@ -309,22 +321,16 @@ function BusinessApplicationContactInfo() {
 }
 // ───────────────────────────── END ADDED BLOCK ─────────────────────────────
 
-const EMPTY_FORM: BusinessApplicationFormData = {
-  companyName: "",
-  tin: "",
-  sphere: "",
-  location: "",
+type ContactRequestForm = {
+  phone: string;
+  social: string;
+  comment: string;
+};
+
+const EMPTY_FORM: ContactRequestForm = {
   phone: "",
-  description: "",
-  latitude: null,
-  longitude: null,
-  website: "",
-  socialTelegram: "",
-  socialInstagram: "",
-  socialFacebook: "",
-  socialTiktok: "",
-  socialYoutube: "",
-  comments: "",
+  social: "",
+  comment: "",
 };
 
 export default function BusinessApplicationForm() {
@@ -333,28 +339,22 @@ export default function BusinessApplicationForm() {
   const profilePhone = useProfileStore((state) => state.phone);
   const profileFullName = useProfileStore((state) => state.fullName);
   const profileEmail = useProfileStore((state) => state.email);
-  const application = useBusinessApplicationApiStore((state) => state.application);
-  const status = useBusinessApplicationApiStore((state) => state.status);
-  const setApplication = useBusinessApplicationApiStore(
-    (state) => state.setApplication,
-  );
-  const fetchBusinessesFromApi = useBusinessStore((state) => state.fetchBusinessesFromApi);
 
-  const [form, setForm] = useState<BusinessApplicationFormData>(EMPTY_FORM);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [form, setForm] = useState<ContactRequestForm>(EMPTY_FORM);
   const [ownerName, setOwnerName] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<BusinessApplicationFieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    phone?: string;
+    social?: string;
+    comment?: string;
+  }>({});
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const locked = status === "pending";
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const [ownerNameError, setOwnerNameError] = useState<string | undefined>(undefined);
-  const [previousApplication, setPreviousApplication] =
-    useState<typeof application>(null);
   const [previousProfile, setPreviousProfile] = useState<{
     phone: typeof profilePhone;
     fullName: typeof profileFullName;
@@ -362,43 +362,7 @@ export default function BusinessApplicationForm() {
   } | null>(null);
 
   if (
-    application !== previousApplication ||
-    (application && previousProfile?.phone !== profilePhone)
-  ) {
-    setPreviousApplication(application);
-    if (application) {
-      setForm({
-        companyName: application.company_name,
-        tin: application.tin?.trim() ?? "",
-        sphere: application.sphere,
-        location: application.location,
-        phone: application.phone || formatBusinessApplicationPhone(profilePhone ?? ""),
-        description: application.description?.trim() ?? "",
-        latitude:
-          application.latitude != null && Number.isFinite(application.latitude)
-            ? application.latitude
-            : null,
-        longitude:
-          application.longitude != null && Number.isFinite(application.longitude)
-            ? application.longitude
-            : null,
-        website: application.website?.trim() ?? "",
-        socialTelegram: getSocialLinkValue(application.social_links, "telegram"),
-        socialInstagram: getSocialLinkValue(application.social_links, "instagram"),
-        socialFacebook: getSocialLinkValue(application.social_links, "facebook"),
-        socialTiktok: getSocialLinkValue(application.social_links, "tiktok"),
-        socialYoutube: getSocialLinkValue(application.social_links, "youtube"),
-        comments: application.comments?.trim() ?? "",
-      });
-      setCategoryId(application.category_id ?? null);
-      setOwnerName(application.owner_name ?? "");
-      setEmail(application.email ?? "");
-    }
-  }
-
-  if (
     previousProfile === null ||
-    application !== previousApplication ||
     previousProfile.phone !== profilePhone ||
     previousProfile.fullName !== profileFullName ||
     previousProfile.email !== profileEmail
@@ -408,202 +372,96 @@ export default function BusinessApplicationForm() {
       fullName: profileFullName,
       email: profileEmail,
     });
-    if (!application) {
-      if (!ownerName && profileFullName) setOwnerName(profileFullName);
-      if (!email && profileEmail) setEmail(profileEmail);
-      const phone = formatBusinessApplicationPhone(profilePhone ?? "");
-      if (phone && !form.phone) {
-        setForm((current) =>
-          current.phone ? current : { ...current, phone },
-        );
-      }
+    if (!ownerName && profileFullName) setOwnerName(profileFullName);
+    if (!email && profileEmail) setEmail(profileEmail);
+    const phone = formatBusinessApplicationPhone(profilePhone ?? "");
+    if (phone && !form.phone) {
+      setForm((current) =>
+        current.phone ? current : { ...current, phone },
+      );
     }
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    void categoriesApi.list().then(
-      (items) => {
-        if (!cancelled) setCategories(items);
-      },
-      (error: unknown) => {
-        if (!cancelled) {
-          setSubmitError(
-            error instanceof Error ? error.message : t("businessApplication.submitError"),
-          );
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
-
-  function updateField<K extends keyof BusinessApplicationFormData>(
+  function updateField<K extends keyof ContactRequestForm>(
     key: K,
-    value: BusinessApplicationFormData[K],
+    value: ContactRequestForm[K],
   ) {
     setForm((current) => ({ ...current, [key]: value }));
     setFieldErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitError(null);
   }
 
-  // COMMENTED OUT: only used by the AddressAutocomplete field below, which is
-  // hidden to match the mockup. Kept so it's a one-line change to bring back.
-  // function handleLocationChange({
-  //   address,
-  //   lat,
-  //   lng,
-  // }: {
-  //   address: string;
-  //   lat: number | null;
-  //   lng: number | null;
-  // }) {
-  //   setForm((current) => ({
-  //     ...current,
-  //     location: address,
-  //     latitude: lat,
-  //     longitude: lng,
-  //   }));
-  //   setFieldErrors((current) => ({ ...current, location: undefined }));
-  //   setSubmitError(null);
-  // }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (locked || isSubmitting) return;
+    if (isSubmitting || hasSubmitted) return;
 
-    const accountPhone = formatBusinessApplicationPhone(
-      form.phone || profilePhone || "",
-    );
-    const formWithPhone = { ...form, phone: accountPhone };
+    const fullName = ownerName.trim();
+    const phone = form.phone.trim();
+    const phoneDigits = phone.replace(/\D/g, "");
+    const isPhoneValid =
+      /^\+?[\d\s().-]+$/.test(phone) &&
+      phoneDigits.length >= 7 &&
+      phoneDigits.length <= 15;
+    const nextOwnerNameError = !fullName
+      ? t("businessApplication.errors.ownerNameRequired")
+      : fullName.length > 150
+        ? t("businessApplication.errors.fullNameLimitReached")
+        : undefined;
+    const nextPhoneError = !phone
+      ? t("businessApplication.errors.phoneRequired")
+      : isPhoneValid
+        ? undefined
+        : t("businessApplication.errors.phoneInvalid");
+    const nextEmailError = email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+      ? t("businessApplication.errors.emailInvalid")
+      : undefined;
 
-    const errors = validateBusinessApplication(formWithPhone, {
-      companyNameRequired: t("businessApplication.errors.companyNameRequired"),
-      companyNameInvalid: t("businessApplication.errors.companyNameInvalid"),
-      tinRequired: t("businessApplication.errors.tinRequired"),
-      tinInvalid: t("businessApplication.errors.tinInvalid"),
-      sphereRequired: t("businessApplication.errors.sphereRequired"),
-      locationRequired: t("businessApplication.errors.locationRequired"),
-      locationInvalid: t("businessApplication.errors.locationInvalid"),
-      phoneRequired: t("businessApplication.errors.phoneRequired"),
-      phoneInvalid: t("businessApplication.errors.phoneInvalid"),
-      descriptionRequired: t("businessApplication.errors.descriptionRequired"),
-      descriptionLimitReached: t("businessApplication.errors.descriptionLimitReached", {
-        max: BUSINESS_DESCRIPTION_MAX_LENGTH,
-      }),
-      locationCoordsRequired: t("businessApplication.errors.locationCoordsRequired"),
-      websiteRequired: t("businessApplication.errors.websiteRequired"),
-      websiteInvalid: t("businessApplication.errors.websiteInvalid"),
-      socialTelegramRequired: t("businessApplication.errors.socialTelegramRequired"),
-      socialInstagramRequired: t("businessApplication.errors.socialInstagramRequired"),
-      commentsRequired: t("businessApplication.errors.commentsRequired"),
-      commentsLimitReached: t("businessApplication.errors.commentsLimitReached", {
-        max: BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH,
-      }),
-    });
-
-    // ADDED: fields hidden per the mockup (tin, sphere, location, website,
-    // description, socialInstagram) shouldn't silently block submission with
-    // no visible error message, so their errors are dropped here. Remove this
-    // filter once those fields come back into the visible form, or once the
-    // backend/API contract is updated to match the simplified mockup fields.
-    const HIDDEN_FIELD_KEYS: (keyof BusinessApplicationFieldErrors)[] = [
-      "tin",
-      "description",
-      "comments",
-    ];
-    const visibleErrors = { ...errors };
-    HIDDEN_FIELD_KEYS.forEach((key) => {
-      delete visibleErrors[key];
-    });
-
-    const nextEmailError =
-      !email.trim()
-        ? t("businessApplication.errors.emailRequired")
-        : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-          ? undefined
-          : t("businessApplication.errors.emailInvalid");
     setEmailError(nextEmailError);
-    const nextOwnerNameError = ownerName.trim()
-      ? undefined
-      : t("businessApplication.errors.ownerNameRequired");
     setOwnerNameError(nextOwnerNameError);
+    setFieldErrors((current) => ({ ...current, phone: nextPhoneError }));
 
-    if (Object.keys(visibleErrors).length > 0 || nextEmailError || nextOwnerNameError) {
-      const { phone: phoneError, ...displayableErrors } = visibleErrors;
-      setFieldErrors(displayableErrors);
-      if (phoneError) {
-        setSubmitError(phoneError);
-      }
-      return;
-    }
-
-    if (categoryId == null || !categories.some((category) => category.id === categoryId)) {
-      setSubmitError(t("businessApplication.errors.sphereRequired"));
-      return;
-    }
+    if (nextOwnerNameError || nextPhoneError || nextEmailError) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-      const result = await businessApplicationsApi.create(
+      await businessApplicationsApi.createContactRequest(
         {
-          name: form.companyName.trim(),
-          category_id: categoryId,
-          address: form.location.trim(),
-          phone: formWithPhone.phone.trim(),
-          email: email.trim(),
-          owner_name: ownerName.trim(),
-          ...(form.description.trim() ? { description: form.description.trim() } : {}),
-          ...(form.latitude != null ? { latitude: form.latitude } : {}),
-          ...(form.longitude != null ? { longitude: form.longitude } : {}),
-          ...(form.website.trim()
-            ? { website: normalizeBusinessApplicationWebsite(form.website) }
-            : {}),
-          social_links: {
-            telegram: form.socialTelegram.trim() || null,
-            instagram: form.socialInstagram.trim() || null,
-            facebook: form.socialFacebook.trim() || null,
-            tiktok: form.socialTiktok.trim() || null,
-            youtube: form.socialYoutube.trim() || null,
-          },
-          ...(form.tin.trim() ? { tin: form.tin.trim() } : {}),
-          ...(form.comments.trim() ? { comments: form.comments.trim() } : {}),
+          full_name: fullName,
+          phone,
+          ...(email.trim() ? { email: email.trim() } : {}),
+          ...(form.social.trim() ? { social: form.social.trim() } : {}),
+          ...(form.comment.trim() ? { comment: form.comment.trim() } : {}),
         },
-        token ?? undefined,
+        token,
       );
-
-      setApplication(result);
-      await fetchBusinessesFromApi();
+      setHasSubmitted(true);
       setShowReviewModal(true);
     } catch (error) {
       const apiFieldErrors = getApiFieldErrors(error);
       const mappedErrors = {
-        companyName: apiFieldErrors.name,
-        sphere: apiFieldErrors.category_id,
-        location: apiFieldErrors.address,
         phone: apiFieldErrors.phone,
-        socialTelegram: apiFieldErrors.telegram,
-        socialInstagram: apiFieldErrors.instagram,
-        socialFacebook: apiFieldErrors.facebook,
-        socialTiktok: apiFieldErrors.tiktok,
-        socialYoutube: apiFieldErrors.youtube,
+        social: apiFieldErrors.social,
+        comment: apiFieldErrors.comment,
       };
-      setFieldErrors((current) => ({ ...current, ...mappedErrors }));
+      setFieldErrors(mappedErrors);
       setEmailError(apiFieldErrors.email);
-      setOwnerNameError(apiFieldErrors.owner_name);
-      const hasFieldError = Object.values(mappedErrors).some(Boolean) ||
+      setOwnerNameError(apiFieldErrors.full_name);
+      const hasFieldError =
+        Object.values(mappedErrors).some(Boolean) ||
         Boolean(apiFieldErrors.email) ||
-        Boolean(apiFieldErrors.owner_name);
+        Boolean(apiFieldErrors.full_name);
       setSubmitError(
-        hasFieldError
-          ? null
-          : error instanceof Error
-            ? error.message
-            : t("businessApplication.submitError"),
+        error instanceof ApiError && error.status === 429
+          ? t("businessApplication.errors.rateLimit")
+          : hasFieldError
+            ? null
+            : error instanceof Error
+              ? error.message
+              : t("businessApplication.submitError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -621,7 +479,7 @@ export default function BusinessApplicationForm() {
       {/* Card background is #F9F9FD (matches the mockup); every input,
           textarea and the round contact icons above are forced to white
           so they stand out against it. */}
-      <div className="mx-auto grid w-full min-w-0 grid-cols-1 overflow-hidden rounded-[20px] border border-[#0a6af7]/25 bg-[#F9F9FD] shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:rounded-[24px] md:grid-cols-[1.1fr_16px_1fr]">
+      <div className="mx-auto grid w-full min-w-0 grid-cols-1 overflow-hidden rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-block)] shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:rounded-[24px] md:grid-cols-[1.1fr_16px_1fr]">
         <section className="min-w-0 px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
           <div className="mb-6 flex flex-col gap-2 text-center sm:mb-8">
             <h1 className="text-[32px] font-semibold leading-tight text-[var(--text-primary)]">
@@ -636,17 +494,6 @@ export default function BusinessApplicationForm() {
             noValidate
           >
             <ApplicationField
-              id="company-name"
-              label={t("businessApplication.companyName")}
-              value={form.companyName}
-              onChange={(value) => updateField("companyName", value)}
-              error={fieldErrors.companyName}
-              required
-              disabled={locked}
-              placeholder={t("businessApplication.fullNamePlaceholder")}
-            />
-
-            <ApplicationField
               id="owner-name"
               label={t("businessApplication.fullName")}
               value={ownerName}
@@ -657,7 +504,8 @@ export default function BusinessApplicationForm() {
               }}
               error={ownerNameError}
               required
-              disabled={locked}
+              disabled={isSubmitting || hasSubmitted}
+              maxLength={150}
               placeholder={t("businessApplication.fullNamePlaceholder")}
             />
 
@@ -669,7 +517,7 @@ export default function BusinessApplicationForm() {
               onChange={(value) => updateField("phone", value)}
               error={fieldErrors.phone}
               required
-              disabled={locked}
+              disabled={isSubmitting || hasSubmitted}
               placeholder="+998 99 999 99 99"
               inputMode="tel"
               type="tel"
@@ -685,71 +533,13 @@ export default function BusinessApplicationForm() {
                 setSubmitError(null);
               }}
               error={emailError}
-              required
-              disabled={locked}
+              disabled={isSubmitting || hasSubmitted}
+              maxLength={254}
               placeholder="name@example.com"
               type="email"
             />
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="sphere"
-                className={`text-[20px] font-semibold ${
-                  fieldErrors.sphere ? "text-[#e02424]" : "text-[var(--text-secondary)]"
-                }`}
-              >
-                {t("businessApplication.sphere")}
-                <span className="text-[var(--accent-fg)]"> *</span>
-              </label>
-              <select
-                id="sphere"
-                name="sphere"
-                value={categoryId ?? ""}
-                disabled={locked || categories.length === 0}
-                aria-invalid={fieldErrors.sphere ? true : undefined}
-                className="w-full rounded-[14px] border border-transparent bg-white px-3 py-3 text-[18px] font-semibold text-[var(--text-primary)] outline-none focus:border-[#0a6af7] disabled:opacity-70 sm:px-6 sm:py-4"
-                onChange={(event) => {
-                  const selected = categories.find(
-                    (category) => category.id === Number(event.target.value),
-                  );
-                  setCategoryId(selected?.id ?? null);
-                  updateField("sphere", selected?.slug ?? "");
-                }}
-              >
-                <option value="">{t("businessApplication.spherePlaceholder")}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors.sphere ? (
-                <p role="alert" className="text-[13px] font-semibold text-[#e02424]">
-                  {fieldErrors.sphere}
-                </p>
-              ) : null}
-            </div>
 
-            <ApplicationField
-              id="location"
-              label={t("businessApplication.location")}
-              value={form.location}
-              onChange={(value) => updateField("location", value)}
-              error={fieldErrors.location}
-              required
-              disabled={locked}
-              placeholder={t("businessApplication.locationPlaceholder")}
-            />
-
-            <ApplicationField
-              id="website"
-              label={t("businessApplication.website")}
-              value={form.website}
-              onChange={(value) => updateField("website", value)}
-              error={fieldErrors.website}
-              disabled={locked}
-              placeholder={t("businessApplication.websitePlaceholder")}
-            />
 
             {/* COMMENTED OUT: sphere/category select — not in the mockup */}
             {/*
@@ -874,53 +664,13 @@ export default function BusinessApplicationForm() {
             */}
 
             <ApplicationField
-              id="social-telegram"
-              label={t("businessApplication.socialTelegram")}
-              value={form.socialTelegram}
-              onChange={(value) => updateField("socialTelegram", value)}
-              error={fieldErrors.socialTelegram}
-              disabled={locked}
-              placeholder="https://t.me/your-business"
-            />
-
-            <ApplicationField
-              id="social-instagram"
-              label={t("businessApplication.socialInstagram")}
-              value={form.socialInstagram}
-              onChange={(value) => updateField("socialInstagram", value)}
-              error={fieldErrors.socialInstagram}
-              disabled={locked}
-              placeholder="https://instagram.com/your-business"
-            />
-
-            <ApplicationField
-              id="social-facebook"
-              label="Facebook"
-              value={form.socialFacebook}
-              onChange={(value) => updateField("socialFacebook", value)}
-              error={fieldErrors.socialFacebook}
-              disabled={locked}
-              placeholder="https://facebook.com/your-business"
-            />
-
-            <ApplicationField
-              id="social-tiktok"
-              label="TikTok"
-              value={form.socialTiktok}
-              onChange={(value) => updateField("socialTiktok", value)}
-              error={fieldErrors.socialTiktok}
-              disabled={locked}
-              placeholder="https://tiktok.com/@your-business"
-            />
-
-            <ApplicationField
-              id="social-youtube"
-              label="YouTube"
-              value={form.socialYoutube}
-              onChange={(value) => updateField("socialYoutube", value)}
-              error={fieldErrors.socialYoutube}
-              disabled={locked}
-              placeholder="https://youtube.com/@your-business"
+              id="social-combined"
+              label={t("businessApplication.socialCombined")}
+              value={form.social}
+              onChange={(value) => updateField("social", value)}
+              error={fieldErrors.social}
+              disabled={isSubmitting || hasSubmitted}
+              placeholder={t("businessApplication.socialTelegramPlaceholder")}
             />
 
             {/* COMMENTED OUT: description field — not in the mockup */}
@@ -993,14 +743,14 @@ export default function BusinessApplicationForm() {
               <label
                 htmlFor="comments"
                 className={`text-[20px] font-semibold ${
-                  fieldErrors.comments ? "text-[#e02424]" : "text-[var(--text-secondary)]"
+                  fieldErrors.comment ? "text-[#e02424]" : "text-[var(--text-secondary)]"
                 }`}
               >
                 {t("businessApplication.leaveComment")}
               </label>
               <div
-                className={`relative rounded-[14px] border bg-white transition-all ${
-                  fieldErrors.comments
+                className={`relative rounded-[14px] border bg-[var(--bg-form-input)] transition-all ${
+                  fieldErrors.comment
                     ? "border-[#e02424] focus-within:border-[#e02424]"
                     : "border-transparent focus-within:border-[#0a6af7]"
                 }`}
@@ -1008,19 +758,19 @@ export default function BusinessApplicationForm() {
                 <textarea
                   id="comments"
                   name="comments"
-                  value={form.comments}
-                  disabled={locked}
+                  value={form.comment}
+                  disabled={isSubmitting || hasSubmitted}
                   rows={3}
                   maxLength={BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH}
                   placeholder="@Bron_Suport"
-                  aria-invalid={fieldErrors.comments ? true : undefined}
+                  aria-invalid={fieldErrors.comment ? true : undefined}
                   aria-describedby={
-                    fieldErrors.comments ? "comments-error" : "comments-counter"
+                    fieldErrors.comment ? "comments-error" : "comments-counter"
                   }
                   className="w-full min-w-0 resize-none bg-transparent px-3 py-3 pb-8 text-[20px] font-semibold text-[var(--text-primary)] outline-none placeholder:font-semibold placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:py-4 sm:pb-8"
                   onChange={(event) =>
                     updateField(
-                      "comments",
+                      "comment",
                       clampBusinessApplicationComments(event.target.value),
                     )
                   }
@@ -1030,21 +780,21 @@ export default function BusinessApplicationForm() {
                 <p
                   id="comments-counter"
                   className={`pointer-events-none absolute bottom-[6px] right-[10px] shrink-0 text-[18px] font-semibold ${
-                    form.comments.length >= BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH
+                    form.comment.length >= BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH
                       ? "text-[#e02424]"
                       : "text-[var(--text-muted)]"
                   }`}
                 >
-                  {form.comments.length}/{BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH}
+                  {form.comment.length}/{BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH}
                 </p>
               </div>
-              {fieldErrors.comments ? (
+              {fieldErrors.comment ? (
                 <p
                   id="comments-error"
                   role="alert"
                   className="text-[13px] font-semibold text-[#e02424]"
                 >
-                  {fieldErrors.comments}
+                  {fieldErrors.comment}
                 </p>
               ) : null}
             </div>
@@ -1059,13 +809,13 @@ export default function BusinessApplicationForm() {
             <Button
               type="submit"
               text={
-                locked
+                hasSubmitted
                   ? t("businessApplication.submitted")
                   : isSubmitting
                     ? t("businessApplication.submitting")
                     : t("businessApplication.submit")
               }
-              disabled={locked || isSubmitting}
+              disabled={hasSubmitted || isSubmitting}
               data-testid="business-application-submit"
               className="mt-2 w-full !whitespace-normal rounded-[19px] !bg-[#0a6af7] text-center text-[20px] font-semibold text-white sm:text-[20px]"
             />
@@ -1075,10 +825,10 @@ export default function BusinessApplicationForm() {
         {/* ADDED: 16px white divider bar between the two columns, per spec.
             Hidden on mobile where the columns stack vertically instead — a
             thin top border stands in for the separator there. */}
-        <div className="my-[50px] hidden bg-white md:block" aria-hidden />
+        <div className="my-[50px] hidden bg-[var(--bg-surface-muted)] md:block" aria-hidden />
 
         {/* ADDED: right column, replaces nothing — brand-new in this layout */}
-        <aside className="border-t border-[#eef1f7] md:border-t-0">
+        <aside className="border-t border-[var(--border-default)] md:border-t-0">
           <BusinessApplicationContactInfo />
         </aside>
       </div>

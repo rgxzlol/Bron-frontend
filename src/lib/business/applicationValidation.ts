@@ -7,7 +7,7 @@ import {
   clampBusinessDescription,
 } from "@/lib/business/validation";
 
-export const BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH = 500;
+export const BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH = 120;
 
 export type BusinessApplicationFieldErrors = {
   companyName?: string;

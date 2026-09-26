@@ -76,22 +76,24 @@ export async function fetchPopularPlaces(): Promise<
 export async function fetchCategoriesWithCounts(): Promise<Category[]> {
   try {
     const apiCategories = await categoriesApi.list();
-    if (apiCategories.length === 0) return staticCategories;
+    if (apiCategories.length === 0) return [];
 
-    return staticCategories.map((category) => {
-      const target = getHomeCategoryMapTarget(category.id);
-      const match = apiCategories.find(
-        (item) =>
-          target != null &&
-          apiCategoryToUi(item.slug) === target.businessCategory,
-      );
-      return {
-        ...category,
-        count: match?.business_count ?? 0,
-      };
-    });
+    return staticCategories
+      .map((category) => {
+        const target = getHomeCategoryMapTarget(category.id);
+        const match = apiCategories.find(
+          (item) =>
+            target != null &&
+            apiCategoryToUi(item.slug) === target.businessCategory,
+        );
+        return {
+          ...category,
+          count: match?.business_count ?? 0,
+        };
+      })
+      .filter((category) => category.count > 0);
   } catch {
-    return staticCategories;
+    return [];
   }
 }
 

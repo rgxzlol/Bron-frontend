@@ -214,6 +214,15 @@ export async function fetchPublicBusinessesFromApi() {
       list.map((item) => loadBusinessDetails(item.id)),
     );
 
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(
+          `Не удалось загрузить бизнес ${list[index].id} с API:`,
+          result.reason,
+        );
+      }
+    });
+
     return results.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : [],
     );

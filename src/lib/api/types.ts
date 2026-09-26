@@ -562,3 +562,17 @@ export type BusinessApplicationCreate = {
   social_links?: BusinessSocialLinks;
   comments?: string | null;
 };
+
+export type BusinessContactApplicationCreate = {
+  full_name: string;
+  phone: string;
+  email?: string;
+  social?: string;
+  comment?: string;
+};
+
+export type BusinessContactApplication = BusinessContactApplicationCreate & {
+  id: number;
+  status: string;
+  created_at: string;
+};

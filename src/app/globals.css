@@ -11,6 +11,7 @@
   --bg-page: #fafaff;
   --bg-surface: #ffffff;
   --bg-block: #F9F9FD;
+  --bg-form-input: #ffffff;
   --bg-surface-muted: #f4f4f8;
   --bg-surface-soft: #fafaff;
   --bg-input: #fafaff;
@@ -46,6 +47,7 @@
   --bg-page: #1c1c1c;
   --bg-surface: #2b2b2b;
   --bg-block: #2b2b2b;
+  --bg-form-input: #242424;
   --bg-surface-muted: #363636;
   --bg-surface-soft: #333333;
   --bg-input: #333333;

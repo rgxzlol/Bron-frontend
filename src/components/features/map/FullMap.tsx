@@ -95,10 +95,6 @@ function shouldOpenServiceSelection(shop: ShopsType) {
   return getShopServices(shop).length > 1
 }
 
-function shopHasActiveServices(shop: ShopsType) {
-  return (shop.services?.length ?? 0) > 0
-}
-
 function getShopMinPrice(shop: ShopsType) {
   if (shop.services?.length) {
     return Math.min(...shop.services.map((service) => service.priceFrom))
@@ -417,18 +413,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         shop.apiBusinessId == null,
     )
 
-    const filteredShops = mapShops.filter((shop) => {
-      if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
-        return false
-      }
-
-      return matchesShopFilters(
+    const filteredShops = mapShops.filter((shop) =>
+      matchesShopFilters(
         shop,
         currentAppliedCategory,
         currentAppliedMaxPrice,
         currentAppliedLocation,
-      )
-    })
+      ),
+    )
 
     const markerCoordinates: [number, number][] = []
 

@@ -52,11 +52,29 @@ export function uiCategoryToApi(category: string) {
   return UI_TO_API_CATEGORY[category] ?? category;
 }
 
-export function apiCategoryToUi(category: ApiBusiness["category"]) {
-  const value =
-    typeof category === "string" ? category : category.slug || category.name;
-  const normalized = value.trim().toLowerCase();
-  return API_TO_UI_CATEGORY[normalized] ?? value;
+export function apiCategoryToUi(category: unknown): string {
+  if (typeof category === "string") {
+    const value = category.trim();
+    if (!value) return "Другое";
+
+    return API_TO_UI_CATEGORY[value.toLowerCase()] ?? value;
+  }
+
+  if (typeof category !== "object" || category === null) {
+    return "Другое";
+  }
+
+  const slug = "slug" in category && typeof category.slug === "string"
+    ? category.slug.trim()
+    : "";
+  const name = "name" in category && typeof category.name === "string"
+    ? category.name.trim()
+    : "";
+  const normalizedSlug = slug.toLowerCase();
+
+  if (!slug && !name) return "Другое";
+
+  return API_TO_UI_CATEGORY[normalizedSlug] ?? (name || slug);
 }
 
 function parsePrice(value: number | string) {

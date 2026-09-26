@@ -7,6 +7,8 @@ export const supportContacts = {
   email: "bronplatform@gmail.com",
   telegram: "Bron_Founder",
   telegramHref: "https://t.me/Bron_Founder",
+  instagram: "bronapp.uz",
+  instagramHref: "https://instagram.com/bronapp.uz",
 } as const;
 
 export type FaqItem = {

@@ -1,8 +1,14 @@
 import { businessesApi } from "./businesses";
 import { categoriesApi } from "./categories";
 import { getCurrentUserId } from "./businessSync";
-import { ApiError } from "./client";
-import type { Business, BusinessApplication, BusinessApplicationCreate } from "./types";
+import { ApiError, apiRequest } from "./client";
+import type {
+  Business,
+  BusinessApplication,
+  BusinessApplicationCreate,
+  BusinessContactApplication,
+  BusinessContactApplicationCreate,
+} from "./types";
 
 function mapBusinessToApplication(business: Business): BusinessApplication {
   return {
@@ -56,6 +62,17 @@ async function fetchOwnedBusinesses() {
 }
 
 export const businessApplicationsApi = {
+  createContactRequest: (
+    body: BusinessContactApplicationCreate,
+    token?: string | null,
+  ) =>
+    apiRequest<BusinessContactApplication>("/business-applications/create", {
+      method: "POST",
+      body,
+      optionalAuth: true,
+      token,
+    }),
+
   getMy: async () => {
     const owned = await fetchOwnedBusinesses();
     if (owned.length === 0) return null;

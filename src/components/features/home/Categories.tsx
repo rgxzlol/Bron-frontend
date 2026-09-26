@@ -1,6 +1,5 @@
 "use client";
 
-import { categories as fallbackCategories } from "@/data/categories";
 import { assets } from "@/lib/assets";
 import { fetchCategoriesWithCounts } from "@/lib/home/discovery";
 import { pluralizeServices } from "@/lib/pluralize";
@@ -15,7 +14,8 @@ import s from "./homePage.module.css";
 
 export default function Categories() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [categories, setCategories] = useState<Category[]>(fallbackCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -25,6 +25,11 @@ export default function Categories() {
       .then((nextCategories) => {
         if (!cancelled) {
           setCategories(nextCategories);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
         }
       });
 
@@ -64,6 +69,8 @@ export default function Categories() {
     );
   };
 
+  if (!isLoading && categories.length === 0) return null;
+
   return (
     <section className={`${s.homeSection} my-8.75 scroll-mt-24`} id="categories">
       <h2 className="mb-15 w-full text-[24px] font-semibold">
@@ -74,30 +81,42 @@ export default function Categories() {
         <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:justify-start lg:overflow-visible lg:pb-0">
           {(isExpanded ? categories : categories.slice(0, 5)).map(renderCategoryCard)}
 
-          <button
-            type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            className="min-w-40 w-40 flex-none gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2] lg:flex-1"
-            aria-expanded={isExpanded}
-          >
-            <div className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full bg-[#ffebd3]`}>
-              <Image
-                src={assets.categories.more}
-                alt={t("home.allCategories")}
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
-              />
-            </div>
+          {isLoading
+            ? Array.from({ length: 5 }, (_, index) => (
+                <div
+                  key={`category-skeleton-${index}`}
+                  aria-hidden="true"
+                  className="h-[240px] min-w-40 w-40 flex-none animate-pulse rounded-2xl bg-[var(--bg-surface)] lg:flex-1"
+                />
+              ))
+            : null}
 
-            <span className="min-h-12 font-semibold">
-              {isExpanded ? t("common.less") : t("common.more")}
-            </span>
+          {categories.length > 5 ? (
+            <button
+              type="button"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              className="min-w-40 w-40 flex-none gap-1.5 px-4.5 pt-6.5 pb-2.5 flex flex-col items-center rounded-2xl text-center text-nowrap bg-[#F4F4F8] transition-all duration-300 hover:bg-[#e2e2e2] lg:flex-1"
+              aria-expanded={isExpanded}
+            >
+              <div className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full bg-[#ffebd3]`}>
+                <Image
+                  src={assets.categories.more}
+                  alt={t("home.allCategories")}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
 
-            <span className="text-[14px] opacity-75">
-              {isExpanded ? t("common.collapseHint") : t("common.viewAllHint")}
-            </span>
-          </button>
+              <span className="min-h-12 font-semibold">
+                {isExpanded ? t("common.less") : t("common.more")}
+              </span>
+
+              <span className="text-[14px] opacity-75">
+                {isExpanded ? t("common.collapseHint") : t("common.viewAllHint")}
+              </span>
+            </button>
+          ) : null}
         </div>
       </div>
     </section>

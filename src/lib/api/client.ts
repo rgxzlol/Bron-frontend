@@ -36,6 +36,7 @@ type RequestOptions = {
   method?: string;
   body?: unknown;
   auth?: boolean;
+  optionalAuth?: boolean;
   token?: string | null;
 };
 
@@ -177,9 +178,9 @@ async function executeRequest<T>(
 
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, auth = false, token }: RequestOptions = {},
+  { method = "GET", body, auth = false, optionalAuth = false, token }: RequestOptions = {},
 ): Promise<T> {
-  const authToken = token ?? (auth ? getAuthToken() : null);
+  const authToken = token ?? (auth || optionalAuth ? getAuthToken() : null);
   if (auth && !authToken) {
     throw new ApiError(401, "Требуется авторизация");
   }
@@ -191,7 +192,7 @@ export async function apiRequest<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  if (auth && authToken) {
+  if ((auth || optionalAuth) && authToken) {
     headers.Authorization = `Bearer ${authToken}`;
   }
 

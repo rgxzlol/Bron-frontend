@@ -316,10 +316,10 @@ export const useBusinessStore = create<BusinessStore>()(
         const token = getAuthToken();
         if (!token) return;
 
-        const userId = await getCurrentUserId();
-        if (!userId) return;
-
         try {
+          const userId = await getCurrentUserId();
+          if (!userId) return;
+
           const existing = get().businesses;
           const existingById = new Map(existing.map((item) => [item.id, item]));
           const fromApi = await fetchMyBusinessesFromApi(userId);

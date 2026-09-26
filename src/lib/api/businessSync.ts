@@ -167,7 +167,13 @@ async function loadBusinessDetails(
     withOwnerData
       ? Promise.all([
           loadBusinessStats(businessId),
-          loadBusinessBookings(businessId, mappedItems),
+          loadBusinessBookings(businessId, mappedItems).catch((error) => {
+            console.error(
+              `Не удалось загрузить бронирования бизнеса ${businessId}:`,
+              error,
+            );
+            return [];
+          }),
         ])
       : Promise.resolve<[undefined, BusinessBookingRequest[]]>([undefined, []]),
     branches[0]?.id

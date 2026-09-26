@@ -276,10 +276,16 @@ export function apiBusinessToSavedBusiness(
     gallery: galleryUrls,
     services: mappedServices,
   });
+  const businessApprovalStatus = business.status?.toLowerCase();
 
   return {
     id: String(business.id),
     status: "confirmed",
+    approvalStatus:
+      businessApprovalStatus === "pending" ||
+      businessApprovalStatus === "approved"
+        ? businessApprovalStatus
+        : undefined,
     bookings: extras?.stats?.total_bookings ?? 0,
     views: business.views_count ?? 0,
     profilePhoto: resolveMediaUrl(business.logo),

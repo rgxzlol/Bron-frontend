@@ -40,25 +40,7 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
 }
 
 async function fetchOwnedBusinesses() {
-  const userId = await getCurrentUserId();
-  if (!userId) return [];
-
-  const list = await businessesApi.list();
-  const owned = await Promise.all(
-    list.map(async (item) => {
-      try {
-        const detail = await businessesApi.get(item.id);
-        return detail.owner_id === userId ? detail : null;
-      } catch (error) {
-        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-          return null;
-        }
-        throw error;
-      }
-    }),
-  );
-
-  return owned.filter((item): item is Business => item != null);
+  return businessesApi.my();
 }
 
 export const businessApplicationsApi = {

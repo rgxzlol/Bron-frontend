@@ -292,6 +292,7 @@ export const uz: MessageTree = {
     myBusiness: "Mening biznesim",
     untitled: "Nomsiz",
     confirmed: "Tasdiqlangan",
+    pendingApproval: "Ko‘rib chiqilmoqda",
     bookingsLabel: "Bronlar",
     viewsLabel: "Ko‘rishlar",
     dashboard: "Boshqaruv paneli",

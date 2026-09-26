@@ -141,10 +141,14 @@ async function mapProductsFromApiList(
   );
 }
 
-async function loadBusinessDetails(businessId: number, withOwnerData = false) {
+async function loadBusinessDetails(
+  businessId: number,
+  withOwnerData = false,
+  knownBusiness?: ApiBusiness,
+) {
   const [business, services, products, branches, schedule, galleryUrls] =
     await Promise.all([
-    businessesApi.get(businessId),
+    knownBusiness ? Promise.resolve(knownBusiness) : businessesApi.get(businessId),
     servicesApi.listByBusiness(businessId).catch(() => []),
     productsApi.listByBusiness(businessId).catch(() => []),
     branchesApi.listByBusiness(businessId).catch(() => []),
@@ -187,24 +191,13 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
   });
 }
 
-export async function fetchMyBusinessesFromApi(userId: number) {
-  const list = await businessesApi.list();
-  const ownedItems = await Promise.all(
-    list.map(async (item) => {
-      if (item.owner_id != null) {
-        return item.owner_id === userId ? item : null;
-      }
-
-      const detail = await businessesApi.get(item.id);
-      return detail.owner_id === userId ? item : null;
-    }),
+export async function fetchMyBusinessesFromApi() {
+  const businesses = await businessesApi.my();
+  return Promise.all(
+    businesses.map((business) =>
+      loadBusinessDetails(business.id, true, business),
+    ),
   );
-
-  const owned = ownedItems.filter(
-    (item): item is NonNullable<typeof item> => item != null,
-  );
-
-  return Promise.all(owned.map((item) => loadBusinessDetails(item.id, true)));
 }
 
 export async function fetchPublicBusinessesFromApi() {
@@ -283,19 +276,8 @@ async function ensureDefaultBranch(
   return branch.id;
 }
 
-async function resolveCreatedBusinessId(
-  draft: BusinessDraft,
-  userId: number,
-): Promise<number> {
-  const list = await businessesApi.list();
-  const owned = await Promise.all(
-    list.map(async (item) => {
-      const detail = await businessesApi.get(item.id);
-      return detail.owner_id === userId ? detail : null;
-    }),
-  );
-
-  const mine = owned.filter((item): item is NonNullable<typeof item> => item != null);
+async function resolveCreatedBusinessId(draft: BusinessDraft): Promise<number> {
+  const mine = await businessesApi.my();
   const byName = mine.find((item) => item.name === draft.name.trim());
   if (byName) return byName.id;
 
@@ -318,20 +300,11 @@ function isMissingBusinessError(error: unknown) {
 async function getOwnedApiBusinessId(businessId: string): Promise<number | null> {
   if (!/^\d+$/.test(businessId)) return null;
 
-  let userId: number | null = null;
   try {
-    userId = await getCurrentUserId();
-  } catch (error) {
-    console.warn("Failed to resolve current user for business ownership:", error);
-    return null;
-  }
-  if (!userId) return null;
-
-  try {
-    const detail = await businessesApi.get(Number(businessId));
-    if (detail.owner_id != null && Number(detail.owner_id) === userId) {
-      return detail.id;
-    }
+    const mine = await businessesApi.my();
+    return mine.some((business) => business.id === Number(businessId))
+      ? Number(businessId)
+      : null;
   } catch (error) {
     if (!isMissingBusinessError(error)) {
       throw error;
@@ -415,13 +388,8 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
     token,
   );
 
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    throw new Error("Не удалось определить пользователя");
-  }
-
   const businessId =
-    created.business_id ?? (await resolveCreatedBusinessId(draft, userId));
+    created.business_id ?? (await resolveCreatedBusinessId(draft));
   return persistBusinessToApi(draft, businessId);
 }
 

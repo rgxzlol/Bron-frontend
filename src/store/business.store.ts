@@ -6,7 +6,6 @@ import {
   ensureWritableBusinessId,
   fetchBusinessBookingsFromApi,
   fetchMyBusinessesFromApi,
-  getCurrentUserId,
   removeBusinessFromApi,
   removeServiceFromApi,
   saveBusinessDraftToApi,
@@ -93,6 +92,7 @@ export type BusinessDraft = {
 export type SavedBusiness = BusinessDraft & {
   id: string;
   status: "confirmed";
+  approvalStatus?: "pending" | "approved";
   bookings: number;
   views: number;
   lat: number;
@@ -130,6 +130,7 @@ function normalizeBusiness(business: SavedBusiness): SavedBusiness {
 
 type BusinessStore = {
   businesses: SavedBusiness[];
+  hasLoadedBusinesses: boolean;
   draft: BusinessDraft;
   editingId: string | null;
   showMyBusiness: boolean;
@@ -247,6 +248,7 @@ export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
       businesses: [],
+      hasLoadedBusinesses: false,
       draft: createEmptyDraft(),
       editingId: null,
       showMyBusiness: false,
@@ -317,12 +319,9 @@ export const useBusinessStore = create<BusinessStore>()(
         if (!token) return;
 
         try {
-          const userId = await getCurrentUserId();
-          if (!userId) return;
-
           const existing = get().businesses;
           const existingById = new Map(existing.map((item) => [item.id, item]));
-          const fromApi = await fetchMyBusinessesFromApi(userId);
+          const fromApi = await fetchMyBusinessesFromApi();
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
@@ -343,9 +342,11 @@ export const useBusinessStore = create<BusinessStore>()(
           set({
             businesses: merged,
             showMyBusiness: merged.length > 0,
+            hasLoadedBusinesses: true,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
+          set({ hasLoadedBusinesses: true });
         }
       },
 
@@ -385,6 +386,7 @@ export const useBusinessStore = create<BusinessStore>()(
         set({
           businesses: [],
           showMyBusiness: false,
+          hasLoadedBusinesses: false,
           mapFocusBusinessId: null,
         }),
 

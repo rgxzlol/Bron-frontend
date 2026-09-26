@@ -1,8 +1,6 @@
 import { getApiBaseUrl, isCrossOriginApiRequest } from "@/config/api";
 import { getAuthToken } from "./token";
 
-const DEMO_TOKEN = "demo-token";
-
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -39,8 +37,6 @@ type RequestOptions = {
   body?: unknown;
   auth?: boolean;
   token?: string | null;
-  /** Skip demo fallback — use for endpoints where local persistence is the source of truth. */
-  skipDemo?: boolean;
 };
 
 type UploadOptions = {
@@ -57,36 +53,6 @@ function normalizeApiPath(path: string) {
   const search = searchParts.join("?");
 
   return search ? `${normalizedPathname}?${search}` : normalizedPathname;
-}
-
-function isBusinessDataPath(path: string) {
-  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  return (
-    cleanPath === "/businesses" ||
-    cleanPath.startsWith("/businesses/") ||
-    cleanPath.startsWith("/services/business/") ||
-    cleanPath.startsWith("/products/business/") ||
-    cleanPath.startsWith("/branches/business/") ||
-    cleanPath.startsWith("/working-hours/business/") ||
-    cleanPath.startsWith("/bookings/")
-  );
-}
-
-function isNotificationPath(path: string) {
-  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  return cleanPath === "/notifications" || cleanPath.startsWith("/notifications/");
-}
-
-function isBookingPath(path: string) {
-  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  return cleanPath === "/bookings" || cleanPath.startsWith("/bookings/");
-}
-
-function isAuthPath(path: string) {
-  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  return cleanPath === "/auth/login" ||
-    cleanPath === "/auth/register" ||
-    cleanPath === "/auth/me";
 }
 
 function buildUrl(path: string) {
@@ -145,103 +111,9 @@ function extractErrorMessage(data: unknown, fallback: string) {
   return fallback;
 }
 
-/** Бэкенд недоступен (сетевая ошибка или заглушка хостинга вместо API). */
-function isBackendUnavailable(error: unknown): error is ApiError {
-  if (!(error instanceof ApiError)) return false;
-  if (error.status === 0 || error.status === 502) return true;
-  if (typeof error.data === "string") {
-    const trimmed = error.data.trimStart();
-    if (trimmed.startsWith("<") || /^redirecting\b/i.test(trimmed)) {
-      return true;
-    }
-  }
-  if (error.status >= 300 && error.status < 400) {
-    return true;
-  }
-  if (error.data && typeof error.data === "object") {
-    const detail = (error.data as { detail?: unknown }).detail;
-    if (
-      typeof detail === "string" &&
-      detail.includes("Upstream API returned HTML instead of JSON")
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function tryDemoResponse<T>(
-  path: string,
-  method: string,
-  body: unknown,
-): Promise<T | null> {
-  const { getDemoResponse } = await import("./demo");
-  const demo = getDemoResponse(path, method, body);
-  if (demo === undefined) return null;
-
-  if (process.env.NODE_ENV !== "production") {
-    console.warn(`[demo] Демо-ответ для ${method} ${path}`);
-  }
-
-  return demo as T;
-}
-
-async function resolveDemoResponse<T>(
-  path: string,
-  method: string,
-  body: unknown,
-  token?: string | null,
-): Promise<T | null> {
-  if (isBusinessDataPath(path) || isNotificationPath(path) || isBookingPath(path)) return null;
-  if (token === DEMO_TOKEN) {
-    return tryDemoResponse<T>(path, method, body);
-  }
-
-  return null;
-}
-
-async function handleDemoFallback<T>(
-  path: string,
-  method: string,
-  body: unknown,
-  error: unknown,
-): Promise<T | null> {
-  if (isAuthPath(path)) throw error;
-  if (isBusinessDataPath(path) || isNotificationPath(path) || isBookingPath(path)) throw error;
-  const cleanPath = path.split("?")[0].replace(/\/$/, "") || "/";
-  const upperMethod = method.toUpperCase();
-  const isBookingStatusWrite =
-    upperMethod === "PATCH" &&
-    (/\/bookings\/\d+\/cancel$/.test(cleanPath) ||
-      /\/bookings\/\d+\/approve$/.test(cleanPath) ||
-      /\/bookings\/\d+\/reject$/.test(cleanPath));
-  const allowBookingWriteFallback =
-    (upperMethod === "POST" && cleanPath === "/bookings/create") ||
-    (isBookingStatusWrite &&
-      (isBackendUnavailable(error) ||
-        (error instanceof ApiError && error.status === 404)));
-
-  if (!isBackendUnavailable(error) && !allowBookingWriteFallback) {
-    throw error;
-  }
-
-  const { getDemoResponse } = await import("./demo");
-  const demo = getDemoResponse(path, method, body);
-  if (demo !== undefined) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(`[demo] Fallback-ответ для ${method} ${path}`);
-    }
-    return demo as T;
-  }
-
-  throw error;
-}
-
 async function executeRequest<T>(
   path: string,
   init: RequestInit,
-  bodyForDemo?: unknown,
-  skipDemo = false,
 ): Promise<T> {
   const requestUrl = buildUrl(path);
   const crossOrigin = isCrossOriginApiRequest(requestUrl);
@@ -276,27 +148,18 @@ async function executeRequest<T>(
 
     return data as T;
   } catch (error) {
-    if (!skipDemo) {
-      const demo = await handleDemoFallback<T>(path, init.method ?? "GET", bodyForDemo, error);
-      if (demo !== null) return demo;
-    }
     throw error;
   }
 }
 
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, auth = false, token, skipDemo = false }: RequestOptions = {},
+  { method = "GET", body, auth = false, token }: RequestOptions = {},
 ): Promise<T> {
   const authToken = token ?? (auth ? getAuthToken() : null);
   if (auth && !authToken) {
     throw new ApiError(401, "Требуется авторизация");
   }
-  if (!skipDemo) {
-    const demo = await resolveDemoResponse<T>(path, method, body, authToken);
-    if (demo !== null) return demo;
-  }
-
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -316,8 +179,6 @@ export async function apiRequest<T>(
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     },
-    body,
-    skipDemo,
   );
 }
 
@@ -342,6 +203,5 @@ export async function apiUploadRequest<T>(
       headers,
       body: formData,
     },
-    Object.fromEntries(formData.entries()),
   );
 }

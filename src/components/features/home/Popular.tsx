@@ -13,8 +13,8 @@ import { useEffect, useState } from "react";
 import s from "./homePage.module.css";
 import popularStyles from "./popular.module.css";
 
-function buildBookHref(shopId?: number) {
-  return `${routes.book}?shopId=${shopId ?? 1}`;
+function buildBookHref(shopId: number) {
+  return `${routes.book}?shopId=${shopId}`;
 }
 
 function PopularCardImage({ place }: { place: PopularPlace }) {
@@ -41,7 +41,9 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
 
 export default function Popular() {
   const { t } = useTranslation();
-  const [places, setPlaces] = useState<PopularPlace[]>([]);
+  const [places, setPlaces] = useState<
+    Array<PopularPlace & { shopId: number }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -86,28 +88,27 @@ export default function Popular() {
                   {place.title}
                 </span>
 
-                <div className="flex flex-col gap-x-[15px] gap-y-[6px]">
+                {place.rating != null && place.reviews != null ? (
                   <div className="flex items-center gap-[6px]">
                     <Image
                       src={assets.popular.starRating}
                       alt={t("home.rating")}
                     />
-
                     <p className="text-[15px] font-semibold">{place.rating}</p>
-
                     <p className="text-[15px] font-semibold opacity-75">
                       ({place.reviews} {pluralizeReviews(place.reviews)})
                     </p>
                   </div>
+                ) : null}
 
+                {place.time != null ? (
                   <div className="flex items-center gap-[6px]">
                     <Image src={assets.popular.timeIcon} alt={t("home.time")} />
-
                     <p className="text-[15px] font-semibold">
                       {formatDurationMinutes(place.time)}
                     </p>
                   </div>
-                </div>
+                ) : null}
 
                 <p className={`${popularStyles.description} line-clamp-2 min-h-[40px] text-[13px] font-semibold leading-[20px]`}>
                   {place.desc}

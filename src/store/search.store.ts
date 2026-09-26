@@ -4,6 +4,7 @@ import {
   searchCatalog,
   type SearchCatalogItem,
 } from "@/lib/search/catalog";
+import { searchBusinessesFromApi } from "@/lib/home/discovery";
 import {
   isSearchQuerySubmittable,
   normalizeSearchQuery,
@@ -15,6 +16,7 @@ type SearchState = {
   submittedQuery: string | null;
   results: SearchCatalogItem[];
   suggestions: SearchCatalogItem[];
+  searchRequestId: number;
   setQuery: (query: string) => void;
   submitSearch: (query?: string) => void;
   clearSearch: () => void;
@@ -25,6 +27,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   submittedQuery: null,
   results: [],
   suggestions: [],
+  searchRequestId: 0,
 
   setQuery: (query) => {
     const sanitizedQuery = sanitizeSearchQuery(query);
@@ -45,17 +48,25 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         submittedQuery: sanitizedQuery.trim() ? sanitizedQuery : null,
         results: [],
         suggestions: [],
+        searchRequestId: get().searchRequestId + 1,
       });
       return;
     }
 
-    const results = searchCatalog(nextQuery);
-
+    const searchRequestId = get().searchRequestId + 1;
+    const categoryResults = searchCatalog(nextQuery);
     set({
       query: nextQuery,
       submittedQuery: nextQuery,
-      results,
+      results: categoryResults,
       suggestions: getSearchSuggestions(nextQuery),
+      searchRequestId,
+    });
+
+    void searchBusinessesFromApi(nextQuery).then((businessResults) => {
+      if (get().searchRequestId !== searchRequestId) return;
+      const results = [...categoryResults, ...businessResults];
+      set({ results });
     });
   },
 
@@ -65,6 +76,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       submittedQuery: null,
       results: [],
       suggestions: [],
+      searchRequestId: get().searchRequestId + 1,
     });
   },
 }));

@@ -101,6 +101,10 @@ export default function BookingsPageClient() {
           bookingEndTime={booking.end_time}
           totalPrice={booking.total_price}
           businessId={booking.business_id}
+          businessName={booking.business_name}
+          businessAddress={booking.business_address}
+          businessCategory={booking.business_category}
+          businessLogo={booking.business_logo}
           bookingStatus={booking.status}
           guestsCount={booking.guest_count}
           orderItems={booking.items}

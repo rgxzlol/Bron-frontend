@@ -321,6 +321,9 @@ const EMPTY_FORM: BusinessApplicationFormData = {
   website: "",
   socialTelegram: "",
   socialInstagram: "",
+  socialFacebook: "",
+  socialTiktok: "",
+  socialYoutube: "",
   comments: "",
 };
 
@@ -382,6 +385,9 @@ export default function BusinessApplicationForm() {
         website: application.website?.trim() ?? "",
         socialTelegram: getSocialLinkValue(application.social_links, "telegram"),
         socialInstagram: getSocialLinkValue(application.social_links, "instagram"),
+        socialFacebook: getSocialLinkValue(application.social_links, "facebook"),
+        socialTiktok: getSocialLinkValue(application.social_links, "tiktok"),
+        socialYoutube: getSocialLinkValue(application.social_links, "youtube"),
         comments: application.comments?.trim() ?? "",
       });
       setCategoryId(application.category_id ?? null);
@@ -560,9 +566,9 @@ export default function BusinessApplicationForm() {
           social_links: {
             telegram: form.socialTelegram.trim() || null,
             instagram: form.socialInstagram.trim() || null,
-            facebook: null,
-            tiktok: null,
-            youtube: null,
+            facebook: form.socialFacebook.trim() || null,
+            tiktok: form.socialTiktok.trim() || null,
+            youtube: form.socialYoutube.trim() || null,
           },
           ...(form.tin.trim() ? { tin: form.tin.trim() } : {}),
           ...(form.comments.trim() ? { comments: form.comments.trim() } : {}),
@@ -582,6 +588,9 @@ export default function BusinessApplicationForm() {
         phone: apiFieldErrors.phone,
         socialTelegram: apiFieldErrors.telegram,
         socialInstagram: apiFieldErrors.instagram,
+        socialFacebook: apiFieldErrors.facebook,
+        socialTiktok: apiFieldErrors.tiktok,
+        socialYoutube: apiFieldErrors.youtube,
       };
       setFieldErrors((current) => ({ ...current, ...mappedErrors }));
       setEmailError(apiFieldErrors.email);
@@ -882,6 +891,36 @@ export default function BusinessApplicationForm() {
               error={fieldErrors.socialInstagram}
               disabled={locked}
               placeholder="https://instagram.com/your-business"
+            />
+
+            <ApplicationField
+              id="social-facebook"
+              label="Facebook"
+              value={form.socialFacebook}
+              onChange={(value) => updateField("socialFacebook", value)}
+              error={fieldErrors.socialFacebook}
+              disabled={locked}
+              placeholder="https://facebook.com/your-business"
+            />
+
+            <ApplicationField
+              id="social-tiktok"
+              label="TikTok"
+              value={form.socialTiktok}
+              onChange={(value) => updateField("socialTiktok", value)}
+              error={fieldErrors.socialTiktok}
+              disabled={locked}
+              placeholder="https://tiktok.com/@your-business"
+            />
+
+            <ApplicationField
+              id="social-youtube"
+              label="YouTube"
+              value={form.socialYoutube}
+              onChange={(value) => updateField("socialYoutube", value)}
+              error={fieldErrors.socialYoutube}
+              disabled={locked}
+              placeholder="https://youtube.com/@your-business"
             />
 
             {/* COMMENTED OUT: description field — not in the mockup */}

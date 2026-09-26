@@ -15,6 +15,7 @@ import { NotificationCard } from "./NotificationCard";
 import { NotificationEmpty } from "./NotificationEmpty";
 import { useBookingStore } from "@/store/booking.store";
 import { useBusinessStore } from "@/store/business.store";
+import type { InAppNotificationType } from "@/lib/api/types";
 
 export default function NotificationDropdown() {
   const router = useRouter();
@@ -50,13 +51,25 @@ export default function NotificationDropdown() {
     (state) => state.addBookingReminder,
   );
 
-  async function openNotification(notificationId: string, bookingId?: number | null) {
+  async function openNotification(
+    notificationId: string,
+    bookingId: number | null | undefined,
+    notificationType: InAppNotificationType,
+  ) {
     await markNotificationRead(notificationId);
     if (bookingId == null) return;
 
     try {
-      await bookingsApi.get(bookingId);
       setIsOpen(false);
+      const booking = await bookingsApi.get(bookingId, token ?? undefined);
+      if (notificationType === "booking_created") {
+        await useBusinessStore.getState().fetchBusinessesFromApi();
+        await useBusinessStore
+          .getState()
+          .refreshBusinessBookings(String(booking.business_id));
+        router.push(`${routes.business}?dashboard=${booking.business_id}`);
+        return;
+      }
       router.push(`${routes.bookings}?booking_id=${bookingId}`);
     } catch (error) {
       console.error("Не удалось открыть бронирование из уведомления:", error);
@@ -85,8 +98,17 @@ export default function NotificationDropdown() {
         void refreshBusinessBookings(business.id);
       });
     };
-    const interval = window.setInterval(refresh, 60_000);
-    return () => window.clearInterval(interval);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, [
     token,
     fetchNotifications,
@@ -190,7 +212,9 @@ export default function NotificationDropdown() {
               title={presentation.title}
               description={presentation.description}
               time={formatNotificationTime(item.time)}
-              onClick={() => void openNotification(item.id, item.booking_id)}
+              onClick={() =>
+                void openNotification(item.id, item.booking_id, item.type)
+              }
               onDelete={() => void deleteNotification(item.id)}
               deleteLabel={t("common.delete")}
               testId={presentation.testId}

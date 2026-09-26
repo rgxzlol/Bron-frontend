@@ -304,6 +304,8 @@ export function apiBookingToBusinessBookingRequest(
     serviceName,
     price: booking.total_price,
     status: apiBookingStatusToUi(booking.status),
+    attendanceStatus: booking.attendance_status,
+    extraWaitMinutes: booking.extra_wait_minutes,
   };
 }
 

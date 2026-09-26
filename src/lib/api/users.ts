@@ -8,7 +8,7 @@ import type {
 } from "./types";
 import { assertApiImage } from "./media";
 
-const NOTIFICATION_REQUEST_OPTIONS = { auth: true as const, skipDemo: true as const };
+const NOTIFICATION_REQUEST_OPTIONS = { auth: true as const };
 
 export const usersApi = {
   getProfile: (token?: string) =>
@@ -50,7 +50,6 @@ export const usersApi = {
         const profile = await apiRequest<UserProfile>("/users/profile", {
           auth: true,
           token,
-          skipDemo: true,
         });
         return profile.notification_settings ?? null;
       } catch {
@@ -80,7 +79,6 @@ export const usersApi = {
           body: { notification_settings: body },
           auth: true,
           token,
-          skipDemo: true,
         });
       } catch {
         // Local persisted preferences remain the source of truth.

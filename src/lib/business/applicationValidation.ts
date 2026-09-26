@@ -19,6 +19,9 @@ export type BusinessApplicationFieldErrors = {
   website?: string;
   socialTelegram?: string;
   socialInstagram?: string;
+  socialFacebook?: string;
+  socialTiktok?: string;
+  socialYoutube?: string;
   comments?: string;
 };
 
@@ -34,6 +37,9 @@ export type BusinessApplicationFormData = {
   website: string;
   socialTelegram: string;
   socialInstagram: string;
+  socialFacebook: string;
+  socialTiktok: string;
+  socialYoutube: string;
   comments: string;
 };
 
@@ -118,6 +124,15 @@ export function validateBusinessApplication(
   }
   if (data.socialInstagram.trim() && !urlPattern.test(data.socialInstagram.trim())) {
     errors.socialInstagram = messages.websiteInvalid;
+  }
+  for (const [field, value] of [
+    ["socialFacebook", data.socialFacebook],
+    ["socialTiktok", data.socialTiktok],
+    ["socialYoutube", data.socialYoutube],
+  ] as const) {
+    if (value.trim() && !urlPattern.test(value.trim())) {
+      errors[field] = messages.websiteInvalid;
+    }
   }
 
   const comments = data.comments.trim();

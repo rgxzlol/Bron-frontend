@@ -17,7 +17,7 @@ import { validateGalleryImageFile } from "@/lib/business/photos";
 import { useToastStore } from "@/store/toast.store";
 import CustomerReviewModal from "@/components/features/review/CustomerReviewModal";
 import Image from "next/image";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 
@@ -1477,12 +1477,14 @@ function BookingCard({
   dateLabel,
   onAccept,
   onCancel,
+  onAttendance,
   onReviewCustomer,
 }: {
   booking: BusinessBookingRequest;
   dateLabel: string;
   onAccept: () => void;
   onCancel: () => void;
+  onAttendance: (status: "on_time" | "late" | "no_show") => void;
   onReviewCustomer: () => void;
 }) {
   const { t } = useTranslation();
@@ -1566,19 +1568,46 @@ function BookingCard({
             {t("business.accepted")}
           </div>
           {isCompleted && (
-            <button
-              type="button"
-              onClick={onReviewCustomer}
-              className="rounded-[12px] bg-[#f2b705] py-[12px] text-[14px] font-semibold text-white"
-              data-testid={`business-booking-review-customer-${booking.id}`}
-            >
-              Оценить клиента
-            </button>
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  ["on_time", "businessDashboard.attendanceOnTime"],
+                  ["late", "businessDashboard.attendanceLate"],
+                  ["no_show", "businessDashboard.attendanceNoShow"],
+                ] as const).map(([status, labelKey]) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => onAttendance(status)}
+                    disabled={booking.attendanceStatus === status}
+                    className="rounded-[10px] border border-[var(--border-default)] px-2 py-2 text-[12px] font-semibold text-[var(--text-primary)] disabled:border-[#0a6af7] disabled:bg-[#eef4ff] disabled:text-[#0a6af7]"
+                    data-testid={`business-booking-attendance-${status}-${booking.id}`}
+                  >
+                    {t(labelKey)}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onReviewCustomer}
+                className="rounded-[12px] bg-[#f2b705] py-[12px] text-[14px] font-semibold text-white"
+                data-testid={`business-booking-review-customer-${booking.id}`}
+              >
+                Оценить клиента
+              </button>
+            </>
           )}
         </>
       )}
     </div>
   );
+}
+
+function formatBookingDateLabel(value?: string) {
+  if (!value) return "";
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return `${day} ${RU_MONTHS_GEN[month - 1]} ${year}`;
 }
 
 /* ---------- main component ---------- */
@@ -1597,6 +1626,7 @@ export default function BusinessDashboard({
   const removeService = useBusinessStore((s) => s.removeService);
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
+  const updateBookingAttendance = useBusinessStore((s) => s.updateBookingAttendance);
   const refreshBusinessBookings = useBusinessStore(
     (s) => s.refreshBusinessBookings,
   );
@@ -1629,12 +1659,27 @@ export default function BusinessDashboard({
   const [deleteTarget, setDeleteTarget] = useState<BusinessService | null>(
     null,
   );
-  const menuAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const headerMenuAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [itemMenuAnchor, setItemMenuAnchor] = useState<HTMLElement | null>(null);
+  const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (view !== "bookings") return;
-    void refreshBusinessBookings(businessId);
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        void refreshBusinessBookings(businessId);
+      }
+    };
+
+    refresh();
+    const interval = window.setInterval(refresh, 15_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [view, businessId, refreshBusinessBookings]);
 
   const categoryTags = useMemo(() => {
@@ -1668,11 +1713,6 @@ export default function BusinessDashboard({
 
   const income = confirmedBookings.reduce((sum, b) => sum + b.price, 0);
   const activeServicesCount = services.filter((s) => s.active).length;
-
-  const today = new Date();
-  const bookingDateLabel = `${today.getDate()} ${
-    RU_MONTHS_GEN[today.getMonth()]
-  } ${today.getFullYear()}`;
 
   function handleGalleryScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -1804,18 +1844,15 @@ export default function BusinessDashboard({
           onToggle={() => void toggleService(businessId, item.id, !item.active)}
         />
         <div className="relative flex justify-end">
-          <div
-            ref={(el) => {
-              menuAnchorRefs.current[`row-${item.id}`] = el;
-            }}
-          >
+          <div>
             <button
               type="button"
               aria-label={t("businessDashboard.deleteAria", { name: item.name })}
               data-testid={`business-inventory-menu-${item.id}`}
-              onClick={() =>
-                setItemMenuId(itemMenuId === item.id ? null : item.id)
-              }
+              onClick={(event) => {
+                setItemMenuAnchor(event.currentTarget.parentElement);
+                setItemMenuId(itemMenuId === item.id ? null : item.id);
+              }}
               className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
             >
               <DotsVerticalIcon />
@@ -1823,12 +1860,15 @@ export default function BusinessDashboard({
           </div>
           {itemMenuId === item.id && (
             <BusinessCardMenu
-              anchorEl={menuAnchorRefs.current[`row-${item.id}`]}
+              anchorEl={itemMenuAnchor}
               editLabel={t("businessDashboard.menuEdit")}
               deleteLabel={t("common.delete")}
               onEdit={() => openEditItem(item)}
               onDelete={() => setDeleteTarget(item)}
-              onClose={() => setItemMenuId(null)}
+              onClose={() => {
+                setItemMenuId(null);
+                setItemMenuAnchor(null);
+              }}
             />
           )}
         </div>
@@ -1858,30 +1898,29 @@ export default function BusinessDashboard({
         </div>
 
         <div className="absolute right-[8px] top-[8px]">
-          <div
-            ref={(el) => {
-              menuAnchorRefs.current[`card-${item.id}`] = el;
-            }}
-            className="relative"
-          >
+          <div className="relative">
             <button
               type="button"
               aria-label={`Меню ${item.name}`}
-              onClick={() =>
-                setItemMenuId(itemMenuId === item.id ? null : item.id)
-              }
+              onClick={(event) => {
+                setItemMenuAnchor(event.currentTarget.parentElement);
+                setItemMenuId(itemMenuId === item.id ? null : item.id);
+              }}
               className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
             >
               <DotsVerticalIcon />
             </button>
             {itemMenuId === item.id && (
               <BusinessCardMenu
-                anchorEl={menuAnchorRefs.current[`card-${item.id}`]}
+                anchorEl={itemMenuAnchor}
                 editLabel={t("businessDashboard.menuEdit")}
                 deleteLabel={t("common.delete")}
                 onEdit={() => openEditItem(item)}
                 onDelete={() => setDeleteTarget(item)}
-                onClose={() => setItemMenuId(null)}
+                onClose={() => {
+                  setItemMenuId(null);
+                  setItemMenuAnchor(null);
+                }}
               />
             )}
           </div>
@@ -1895,7 +1934,7 @@ export default function BusinessDashboard({
       <BookingCard
         key={booking.id}
         booking={booking}
-        dateLabel={bookingDateLabel}
+        dateLabel={formatBookingDateLabel(booking.bookingDate)}
         onAccept={() => {
           void updateBookingStatus(businessId, booking.id, "accepted").catch(
             (error) => {
@@ -1915,6 +1954,18 @@ export default function BusinessDashboard({
                   ? error.message
                   : t("businessErrors.itemSaveFailed");
               showToast(t("business.cancelBooking"), message);
+            },
+          );
+        }}
+        onAttendance={(attendanceStatus) => {
+          void updateBookingAttendance(businessId, booking.id, attendanceStatus).catch(
+            (error) => {
+              showToast(
+                t("businessDashboard.bookingsTitle"),
+                error instanceof Error
+                  ? error.message
+                  : t("businessDashboard.attendanceUpdateError"),
+              );
             },
           );
         }}
@@ -1949,20 +2000,23 @@ export default function BusinessDashboard({
               title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
-                <div className="relative" ref={headerMenuAnchorRef}>
+                <div className="relative">
                   <button
                     type="button"
                     aria-label={t("business.menuAria")}
                     aria-expanded={headerMenuOpen}
                     data-testid="business-dashboard-menu"
-                    onClick={() => setHeaderMenuOpen((v) => !v)}
+                    onClick={(event) => {
+                      setHeaderMenuAnchor(event.currentTarget.parentElement);
+                      setHeaderMenuOpen((v) => !v);
+                    }}
                     className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
                   >
                     <DotsVerticalIcon />
                   </button>
                   {headerMenuOpen && (
                     <BusinessCardMenu
-                      anchorEl={headerMenuAnchorRef.current}
+                      anchorEl={headerMenuAnchor}
                       editLabel={t("businessDashboard.editProfile")}
                       onEdit={onEditProfile}
                       onDelete={() => {

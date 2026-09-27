@@ -46,8 +46,12 @@ const Business = () => {
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
-  const { status, hasExistingBusiness, hasLoadedBusinesses } =
-    useBusinessNavAccess();
+  const {
+    status,
+    hasExistingBusiness,
+    hasLoadedBusinesses,
+    businessLoadStatus,
+  } = useBusinessNavAccess();
 
   const editId = searchParams.get("edit");
   const dashboardParam = searchParams.get("dashboard");

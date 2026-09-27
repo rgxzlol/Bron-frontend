@@ -21,8 +21,7 @@ const NAV_TITLE_KEYS = [
 
 export default function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { t } = useTranslation();
-  const { canAccessBusinessPage, isBusinessLocked, isBusinessVisible, businessHref } =
-    useBusinessNavAccess();
+  const { isBusinessVisible, businessHref } = useBusinessNavAccess();
 
   return (
     <ul className="mt-8 list-none w-full lg:mt-[47px]">
@@ -34,20 +33,13 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
         }
 
         const href = isBusinessItem ? businessHref : item.href;
-        const locked = isBusinessItem && isBusinessLocked;
 
         return (
           <li key={item.href} className="w-full">
             <NavLink
               href={href}
-              onClick={(event) => {
-                if (locked && !canAccessBusinessPage) {
-                  event.preventDefault();
-                }
-                onNavigate?.();
-              }}
-              aria-disabled={locked}
-              className={`${s.link} ${locked ? s.locked : ""}`}
+              onClick={onNavigate}
+              className={s.link}
               activeClassName={s.active}
               data-testid={isBusinessItem ? "nav-business" : undefined}
             >

@@ -9,12 +9,12 @@ import type { BusinessApplicationStatus } from "@/store/businessApplication.stor
 function resolveNavStatus(
   apiStatus: BusinessApplicationStatus,
   hasExistingBusiness: boolean,
+  hasPendingBusiness: boolean,
 ): BusinessApplicationStatus {
-  if (apiStatus === "none" && hasExistingBusiness) {
-    return "approved";
-  }
-
-  return apiStatus;
+  if (apiStatus !== "none") return apiStatus;
+  if (hasPendingBusiness) return "pending";
+  if (hasExistingBusiness) return "approved";
+  return "none";
 }
 
 export function useBusinessNavAccess() {
@@ -25,24 +25,23 @@ export function useBusinessNavAccess() {
 
   const hasExistingBusiness = businesses.length > 0;
   const isLoggedIn = Boolean(token);
-  const status = resolveNavStatus(apiStatus, hasExistingBusiness);
+  const hasPendingBusiness = businesses.some(
+    (business) => business.approvalStatus === "pending",
+  );
+  const status = resolveNavStatus(
+    apiStatus,
+    hasExistingBusiness,
+    hasPendingBusiness,
+  );
 
   const isBusinessVisible =
     isLoggedIn &&
     (status === "pending" || status === "approved" || hasExistingBusiness);
-  const isBusinessLocked = status === "pending" && !hasExistingBusiness;
-  const canAccessBusinessPage = status === "approved" || hasExistingBusiness;
-
-  const businessHref =
-    status === "pending" && !hasExistingBusiness
-      ? routes.businessApplication
-      : routes.business;
+  const businessHref = routes.business;
 
   return {
-    canAccessBusinessPage,
     hasExistingBusiness,
     hasLoadedBusinesses,
-    isBusinessLocked,
     isBusinessVisible,
     businessHref,
     status,

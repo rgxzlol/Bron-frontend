@@ -2,7 +2,6 @@
 
 import { routes } from "@/config/routes";
 import { useBusinessStore } from "@/store/business.store";
-import { useAuthStore } from "@/store/auth.store";
 import { shouldRedirectFromBusinessPage, useBusinessNavAccess } from "@/lib/business/applicationAccess";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,10 +34,8 @@ const Business = () => {
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
-  const fetchBusinessesFromApi = useBusinessStore((s) => s.fetchBusinessesFromApi);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
-  const token = useAuthStore((s) => s.token);
   const { status, hasExistingBusiness, hasLoadedBusinesses } =
     useBusinessNavAccess();
 
@@ -65,12 +62,6 @@ const Business = () => {
       router.replace(redirectTo);
     }
   }, [status, hasExistingBusiness, hasLoadedBusinesses, router]);
-
-  useEffect(() => {
-    if (token) {
-      void fetchBusinessesFromApi();
-    }
-  }, [token, fetchBusinessesFromApi]);
 
   useEffect(() => {
     if (hasBusinesses) {

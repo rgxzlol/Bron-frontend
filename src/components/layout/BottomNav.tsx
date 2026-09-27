@@ -19,8 +19,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useTranslation();
-  const { canAccessBusinessPage, isBusinessLocked, isBusinessVisible, businessHref } =
-    useBusinessNavAccess();
+  const { isBusinessVisible, businessHref } = useBusinessNavAccess();
 
   return (
     <nav
@@ -35,7 +34,6 @@ export default function BottomNav() {
             return null;
           }
           const href = isBusinessItem ? businessHref : item.href;
-          const locked = isBusinessItem && isBusinessLocked;
           const isActive = pathname === href || (isBusinessItem && pathname.startsWith(routes.business));
 
           return (
@@ -44,22 +42,16 @@ export default function BottomNav() {
                 href={href}
                 aria-label={t(NAV_TITLE_KEYS[index])}
                 aria-current={isActive ? "page" : undefined}
-                aria-disabled={locked}
                 data-testid={isBusinessItem ? "nav-business" : undefined}
                 onClick={(event) => {
-                  if (locked && !canAccessBusinessPage) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  if (isBusinessItem && canAccessBusinessPage) {
+                  if (isBusinessItem) {
                     event.preventDefault();
                     router.push(routes.business);
                   }
                 }}
                 className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
                   isActive ? "bg-white" : "hover:bg-white/15"
-                } ${locked ? "opacity-45" : ""}`}
+                }`}
               >
                 <span
                   className="h-6 w-6 [-webkit-mask-repeat:no-repeat] [mask-repeat:no-repeat] [-webkit-mask-size:contain] [mask-size:contain] [-webkit-mask-position:center] [mask-position:center]"

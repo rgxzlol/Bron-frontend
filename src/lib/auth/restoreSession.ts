@@ -1,4 +1,5 @@
 import { authApi } from "@/lib/api";
+import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth.store";
 import { clearAuthCookie, getAuthCookie, setAuthCookie } from "@/lib/auth/session";
 
@@ -24,16 +25,32 @@ export async function restoreSessionFromCookie(): Promise<boolean> {
     restorePromise = (async () => {
       try {
         const user = await authApi.me(cookieToken);
+        if (getAuthCookie() !== cookieToken) {
+          return Boolean(useAuthStore.getState().token);
+        }
         useAuthStore.getState().setSession({
           token: cookieToken,
           userId: user.id,
           username: user.username,
         });
         return true;
-      } catch {
-        clearAuthCookie();
-        useAuthStore.getState().clearToken();
-        return false;
+      } catch (error) {
+        if (getAuthCookie() !== cookieToken) {
+          return Boolean(useAuthStore.getState().token);
+        }
+
+        if (
+          error instanceof ApiError &&
+          (error.status === 401 || error.status === 403)
+        ) {
+          clearAuthCookie();
+          useAuthStore.getState().clearToken();
+          return false;
+        }
+
+        console.error("Не удалось проверить восстановленную сессию:", error);
+        useAuthStore.setState({ token: cookieToken });
+        return true;
       } finally {
         restorePromise = null;
       }

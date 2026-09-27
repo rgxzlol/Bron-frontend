@@ -39,8 +39,8 @@ function mapBusinessToApplication(business: Business): BusinessApplication {
   };
 }
 
-async function fetchOwnedBusinesses() {
-  return businessesApi.my();
+async function fetchOwnedBusinesses(token?: string | null) {
+  return businessesApi.my(token);
 }
 
 export const businessApplicationsApi = {
@@ -55,8 +55,8 @@ export const businessApplicationsApi = {
       token,
     }),
 
-  getMy: async () => {
-    const owned = await fetchOwnedBusinesses();
+  getMy: async (token?: string | null) => {
+    const owned = await fetchOwnedBusinesses(token);
     if (owned.length === 0) return null;
 
     const latest = owned.sort(

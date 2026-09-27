@@ -4,7 +4,9 @@ import { routes } from "@/config/routes";
 import { useBusinessStore } from "@/store/business.store";
 import { shouldRedirectFromBusinessPage, useBusinessNavAccess } from "@/lib/business/applicationAccess";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useAuthStore } from "@/store/auth.store";
 import BusinessModal from "./BusinessModal";
 import BusinessDashboard from "./BusinessDashboard";
 import BusinessEmptyPromo from "./BusinessEmptyPromo";
@@ -29,14 +31,27 @@ function useDesktopLayout() {
 const Business = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
+  const token = useAuthStore((s) => s.token);
+  const userId = useAuthStore((s) => s.userId);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editBusinessId, setEditBusinessId] = useState<string | null>(null);
-  const businesses = useBusinessStore((s) => s.businesses);
+  const storedBusinesses = useBusinessStore((s) => s.businesses);
+  const businessesUserId = useBusinessStore((s) => s.businessesUserId);
+  const businesses = useMemo(
+    () => (businessesUserId === userId ? storedBusinesses : []),
+    [businessesUserId, userId, storedBusinesses],
+  );
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
-  const { status, hasExistingBusiness, hasLoadedBusinesses } =
+  const {
+    status,
+    hasExistingBusiness,
+    hasLoadedBusinesses,
+    businessLoadStatus,
+  } =
     useBusinessNavAccess();
 
   const editId = searchParams.get("edit");
@@ -56,12 +71,12 @@ const Business = () => {
     const redirectTo = shouldRedirectFromBusinessPage(
       status,
       hasExistingBusiness,
-      hasLoadedBusinesses,
+      businessLoadStatus,
     );
     if (redirectTo) {
       router.replace(redirectTo);
     }
-  }, [status, hasExistingBusiness, hasLoadedBusinesses, router]);
+  }, [status, hasExistingBusiness, businessLoadStatus, router]);
 
   useEffect(() => {
     if (hasBusinesses) {
@@ -140,6 +155,38 @@ const Business = () => {
   }
 
   const modalOpen = editModalOpen || createModalOpen;
+  const isLoadingBusinesses =
+    Boolean(token) &&
+    (!hasLoadedBusinesses ||
+      businessLoadStatus === "idle" ||
+      businessLoadStatus === "loading");
+
+  if (isLoadingBusinesses) {
+    return (
+      <p className="px-4 py-10 text-center text-[var(--text-secondary)]" role="status">
+        {t("common.loading")}
+      </p>
+    );
+  }
+
+  if (token && businessLoadStatus === "error") {
+    return (
+      <div
+        className="mx-auto flex max-w-[560px] flex-col items-center gap-4 px-4 py-10 text-center"
+        role="alert"
+      >
+        <p className="text-[var(--text-primary)]">{t("business.loadError")}</p>
+        <button
+          type="button"
+          onClick={() => void useBusinessStore.getState().fetchBusinessesFromApi()}
+          className="rounded-full bg-[var(--accent-fg)] px-5 py-3 font-semibold text-white"
+        >
+          {t("business.retry")}
+        </button>
+      </div>
+    );
+  }
+
   const modal = modalOpen ? (
     <BusinessModal onClose={handleCloseModal} onSaved={handleSaved} />
   ) : null;

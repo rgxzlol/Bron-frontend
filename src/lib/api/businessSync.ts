@@ -197,13 +197,24 @@ async function loadBusinessDetails(
   });
 }
 
-export async function fetchMyBusinessesFromApi() {
-  const businesses = await businessesApi.my();
-  return Promise.all(
+export async function fetchMyBusinessesFromApi(token?: string | null) {
+  const businesses = await businessesApi.my(token);
+  const results = await Promise.allSettled(
     businesses.map((business) =>
       loadBusinessDetails(business.id, true, business),
     ),
   );
+
+  return results.flatMap((result, index) => {
+    if (result.status === "fulfilled") return [result.value];
+
+    const business = businesses[index];
+    console.error(
+      `Не удалось загрузить детали бизнеса ${business.id}:`,
+      result.reason,
+    );
+    return [apiBusinessToSavedBusiness(business)];
+  });
 }
 
 export async function fetchPublicBusinessesFromApi() {

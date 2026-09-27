@@ -14,6 +14,7 @@ import {
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
 import { getAuthToken } from "@/lib/api/token";
+import { useAuthStore } from "@/store/auth.store";
 import { useNotificationStore } from "@/store/notification.store";
 import { ApiError } from "@/lib/api/client";
 import type { BookingAttendanceStatus } from "@/lib/api/types";
@@ -92,7 +93,7 @@ export type BusinessDraft = {
 export type SavedBusiness = BusinessDraft & {
   id: string;
   status: "confirmed";
-  approvalStatus?: "pending" | "approved";
+  approvalStatus?: "pending" | "approved" | "rejected";
   bookings: number;
   views: number;
   lat: number;
@@ -130,7 +131,9 @@ function normalizeBusiness(business: SavedBusiness): SavedBusiness {
 
 type BusinessStore = {
   businesses: SavedBusiness[];
+  businessesUserId: number | null;
   hasLoadedBusinesses: boolean;
+  businessLoadStatus: "idle" | "loading" | "loaded" | "error";
   draft: BusinessDraft;
   editingId: string | null;
   showMyBusiness: boolean;
@@ -246,9 +249,14 @@ function replaceBusiness(
 
 export const useBusinessStore = create<BusinessStore>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      let businessFetchRequestId = 0;
+
+      return {
       businesses: [],
+      businessesUserId: null,
       hasLoadedBusinesses: false,
+      businessLoadStatus: "idle",
       draft: createEmptyDraft(),
       editingId: null,
       showMyBusiness: false,
@@ -315,13 +323,36 @@ export const useBusinessStore = create<BusinessStore>()(
       },
 
       fetchBusinessesFromApi: async () => {
-        const token = getAuthToken();
-        if (!token) return;
+        const auth = useAuthStore.getState();
+        const token = auth.token ?? getAuthToken();
+        const userId = auth.userId;
+        if (!token) {
+          get().clearBusinesses();
+          return;
+        }
+
+        const requestId = ++businessFetchRequestId;
+        const belongsToCurrentUser =
+          get().businessesUserId === userId && userId !== null;
+        set({
+          businesses: belongsToCurrentUser ? get().businesses : [],
+          businessesUserId: userId,
+          showMyBusiness:
+            belongsToCurrentUser && get().businesses.length > 0,
+          hasLoadedBusinesses: false,
+          businessLoadStatus: "loading",
+        });
+        const isCurrentRequest = () =>
+          businessFetchRequestId === requestId &&
+          useAuthStore.getState().token === token &&
+          useAuthStore.getState().userId === userId;
 
         try {
+          const fromApi = await fetchMyBusinessesFromApi(token);
+          if (!isCurrentRequest()) return;
+
           const existing = get().businesses;
           const existingById = new Map(existing.map((item) => [item.id, item]));
-          const fromApi = await fetchMyBusinessesFromApi();
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
@@ -341,12 +372,23 @@ export const useBusinessStore = create<BusinessStore>()(
           });
           set({
             businesses: merged,
+            businessesUserId: userId,
             showMyBusiness: merged.length > 0,
             hasLoadedBusinesses: true,
+            businessLoadStatus: "loaded",
           });
         } catch (error) {
+          if (!isCurrentRequest()) return;
           console.error("Не удалось загрузить бизнесы:", error);
-          set({ hasLoadedBusinesses: true });
+          if (error instanceof ApiError && error.status === 401) {
+            useAuthStore.getState().clearToken();
+            get().clearBusinesses();
+            return;
+          }
+          set({
+            hasLoadedBusinesses: true,
+            businessLoadStatus: "error",
+          });
         }
       },
 
@@ -382,13 +424,17 @@ export const useBusinessStore = create<BusinessStore>()(
 
       clearMapFocus: () => set({ mapFocusBusinessId: null }),
 
-      clearBusinesses: () =>
+      clearBusinesses: () => {
+        businessFetchRequestId += 1;
         set({
           businesses: [],
+          businessesUserId: null,
           showMyBusiness: false,
           hasLoadedBusinesses: false,
+          businessLoadStatus: "idle",
           mapFocusBusinessId: null,
-        }),
+        });
+      },
 
       addService: async (businessId, service) => {
         const current = get().getBusiness(businessId);
@@ -663,42 +709,55 @@ export const useBusinessStore = create<BusinessStore>()(
           })),
         }));
       },
-    }),
+      };
+    },
     {
       name: "business-storage",
-      version: 7,
+      version: 8,
       migrate: (persisted) => {
         const state = persisted as {
           businesses?: SavedBusiness[];
+          businessesUserId?: number | null;
           showMyBusiness?: boolean;
         };
         if (!state) return persisted;
 
-        const businesses = (state.businesses ?? [])
+        const businessesUserId =
+          typeof state.businessesUserId === "number"
+            ? state.businessesUserId
+            : null;
+        const businesses = (businessesUserId === null ? [] : state.businesses ?? [])
           .filter((business) => !isLegacyDemoBusiness(business))
           .map((b) => normalizeBusiness(b as SavedBusiness));
 
         return {
           ...state,
+          businessesUserId,
           businesses,
-          showMyBusiness: businesses.length > 0,
+          showMyBusiness: businessesUserId !== null && businesses.length > 0,
         };
       },
       merge: (persisted, current) => {
         const state = persisted as Partial<BusinessStore> | undefined;
-        const businesses = (state?.businesses ?? [])
+        const businessesUserId =
+          typeof state?.businessesUserId === "number"
+            ? state.businessesUserId
+            : null;
+        const businesses = (businessesUserId === null ? [] : state?.businesses ?? [])
           .filter((business) => !isLegacyDemoBusiness(business))
           .map((business) => normalizeBusiness(business));
 
         return {
           ...current,
           ...state,
+          businessesUserId,
           businesses,
-          showMyBusiness: businesses.length > 0,
+          showMyBusiness: businessesUserId !== null && businesses.length > 0,
         };
       },
       partialize: (state) => ({
         businesses: state.businesses,
+        businessesUserId: state.businessesUserId,
         showMyBusiness: state.showMyBusiness,
       }),
     },

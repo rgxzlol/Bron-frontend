@@ -19,14 +19,31 @@ function resolveNavStatus(
 
 export function useBusinessNavAccess() {
   const token = useAuthStore((state) => state.token);
-  const apiStatus = useBusinessApplicationApiStore((state) => state.status);
+  const userId = useAuthStore((state) => state.userId);
+  const storedApiStatus = useBusinessApplicationApiStore((state) => state.status);
+  const applicationUserId = useBusinessApplicationApiStore((state) => state.userId);
   const businesses = useBusinessStore((state) => state.businesses);
-  const hasLoadedBusinesses = useBusinessStore((state) => state.hasLoadedBusinesses);
+  const businessesUserId = useBusinessStore((state) => state.businessesUserId);
+  const storedHasLoadedBusinesses = useBusinessStore(
+    (state) => state.hasLoadedBusinesses,
+  );
+  const storedBusinessLoadStatus = useBusinessStore(
+    (state) => state.businessLoadStatus,
+  );
 
-  const hasExistingBusiness = businesses.length > 0;
+  const hasCurrentBusinesses = businessesUserId === userId;
+  const hasExistingBusiness = hasCurrentBusinesses && businesses.length > 0;
   const isLoggedIn = Boolean(token);
+  const apiStatus =
+    applicationUserId === userId ? storedApiStatus : "none";
+  const hasLoadedBusinesses =
+    hasCurrentBusinesses && storedHasLoadedBusinesses;
+  const businessLoadStatus = hasCurrentBusinesses
+    ? storedBusinessLoadStatus
+    : "idle";
   const hasPendingBusiness = businesses.some(
-    (business) => business.approvalStatus === "pending",
+    (business) =>
+      hasCurrentBusinesses && business.approvalStatus === "pending",
   );
   const status = resolveNavStatus(
     apiStatus,
@@ -36,12 +53,16 @@ export function useBusinessNavAccess() {
 
   const isBusinessVisible =
     isLoggedIn &&
-    (status === "pending" || status === "approved" || hasExistingBusiness);
+    (status === "pending" ||
+      status === "approved" ||
+      hasExistingBusiness ||
+      !hasLoadedBusinesses);
   const businessHref = routes.business;
 
   return {
     hasExistingBusiness,
     hasLoadedBusinesses,
+    businessLoadStatus,
     isBusinessVisible,
     businessHref,
     status,
@@ -51,9 +72,13 @@ export function useBusinessNavAccess() {
 export function shouldRedirectFromBusinessPage(
   status: BusinessApplicationStatus,
   hasExistingBusiness: boolean,
-  hasLoadedBusinesses: boolean,
+  businessLoadStatus: "idle" | "loading" | "loaded" | "error",
 ) {
-  if (status === "pending" && hasLoadedBusinesses && !hasExistingBusiness) {
+  if (
+    status === "pending" &&
+    businessLoadStatus === "loaded" &&
+    !hasExistingBusiness
+  ) {
     return routes.businessApplication;
   }
   return null;

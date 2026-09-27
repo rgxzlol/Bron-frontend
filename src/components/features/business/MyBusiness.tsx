@@ -172,13 +172,17 @@ export default function MyBusiness({
                     className={`shrink-0 rounded-full px-[12px] py-[5px] text-[12px] font-semibold ${
                       business.approvalStatus === "pending"
                         ? "bg-[#fff4d6] text-[#9a6700]"
-                        : "bg-[#e7f8ef] text-[#00bd08]"
+                        : business.approvalStatus === "rejected"
+                          ? "bg-[#fff1f1] text-[#e02424]"
+                          : "bg-[#e7f8ef] text-[#00bd08]"
                     }`}
                     data-testid={`business-card-status-${business.id}`}
                   >
                     {business.approvalStatus === "pending"
                       ? t("business.pendingApproval")
-                      : t("business.confirmed")}
+                      : business.approvalStatus === "rejected"
+                        ? t("business.rejected")
+                        : t("business.confirmed")}
                   </span>
                 </div>
 
@@ -300,7 +304,9 @@ export default function MyBusiness({
                   <span className={desktop.listStatus} data-testid={`business-card-status-${business.id}`}>
                     • {business.approvalStatus === "pending"
                       ? t("business.pendingApproval")
-                      : t("business.confirmed")}
+                      : business.approvalStatus === "rejected"
+                        ? t("business.rejected")
+                        : t("business.confirmed")}
                   </span>
                   <div
                     ref={(el) => {

@@ -46,12 +46,7 @@ const Business = () => {
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
-  const {
-    status,
-    hasExistingBusiness,
-    hasLoadedBusinesses,
-    businessLoadStatus,
-  } =
+  const { status, hasExistingBusiness, hasLoadedBusinesses } =
     useBusinessNavAccess();
 
   const editId = searchParams.get("edit");
@@ -76,7 +71,7 @@ const Business = () => {
     if (redirectTo) {
       router.replace(redirectTo);
     }
-  }, [status, hasExistingBusiness, businessLoadStatus, router]);
+  }, [status, hasExistingBusiness, hasLoadedBusinesses, router]);
 
   useEffect(() => {
     if (hasBusinesses) {

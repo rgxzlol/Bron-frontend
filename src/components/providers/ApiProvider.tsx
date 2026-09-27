@@ -52,6 +52,7 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       return;
     }
     void fetchBusinessesFromApi();
+    void fetchBusinessesFromApi();
 
     return onStoreHydrated(useBookingStore, () => {
       void fetchMyBookings();

@@ -30,11 +30,8 @@ export function useBusinessNavAccess() {
   const hasCurrentBusinesses = businessesUserId === userId;
   const hasExistingBusiness = hasCurrentBusinesses && businesses.length > 0;
   const isLoggedIn = Boolean(token);
-  const apiStatus =
-    applicationUserId === userId ? storedApiStatus : "none";
   const hasPendingBusiness = businesses.some(
-    (business) =>
-      hasCurrentBusinesses && business.approvalStatus === "pending",
+    (business) => business.approvalStatus === "pending",
   );
   const status = resolveNavStatus(
     apiStatus,
@@ -44,17 +41,12 @@ export function useBusinessNavAccess() {
 
   const isBusinessVisible =
     isLoggedIn &&
-    (status === "pending" ||
-      status === "approved" ||
-      hasExistingBusiness ||
-      !hasLoadedBusinesses);
+    (status === "pending" || status === "approved" || hasExistingBusiness);
   const businessHref = routes.business;
 
   return {
     hasExistingBusiness,
-    hasLoadedBusinesses:
-      hasCurrentBusinesses && hasLoadedBusinesses,
-    businessLoadStatus: hasCurrentBusinesses ? businessLoadStatus : "idle",
+    hasLoadedBusinesses,
     isBusinessVisible,
     businessHref,
     status,

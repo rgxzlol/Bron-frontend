@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useBusinessStore } from "@/store/business.store";
 import { useBusinessApplicationApiStore } from "@/store/businessApplicationApi.store";
 import type { BusinessApplicationStatus } from "@/store/businessApplication.store";
+import { useProfileStore } from "@/store/profile.store";
 
 function resolveNavStatus(
   apiStatus: BusinessApplicationStatus,
@@ -22,9 +23,12 @@ export function useBusinessNavAccess() {
   const apiStatus = useBusinessApplicationApiStore((state) => state.status);
   const businesses = useBusinessStore((state) => state.businesses);
   const hasLoadedBusinesses = useBusinessStore((state) => state.hasLoadedBusinesses);
+  const role = useProfileStore((state) => state.role);
 
   const hasExistingBusiness = businesses.length > 0;
   const isLoggedIn = Boolean(token);
+  // Business owners get the page even before their first business exists
+  const isBusinessOwner = role === "business_owner";
   const hasPendingBusiness = businesses.some(
     (business) => business.approvalStatus === "pending",
   );
@@ -36,7 +40,10 @@ export function useBusinessNavAccess() {
 
   const isBusinessVisible =
     isLoggedIn &&
-    (status === "pending" || status === "approved" || hasExistingBusiness);
+    (isBusinessOwner ||
+      status === "pending" ||
+      status === "approved" ||
+      hasExistingBusiness);
   const businessHref = routes.business;
 
   return {

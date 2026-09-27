@@ -88,6 +88,7 @@ type ProfileState = {
   rating: number;
   reviewCount: number;
   avatarUrl: string | null;
+  role: string | null;
   language: ProfileLanguage;
   theme: ProfileTheme;
   notifications: NotificationSettings;
@@ -150,6 +151,7 @@ export const useProfileStore = create<ProfileState>()(
       rating: DEFAULT_PROFILE_RATING,
       reviewCount: 0,
       avatarUrl: null,
+      role: null,
       language: "ru",
       theme: "light",
       notifications: DEFAULT_NOTIFICATIONS,
@@ -169,6 +171,7 @@ export const useProfileStore = create<ProfileState>()(
           set((state) => ({
             ...applyProfileToState(profile, state.fullName),
             avatarUrl: profile.avatar ?? null,
+            role: profile.role ?? null,
             isProfileLoading: false,
           }));
           const userId = useAuthStore.getState().userId;
@@ -318,6 +321,7 @@ export const useProfileStore = create<ProfileState>()(
           rating: DEFAULT_PROFILE_RATING,
           reviewCount: 0,
           avatarUrl: null,
+          role: null,
           isProfileLoading: false,
           profileError: null,
         }),
@@ -332,6 +336,7 @@ export const useProfileStore = create<ProfileState>()(
         rating: state.rating,
         reviewCount: state.reviewCount,
         avatarUrl: state.avatarUrl,
+        role: state.role,
         language: state.language,
         theme: state.theme,
         paymentHistory: state.paymentHistory,

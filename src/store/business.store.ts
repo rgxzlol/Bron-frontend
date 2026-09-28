@@ -59,6 +59,7 @@ export type BusinessService = {
   duration?: number;
   guestCapacity?: number;
   quantity?: number;
+  dates?: string[];
 };
 
 export type BusinessBookingRequest = {

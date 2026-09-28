@@ -396,6 +396,7 @@ type ServiceFormData = {
   duration?: number;
   guestCapacity: number | null;
   quantity: number | null;
+  dates: Date[];
 };
 
 const emptyServiceForm = (): ServiceFormData => ({
@@ -406,6 +407,7 @@ const emptyServiceForm = (): ServiceFormData => ({
   photo: null,
   guestCapacity: null,
   quantity: null,
+  dates: [],
 });
 
 function serviceToFormData(item: BusinessService): ServiceFormData {
@@ -418,6 +420,7 @@ function serviceToFormData(item: BusinessService): ServiceFormData {
     duration: item.duration,
     guestCapacity: item.guestCapacity ?? null,
     quantity: item.quantity ?? null,
+    dates: [],
   };
 }
 
@@ -653,14 +656,12 @@ function CalendarField({
   prevMonthLabel,
   nextMonthLabel,
 }: {
-  value: Date;
-  onChange: (date: Date) => void;
+  value: Date[];
+  onChange: (dates: Date[]) => void;
   prevMonthLabel: string;
   nextMonthLabel: string;
 }) {
-  const [month, setMonth] = useState(
-    () => new Date(value.getFullYear(), value.getMonth(), 1),
-  );
+  const [month, setMonth] = useState(() => new Date());
 
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -698,9 +699,28 @@ function CalendarField({
   }, [monthIndex, year]);
 
   const isSelected = (date: Date) =>
-    value.getFullYear() === date.getFullYear() &&
-    value.getMonth() === date.getMonth() &&
-    value.getDate() === date.getDate();
+    value.some(
+      (d) =>
+        d.getFullYear() === date.getFullYear() &&
+        d.getMonth() === date.getMonth() &&
+        d.getDate() === date.getDate(),
+    );
+
+  function toggleDate(date: Date) {
+    if (isSelected(date)) {
+      onChange(value.filter((d) => !isSameDay(d, date)));
+    } else {
+      onChange([...value, date]);
+    }
+  }
+
+  function isSameDay(a: Date, b: Date): boolean {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
 
   return (
     <div
@@ -766,7 +786,7 @@ function CalendarField({
               aria-pressed={selected}
               aria-disabled={isPast}
               disabled={isPast}
-              onClick={() => onChange(date)}
+              onClick={() => !isPast && toggleDate(date)}
               className={`mx-auto flex h-[42px] w-[42px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
                 selected && !isPast
                   ? "bg-[#0a6af7] text-white shadow-sm"
@@ -896,7 +916,15 @@ function AddItemScreen({
     });
   const [descriptionLimitHit, setDescriptionLimitHit] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
-  const [date, setDate] = useState<Date>(() => new Date());
+  const [dates, setDates] = useState<Date[]>(() => {
+    if (!initialItem || !initialItem.dates || !isService) return [];
+    return initialItem.dates
+      .map((dateStr) => {
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      })
+      .filter((d): d is Date => d !== null);
+  });
   const [durationMin, setDurationMin] = useState<number | null>(
     () => initialItem?.duration ?? null,
   );
@@ -1207,11 +1235,36 @@ function AddItemScreen({
                 {t("businessForms.dateLabel")}
               </span>
               <CalendarField
-                value={date}
-                onChange={setDate}
+                value={dates}
+                onChange={setDates}
                 prevMonthLabel={t("businessForms.prevMonthAria")}
                 nextMonthLabel={t("businessForms.nextMonthAria")}
               />
+              {dates.length > 0 && (
+                <div className="flex flex-wrap gap-[8px] mt-[12px]">
+                  {dates
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .map((date) => {
+                      const formatted = date.toLocaleDateString("ru-RU", {
+                        month: "short",
+                        day: "numeric",
+                      });
+                      return (
+                        <button
+                          key={date.toISOString()}
+                          type="button"
+                          onClick={() =>
+                            setDates(dates.filter((d) => d.getTime() !== date.getTime()))
+                          }
+                          className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-full bg-[#0a6af7] text-white text-[13px] font-semibold hover:bg-[#0856ce] transition"
+                        >
+                          {formatted}
+                          <span className="text-[16px] leading-none">×</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
 
             <label className="flex flex-col gap-[8px]" data-field="duration">
@@ -1288,6 +1341,7 @@ function AddItemScreen({
                   duration: isService ? durationMin ?? undefined : undefined,
                   guestCapacity: form.guestCapacity ?? 1,
                   quantity: form.quantity ?? 1,
+                  dates,
                 });
               } finally {
                 setIsSaving(false);
@@ -1732,6 +1786,11 @@ export default function BusinessDashboard({
         duration: data.duration,
         guestCapacity: data.guestCapacity ?? undefined,
         type: "service",
+        dates: data.dates.length > 0 
+          ? data.dates
+              .sort((a, b) => a.getTime() - b.getTime())
+              .map((d) => d.toISOString().split("T")[0])
+          : undefined,
       });
       if (nextId !== businessId) {
         onBusinessIdChange?.(nextId);
@@ -1800,6 +1859,16 @@ export default function BusinessDashboard({
         ...(editingItem.type === "service"
           ? { guestCapacity: data.guestCapacity ?? undefined }
           : { quantity: data.quantity ?? undefined }),
+        ...(editingItem.type === "service"
+          ? {
+              dates:
+                data.dates.length > 0
+                  ? data.dates
+                      .sort((a, b) => a.getTime() - b.getTime())
+                      .map((d) => d.toISOString().split("T")[0])
+                  : undefined,
+            }
+          : {}),
       });
       closeEditItem();
     } catch {
@@ -1828,6 +1897,11 @@ export default function BusinessDashboard({
               ? t("businessDashboard.typeService")
               : t("businessDashboard.typeProduct")}
           </p>
+          {isService && item.dates && item.dates.length > 0 && (
+            <p className="mt-[4px] text-[11px] text-[#0a6af7] font-medium">
+              {t("businessForms.dateLabel")}: {item.dates.length} {item.dates.length === 1 ? "дата" : "даты"}
+            </p>
+          )}
         </div>
         <p className="truncate text-[13px] text-[var(--text-secondary)]">
           {item.category || t("businessDashboard.defaultCategory")}

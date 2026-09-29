@@ -20,6 +20,7 @@ import { useFavoriteStore } from "@/store/favorite.store";
 import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import s from "./fullMap.module.css";
 import { translateLocation } from "@/lib/i18n/location";
 
@@ -124,22 +125,12 @@ export default function ShopDetailPanel({
     setImageIndex((index) => (index < gallery.length - 1 ? index + 1 : 0));
   }
 
-  const priceRows =
-    activeServices.length > 0
-      ? activeServices.map((service) => ({
-          id: service.id,
-          name: service.title,
-          duration: `${service.durationMin} мин`,
-          price: service.priceFrom,
-        }))
-      : [
-          {
-            id: "base",
-            name: shop.category,
-            duration: shop.type === "Больница" ? `${shop.time} мин` : "1 час",
-            price: shop.price,
-          },
-        ];
+  const priceRows = activeServices.map((service) => ({
+    id: service.id,
+    name: service.title,
+    duration: `${service.durationMin} мин`,
+    price: service.priceFrom,
+  }));
 
   const { rating: displayRating, reviews: displayReviews } = getEffectiveShopRating(
     shop.id,
@@ -238,7 +229,15 @@ export default function ShopDetailPanel({
             </span>
           </div>
           <div className={s.sheetInfo}>
-            <span className={s.sheetTag}>{shop.type}</span>
+            <span className={s.sheetTag}>
+              <BusinessCategoryIcon
+                category={shop.category || shop.type}
+                size={14}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+              {shop.category}
+            </span>
             <h2 className={s.sheetTitle} data-testid="map-vendor-title">
               {shop.title}
             </h2>
@@ -363,30 +362,28 @@ export default function ShopDetailPanel({
 
             <div className={s.sheetSection}>
               <h3 className={s.sheetSectionTitle}>Цена</h3>
-              {priceRows.map((row) => (
-                <div key={row.id} className={s.priceItem}>
-                  <span className={s.priceCircle} aria-hidden="true">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    >
-                      <path d="M6.5 9v6M4 10.5v3M17.5 9v6M20 10.5v3M6.5 12h11" />
-                    </svg>
-                  </span>
-                  <div className={s.priceInfo}>
-                    <span className={s.priceName}>{row.name}</span>
-                    <span className={s.priceDuration}>{row.duration}</span>
+              {priceRows.length > 0 ? (
+                priceRows.map((row) => (
+                  <div key={row.id} className={s.priceItem}>
+                    <span className={s.priceCircle} aria-hidden="true">
+                      <BusinessCategoryIcon
+                        category={shop.category || shop.type}
+                        size={20}
+                        strokeWidth={1.8}
+                      />
+                    </span>
+                    <div className={s.priceInfo}>
+                      <span className={s.priceName}>{row.name}</span>
+                      <span className={s.priceDuration}>{row.duration}</span>
+                    </div>
+                    <span className={s.priceAmount}>
+                      {formatPrice(row.price)} сум
+                    </span>
                   </div>
-                  <span className={s.priceAmount}>
-                    {formatPrice(row.price)} сум
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className={s.noServices}>{t("map.noServices")}</p>
+              )}
             </div>
 
             <div className={s.sheetSection}>
@@ -488,7 +485,15 @@ export default function ShopDetailPanel({
               </div>
             </div>
 
-            <p className={s.category}>{shop.category}</p>
+            <p className={s.category}>
+              <BusinessCategoryIcon
+                category={shop.category || shop.type}
+                size={15}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+              {shop.category}
+            </p>
             <p className={s.priceFrom} data-testid="map-vendor-price">
               {priceLabel}
             </p>

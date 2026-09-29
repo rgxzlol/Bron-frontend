@@ -3,6 +3,7 @@
 import { FC, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { assets } from '@/lib/assets';
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import { Category } from '@/types/category';
 import { categories } from '@/data/categories';
 import { pluralizeServices } from '@/lib/pluralize';
@@ -45,12 +46,15 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             style={{ backgroundColor: selectedCategory.color }}
                             className="w-[36px] h-[36px] rounded-full flex items-center justify-center shadow-inner transition-transform duration-300 hover:scale-105"
                         >
-                            <Image
-                                src={selectedCategory.icon}
-                                alt={selectedCategory.title}
-                                width={18}
-                                height={18}
-                            />
+                            {selectedCategory && (
+                                <BusinessCategoryIcon
+                                    category={selectedCategory.title}
+                                    color={selectedCategory.iconColor}
+                                    size={18}
+                                    strokeWidth={1.8}
+                                    aria-hidden="true"
+                                />
+                            )}
                         </div>
                         <span className="text-[18px] font-semibold text-black">
                             {translateHomeCategory(t, selectedCategory.id) || selectedCategory.title}
@@ -86,7 +90,12 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                             }`}
                     >
                         <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center bg-gray-100 flex-shrink-0">
-                            <span className="text-gray-400 text-lg">★</span>
+                            <BusinessCategoryIcon
+                                category="Другое"
+                                size={18}
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                            />
                         </div>
                         <div className="flex flex-col text-left">
                             <span className="text-[16px] font-semibold">{t("headerFilters.allCategories")}</span>
@@ -117,7 +126,13 @@ export const CategoryDropdown: FC<CategoryDropdownProps> = ({ selectedCategory, 
                                     style={{ backgroundColor: cat.color }}
                                     className="w-[36px] h-[36px] rounded-full flex items-center justify-center flex-shrink-0 shadow-inner"
                                 >
-                                    <Image src={cat.icon} alt={title} width={18} height={18} />
+                                    <BusinessCategoryIcon
+                                        category={cat.title}
+                                        color={cat.iconColor}
+                                        size={18}
+                                        strokeWidth={1.8}
+                                        aria-hidden="true"
+                                    />
                                 </div>
                                 <div className="flex flex-col text-left">
                                     <span className="text-[16px] font-semibold">{title}</span>

@@ -84,7 +84,9 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
         const match = apiCategories.find(
           (item) =>
             target != null &&
-            apiCategoryToUi(item.slug) === target.businessCategory,
+            (apiCategoryToUi(item) === target.businessCategory ||
+              item.name.trim().toLowerCase() ===
+                target.businessCategory.toLowerCase()),
         );
         return {
           ...category,

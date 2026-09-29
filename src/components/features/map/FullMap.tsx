@@ -1,9 +1,13 @@
 "use client"
 
 import mapboxgl from "mapbox-gl"
+import { renderToStaticMarkup } from "react-dom/server"
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import Image from "next/image"
+import { servicesApi } from "@/lib/api/services"
 import { ShopsType } from "@/types/shops.types"
+import { parsePrice } from "@/lib/formatPrice"
+import { getBusinessCategoryIcon } from "@/lib/business/categoryIcons"
 import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
 import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
@@ -15,6 +19,7 @@ import { useBusinessStore } from "@/store/business.store"
 import { useMapFilterStore } from "@/store/mapFilter.store"
 import { useProfileStore } from "@/store/profile.store"
 import { useAuthStore } from "@/store/auth.store"
+import { useToastStore } from "@/store/toast.store"
 import type { MapLocationFilter } from "@/store/mapFilter.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
@@ -37,6 +42,7 @@ type FullMapProps = {
 const filters = ["Ресторан", "Спортзал", "Кофейня", "Больница"]
 const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
+const SHOP_MARKER_LABEL_MIN_ZOOM = 12.5
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
 const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
 function subscribeToMapNavigation(onChange: () => void) {
@@ -52,47 +58,69 @@ function getServerMapNavigationFilter() {
   return "Все"
 }
 
-function createShopMarkerElement(title: string, isHospital: boolean) {
-  const el = document.createElement("div")
-  el.style.cssText = [
-    "display:flex",
-    "align-items:center",
-    "gap:8px",
-    "padding:8px 16px",
-    "border-radius:9999px",
-    "background:#ffffff",
-    "border:1px solid #e0e0e8",
-    "box-shadow:0 4px 14px rgba(0,0,0,0.12)",
-    "cursor:pointer",
-    "white-space:nowrap",
-    "color:#111111",
-    "font-weight:600",
-    "font-size:14px",
-    "line-height:1.2",
-  ].join(";")
+function setShopMarkerPresentation(
+  element: HTMLElement,
+  showLabel: boolean,
+) {
+  element.style.cssText = showLabel
+    ? [
+        "display:flex",
+        "align-items:center",
+        "gap:8px",
+        "padding:8px 16px",
+        "border-radius:9999px",
+        "background:#ffffff",
+        "border:1px solid #e0e0e8",
+        "box-shadow:0 4px 14px rgba(0,0,0,0.12)",
+        "cursor:pointer",
+        "white-space:nowrap",
+        "color:#111111",
+        "font-weight:600",
+        "font-size:14px",
+        "line-height:1.2",
+      ].join(";")
+    : [
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "width:40px",
+        "height:40px",
+        "padding:0",
+        "border-radius:9999px",
+        "background:#ffffff",
+        "border:1px solid #d8dce5",
+        "box-shadow:0 4px 14px rgba(0,0,0,0.18)",
+        "cursor:pointer",
+      ].join(";")
 
-  if (isHospital) {
-    const icon = document.createElement("img")
-    icon.src = assets.categories.health.src
-    icon.width = 16
-    icon.height = 16
-    icon.alt = ""
-    el.appendChild(icon)
-  }
+  const label = element.querySelector<HTMLElement>("[data-marker-label]")
+  if (label) label.style.display = showLabel ? "" : "none"
+}
+
+function createShopMarkerElement(
+  title: string,
+  category: string,
+  showLabel: boolean,
+) {
+  const el = document.createElement("div")
+  el.className = "map-shop-marker"
+
+  const icon = document.createElement("span")
+  icon.style.cssText =
+    "display:inline-flex;align-items:center;justify-content:center;color:#0a6af7;flex:none"
+  const Icon = getBusinessCategoryIcon(category)
+  icon.innerHTML = renderToStaticMarkup(
+    <Icon aria-hidden="true" size={20} strokeWidth={2.4} />,
+  )
+  el.appendChild(icon)
 
   const label = document.createElement("span")
+  label.dataset.markerLabel = "true"
   label.textContent = title
   el.appendChild(label)
 
+  setShopMarkerPresentation(el, showLabel)
   return el
-}
-
-function getShopServices(shop: ShopsType) {
-  return shop.services ?? []
-}
-
-function shouldOpenServiceSelection(shop: ShopsType) {
-  return getShopServices(shop).length > 1
 }
 
 function getShopMinPrice(shop: ShopsType) {
@@ -185,10 +213,12 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
   const locationFilterReadyRef = useRef(false)
   const mapViewportModeRef = useRef<MapViewportMode>("idle")
+  const serviceRequestIdRef = useRef(0)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
   const [serviceSelectionShop, setServiceSelectionShop] =
     useState<ShopsType | null>(null)
+  const showToast = useToastStore((state) => state.showToast)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
   const navigationFilter = useSyncExternalStore(
@@ -371,8 +401,62 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     return true
   }
 
-  function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
-    openShop(shop, map)
+  async function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
+    const requestId = ++serviceRequestIdRef.current
+    setSelectedShop(null)
+    setServiceSelectionShop(null)
+
+    if (shop.apiBusinessId == null) {
+      openShop({ ...shop, services: [] }, map)
+      return
+    }
+
+    try {
+      const items = await servicesApi.listByBusiness(shop.apiBusinessId)
+      if (requestId !== serviceRequestIdRef.current) return
+
+      const services = items
+        .filter((service) => service.is_active !== false)
+        .map((service) => ({
+          id: String(service.id),
+          title: service.title,
+          description: service.description ?? "",
+          priceFrom: parsePrice(String(service.price)),
+          durationMin:
+            typeof service.duration === "number" && service.duration > 0
+              ? service.duration
+              : 60,
+          kind: "service" as const,
+          category: service.category,
+        }))
+      const shopWithServices = {
+        ...shop,
+        services,
+        ...(services.length > 0
+          ? { price: Math.min(...services.map((service) => service.priceFrom)) }
+          : {}),
+      }
+
+      const coords = normalizeCoords(shop.lat, shop.lng)
+      if (coords) {
+        map.flyTo({
+          center: [coords.lng, coords.lat],
+          zoom: 15,
+          speed: 1.2,
+        })
+      }
+
+      if (services.length > 1) {
+        setServiceSelectionShop(enrichShopWithDistance(shopWithServices))
+      } else {
+        openShop(shopWithServices, map)
+      }
+    } catch (error) {
+      if (requestId !== serviceRequestIdRef.current) return
+      console.error(`Не удалось загрузить услуги бизнеса ${shop.apiBusinessId}:`, error)
+      showToast(t("map.servicesLoadFailed"))
+      openShop({ ...shop, services: [] }, map)
+    }
   }
 
   function openShop(shop: ShopsType, map: mapboxgl.Map) {
@@ -430,8 +514,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markerCoordinates.push([coords.lng, coords.lat])
 
-      const isHospital = shop.type === "Больница"
-      const el = createShopMarkerElement(shop.title, isHospital)
+      const el = createShopMarkerElement(
+        shop.title,
+        shop.category || shop.type,
+        map.getZoom() >= SHOP_MARKER_LABEL_MIN_ZOOM,
+      )
       el.setAttribute("data-testid", `map-shop-marker-${shop.id}`)
       el.setAttribute("role", "button")
       el.setAttribute("tabindex", "0")
@@ -506,6 +593,13 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     })
 
     mapRef.current = map
+    const handleZoomEnd = () => {
+      const showLabels = map.getZoom() >= SHOP_MARKER_LABEL_MIN_ZOOM
+      markersRef.current.forEach((marker) =>
+        setShopMarkerPresentation(marker.getElement(), showLabels),
+      )
+    }
+    map.on("zoomend", handleZoomEnd)
 
     const handleMapReady = () => {
       if (cancelled || mapRef.current !== map) return
@@ -564,6 +658,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       markersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
+      map.off("zoomend", handleZoomEnd)
       map.remove()
       mapRef.current = null
     }
@@ -754,24 +849,28 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   return (
     <div className="relative">
       <div className="absolute top-4 left-4 z-10 flex max-w-[calc(100%-32px)] gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:max-w-[70%]">
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            data-testid={`map-filter-${filter}`}
-            onClick={() => handleFilterSelect(filter)}
-            className={`
-              px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
-              ${
-                activeFilter === filter
-                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                  : "bg-[var(--bg-surface)] text-[var(--accent-fg)] border-[var(--primary)]"
-              }
-            `}
-          >
-            {translateLabel(t, filter, MAP_FILTER_PILL_KEYS)}
-          </button>
-        ))}
+        {filters.map((filter) => {
+          const Icon = getBusinessCategoryIcon(filter)
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`map-filter-${filter}`}
+              onClick={() => handleFilterSelect(filter)}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
+                ${
+                  activeFilter === filter
+                    ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                    : "bg-[var(--bg-surface)] text-[var(--accent-fg)] border-[var(--primary)]"
+                }
+              `}
+            >
+              <Icon size={16} strokeWidth={2} aria-hidden="true" />
+              {translateLabel(t, filter, MAP_FILTER_PILL_KEYS)}
+            </button>
+          )
+        })}
       </div>
 
       <div className="absolute top-[72px] right-4 z-10 flex flex-col gap-3 lg:hidden">
@@ -901,6 +1000,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       {serviceSelectionShop && (
         <HospitalServicesModal
+          key={serviceSelectionShop.id}
           shop={serviceSelectionShop}
           onClose={() => setServiceSelectionShop(null)}
           onContinue={handleServiceSelectionContinue}

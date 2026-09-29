@@ -9,6 +9,7 @@ import type {
 import type {
   Branch,
   Business as ApiBusiness,
+  BusinessCategory as ApiBusinessCategory,
   BusinessCreate as ApiBusinessCreate,
   BusinessStats,
   BusinessUpdate as ApiBusinessUpdate,
@@ -29,27 +30,130 @@ import type {
   ServiceListItem,
 } from "./types";
 
-const UI_TO_API_CATEGORY: Record<string, string> = {
-  "Спорт зал": "gym",
-  Красота: "beauty",
-  Здоровье: "health",
-  Образование: "education",
-  Еда: "food",
-  Другое: "other",
+const UI_TO_API_CATEGORY: Record<string, string[]> = {
+  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty"],
+  Здоровье: ["health", "healthcare", "medical", "medicine", "clinic"],
+  "Фитнес зал": ["gym", "fitness", "sport"],
+  "Учебные заведения": ["education", "school"],
+  Рестораны: ["restaurants", "restaurant", "food"],
+  Кафейни: ["cafes", "cafe", "coffee"],
+  "Авто сервис": ["auto_service", "autoservice", "auto", "car_service"],
+  Кинотеатры: ["cinema", "cinemas", "movie_theater"],
+  "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
+  Клининг: ["cleaning", "cleaning_service"],
+  Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
 };
 
 const API_TO_UI_CATEGORY: Record<string, string> = {
-  gym: "Спорт зал",
-  beauty: "Красота",
+  beauty_salon: "Салон красоты",
+  salon_beauty: "Салон красоты",
+  beauty: "Салон красоты",
+  "салон красоты": "Салон красоты",
+  салон_красоты: "Салон красоты",
   health: "Здоровье",
-  education: "Образование",
-  food: "Еда",
-  club: "Клуб",
-  other: "Другое",
+  healthcare: "Здоровье",
+  medical: "Здоровье",
+  clinic: "Здоровье",
+  hospital: "Здоровье",
+  gym: "Фитнес зал",
+  fitness: "Фитнес зал",
+  sport: "Фитнес зал",
+  education: "Учебные заведения",
+  school: "Учебные заведения",
+  restaurant: "Рестораны",
+  restaurants: "Рестораны",
+  food: "Рестораны",
+  cafe: "Кафейни",
+  cafes: "Кафейни",
+  coffee: "Кафейни",
+  auto_service: "Авто сервис",
+  autoservice: "Авто сервис",
+  car_service: "Авто сервис",
+  auto: "Авто сервис",
+  cinema: "Кинотеатры",
+  cinemas: "Кинотеатры",
+  movie_theater: "Кинотеатры",
+  pc_club: "Комп клуб",
+  computer_club: "Комп клуб",
+  gaming_club: "Комп клуб",
+  club: "Комп клуб",
+  cleaning: "Клининг",
+  cleaning_service: "Клининг",
+  sanatorium: "Санатории",
+  sanatoriums: "Санатории",
+  spa: "Санатории",
+  wellness: "Санатории",
+  "спорт зал": "Фитнес зал",
+  спорт_зал: "Фитнес зал",
+  "фитнес зал": "Фитнес зал",
+  фитнес_зал: "Фитнес зал",
+  "учебные заведения": "Учебные заведения",
+  учебные_заведения: "Учебные заведения",
+  рестораны: "Рестораны",
+  кафейни: "Кафейни",
+  "авто сервис": "Авто сервис",
+  авто_сервис: "Авто сервис",
+  кинотеатры: "Кинотеатры",
+  "комп клуб": "Комп клуб",
+  комп_клуб: "Комп клуб",
+  клининг: "Клининг",
+  санатории: "Санатории",
+  "кафе и рестораны": "Рестораны",
+  кафе_и_рестораны: "Рестораны",
+  restaurants_cafes: "Рестораны",
+  sports_fitness: "Фитнес зал",
+  sports_and_fitness: "Фитнес зал",
+  beauty_care: "Салон красоты",
+  beauty_and_care: "Салон красоты",
+  cafe_and_restaurants: "Рестораны",
+  cafes_and_restaurants: "Рестораны",
+  medicine: "Здоровье",
+  health_spa: "Санатории",
+  health_and_spa: "Санатории",
+  hotels_recreation: "Санатории",
+  hotels_and_recreation: "Санатории",
+  auto_services: "Авто сервис",
+  entertainment: "Кинотеатры",
+  leisure: "Кинотеатры",
+  "спорт и фитнес": "Фитнес зал",
+  спорт_и_фитнес: "Фитнес зал",
+  "красота и уход": "Салон красоты",
+  красота_и_уход: "Салон красоты",
+  медицина: "Здоровье",
+  "здоровье и spa": "Санатории",
+  здоровье_и_spa: "Санатории",
+  "отели и отдых": "Санатории",
+  отели_и_отдых: "Санатории",
+  автосервисы: "Авто сервис",
+  образование: "Учебные заведения",
+  развлечения: "Кинотеатры",
+  еда: "Рестораны",
+  другое: "Кинотеатры",
 };
 
 export function uiCategoryToApi(category: string) {
-  return UI_TO_API_CATEGORY[category] ?? category;
+  return UI_TO_API_CATEGORY[category]?.[0] ?? category;
+}
+
+export function findApiCategoryForUi(
+  categories: ApiBusinessCategory[],
+  uiCategory: string,
+): ApiBusinessCategory | undefined {
+  const expectedSlugs = new Set(
+    (UI_TO_API_CATEGORY[uiCategory] ?? [uiCategory]).map((slug) =>
+      slug.toLowerCase().replace(/[\s-]+/g, "_"),
+    ),
+  );
+
+  return (
+    categories.find((category) =>
+      expectedSlugs.has(category.slug.toLowerCase().replace(/[\s-]+/g, "_")),
+    ) ??
+    categories.find(
+      (category) => category.name.trim().toLowerCase() === uiCategory.toLowerCase(),
+    ) ??
+    categories.find((category) => apiCategoryToUi(category) === uiCategory)
+  );
 }
 
 export function apiCategoryToUi(category: unknown): string {
@@ -57,7 +161,10 @@ export function apiCategoryToUi(category: unknown): string {
     const value = category.trim();
     if (!value) return "Другое";
 
-    return API_TO_UI_CATEGORY[value.toLowerCase()] ?? value;
+    const normalizedValue = value.toLowerCase().replace(/[\s-]+/g, "_");
+    return API_TO_UI_CATEGORY[normalizedValue] ??
+      API_TO_UI_CATEGORY[value.toLowerCase()] ??
+      value;
   }
 
   if (typeof category !== "object" || category === null) {
@@ -70,11 +177,14 @@ export function apiCategoryToUi(category: unknown): string {
   const name = "name" in category && typeof category.name === "string"
     ? category.name.trim()
     : "";
-  const normalizedSlug = slug.toLowerCase();
+  const normalizedSlug = slug.toLowerCase().replace(/[\s-]+/g, "_");
 
   if (!slug && !name) return "Другое";
 
-  return API_TO_UI_CATEGORY[normalizedSlug] ?? (name || slug);
+  const normalizedName = name.toLowerCase().replace(/[\s-]+/g, "_");
+  return API_TO_UI_CATEGORY[normalizedSlug] ??
+    API_TO_UI_CATEGORY[normalizedName] ??
+    (name || slug);
 }
 
 function parsePrice(value: number | string) {

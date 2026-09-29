@@ -5,6 +5,7 @@ import type { ShopService, ShopsType } from "@/types/shops.types";
 import { formatPrice } from "@/lib/formatPrice";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import Button from "@/components/shared/Button";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import s from "./hospitalServicesModal.module.css";
 
 type HospitalServicesModalProps = {
@@ -22,54 +23,14 @@ function pluralizeServices(count: number, t: (key: string) => string) {
   return t("map.serviceWordMany");
 }
 
-const ICON_TONES = [s.iconTonePink, s.iconToneBlue, s.iconTonePurple];
-
-function ServiceIcon({ index }: { index: number }) {
-  const tone = index % 3;
-
-  if (tone === 0) {
-    return (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 21s-7.6-4.9-9.4-9.3C1.2 8.5 3.3 5.4 6.4 5.4c1.9 0 3.6 1 4.6 2.6 1-1.6 2.7-2.6 4.6-2.6 3.1 0 5.2 3.1 3.8 6.3C19.6 16.1 12 21 12 21z" />
-      </svg>
-    );
-  }
-
-  if (tone === 1) {
-    return (
-      <svg
-        width="26"
-        height="26"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
-        <path d="M14 3v5h5M9 13h6M9 17h4" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 5.6C10.9 4.5 9.5 3.8 8 3.8 5.2 3.8 3.1 6.1 3.4 8.8c.2 2.3 1.2 4.4 1.8 6.6.5 1.9 1 4.8 2.5 4.8 1.8 0 1.4-4.1 4.3-4.1s2.5 4.1 4.3 4.1c1.5 0 2-2.9 2.5-4.8.6-2.2 1.6-4.3 1.8-6.6.3-2.7-1.8-5-4.6-5-1.5 0-2.9.7-4 1.8z" />
-    </svg>
-  );
-}
+const ICON_TONES = [
+  s.iconToneGreen,
+  s.iconTonePink,
+  s.iconToneBlue,
+  s.iconTonePurple,
+  s.iconToneYellow,
+  s.iconToneSky,
+];
 
 export default function HospitalServicesModal({
   shop,
@@ -140,10 +101,14 @@ export default function HospitalServicesModal({
               >
                 <div className={s.cardInner}>
                   <div
-                    className={`${s.iconBox} ${ICON_TONES[index % 3]}`}
+                    className={`${s.iconBox} ${ICON_TONES[index % ICON_TONES.length]}`}
                     aria-hidden
                   >
-                    <ServiceIcon index={index} />
+                    <BusinessCategoryIcon
+                      category={service.category || shop.type || shop.category}
+                      size={24}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div className={s.cardBody}>
@@ -152,9 +117,16 @@ export default function HospitalServicesModal({
                   </div>
 
                   <div className={s.cardSide}>
-                    <span className={s.price}>
-                      {t("map.priceFromShort", { price: formatPrice(service.priceFrom) })}
-                    </span>
+                    <div className={s.priceMeta}>
+                      <span className={s.price}>
+                        {t("map.priceFromShort", { price: formatPrice(service.priceFrom) })}
+                      </span>
+                      {service.durationMin > 0 && (
+                        <span className={s.duration}>
+                          {t("map.durationMin", { min: service.durationMin })}
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
                       className={isSelected ? s.pickBtnPress : s.pickBtn}

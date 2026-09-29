@@ -1,0 +1,510 @@
+.page {
+  width: 100%;
+}
+
+.workspace,
+.profileCard,
+.servicesCard {
+  min-width: 0;
+}
+
+.pageHeader,
+.profileCard {
+  display: none;
+}
+
+.categoryTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.categoryTags span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f0f4ff;
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.servicesCard {
+  display: block;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--bg-surface);
+}
+
+.servicesHeading > button {
+  display: none;
+}
+
+.servicesTable {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-surface-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.emptyServices {
+  padding: 28px 12px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 14px;
+}
+
+.serviceActions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.serviceActions button {
+  padding: 16px 12px;
+  border-radius: 14px;
+  background: #0a6af7;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+
+.serviceActions button:hover {
+  background: #0858ce;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .serviceActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.inventoryDescription,
+.inventoryPhoto,
+.desktopEditProfileButton,
+.desktopColumn {
+  display: none;
+}
+
+.profileMenu {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    max-width: none !important;
+    padding: 0 0 36px;
+  }
+
+  .workspace {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .pageHeader {
+    display: block;
+    margin: 0 0 -8px;
+  }
+
+  .pageHeader h1 {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .mobileHeader {
+    display: none !important;
+  }
+
+  .workspace [data-testid="business-dashboard-tabs"] {
+    width: fit-content;
+    min-width: 320px;
+    margin: -12px 0 -12px;
+    padding: 0;
+    gap: 28px;
+    border-bottom: 1px solid var(--border-default);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .workspace [data-testid="business-dashboard-tabs"] button {
+    position: relative;
+    flex: initial;
+    padding: 8px 0 10px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .workspace [data-testid="business-dashboard-tabs"] button[aria-selected="true"] {
+    color: var(--primary);
+  }
+
+  .workspace [data-testid="business-dashboard-tabs"] button[aria-selected="true"]::after {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: var(--primary);
+    content: "";
+  }
+
+  .profileCard {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 20px;
+    min-height: 178px;
+    padding: 28px;
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    background: var(--bg-surface);
+  }
+
+  .profileAvatar {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--bg-surface-muted);
+  }
+
+  .profileAvatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profileAvatar > span {
+    position: absolute;
+    inset: 0;
+  }
+
+  .profileDetails {
+    min-width: 0;
+  }
+
+  .profileDetails h2 {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 19px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profileCategory {
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .profileAddress {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .profileAddress svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--primary);
+  }
+
+  .profileActions {
+    display: flex;
+    align-self: start;
+    gap: 10px;
+  }
+
+  .profileActions button {
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 150ms ease;
+  }
+
+  .profileActions button:hover {
+    background: var(--bg-surface-muted);
+  }
+
+  .profileActions button:last-child {
+    border-color: transparent;
+    background: var(--bg-surface-muted);
+  }
+
+  .profileActions .profileMenu {
+    position: relative;
+    display: block;
+  }
+
+  .profileActions .profileMenu > button {
+    display: flex;
+    width: 40px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+  }
+
+  .servicesCard {
+    display: block;
+    padding: 24px 26px;
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    background: var(--bg-surface);
+  }
+
+  .servicesHeading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .servicesHeading h3 {
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .servicesHeading p {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .servicesHeading > button {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 22px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 150ms ease;
+  }
+
+  .servicesHeading > button:hover,
+  .serviceActions button:first-child:hover {
+    background: var(--primary-hover);
+  }
+
+  .categoryTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .categoryTags span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--bg-active-soft);
+    color: var(--accent-fg);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .servicesTable {
+    margin-top: 18px;
+    overflow: hidden;
+    border: 1px solid var(--border-default);
+    border-radius: 14px;
+  }
+
+  .tableHeader,
+  .inventoryRow {
+    display: grid;
+    grid-template-columns:
+      minmax(140px, 1.25fr)
+      minmax(110px, 1fr)
+      minmax(90px, 0.8fr)
+      minmax(130px, 1.2fr)
+      58px
+      74px
+      40px;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .tableHeader {
+    padding: 11px 16px;
+    background: var(--bg-surface-muted);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .desktopColumn {
+    display: inline;
+  }
+
+  .inventoryRow {
+    min-height: 78px;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid var(--border-default) !important;
+    background: var(--bg-surface);
+  }
+
+  .inventoryRow:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .inventoryRow > div:first-child p:first-child {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  .inventoryRow > div:first-child p:nth-child(2) {
+    font-size: 12px;
+  }
+
+  .inventoryDescription {
+    display: block;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inventoryPhoto {
+    display: block;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+
+  .inventoryPhoto > div {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 10px !important;
+  }
+
+  .emptyServices {
+    padding: 28px 16px;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .serviceActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .serviceActions button {
+    min-height: 48px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .serviceActions button:first-child {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .serviceActions button:last-child {
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+  }
+
+  .serviceActions button:last-child:hover {
+    background: var(--bg-surface-muted);
+  }
+
+  .mobileProductButton {
+    display: none !important;
+  }
+
+  .desktopEditProfileButton {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .tableHeader,
+  .inventoryRow {
+    grid-template-columns:
+      minmax(100px, 1.2fr)
+      minmax(72px, 0.85fr)
+      minmax(70px, 0.75fr)
+      minmax(80px, 1fr)
+      48px
+      60px
+      36px;
+    gap: 8px;
+  }
+
+  .servicesCard {
+    padding: 20px;
+  }
+
+  .profileCard {
+    grid-template-columns: 80px minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 22px;
+  }
+
+  .profileAvatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profileActions {
+    gap: 6px;
+  }
+
+  .profileActions button {
+    padding: 0 12px;
+  }
+}

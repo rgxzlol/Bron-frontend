@@ -20,6 +20,8 @@ import Image from "next/image";
 import { useEffect, useId, useMemo, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
+import desktop from "./businessDashboardDesktop.module.css";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 
 type Props = {
   businessId: string;
@@ -114,6 +116,19 @@ function DotsVerticalIcon() {
       <circle cx="12" cy="5" r="1.8" />
       <circle cx="12" cy="12" r="1.8" />
       <circle cx="12" cy="19" r="1.8" />
+    </svg>
+  );
+}
+
+function DashboardPinIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <circle cx="12" cy="11" r="2.5" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
@@ -273,11 +288,13 @@ function ScreenHeader({
   onBack,
   action,
   sticky = false,
+  className,
 }: {
   title: string;
   onBack: () => void;
   action?: React.ReactNode;
   sticky?: boolean;
+  className?: string;
 }) {
   const [isBackFixed, setIsBackFixed] = useState(false);
 
@@ -295,7 +312,7 @@ function ScreenHeader({
 
   return (
     <div
-      className="relative mb-[18px] flex min-h-[44px] items-center justify-center"
+      className={`relative mb-[18px] flex min-h-[44px] items-center justify-center ${className ?? ""}`}
     >
       <button
         type="button"
@@ -1707,6 +1724,7 @@ export default function BusinessDashboard({
   >([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
   const [itemMenuId, setItemMenuId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<BusinessService | null>(null);
   const [showDeleteBusiness, setShowDeleteBusiness] = useState(false);
@@ -1715,6 +1733,7 @@ export default function BusinessDashboard({
   );
   const [itemMenuAnchor, setItemMenuAnchor] = useState<HTMLElement | null>(null);
   const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(null);
+  const [desktopMenuAnchor, setDesktopMenuAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (view !== "bookings") return;
@@ -1887,7 +1906,7 @@ export default function BusinessDashboard({
     return (
       <div
         key={item.id}
-        className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] items-center gap-[10px] border-b border-[var(--border-default)] px-[12px] py-[12px] last:border-b-0"
+        className={`${desktop.inventoryRow} grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] items-center gap-[10px] border-b border-[var(--border-default)] px-[12px] py-[12px] last:border-b-0`}
         data-testid={`business-inventory-row-${item.id}`}
       >
         <div className="min-w-0">
@@ -1907,6 +1926,12 @@ export default function BusinessDashboard({
           {item.category || t("businessDashboard.defaultCategory")}
         </p>
         <p className="text-[13px] font-semibold">{formatPrice(item.price)}</p>
+        <p className={desktop.inventoryDescription}>
+          {item.description || "—"}
+        </p>
+        <div className={desktop.inventoryPhoto}>
+          <ItemPhoto photo={item.photo} alt={item.name} />
+        </div>
         <ServiceStatusToggle
           active={item.active}
           ariaLabel={t("businessDashboard.serviceStatusAria", { name: item.name })}
@@ -2058,7 +2083,7 @@ export default function BusinessDashboard({
   return (
     <>
       <div
-        className={`mx-auto flex w-full flex-col pb-[24px] ${
+        className={`${desktop.page} mx-auto flex w-full flex-col pb-[24px] ${
           view === "addService" ||
           view === "addProduct" ||
           view === "editService" ||
@@ -2069,8 +2094,16 @@ export default function BusinessDashboard({
         data-testid="business-dashboard"
       >
         {view === "servicesStaff" && (
-          <div data-testid="business-dashboard-workspace">
+          <div
+            className={desktop.workspace}
+            data-testid="business-dashboard-workspace"
+          >
+            <div className={desktop.pageHeader}>
+              <h1>{t("businessDashboard.title")}</h1>
+            </div>
+
             <ScreenHeader
+              className={desktop.mobileHeader}
               title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
@@ -2112,45 +2145,122 @@ export default function BusinessDashboard({
               onBookings={() => setView("bookings")}
             />
 
-            <div className="rounded-[24px] bg-[var(--bg-surface)] p-[16px]">
-              <h3 className="text-[18px] font-bold">
-                {t("businessDashboard.servicesTitle")}
-              </h3>
-              <p className="mt-[4px] text-[14px] text-[var(--text-secondary)]">
-                {t("businessDashboard.servicesSubtitle")}
-              </p>
+            <section
+              className={desktop.profileCard}
+              data-testid="business-dashboard-profile"
+            >
+              <div className={desktop.profileAvatar}>
+                {business.profilePhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={business.profilePhoto} alt="" />
+                ) : (
+                  <Image src={assets.map.photo1} alt="" fill sizes="100px" />
+                )}
+              </div>
+              <div className={desktop.profileDetails}>
+                <h2>{business.name || t("business.untitled")}</h2>
+                {business.category && (
+                  <p className={desktop.profileCategory}>{business.category}</p>
+                )}
+                {business.address && (
+                  <p className={desktop.profileAddress}>
+                    <DashboardPinIcon />
+                    <span>{business.address}</span>
+                  </p>
+                )}
+              </div>
+              <div className={desktop.profileActions}>
+                <button type="button" onClick={onClose}>
+                  {t("businessForms.back")}
+                </button>
+                <button type="button" onClick={onEditProfile}>
+                  {t("businessDashboard.editProfile")}
+                </button>
+                <div className={desktop.profileMenu}>
+                  <button
+                    type="button"
+                    aria-label={t("business.menuAria")}
+                    aria-expanded={desktopMenuOpen}
+                    data-testid="business-dashboard-menu-desktop"
+                    onClick={(event) => {
+                      setDesktopMenuAnchor(event.currentTarget.parentElement);
+                      setDesktopMenuOpen((value) => !value);
+                    }}
+                  >
+                    <DotsVerticalIcon />
+                  </button>
+                  {desktopMenuOpen && (
+                    <BusinessCardMenu
+                      anchorEl={desktopMenuAnchor}
+                      editLabel={t("businessDashboard.editProfile")}
+                      onEdit={onEditProfile}
+                      onDelete={() => {
+                        setDesktopMenuOpen(false);
+                        setShowDeleteBusiness(true);
+                      }}
+                      onClose={() => setDesktopMenuOpen(false)}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
 
+            <section className={desktop.servicesCard}>
+              <div className={desktop.servicesHeading}>
+                <div>
+                  <h3>{t("businessDashboard.servicesTitle")}</h3>
+                  <p>{t("businessDashboard.servicesSubtitle")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView("addProduct")}
+                  data-testid="business-dashboard-add-product-desktop"
+                >
+                  {t("business.addProduct")}
+                </button>
+              </div>
               {categoryTags.length > 0 && (
                 <div
-                  className="mt-[12px] flex flex-wrap gap-[8px]"
+                  className={desktop.categoryTags}
                   data-testid="business-category-tags"
                 >
                   {categoryTags.map((tag, index) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]"
-                      data-testid={`business-category-tag-${index}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                      <span
+                        key={tag}
+                        data-testid={`business-category-tag-${index}`}
+                      >
+                        <BusinessCategoryIcon
+                          category={tag}
+                          size={14}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        {tag}
+                      </span>
+                    ))}
                 </div>
               )}
 
               <div
-                className="mt-[16px] overflow-hidden rounded-[16px] border border-[var(--border-default)]"
+                className={desktop.servicesTable}
                 data-testid="business-services-table"
               >
-                <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] gap-[10px] bg-[var(--bg-surface-muted)] px-[12px] py-[10px] text-[12px] font-semibold text-[var(--text-secondary)]">
+                <div className={desktop.tableHeader}>
                   <span>{t("businessDashboard.colName")}</span>
                   <span>{t("businessDashboard.colCategory")}</span>
                   <span>{t("businessDashboard.colPrice")}</span>
+                  <span className={desktop.desktopColumn}>
+                    {t("businessDashboard.colDescription")}
+                  </span>
+                  <span className={desktop.desktopColumn}>
+                    {t("businessDashboard.colPhoto")}
+                  </span>
                   <span>{t("businessDashboard.colStatus")}</span>
                   <span className="text-right">{t("businessDashboard.colAction")}</span>
                 </div>
 
                 {business.services.length === 0 ? (
-                  <p className="px-[12px] py-[28px] text-center text-[14px] text-[var(--text-muted)]">
+                  <p className={desktop.emptyServices}>
                     {t("businessDashboard.emptyServices")}
                   </p>
                 ) : (
@@ -2158,11 +2268,10 @@ export default function BusinessDashboard({
                 )}
               </div>
 
-              <div className="mt-[16px] grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+              <div className={desktop.serviceActions}>
                 <button
                   type="button"
                   onClick={() => setView("addService")}
-                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
                   data-testid="business-dashboard-add-service"
                 >
                   {t("business.addService")}
@@ -2170,19 +2279,30 @@ export default function BusinessDashboard({
                 <button
                   type="button"
                   onClick={() => setView("addProduct")}
-                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+                  className={desktop.mobileProductButton}
                   data-testid="business-dashboard-add-product"
                 >
                   {t("business.addProduct")}
                 </button>
+                <button
+                  type="button"
+                  onClick={onEditProfile}
+                  className={desktop.desktopEditProfileButton}
+                >
+                  {t("businessDashboard.editProfile")}
+                </button>
               </div>
-            </div>
+            </section>
           </div>
         )}
 
         {view === "bookings" && (
-          <div data-testid="business-dashboard-bookings">
+          <div className={desktop.workspace} data-testid="business-dashboard-bookings">
+            <div className={desktop.pageHeader}>
+              <h1>{t("businessDashboard.title")}</h1>
+            </div>
             <ScreenHeader
+              className={desktop.mobileHeader}
               title={business.name || t("business.untitled")}
               onBack={onClose}
             />

@@ -1,11 +1,12 @@
 "use client";
 
 import { assets } from "@/lib/assets";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useBusinessStore } from "@/store/business.store";
 import { useToastStore } from "@/store/toast.store";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 import desktop from "./businessDesktop.module.css";
@@ -69,14 +70,8 @@ export default function MyBusiness({
   } | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const menuAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
   const deleteTarget = cards.find((business) => business.id === deleteTargetId);
-  const openMenuAnchor = openMenu
-    ? menuAnchorRefs.current[
-        openMenu.variant === "desktop" ? `desktop-${openMenu.id}` : openMenu.id
-      ]
-    : null;
+  const [openMenuAnchor, setOpenMenuAnchor] = useState<HTMLElement | null>(null);
 
   return (
     <div data-testid="my-business-dashboard">
@@ -129,14 +124,17 @@ export default function MyBusiness({
                 </div>
                 <div className="absolute right-[10px] top-[10px] z-10 flex items-center gap-[8px]">
                   {business.category && (
-                    <span className="rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]">
+                    <span className="inline-flex items-center gap-[6px] rounded-full bg-[var(--bg-active-soft)] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]">
+                      <BusinessCategoryIcon
+                        category={business.category}
+                        size={14}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
                       {business.category}
                     </span>
                   )}
                   <div
-                    ref={(el) => {
-                      menuAnchorRefs.current[business.id] = el;
-                    }}
                     className="relative"
                   >
                     <button
@@ -147,6 +145,7 @@ export default function MyBusiness({
                       data-testid={`business-card-menu-${business.id}`}
                       onClick={(event) => {
                         event.stopPropagation();
+                        setOpenMenuAnchor(event.currentTarget.parentElement);
                         setOpenMenu(
                           isMenuOpen
                             ? null
@@ -268,7 +267,15 @@ export default function MyBusiness({
 
               <div className={desktop.listBody}>
                 {business.category && (
-                  <span className={desktop.listCategory}>{business.category}</span>
+                  <span className={`${desktop.listCategory} ${desktop.categoryWithIcon}`}>
+                    <BusinessCategoryIcon
+                      category={business.category}
+                      size={14}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                    {business.category}
+                  </span>
                 )}
                 <h3 className={desktop.listName} data-testid={`business-card-name-${business.id}`}>
                   {business.name || t("business.untitled")}
@@ -303,9 +310,6 @@ export default function MyBusiness({
                       : t("business.confirmed")}
                   </span>
                   <div
-                    ref={(el) => {
-                      menuAnchorRefs.current[`desktop-${business.id}`] = el;
-                    }}
                     className="relative"
                   >
                     <button
@@ -316,6 +320,7 @@ export default function MyBusiness({
                       data-testid={`business-card-menu-${business.id}`}
                       onClick={(event) => {
                         event.stopPropagation();
+                        setOpenMenuAnchor(event.currentTarget.parentElement);
                         setOpenMenu(
                           isMenuOpen
                             ? null
@@ -333,7 +338,7 @@ export default function MyBusiness({
                   className={desktop.listStatsButton}
                   data-testid={`business-card-statistics-${business.id}`}
                 >
-                  {t("business.statistics")}
+                  {t("business.dashboard")}
                 </button>
               </div>
             </article>
@@ -347,7 +352,10 @@ export default function MyBusiness({
           anchorEl={openMenuAnchor}
           onEdit={() => onEditBusiness(openMenu.id)}
           onDelete={() => setDeleteTargetId(openMenu.id)}
-          onClose={() => setOpenMenu(null)}
+          onClose={() => {
+            setOpenMenu(null);
+            setOpenMenuAnchor(null);
+          }}
         />
       )}
 

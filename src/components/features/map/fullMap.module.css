@@ -154,9 +154,18 @@
 }
 
 .category {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: -8px;
   font-size: 14px;
   color: var(--text-muted);
+}
+
+.noServices {
+  padding: 12px 0;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .priceFrom {
@@ -454,6 +463,9 @@
 }
 
 .sheetTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 12px;
   border-radius: 999px;
   background: var(--bg-active-soft);

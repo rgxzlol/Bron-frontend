@@ -1,13 +1,12 @@
 "use client";
 
-import { assets } from "@/lib/assets";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import { fetchCategoriesWithCounts } from "@/lib/home/discovery";
 import { pluralizeServices } from "@/lib/pluralize";
 import { buildMapCategoryHref } from "@/lib/category/homeCategoryMap";
 import { translateHomeCategory } from "@/lib/i18n/labels";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { Category } from "@/types/category";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import s from "./homePage.module.css";
@@ -51,12 +50,11 @@ export default function Categories() {
           style={{ backgroundColor: category.color }}
           className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full`}
         >
-          <Image
-            src={category.icon}
-            alt={title}
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
+          <BusinessCategoryIcon
+            category={category.title}
+            color={category.iconColor}
+            aria-hidden="true"
+            className="h-9 w-9"
           />
         </div>
 
@@ -86,8 +84,13 @@ export default function Categories() {
                 <div
                   key={`category-skeleton-${index}`}
                   aria-hidden="true"
-                  className="h-[240px] min-w-40 w-40 flex-none animate-pulse rounded-2xl bg-[var(--bg-surface)] lg:flex-1"
-                />
+                  className="flex h-[240px] min-w-40 w-40 flex-none animate-pulse flex-col items-center gap-3 rounded-2xl bg-[var(--bg-surface)] px-4 pt-6 lg:flex-1"
+                >
+                  <div className="h-[75px] w-[75px] shrink-0 rounded-full bg-[var(--bg-surface-muted)]" />
+                  <div className="mt-1 h-4 w-3/4 rounded bg-[var(--bg-surface-muted)]" />
+                  <div className="h-4 w-1/2 rounded bg-[var(--bg-surface-muted)]" />
+                  <div className="mt-auto mb-2 h-4 w-2/3 rounded bg-[var(--bg-surface-muted)]" />
+                </div>
               ))
             : null}
 
@@ -99,12 +102,10 @@ export default function Categories() {
               aria-expanded={isExpanded}
             >
               <div className={`${s.iconCircle} h-[75px] w-[75px] shrink-0 rounded-full bg-[#ffebd3]`}>
-                <Image
-                  src={assets.categories.more}
-                  alt={t("home.allCategories")}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 object-contain"
+                <BusinessCategoryIcon
+                  category="Другое"
+                  aria-hidden="true"
+                  className="h-9 w-9"
                 />
               </div>
 

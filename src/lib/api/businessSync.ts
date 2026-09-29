@@ -25,9 +25,9 @@ import {
   apiServiceToBusinessService,
   draftToBusinessCreate,
   draftToBusinessUpdate,
+  findApiCategoryForUi,
   resolveApiBusinessCoords,
   scheduleToWorkingHoursPayload,
-  uiCategoryToApi,
   workingHoursToSchedule,
 } from "@/lib/api/mappers";
 import { getAuthToken } from "@/lib/api/token";
@@ -328,8 +328,7 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
 
   const coords = await resolveDraftCoords(draft);
   const categories = await categoriesApi.list();
-  const categorySlug = uiCategoryToApi(draft.category).toLowerCase();
-  const category = categories.find((item) => item.slug.toLowerCase() === categorySlug);
+  const category = findApiCategoryForUi(categories, draft.category);
   if (!category) {
     throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
   }
@@ -372,8 +371,7 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
     categoriesApi.list(),
     usersApi.getProfile(token),
   ]);
-  const categorySlug = uiCategoryToApi(draft.category).toLowerCase();
-  const category = categories.find((item) => item.slug.toLowerCase() === categorySlug);
+  const category = findApiCategoryForUi(categories, draft.category);
   if (!category) {
     throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
   }

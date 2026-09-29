@@ -14,11 +14,11 @@ export type SearchCatalogItem = {
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   "салон красоты": ["beauty", "salon", "hair", "парикмахерская"],
   здоровье: ["health", "clinic", "клиника", "медицина"],
-  "фитнес зал": ["gym", "fitness", "sport", "спорт", "тренажерный зал"],
+  "фитнес зал": ["gym", "fitness", "sport", "тренажерный зал"],
   "учебные заведения": ["education", "school", "образование"],
   рестораны: ["restaurant", "food", "еда"],
   кафейни: ["cafe", "coffee", "кофе"],
-  "авто сервис": ["car wash", "auto", "автомойка", "мойка", "car service"],
+  "авто сервис": ["car service", "auto", "автомойка", "мойка"],
   кинотеатры: ["cinema", "movie", "кино"],
   "комп клуб": ["pc club", "gaming", "игры"],
   клининг: ["cleaning", "уборка"],

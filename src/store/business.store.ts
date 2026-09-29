@@ -31,12 +31,17 @@ import {
 } from "@/lib/geocoding";
 
 export const BUSINESS_CATEGORIES = [
-  "Спорт зал",
-  "Красота",
+  "Салон красоты",
   "Здоровье",
-  "Образование",
-  "Еда",
-  "Другое",
+  "Фитнес зал",
+  "Учебные заведения",
+  "Рестораны",
+  "Кафейни",
+  "Авто сервис",
+  "Кинотеатры",
+  "Комп клуб",
+  "Клининг",
+  "Санатории",
 ] as const;
 
 export const SERVICE_CATEGORIES = [
@@ -59,6 +64,7 @@ export type BusinessService = {
   duration?: number;
   guestCapacity?: number;
   quantity?: number;
+  dates?: string[];
 };
 
 export type BusinessBookingRequest = {

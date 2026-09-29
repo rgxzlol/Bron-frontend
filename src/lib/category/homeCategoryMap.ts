@@ -6,17 +6,17 @@ export type HomeCategoryMapTarget = {
 };
 
 const HOME_CATEGORY_MAP: Record<number, HomeCategoryMapTarget> = {
-  1: { businessCategory: "Красота", mapPill: "Все" },
+  1: { businessCategory: "Салон красоты", mapPill: "Все" },
   2: { businessCategory: "Здоровье", mapPill: "Больница" },
-  3: { businessCategory: "Спорт зал", mapPill: "Спортзал" },
-  4: { businessCategory: "Образование", mapPill: "Все" },
-  5: { businessCategory: "Еда", mapPill: "Ресторан" },
-  6: { businessCategory: "Еда", mapPill: "Кофейня" },
-  7: { businessCategory: "Другое", mapPill: "Все" },
-  8: { businessCategory: "Другое", mapPill: "Все" },
-  9: { businessCategory: "Другое", mapPill: "Все" },
-  10: { businessCategory: "Другое", mapPill: "Все" },
-  11: { businessCategory: "Здоровье", mapPill: "Больница" },
+  3: { businessCategory: "Фитнес зал", mapPill: "Спортзал" },
+  4: { businessCategory: "Учебные заведения", mapPill: "Все" },
+  5: { businessCategory: "Рестораны", mapPill: "Ресторан" },
+  6: { businessCategory: "Кафейни", mapPill: "Кофейня" },
+  7: { businessCategory: "Авто сервис", mapPill: "Все" },
+  8: { businessCategory: "Кинотеатры", mapPill: "Все" },
+  9: { businessCategory: "Комп клуб", mapPill: "Все" },
+  10: { businessCategory: "Клининг", mapPill: "Все" },
+  11: { businessCategory: "Санатории", mapPill: "Все" },
 };
 
 export function getHomeCategoryMapTarget(

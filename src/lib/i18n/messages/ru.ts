@@ -175,6 +175,12 @@ export const ru: MessageTree = {
     cardExpiryPlaceholder: "ММ\\ ГГ",
     saveCardAria: "Сохранить карту для будущих платежей",
     ratingLabel: "Рейтинг",
+    noRating: "Нет оценок",
+    ratingLoading: "Загружаем рейтинг…",
+    ratingUnavailable: "Рейтинг недоступен",
+    ratedBookingsCount: "Оценено броней: {count}",
+    bookingAttendanceStats:
+      "Вовремя: {onTime} · Опоздал: {late} · Не пришёл: {noShow}",
   },
   auth: {
     loginTab: "Войти в аккаунт",

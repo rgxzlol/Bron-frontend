@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookingCard } from "@/components/features/booking/BookingCard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -16,6 +16,7 @@ export default function BookingsPageClient() {
   const selectedBookingId = searchParams.get("booking_id");
   const token = useAuthStore((state) => state.token);
   const { bookings, isLoading, error, fetchMyBookings } = useBookingStore();
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (!token) return;
@@ -25,11 +26,16 @@ export default function BookingsPageClient() {
     });
   }, [token, fetchMyBookings]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const isPastTab = currentTab === "past";
 
   const filtered = bookings
     .filter((booking) => {
-      const past = isPastBooking(booking);
+      const past = isPastBooking(booking, now);
       return isPastTab ? past : !past;
     })
     .sort((a, b) => {

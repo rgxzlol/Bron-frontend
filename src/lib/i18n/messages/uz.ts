@@ -175,6 +175,12 @@ export const uz: MessageTree = {
     cardExpiryPlaceholder: "OO\\ YY",
     saveCardAria: "Kelajakdagi to‘lovlar uchun kartani saqlash",
     ratingLabel: "Reyting",
+    noRating: "Baholar yo‘q",
+    ratingLoading: "Reyting yuklanmoqda…",
+    ratingUnavailable: "Reyting mavjud emas",
+    ratedBookingsCount: "Baholangan bronlar: {count}",
+    bookingAttendanceStats:
+      "O‘z vaqtida: {onTime} · Kechikdi: {late} · Kelmagan: {noShow}",
   },
   auth: {
     loginTab: "Hisobga kirish",

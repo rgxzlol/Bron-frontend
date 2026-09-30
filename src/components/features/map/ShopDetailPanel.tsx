@@ -13,7 +13,6 @@ import {
   isRemoteShopImage,
 } from "@/lib/business/shopImages";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { businessesApi } from "@/lib/api/businesses";
 import { fetchBusinessReviewStats } from "@/lib/reviews/businessReviews";
 import { useAuthStore } from "@/store/auth.store";
 import { useFavoriteStore } from "@/store/favorite.store";
@@ -26,6 +25,7 @@ import { translateLocation } from "@/lib/i18n/location";
 
 type ShopDetailPanelProps = {
   shop: ShopsType;
+  viewsCount: number | null;
   onClose: () => void;
   onBook: () => void;
 };
@@ -50,6 +50,7 @@ function GalleryImage({
 
 export default function ShopDetailPanel({
   shop,
+  viewsCount,
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
@@ -63,7 +64,6 @@ export default function ShopDetailPanel({
   const [imageIndex, setImageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(null);
-  const [viewsCount, setViewsCount] = useState<number | null>(null);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
   const businessId = shop.apiBusinessId;
@@ -96,26 +96,6 @@ export default function ShopDetailPanel({
       cancelled = true;
     };
   }, [businessId]);
-
-  useEffect(() => {
-    if (!businessId) return;
-    let cancelled = false;
-
-    void businessesApi
-      .recordView(businessId, token ?? undefined)
-      .then(({ views_count }) => {
-        if (!cancelled) setViewsCount(views_count);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          console.warn("Не удалось учесть просмотр бизнеса:", error);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [businessId, token]);
 
   function showPrevImage() {
     setImageIndex((index) => (index > 0 ? index - 1 : gallery.length - 1));

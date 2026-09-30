@@ -237,14 +237,8 @@ export const BookingCard = ({
   }, [shop]);
 
   const resolvedOrderItems = useMemo(
-    () =>
-      resolveBookingOrderItems(
-        orderItems,
-        shop,
-        totalPrice ?? shop.price,
-        t,
-      ),
-    [orderItems, shop, totalPrice, t],
+    () => resolveBookingOrderItems(orderItems),
+    [orderItems],
   );
 
   function goToPhoto(next: number) {
@@ -565,6 +559,7 @@ export const BookingCard = ({
           isOpen
           onClose={() => setIsEditModalOpen(false)}
           bookingId={bookingId}
+          businessId={Number(shopId)}
           bookingDate={bookingDate}
           bookingTime={bookingTime}
           hours={shop.hours}

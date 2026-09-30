@@ -17,6 +17,7 @@ const HOME_CATEGORY_MAP: Record<number, HomeCategoryMapTarget> = {
   9: { businessCategory: "Комп клуб", mapPill: "Все" },
   10: { businessCategory: "Клининг", mapPill: "Все" },
   11: { businessCategory: "Санатории", mapPill: "Все" },
+  12: { businessCategory: "Другое", mapPill: "Все" },
 };
 
 export function getHomeCategoryMapTarget(

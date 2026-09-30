@@ -139,9 +139,11 @@ export default function SearchBar() {
                   <span className="text-[15px] font-semibold text-[var(--text-primary)]">
                     {localized.title}
                   </span>
-                  <span className="line-clamp-1 text-[13px] font-semibold text-[var(--text-secondary)]">
-                    {localized.description}
-                  </span>
+                  {localized.description ? (
+                    <span className="line-clamp-1 text-[13px] font-semibold text-[var(--text-secondary)]">
+                      {localized.description}
+                    </span>
+                  ) : null}
                 </button>
               </li>
             );

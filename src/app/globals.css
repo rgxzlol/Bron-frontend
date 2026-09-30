@@ -135,23 +135,23 @@
 
 @layer components {
   .theme-close-button {
-    width: 55px !important;
-    height: 55px !important;
-    min-width: 55px !important;
-    min-height: 55px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
     display: grid !important;
     place-items: center !important;
     padding: 0 !important;
-    border-radius: 14px !important;
-    background: #fafaff !important;
-    color: #111827 !important;
+    border-radius: 50% !important;
+    background: var(--bg-surface-muted) !important;
+    color: var(--text-primary) !important;
     transition:
       background-color 0.2s ease,
       transform 0.2s ease;
   }
 
   .theme-close-button:hover {
-    background: #f0f1f8 !important;
+    background: var(--bg-hover) !important;
   }
 
   .theme-close-button:active {
@@ -164,12 +164,12 @@
   }
 
   [data-theme="dark"] .theme-close-button {
-    background: #ffffff !important;
-    color: #111827 !important;
+    background: var(--bg-page) !important;
+    color: #ffffff !important;
   }
 
   [data-theme="dark"] .theme-close-button:hover {
-    background: #f0f0f0 !important;
+    background: var(--bg-hover) !important;
   }
 
   .container {

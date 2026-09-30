@@ -27,9 +27,7 @@ function toApiCreatePayload(payload: BookingCreate): BookingCreate {
     start_time: toApiTime(payload.start_time),
     end_time: toApiTime(payload.end_time),
     guest_count: payload.guest_count ?? 1,
-    product_ids: payload.product_ids ?? [],
-    ...(payload.items?.length ? { items: payload.items } : {}),
-    ...(payload.total_price != null ? { total_price: payload.total_price } : {}),
+    items: payload.items,
   };
 }
 
@@ -63,10 +61,10 @@ function toListItem(
     start_time: start,
     end_time: end,
     status: booking.status || "pending",
-    total_price: extras?.total_price ?? booking.total_price,
+    total_price: booking.total_price ?? extras?.total_price ?? 0,
     business_id: booking.business_id ?? extras?.business_id,
     guest_count: extras?.guest_count ?? booking.guest_count,
-    items: extras?.items?.length ? extras.items : booking.items,
+    items: booking.items ?? extras?.items,
   };
 }
 
@@ -219,8 +217,6 @@ export const useBookingStore = create<BookingStore>()(
 
       createBooking: async (payload) => {
         const listExtras = {
-          items: payload.items,
-          total_price: payload.total_price,
           guest_count: payload.guest_count,
           booking_date: payload.booking_date,
           start_time: payload.start_time,
@@ -241,8 +237,8 @@ export const useBookingStore = create<BookingStore>()(
             end_time: booking.end_time || payload.end_time,
             guest_count: booking.guest_count || payload.guest_count || 1,
             status: booking.status || "pending",
-            items: booking.items?.length ? booking.items : payload.items,
-            total_price: booking.total_price || payload.total_price || 0,
+            items: booking.items,
+            total_price: booking.total_price,
           };
         } catch (error) {
           set({ error: error instanceof Error ? error.message : "Не удалось создать бронирование" });

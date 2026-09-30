@@ -27,7 +27,7 @@ type NotificationState = {
   fetchUnreadCount: () => Promise<void>;
   markNotificationRead: (notificationId: string) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
-  markAllNotificationsRead: () => Promise<void>;
+  deleteAllNotifications: () => Promise<boolean>;
   resetNotifications: () => void;
 };
 
@@ -116,22 +116,61 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
   },
 
-  markAllNotificationsRead: async () => {
+  deleteAllNotifications: async () => {
     const token = useAuthStore.getState().token;
-    if (token) {
-      try {
-        await notificationsApi.markAllRead(token);
-      } catch (error) {
-        if (!isNotificationsEndpointUnavailable(error)) {
-          console.error("Не удалось отметить уведомления прочитанными:", error);
-          return;
-        }
-      }
-    }
+    const initialItems = get().items;
+    const serverItems = initialItems.filter((item) => !item.id.startsWith("local-"));
+    const validServerItems = serverItems.filter((item) => {
+      const id = Number(item.id);
+      return Number.isInteger(id) && id > 0;
+    });
+    const invalidServerItems = serverItems.filter(
+      (item) => !validServerItems.includes(item),
+    );
+    const results = token
+      ? await Promise.allSettled(
+          validServerItems.map((item) =>
+            notificationsApi.remove(Number(item.id), token),
+          ),
+        )
+      : validServerItems.map(() => ({ status: "rejected" as const, reason: new Error("Требуется авторизация") }));
 
-    const next = get().items.map((item) => ({ ...item, read: true }));
-    saveLocalNotifications(next.filter((entry) => entry.id.startsWith("local-")));
-    set({ items: next, unreadCount: 0 });
+    const deletedIds = new Set(
+      validServerItems.flatMap((item, index) =>
+        results[index].status === "fulfilled" ? [item.id] : [],
+      ),
+    );
+    invalidServerItems.forEach((item) => {
+      console.error(`Не удалось удалить уведомление с некорректным ID: ${item.id}`);
+    });
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(
+          `Не удалось удалить уведомление ${validServerItems[index].id}:`,
+          result.reason,
+        );
+      }
+    });
+
+    const localIds = new Set(
+      initialItems
+        .filter((item) => item.id.startsWith("local-"))
+        .map((item) => item.id),
+    );
+    const deletableIds = new Set([...localIds, ...deletedIds]);
+    const currentItems = get().items;
+    const removedUnreadCount = currentItems.filter(
+      (item) => deletableIds.has(item.id) && !item.read,
+    ).length;
+    const next = currentItems.filter((item) => !deletableIds.has(item.id));
+    saveLocalNotifications(next.filter((item) => item.id.startsWith("local-")));
+    set({
+      items: next,
+      unreadCount: Math.max(0, get().unreadCount - removedUnreadCount),
+    });
+
+    return results.every((result) => result.status === "fulfilled") &&
+      invalidServerItems.length === 0;
   },
 
   deleteNotification: async (notificationId) => {

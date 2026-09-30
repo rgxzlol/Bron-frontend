@@ -1,11 +1,11 @@
 "use client";
 import { useMemo, useRef, useState, type TouchEvent } from "react";
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import ReviewModal from "@/components/features/review/ReviewModal";
 import { useReviewStore } from "@/store/review.store";
-import { getShopGallery, isRemoteShopImage } from "@/lib/business/shopImages";
+import { isRemoteShopImage } from "@/lib/business/shopImages";
 import { formatPrice } from "@/lib/formatPrice";
 import type { BookingOrderItem } from "@/lib/api/types";
 import {
@@ -16,6 +16,7 @@ import { BookingDropdown } from "./BookingDropdown";
 import { BookingCancelModal } from "./BookingCancelModal";
 import { BookingEditModal } from "./BookingEditModal";
 import { translateLocation } from "@/lib/i18n/location";
+import type { Translator } from "@/lib/i18n/createTranslator";
 
 interface BookingCardProps {
   status?: "upcoming" | "past";
@@ -39,6 +40,36 @@ const REVIEWABLE_STATUSES = new Set(["completed", "finished", "done"]);
 function isReviewableBooking(status?: string) {
   if (!status) return false;
   return REVIEWABLE_STATUSES.has(status.toLowerCase());
+}
+
+function getBookingStatusLabel(status: string | undefined, t: Translator) {
+  const normalizedStatus = status?.trim().toLowerCase();
+  if (normalizedStatus === "pending") {
+    return t("businessDashboard.bookingStatusPending");
+  }
+  if (
+    normalizedStatus === "accepted" ||
+    normalizedStatus === "approved" ||
+    normalizedStatus === "confirmed" ||
+    normalizedStatus === "waiting"
+  ) {
+    return t("bookings.statusConfirmed");
+  }
+  if (
+    normalizedStatus === "completed" ||
+    normalizedStatus === "finished" ||
+    normalizedStatus === "done"
+  ) {
+    return t("bookings.statusCompleted");
+  }
+  if (
+    normalizedStatus === "cancelled" ||
+    normalizedStatus === "canceled" ||
+    normalizedStatus === "rejected"
+  ) {
+    return t("bookings.statusCancelled");
+  }
+  return status || t("bookings.statusConfirmed");
 }
 
 function formatBookingDate(value?: string, locale = "ru-RU") {
@@ -72,10 +103,6 @@ function formatBookingTimeRange(start?: string, end?: string) {
   const startTime = formatTimeValue(start) ?? "12:00";
   const endTime = formatTimeValue(end) ?? addHourToTime(startTime);
   return `${startTime}-${endTime}`;
-}
-
-function imageKey(image: StaticImageData | string) {
-  return typeof image === "string" ? image : image.src;
 }
 
 const CalendarIcon = () => (
@@ -154,7 +181,7 @@ export const BookingCard = ({
       title: businessName || "Бизнес",
       lat: 0,
       lng: 0,
-      img: businessLogo || assets.profile.avatar,
+      img: businessLogo ?? "",
       profilePhoto: businessLogo ?? null,
       gallery: businessLogo ? [businessLogo] : [],
       type: businessCategory || "",
@@ -219,22 +246,8 @@ export const BookingCard = ({
     bookingId != null ? `booking-order-panel-${bookingId}` : "booking-order-panel";
 
   const gallery = useMemo(() => {
-    const photos = getShopGallery(shop);
-    if (photos.length >= 2) return photos;
-    const fallbacks: (StaticImageData | string)[] = [
-      shop.img,
-      assets.map.photo2,
-      assets.popular.photo1,
-    ];
-    const seen = new Set(photos.map(imageKey));
-    for (const image of fallbacks) {
-      const key = imageKey(image);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      photos.push(image);
-    }
-    return photos;
-  }, [shop]);
+    return businessLogo ? [businessLogo] : [];
+  }, [businessLogo]);
 
   const resolvedOrderItems = useMemo(
     () => resolveBookingOrderItems(orderItems),
@@ -258,7 +271,7 @@ export const BookingCard = ({
     goToPhoto(photoIndex + (delta < 0 ? 1 : -1));
   }
 
-  const currentPhoto = gallery[photoIndex] ?? shop.img;
+  const currentPhoto = gallery[photoIndex];
 
   return (
     <>
@@ -272,13 +285,32 @@ export const BookingCard = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <Image
-            src={currentPhoto}
-            alt={shop.title}
-            fill
-            className="object-cover"
-            unoptimized={isRemoteShopImage(currentPhoto)}
-          />
+          {currentPhoto ? (
+            <Image
+              src={currentPhoto}
+              alt={shop.title}
+              fill
+              className="object-cover"
+              unoptimized={isRemoteShopImage(currentPhoto)}
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center bg-[var(--bg-surface-muted)] text-[var(--text-muted)]"
+              aria-hidden="true"
+            >
+              <svg
+                width="56"
+                height="56"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="M3 15l5-5 4 4 3-3 6 6M8.5 8.5h.01" />
+              </svg>
+            </div>
+          )}
 
           {gallery.length > 1 ? (
             <>
@@ -340,11 +372,7 @@ export const BookingCard = ({
                       : undefined
                   }
                 >
-                  {(bookingStatus ?? "").toLowerCase() === "pending"
-                    ? t("businessDashboard.bookingStatusPending")
-                    : isCancelled
-                      ? t("bookings.statusCancelled")
-                      : t("bookings.statusConfirmed")}
+                  {getBookingStatusLabel(bookingStatus, t)}
                 </span>
                 <BookingDropdown
                   bookingId={bookingId}
@@ -354,16 +382,18 @@ export const BookingCard = ({
               </>
             )}
           </div>
-          <span
-            className="absolute bottom-[10px] left-[10px] rounded-[10px] bg-black/60 px-[10px] py-[4px] text-[12px] font-semibold text-white"
-            data-testid={
-              bookingId != null
-                ? `booking-gallery-counter-${bookingId}`
-                : "booking-gallery-counter"
-            }
-          >
-            {photoIndex + 1}/{gallery.length}
-          </span>
+          {gallery.length > 0 ? (
+            <span
+              className="absolute bottom-[10px] left-[10px] rounded-[10px] bg-black/60 px-[10px] py-[4px] text-[12px] font-semibold text-white"
+              data-testid={
+                bookingId != null
+                  ? `booking-gallery-counter-${bookingId}`
+                  : "booking-gallery-counter"
+              }
+            >
+              {photoIndex + 1}/{gallery.length}
+            </span>
+          ) : null}
         </div>
 
         <div className="flex flex-col px-[6px] pt-[12px]">
@@ -490,7 +520,7 @@ export const BookingCard = ({
             }
           >
             <span className="flex items-center gap-[10px]">
-              <Image src={assets.booking.bagIcon} alt="" width={20} height={20} data-theme-aware />
+              <Image src={assets.booking.bagIcon} alt="" width={20} height={20} data-theme-invert />
               <span className="text-[15px] font-bold text-[var(--text-primary)]">
                 {t("bookingsCard.orderComposition")}
               </span>

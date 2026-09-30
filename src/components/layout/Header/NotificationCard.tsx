@@ -9,6 +9,7 @@ export type NotificationCardProps = {
   onClick?: () => void;
   onDelete?: () => void;
   deleteLabel?: string;
+  isRead?: boolean;
   testId?: string;
 };
 
@@ -20,6 +21,7 @@ export function NotificationCard({
   onClick,
   onDelete,
   deleteLabel,
+  isRead = true,
   testId,
 }: NotificationCardProps) {
   return (
@@ -34,8 +36,17 @@ export function NotificationCard({
             <Image src={icon} alt="" className="h-5 w-5 object-contain" />
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-[14px] font-bold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--accent-fg)]">
+            <span className="flex min-w-0 items-center gap-1.5">
+              {!isRead && (
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent-fg)]"
+                  aria-label="Непрочитано"
+                  data-testid="notification-unread-indicator"
+                />
+              )}
+              <span className="truncate text-[14px] font-bold text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--accent-fg)]">
               {title}
+              </span>
             </span>
             <span className="truncate text-[12px] font-medium text-[var(--text-secondary)]">{description}</span>
           </span>

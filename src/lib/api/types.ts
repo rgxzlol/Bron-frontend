@@ -408,6 +408,14 @@ export type ApiBookingAttendanceStatus = "visited" | "late" | "no_show";
 export type Booking = {
   id: number;
   user_id: number;
+  username?: string | null;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  customer_name?: string | null;
+  user?: Pick<UserOut, "username" | "first_name" | "last_name"> & {
+    full_name?: string | null;
+  };
   business_id: number;
   service_id: number;
   branch_id: number;

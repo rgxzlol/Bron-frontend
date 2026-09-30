@@ -74,6 +74,18 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
   >();
   const bookingsWithCustomers = await Promise.all(
     bookings.map(async (booking) => {
+      const embeddedUser = booking.user;
+      const embeddedUsername =
+        embeddedUser?.username || booking.username || "";
+      const embeddedFullName =
+        booking.customer_name?.trim() ||
+        embeddedUser?.full_name?.trim() ||
+        booking.full_name?.trim() ||
+        [embeddedUser?.first_name, embeddedUser?.last_name]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        [booking.first_name, booking.last_name].filter(Boolean).join(" ").trim();
       let customer: {
         name: string;
         bookingRating?: number | null;
@@ -83,7 +95,10 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
         noShowCount?: number;
         ratingStatsAvailable?: boolean;
       } = {
-        name: `Клиент #${booking.user_id}`,
+        name: getCustomerDisplayName(
+          { username: embeddedUsername, full_name: embeddedFullName },
+          booking.user_id,
+        ),
       };
 
       let ratingRequest = customerRatings.get(booking.user_id);

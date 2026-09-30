@@ -73,10 +73,9 @@ const Business = () => {
     if (createModalOpen) return;
 
     if (resolvedEditId) {
-      setEditBusinessId(resolvedEditId);
       loadForEdit(resolvedEditId);
     }
-  }, [resolvedEditId, loadForEdit, businesses, createModalOpen]);
+  }, [resolvedEditId, loadForEdit, createModalOpen]);
 
   function pushBusinessView(query: { edit?: string | null; dashboard?: string | null }) {
     const params = new URLSearchParams(searchParams.toString());

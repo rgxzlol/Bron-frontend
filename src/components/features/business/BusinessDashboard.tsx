@@ -14,7 +14,11 @@ import {
 } from "@/store/business.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
-import { isBusinessBookingVisible } from "@/lib/booking/classify";
+import {
+  compareBookingsByTime,
+  isBusinessBookingVisible,
+  isPastBooking,
+} from "@/lib/booking/classify";
 import { useToastStore } from "@/store/toast.store";
 import { businessesApi } from "@/lib/api";
 import Image from "next/image";
@@ -39,7 +43,7 @@ type View =
   | "editService"
   | "editProduct";
 
-type BookingTab = "all" | "pending" | "confirmed";
+type BookingTab = "all" | "pending" | "confirmed" | "past";
 
 const inputClass =
   "w-full rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[16px] py-[14px] text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[#0a6af7]/30";
@@ -1612,10 +1616,12 @@ function DeleteItemModal({
 
 function BookingCard({
   booking,
+  readOnly = false,
   onStatusChange,
   onAttendance,
 }: {
   booking: BusinessBookingRequest;
+  readOnly?: boolean;
   onStatusChange: (status: "accepted" | "cancelled") => Promise<void>;
   onAttendance: (status: "on_time" | "late" | "no_show") => Promise<void>;
 }) {
@@ -1730,7 +1736,7 @@ function BookingCard({
         </span>
 
         <div className="flex min-w-0 items-center gap-[8px]">
-          {isConfirmed ? (
+          {isConfirmed && !readOnly ? (
             <div className="grid min-w-0 flex-1 grid-cols-3 gap-[7px]">
               {([
                 ["no_show", "businessDashboard.attendanceNoShow", "bg-[#FFE9E8]/80 text-[#E92026]", "bg-[#FFE9E8]/50 text-[#E92026]"],
@@ -1791,7 +1797,7 @@ function BookingCard({
         </p>
       ) : null}
 
-      {booking.status === "pending" ? (
+      {booking.status === "pending" && !readOnly ? (
         <div className="flex gap-[8px]">
           <button
             type="button"
@@ -1864,13 +1870,13 @@ function BookingCard({
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-[10px] bg-[var(--bg-surface)]">
+      <div className="mt-[4px] overflow-hidden rounded-[10px] bg-[var(--bg-surface)]">
         <button
           type="button"
           onClick={() => setIsOrderOpen((open) => !open)}
           aria-expanded={isOrderOpen}
           aria-controls={orderPanelId}
-          className="flex w-full items-center justify-between gap-[8px] px-[10px] py-[9px] text-left transition-colors hover:bg-[var(--bg-hover)]"
+          className=" flex w-full items-center justify-between gap-[8px] px-[10px] py-[9px] text-left transition-colors hover:bg-[var(--bg-hover)]"
           data-testid={`business-booking-order-toggle-${booking.id}`}
         >
           <span className="flex min-w-0 items-center gap-[7px]">
@@ -1898,7 +1904,7 @@ function BookingCard({
         {isOrderOpen ? (
           <ul
             id={orderPanelId}
-            className="flex flex-col gap-[6px] px-[10px] pb-[9px]"
+            className="mt-[10px] flex flex-col gap-[6px] px-[10px] pb-[9px]"
             data-testid={`business-booking-order-items-${booking.id}`}
           >
             {items.map((item) => (
@@ -2002,6 +2008,7 @@ export default function BusinessDashboard({
 
   const [view, setView] = useState<View>("servicesStaff");
   const [bookingTab, setBookingTab] = useState<BookingTab>("all");
+  const [now, setNow] = useState(() => new Date());
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
@@ -2035,6 +2042,12 @@ export default function BusinessDashboard({
     };
   }, [view, businessId, refreshBusinessBookings]);
 
+  useEffect(() => {
+    if (view !== "bookings") return;
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, [view]);
+
   const categoryTags = useMemo(() => {
     if (!business) return [];
     const tags = new Set<string>();
@@ -2060,6 +2073,29 @@ export default function BusinessDashboard({
       end_time: booking.endTime,
     }),
   );
+  const pastBookings = business.bookingRequests
+    .filter((booking) =>
+      isPastBooking(
+        {
+          booking_date: booking.bookingDate,
+          start_time: booking.time,
+          end_time: booking.endTime,
+        },
+        now,
+      ),
+    )
+    .sort((a, b) =>
+      compareBookingsByTime(
+        {
+          booking_date: b.bookingDate,
+          start_time: b.time,
+        },
+        {
+          booking_date: a.bookingDate,
+          start_time: a.time,
+        },
+      ),
+    );
   const pendingBookings = visibleBookings.filter(
     (b) => b.status === "pending",
   );
@@ -2603,15 +2639,27 @@ export default function BusinessDashboard({
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => setBookingTab("past")}
+                data-testid="business-bookings-tab-past"
+                className={bookingTabClass(bookingTab === "past")}
+              >
+                {t("businessDashboard.bookingsTabPast")}
+              </button>
             </div>
 
             <div
               className="mt-[16px] flex flex-col gap-[12px]"
               data-testid="business-bookings-list"
             >
-              {visibleBookings.length === 0 && (
+              {(bookingTab === "past"
+                ? pastBookings.length === 0
+                : visibleBookings.length === 0) && (
                 <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
-                  {t("businessDashboard.emptyBookings")}
+                  {bookingTab === "past"
+                    ? t("businessDashboard.emptyPastBookings")
+                    : t("businessDashboard.emptyBookings")}
                 </p>
               )}
 
@@ -2649,6 +2697,24 @@ export default function BusinessDashboard({
                   {confirmedBookings.map(renderBookingCard)}
                 </>
               )}
+              {bookingTab === "past" &&
+                pastBookings.map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    readOnly
+                    onStatusChange={(status) =>
+                      updateBookingStatus(businessId, booking.id, status)
+                    }
+                    onAttendance={(attendanceStatus) =>
+                      updateBookingAttendance(
+                        businessId,
+                        booking.id,
+                        attendanceStatus,
+                      )
+                    }
+                  />
+                ))}
             </div>
           </div>
         )}

@@ -179,6 +179,7 @@ export const en: MessageTree = {
     ratingLoading: "Loading rating…",
     ratingUnavailable: "Rating unavailable",
     ratedBookingsCount: "Rated bookings: {count}",
+    bookingAttendanceTitle: "Attendance",
     bookingAttendanceStats:
       "On time: {onTime} · Late: {late} · No-show: {noShow}",
   },

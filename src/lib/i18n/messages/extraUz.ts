@@ -438,9 +438,11 @@ export const extraUz: MessageTree = {
     emptyConfirmedBookings: "Tasdiqlangan bronlar yo‘q",
     emptyPastBookings: "O‘tgan bronlar hali yo‘q",
     customerRating: "Mijoz reytingi: {rating}, baholangan bronlar: {count}",
+    customerSummaryAria: "{name} mijozining tashriflari",
     customerNoRating: "Hali baholanmagan",
     ratingLabel: "reyting",
     bookingPrice: "Narx {price}",
+    bookingPriceLabel: "Narx",
     deleteTitle: "Xizmatni o‘chirish",
     deleteConfirm: "Xizmatni o‘chirishni xohlaysizmi",
     deleteHint:

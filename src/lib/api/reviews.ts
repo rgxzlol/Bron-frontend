@@ -9,7 +9,7 @@ import type {
 
 export const reviewsApi = {
   create: (body: ReviewCreate, token?: string) =>
-    apiRequest<Review>("/reviews", {
+    apiRequest<Review>("/reviews/", {
       method: "POST",
       body,
       auth: true,
@@ -39,7 +39,7 @@ export const reviewsApi = {
 
   getCustomerRating: (customerId: number, token?: string) =>
     apiRequest<CustomerRating>(`/reviews/customer/${customerId}/rating`, {
-      auth: true,
+      optionalAuth: true,
       token,
     }),
 

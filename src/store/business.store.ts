@@ -19,6 +19,7 @@ import { useNotificationStore } from "@/store/notification.store";
 import { ApiError } from "@/lib/api/client";
 import {
   apiCustomerRatingToStats,
+  apiBookingStatusToUi,
   getCustomerDisplayName,
 } from "@/lib/api/mappers";
 import type {
@@ -85,6 +86,7 @@ export type BusinessBookingRequest = {
   bookingId: number;
   customerId: number;
   customerAvatar?: string | null;
+  customerPhone?: string | null;
   customerRating?: number | null;
   customerReviewsCount?: number;
   customerEvaluatedBookingsCount?: number;
@@ -236,6 +238,7 @@ type BusinessStore = {
     businessId: string,
     bookingId: string,
     attendanceStatus: BookingAttendanceStatus,
+    extraWaitMinutes?: number,
   ) => Promise<void>;
 };
 
@@ -718,7 +721,12 @@ export const useBusinessStore = create<BusinessStore>()(
         }
       },
 
-      updateBookingAttendance: async (businessId, bookingId, attendanceStatus) => {
+      updateBookingAttendance: async (
+        businessId,
+        bookingId,
+        attendanceStatus,
+        extraWaitMinutes = 0,
+      ) => {
         const business = get().businesses.find((item) => item.id === businessId);
         const booking = business?.bookingRequests.find((item) => item.id === bookingId);
         if (
@@ -733,25 +741,32 @@ export const useBusinessStore = create<BusinessStore>()(
         const updated = await updateBusinessBookingAttendanceOnApi(
           bookingId,
           attendanceStatus,
+          extraWaitMinutes,
         );
         if (!updated) return;
 
         set((state) => ({
-          businesses: updateBusiness(state.businesses, businessId, (item) => ({
-            ...item,
-            bookingRequests: item.bookingRequests.map((request) =>
+          businesses: updateBusiness(state.businesses, businessId, (item) => {
+            const attendanceStatus: BookingAttendanceStatus =
+              updated.attendance_status === "visited"
+                ? "on_time"
+                : updated.attendance_status;
+            const bookingRequests = item.bookingRequests.map((request) =>
               request.id === bookingId
                 ? {
                     ...request,
-                    attendanceStatus:
-                      updated.attendance_status === "visited"
-                        ? "on_time"
-                        : updated.attendance_status,
+                    status: apiBookingStatusToUi(updated.status),
+                    attendanceStatus,
                     extraWaitMinutes: updated.extra_wait_minutes,
                   }
                 : request,
-            ),
-          })),
+            );
+            return {
+              ...item,
+              bookingRequests,
+              bookings: countAcceptedBookings(bookingRequests),
+            };
+          }),
         }));
 
         try {
@@ -767,6 +782,7 @@ export const useBusinessStore = create<BusinessStore>()(
                       customerName: getCustomerDisplayName(
                         rating,
                         booking.customerId,
+                        booking.customerName,
                       ),
                       customerRating: stats.rating,
                       customerEvaluatedBookingsCount:

@@ -78,16 +78,18 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
       const embeddedUsername =
         embeddedUser?.username || booking.username || "";
       const embeddedFullName =
-        booking.customer_name?.trim() ||
         embeddedUser?.full_name?.trim() ||
-        booking.full_name?.trim() ||
         [embeddedUser?.first_name, embeddedUser?.last_name]
           .filter(Boolean)
           .join(" ")
           .trim() ||
+        booking.customer_name?.trim() ||
+        booking.full_name?.trim() ||
         [booking.first_name, booking.last_name].filter(Boolean).join(" ").trim();
       let customer: {
         name: string;
+        avatar?: string | null;
+        phone?: string | null;
         bookingRating?: number | null;
         evaluatedBookingsCount?: number;
         onTimeCount?: number;
@@ -99,6 +101,8 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
           { username: embeddedUsername, full_name: embeddedFullName },
           booking.user_id,
         ),
+        avatar: embeddedUser?.avatar,
+        phone: embeddedUser?.phone ?? booking.phone,
       };
 
       let ratingRequest = customerRatings.get(booking.user_id);
@@ -112,7 +116,7 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
         const bookingRating = apiCustomerRatingToStats(rating);
         customer = {
           ...customer,
-          name: getCustomerDisplayName(rating, booking.user_id),
+          name: getCustomerDisplayName(rating, booking.user_id, customer.name),
           bookingRating: bookingRating.rating,
           evaluatedBookingsCount: bookingRating.evaluatedBookingsCount,
           onTimeCount: bookingRating.onTimeCount,
@@ -758,6 +762,7 @@ export async function updateBusinessBookingStatusOnApi(
 export async function updateBusinessBookingAttendanceOnApi(
   bookingId: string,
   status: BookingAttendanceStatus,
+  extraWaitMinutes = 0,
 ) {
   const token = getAuthToken();
   if (!token || !/^\d+$/.test(bookingId)) {
@@ -766,7 +771,10 @@ export async function updateBusinessBookingAttendanceOnApi(
 
   return bookingsApi.attendance(
     Number(bookingId),
-    { status: status === "on_time" ? "visited" : status },
+    {
+      status: status === "on_time" ? "visited" : status,
+      extra_wait_minutes: status === "late" ? extraWaitMinutes : 0,
+    },
     token,
   );
 }

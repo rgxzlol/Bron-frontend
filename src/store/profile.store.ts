@@ -12,6 +12,7 @@ import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
 import { reviewsApi } from "@/lib/api/reviews";
 import { apiCustomerRatingToStats } from "@/lib/api/mappers";
+import { resolveMediaUrl } from "@/lib/api/media";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -179,7 +180,7 @@ export const useProfileStore = create<ProfileState>()(
 
           set((state) => ({
             ...applyProfileToState(profile, state.fullName),
-            avatarUrl: profile.avatar ?? null,
+            avatarUrl: resolveMediaUrl(profile.avatar),
             role: profile.role ?? null,
             isProfileLoading: false,
             rating: null,
@@ -235,7 +236,7 @@ export const useProfileStore = create<ProfileState>()(
         saveNotificationSettings(userId, settings);
       },
 
-      setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
+      setAvatarUrl: (avatarUrl) => set({ avatarUrl: resolveMediaUrl(avatarUrl) }),
 
       setLanguage: (language) => {
         set({ language });
@@ -363,7 +364,10 @@ export const useProfileStore = create<ProfileState>()(
           fullName: fullName ?? state.fullName,
           phone: phone ?? state.phone,
           email: email === undefined ? state.email : toUserFacingEmail(email),
-          avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
+          avatarUrl:
+            avatarUrl === undefined
+              ? state.avatarUrl
+              : resolveMediaUrl(avatarUrl),
         })),
 
       resetProfile: () =>
@@ -387,7 +391,7 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 8,
+      version: 9,
       partialize: (state) => ({
         fullName: state.fullName,
         phone: state.phone,
@@ -419,7 +423,10 @@ export const useProfileStore = create<ProfileState>()(
             : String(rest.fullName ?? ""),
           phone: String(rest.phone ?? ""),
           email: toUserFacingEmail(String(rest.email ?? "")),
-          avatarUrl: typeof rest.avatarUrl === "string" ? rest.avatarUrl : null,
+          avatarUrl:
+            typeof rest.avatarUrl === "string"
+              ? resolveMediaUrl(rest.avatarUrl)
+              : null,
           role: typeof rest.role === "string" ? rest.role : null,
           language: mapApiLanguage(String(rest.language ?? "ru")),
           theme: rest.theme === "dark" ? "dark" : "light",

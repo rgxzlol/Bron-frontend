@@ -179,6 +179,7 @@ export const ru: MessageTree = {
     ratingLoading: "Загружаем рейтинг…",
     ratingUnavailable: "Рейтинг недоступен",
     ratedBookingsCount: "Оценено броней: {count}",
+    bookingAttendanceTitle: "Посещения",
     bookingAttendanceStats:
       "Вовремя: {onTime} · Опоздал: {late} · Не пришёл: {noShow}",
   },

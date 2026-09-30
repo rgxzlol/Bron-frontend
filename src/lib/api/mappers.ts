@@ -1,4 +1,7 @@
-import { normalizePhoneForApi } from "@/lib/auth/validation";
+import {
+  looksLikePhoneUsername,
+  normalizePhoneForApi,
+} from "@/lib/auth/validation";
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
 import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
@@ -58,14 +61,15 @@ export type BookingRatingStats = {
 export function getCustomerDisplayName(
   customer: Pick<CustomerRating, "username" | "full_name">,
   customerId: number,
+  fallbackName?: string,
 ) {
   const fullName = customer.full_name?.trim();
   if (fullName) return fullName;
 
   const username = customer.username.trim();
-  if (username && !/^\+?[\d\s()-]+$/.test(username)) return username;
+  if (username && !looksLikePhoneUsername(username)) return username;
 
-  return `Клиент #${customerId}`;
+  return fallbackName?.trim() || `Клиент #${customerId}`;
 }
 
 export function apiCustomerRatingToStats(
@@ -480,7 +484,7 @@ export function apiBusinessToSavedBusiness(
   };
 }
 
-function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
+export function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
   const normalizedStatus = status.trim().toLowerCase();
   if (
     normalizedStatus === "approved" ||
@@ -514,6 +518,7 @@ export function apiBookingToBusinessBookingRequest(
   customer: {
     name?: string;
     avatar?: string | null;
+    phone?: string | null;
     bookingRating?: number | null;
     evaluatedBookingsCount?: number;
     onTimeCount?: number;
@@ -525,7 +530,8 @@ export function apiBookingToBusinessBookingRequest(
   return {
     id: String(booking.id),
     customerId: booking.user_id,
-    customerAvatar: resolveMediaUrl(customer.avatar),
+    customerAvatar: resolveMediaUrl(customer.avatar ?? booking.user?.avatar),
+    customerPhone: customer.phone ?? booking.user?.phone ?? booking.phone ?? null,
     customerRating: customer.bookingRating,
     customerEvaluatedBookingsCount: customer.evaluatedBookingsCount,
     customerOnTimeCount: customer.onTimeCount,

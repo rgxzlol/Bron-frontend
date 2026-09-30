@@ -437,9 +437,11 @@ export const extraEn: MessageTree = {
     emptyConfirmedBookings: "No confirmed bookings",
     emptyPastBookings: "No past bookings yet",
     customerRating: "Customer rating: {rating}, rated bookings: {count}",
+    customerSummaryAria: "Attendance for {name}",
     customerNoRating: "Not rated yet",
     ratingLabel: "rating",
     bookingPrice: "Price {price}",
+    bookingPriceLabel: "Price",
     deleteTitle: "Delete service",
     deleteConfirm: "Are you sure you want to delete the service",
     deleteHint:

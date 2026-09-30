@@ -390,6 +390,31 @@ function parseLocalDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function formatBookingDate(value: string, locale: string) {
+  const date = parseLocalDate(value);
+  if (!date) return undefined;
+  return `${date.toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+  })}, ${date.toLocaleDateString(locale, { weekday: "short" })}`;
+}
+
+function getBookingDurationMinutes(startTime: string, endTime?: string) {
+  const parseTime = (value: string) => {
+    const match = value.match(/^(\d{2}):(\d{2})/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  };
+  const start = parseTime(startTime);
+  const end = endTime ? parseTime(endTime) : null;
+  if (start == null || end == null) return null;
+  const duration = end - start;
+  return duration > 0 ? duration : duration < 0 ? duration + 24 * 60 : null;
+}
+
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1623,9 +1648,12 @@ function BookingCard({
   booking: BusinessBookingRequest;
   readOnly?: boolean;
   onStatusChange: (status: "accepted" | "cancelled") => Promise<void>;
-  onAttendance: (status: "on_time" | "late" | "no_show") => Promise<void>;
+  onAttendance: (
+    status: "on_time" | "late" | "no_show",
+    extraWaitMinutes?: number,
+  ) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
@@ -1634,45 +1662,81 @@ function BookingCard({
   >(null);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
   const [isOrderOpen, setIsOrderOpen] = useState(false);
+  const [isCustomerSummaryOpen, setIsCustomerSummaryOpen] = useState(false);
   const isConfirmed =
     booking.status === "accepted" || booking.status === "waiting";
+  const canUpdateAttendance =
+    isConfirmed ||
+    (booking.status === "completed" && booking.attendanceStatus != null);
+  const isCancelled = booking.status === "cancelled";
   const orderPanelId = useId();
   const items = booking.items ?? [];
   const orderItemCount = items.length
     ? items.reduce((total, item) => total + item.quantity, 0)
     : 1;
+  const bookingDate = booking.bookingDate
+    ? formatBookingDate(booking.bookingDate, locale)
+    : undefined;
+  const bookingDuration = getBookingDurationMinutes(booking.time, booking.endTime);
+
+  useEffect(() => {
+    if (!isCustomerSummaryOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsCustomerSummaryOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCustomerSummaryOpen]);
+
   return (
     <div
-      className="flex flex-col gap-[8px] rounded-[16px] bg-[var(--bg-surface-muted)] p-[10px]"
+      className="flex flex-col gap-[8px] rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[10px]"
       data-testid={`business-booking-card-${booking.id}`}
     >
-      <div className="grid min-w-0 gap-[8px] xl:grid-cols-[minmax(245px,1.1fr)_minmax(120px,1fr)_auto_minmax(270px,1.2fr)] xl:items-center">
-        <div className="flex min-w-0 items-center gap-[8px]">
-          <span className="shrink-0 rounded-[10px] px-[6px] py-[8px] text-[13px] font-bold text-[var(--text-primary)]">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-[10px] xl:grid-cols-[minmax(78px,0.45fr)_minmax(190px,1.15fr)_minmax(150px,1fr)_minmax(120px,0.7fr)_minmax(0,1.4fr)]">
+        <div className="flex min-w-0 flex-col items-start">
+          <span className="px-[6px] text-[20px] font-bold leading-tight text-[var(--text-primary)]">
             {booking.time}
           </span>
-          <div className="flex min-w-0 flex-1 items-center gap-[8px] rounded-[12px] bg-[var(--bg-surface)] px-[10px] py-[7px]">
+          {bookingDate && (
+            <span
+              className="mt-[3px] px-[6px] text-[12px] font-medium text-[var(--text-secondary)]"
+              data-testid={`business-booking-date-${booking.id}`}
+            >
+              {bookingDate}
+            </span>
+          )}
+        </div>
+
+        <div className="flex min-w-0 items-center gap-[8px]">
             <div className="relative h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
+              <span className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[var(--text-secondary)]">
+                {getCustomerInitials(booking.customerName)}
+              </span>
               {booking.customerAvatar ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={booking.customerAvatar}
                   alt=""
-                  fill
-                  sizes="34px"
-                  className="object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
                 />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[var(--text-secondary)]">
-                  {getCustomerInitials(booking.customerName)}
-                </span>
-              )}
+              ) : null}
             </div>
-            <p
-              className="min-w-0 flex-1 truncate text-[13px] font-bold text-[var(--text-primary)]"
+            <button
+              type="button"
+              className="min-w-0 flex-1 truncate text-left text-[13px] font-bold text-[var(--text-primary)] hover:underline"
+              onClick={() => setIsCustomerSummaryOpen(true)}
+              aria-haspopup="dialog"
+              aria-label={t("businessDashboard.customerSummaryAria", {
+                name: booking.customerName,
+              })}
               data-testid={`business-booking-customer-${booking.id}`}
             >
               {booking.customerName}
-            </p>
+            </button>
             <div
               className="flex shrink-0 flex-col items-center leading-none"
               aria-label={
@@ -1722,22 +1786,66 @@ function BookingCard({
                   : t("profile.ratingUnavailable")}
               </span>
             </div>
-          </div>
         </div>
 
-        <p className="min-w-0 px-[4px] text-[13px] font-semibold leading-tight text-[var(--text-secondary)]">
-          {booking.serviceName}
-        </p>
+        <div className="col-span-2 row-start-2 min-w-0 px-[4px] xl:col-span-1 xl:row-start-auto">
+          <p className="truncate text-[14px] font-semibold leading-tight text-[var(--text-primary)]">
+            {booking.serviceName}
+          </p>
+          {bookingDuration != null && (
+            <p className="mt-[4px] flex items-center gap-[4px] text-[12px] text-[var(--text-secondary)]">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              {new Intl.NumberFormat(locale, {
+                style: "unit",
+                unit: "minute",
+                unitDisplay: "short",
+              }).format(bookingDuration)}
+            </p>
+          )}
+        </div>
 
-        <span className="shrink-0 px-[4px] text-[13px] font-bold text-[var(--text-primary)] xl:text-right">
-          {t("businessDashboard.bookingPrice", {
-            price: `${formatPrice(booking.price)} ${t("businessForms.currencySum")}`,
-          })}
-        </span>
+        <div className="col-start-1 row-start-3 px-[4px] xl:col-start-auto xl:row-start-auto">
+          <p className="text-[12px] text-[var(--text-secondary)]">
+            {t("businessDashboard.bookingPriceLabel")}
+          </p>
+          <p className="mt-[2px] text-[15px] font-bold text-[var(--text-primary)]">
+            {formatPrice(booking.price)} {t("businessForms.currencySum")}
+          </p>
+        </div>
 
-        <div className="flex min-w-0 items-center gap-[8px]">
-          {isConfirmed && !readOnly ? (
-            <div className="grid min-w-0 flex-1 grid-cols-3 gap-[7px]">
+        <div className="col-start-2 row-start-3 flex min-w-0 flex-col items-stretch gap-[7px] xl:col-start-auto xl:row-start-auto">
+          {!isConfirmed && (
+            <span
+              className={`w-fit rounded-[9px] px-[10px] py-[6px] text-[12px] font-semibold ${
+                booking.status === "pending"
+                  ? "bg-[#FFF3E3]/80 text-[#EC8009]"
+                  : isCancelled
+                    ? "bg-[#FFE9E8]/80 text-[#E92026]"
+                    : "bg-[#E8F2FF] text-[#0A6AF7]"
+              }`}
+              data-testid={`business-booking-status-${booking.id}`}
+            >
+              {booking.status === "pending"
+                ? t("businessDashboard.bookingStatusPending")
+                : isCancelled
+                  ? t("bookings.statusCancelled")
+                  : t("bookings.statusCompleted")}
+            </span>
+          )}
+          {canUpdateAttendance && !readOnly ? (
+            <div className="flex min-w-0 flex-col gap-[7px]">
+              <div className="flex min-w-0 flex-wrap gap-[7px] xl:grid xl:grid-cols-[repeat(3,minmax(0,1fr))]">
               {([
                 ["no_show", "businessDashboard.attendanceNoShow", "bg-[#FFE9E8]/80 text-[#E92026]", "bg-[#FFE9E8]/50 text-[#E92026]"],
                 ["late", "businessDashboard.attendanceLate", "bg-[#FFF3E3]/80 text-[#EC8009]", "bg-[#FFF3E3]/50 text-[#EC8009]"],
@@ -1768,7 +1876,7 @@ function BookingCard({
                     }}
                     disabled={attendanceSubmitting || selected}
                     aria-pressed={selected}
-                    className={`whitespace-nowrap rounded-[9px] px-[10px] py-[13px] text-[10px] font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+                    className={`min-w-0 whitespace-normal rounded-[9px] px-[6px] py-[12px] text-center text-[12px] font-semibold leading-tight transition disabled:cursor-wait disabled:opacity-60 ${
                       selected ? selectedClass : baseClass
                     }`}
                     data-testid={`business-booking-attendance-${status}-${booking.id}`}
@@ -1779,76 +1887,93 @@ function BookingCard({
                   </button>
                 );
               })}
+              </div>
             </div>
+          ) : booking.status === "pending" && !readOnly ? (
+            <div className="flex min-w-0 gap-[7px]">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (statusSubmitting) return;
+                  setStatusSubmitting(true);
+                  setStatusError(null);
+                  try {
+                    await onStatusChange("accepted");
+                  } catch (error) {
+                    setStatusError(
+                      error instanceof Error && error.message.trim()
+                        ? error.message
+                        : t("businessErrors.itemSaveFailed"),
+                    );
+                  } finally {
+                    setStatusSubmitting(false);
+                  }
+                }}
+                disabled={statusSubmitting}
+                className="min-w-0 flex-1 rounded-[9px] bg-[#0a6af7] px-[10px] py-[10px] text-[12px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-wait disabled:opacity-60"
+                data-testid={`business-booking-accept-${booking.id}`}
+              >
+                {statusSubmitting
+                  ? t("common.loading")
+                  : t("business.acceptBooking")}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (statusSubmitting) return;
+                  setStatusSubmitting(true);
+                  setStatusError(null);
+                  try {
+                    await onStatusChange("cancelled");
+                  } catch (error) {
+                    setStatusError(
+                      error instanceof Error && error.message.trim()
+                        ? error.message
+                        : t("businessErrors.itemSaveFailed"),
+                    );
+                  } finally {
+                    setStatusSubmitting(false);
+                  }
+                }}
+                disabled={statusSubmitting}
+                className="min-w-0 flex-1 rounded-[9px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[10px] text-[12px] font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
+                data-testid={`business-booking-reject-${booking.id}`}
+              >
+                {statusSubmitting
+                  ? t("common.loading")
+                  : t("businessDashboard.rejectBooking")}
+              </button>
+            </div>
+          ) : isConfirmed && !readOnly ? (
+            <button
+              type="button"
+              onClick={async () => {
+                if (statusSubmitting) return;
+                setStatusSubmitting(true);
+                setStatusError(null);
+                try {
+                  await onStatusChange("cancelled");
+                } catch (error) {
+                  setStatusError(
+                    error instanceof Error && error.message.trim()
+                      ? error.message
+                      : t("businessErrors.itemSaveFailed"),
+                  );
+                } finally {
+                  setStatusSubmitting(false);
+                }
+              }}
+              disabled={statusSubmitting}
+              className="rounded-[9px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[10px] text-[12px] font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
+              data-testid={`business-booking-cancel-${booking.id}`}
+            >
+              {statusSubmitting
+                ? t("common.loading")
+                : t("businessDashboard.rejectBooking")}
+            </button>
           ) : null}
         </div>
       </div>
-
-      {booking.customerRatingStatsAvailable ? (
-        <p
-          className="text-[10px] leading-tight text-[var(--text-muted)] xl:pl-[250px]"
-          data-testid={`business-booking-customer-attendance-stats-${booking.id}`}
-        >
-          {t("profile.bookingAttendanceStats", {
-            onTime: booking.customerOnTimeCount ?? 0,
-            late: booking.customerLateCount ?? 0,
-            noShow: booking.customerNoShowCount ?? 0,
-          })}
-        </p>
-      ) : null}
-
-      {booking.status === "pending" && !readOnly ? (
-        <div className="flex gap-[8px]">
-          <button
-            type="button"
-            onClick={async () => {
-              if (statusSubmitting) return;
-              setStatusSubmitting(true);
-              setStatusError(null);
-              try {
-                await onStatusChange("cancelled");
-              } catch (error) {
-                setStatusError(
-                  error instanceof Error && error.message.trim()
-                    ? error.message
-                    : t("businessErrors.itemSaveFailed"),
-                );
-              } finally {
-                setStatusSubmitting(false);
-              }
-            }}
-            disabled={statusSubmitting}
-            className="flex-1 rounded-[9px] bg-[var(--bg-surface)] px-[10px] py-[11px] text-[13px] font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
-            data-testid={`business-booking-reject-${booking.id}`}
-          >
-            {statusSubmitting ? t("common.loading") : t("businessDashboard.rejectBooking")}
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              if (statusSubmitting) return;
-              setStatusSubmitting(true);
-              setStatusError(null);
-              try {
-                await onStatusChange("accepted");
-              } catch (error) {
-                setStatusError(
-                  error instanceof Error && error.message.trim()
-                    ? error.message
-                    : t("businessErrors.itemSaveFailed"),
-                );
-              } finally {
-                setStatusSubmitting(false);
-              }
-            }}
-            disabled={statusSubmitting}
-            className="flex-1 rounded-[9px] bg-[#0a6af7] px-[10px] py-[11px] text-[13px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-wait disabled:opacity-60"
-            data-testid={`business-booking-accept-${booking.id}`}
-          >
-            {statusSubmitting ? t("common.loading") : t("business.acceptBooking")}
-          </button>
-        </div>
-      ) : null}
 
       {statusError ? (
         <p
@@ -1933,6 +2058,134 @@ function BookingCard({
           </ul>
         ) : null}
       </div>
+
+      {isCustomerSummaryOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--backdrop)] p-4"
+          onClick={() => setIsCustomerSummaryOpen(false)}
+          role="presentation"
+        >
+          <section
+            className="flex h-[378px] max-h-[calc(100dvh-32px)] w-[480px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-[24px] bg-[var(--bg-surface)] p-[20px] text-[var(--text-primary)] shadow-[var(--shadow-modal)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("businessDashboard.customerSummaryAria", {
+              name: booking.customerName,
+            })}
+            data-testid={`business-booking-customer-summary-${booking.id}`}
+          >
+            <div className="flex items-start gap-[14px]">
+              <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
+                <span className="flex h-full w-full items-center justify-center text-[24px] font-bold text-[var(--text-secondary)]">
+                  {getCustomerInitials(booking.customerName)}
+                </span>
+                {booking.customerAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={booking.customerAvatar}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="line-clamp-2 text-[23px] font-semibold leading-tight">
+                  {booking.customerName}
+                </h2>
+                {booking.customerPhone ? (
+                  <a
+                    href={`tel:${booking.customerPhone}`}
+                    className="mt-[3px] inline-block text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    data-testid={`business-booking-customer-phone-${booking.id}`}
+                  >
+                    {booking.customerPhone}
+                  </a>
+                ) : null}
+                <div className="mt-[9px] flex flex-wrap items-center gap-x-[20px] gap-y-[4px] text-[13px] text-[var(--text-secondary)]">
+                  <span className="inline-flex items-center gap-[5px]">
+                    <Image
+                      src={assets.profile.leftBarg}
+                      alt=""
+                      width={10}
+                      height={17}
+                      data-theme-invert
+                    />
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {booking.customerRatingStatsAvailable &&
+                      booking.customerRating != null
+                        ? booking.customerRating.toFixed(2)
+                        : "—"}
+                    </span>
+                    <Image
+                      src={assets.profile.rightBarg}
+                      alt=""
+                      width={10}
+                      height={17}
+                      data-theme-invert
+                    />
+                    <span>{t("profile.ratingLabel")}</span>
+                  </span>
+                  <span>
+                    {t("profile.ratedBookingsCount", {
+                      count: booking.customerEvaluatedBookingsCount ?? 0,
+                    })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCustomerSummaryOpen(false)}
+                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--bg-surface-soft)] text-[25px] leading-none text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                aria-label={t("common.close")}
+              >
+                ×
+              </button>
+            </div>
+
+            <h3 className="mb-[8px] mt-[22px] text-[18px] font-semibold">
+              {t("profile.bookingAttendanceTitle")}
+            </h3>
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-[8px] overflow-y-auto rounded-[18px] bg-[var(--bg-surface-soft)] p-[10px]">
+              {([
+                [
+                  "businessDashboard.attendanceOnTime",
+                  booking.customerOnTimeCount,
+                  "bg-[#E7F8EF] text-[#00A82D]",
+                ],
+                [
+                  "businessDashboard.attendanceLate",
+                  booking.customerLateCount,
+                  "bg-[#FFF3E3] text-[#D87500]",
+                ],
+                [
+                  "businessDashboard.attendanceNoShow",
+                  booking.customerNoShowCount,
+                  "bg-[#FFE9E8] text-[#D91F26]",
+                ],
+              ] as const).map(([labelKey, count, colorClass]) => (
+                <div
+                  key={labelKey}
+                  className="flex min-h-[52px] items-center justify-between gap-[12px] rounded-[14px] bg-[var(--bg-surface)] px-[16px] py-[10px]"
+                >
+                  <span className="text-[14px] font-medium">
+                    {t(labelKey)}
+                  </span>
+                  <span
+                    className={`min-w-[54px] rounded-[12px] px-[14px] py-[8px] text-center text-[16px] font-semibold ${colorClass}`}
+                    data-testid={`business-booking-customer-summary-${labelKey.split(".").pop()}-${booking.id}`}
+                  >
+                    {count ?? 0}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2231,11 +2484,6 @@ export default function BusinessDashboard({
               ? t("businessDashboard.typeService")
               : t("businessDashboard.typeProduct")}
           </p>
-          {isService && item.availability && item.availability.length > 0 && (
-            <p className="mt-[4px] text-[11px] text-[#0a6af7] font-medium">
-              {t("businessForms.dateLabel")}: {item.availability.length} {item.availability.length === 1 ? "дата" : "даты"}
-            </p>
-          )}
         </div>
         <p className="truncate text-[13px] text-[var(--text-secondary)]">
           {item.category || t("businessDashboard.defaultCategory")}
@@ -2352,7 +2600,11 @@ export default function BusinessDashboard({
           updateBookingStatus(businessId, booking.id, status)
         }
         onAttendance={(attendanceStatus) =>
-          updateBookingAttendance(businessId, booking.id, attendanceStatus)
+          updateBookingAttendance(
+            businessId,
+            booking.id,
+            attendanceStatus,
+          )
         }
       />
     );

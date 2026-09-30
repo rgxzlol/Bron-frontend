@@ -179,6 +179,7 @@ export const uz: MessageTree = {
     ratingLoading: "Reyting yuklanmoqda…",
     ratingUnavailable: "Reyting mavjud emas",
     ratedBookingsCount: "Baholangan bronlar: {count}",
+    bookingAttendanceTitle: "Tashriflar",
     bookingAttendanceStats:
       "O‘z vaqtida: {onTime} · Kechikdi: {late} · Kelmagan: {noShow}",
   },

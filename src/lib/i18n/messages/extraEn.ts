@@ -298,6 +298,8 @@ export const extraEn: MessageTree = {
     saveChanges: "Save changes",
     updatedToast: "Booking updated",
     updatedToastDesc: "The new date and time have been saved.",
+    completedBookingCannotReschedule:
+      "A completed booking cannot be rescheduled.",
   },
   businessModal: {
     title: "Business profile",
@@ -430,8 +432,10 @@ export const extraEn: MessageTree = {
     bookingsTabAll: "All",
     bookingsTabPending: "Pending",
     bookingsTabConfirmed: "Confirmed",
+    bookingsTabPast: "Past",
     emptyPendingBookings: "No pending requests",
     emptyConfirmedBookings: "No confirmed bookings",
+    emptyPastBookings: "No past bookings yet",
     customerRating: "Customer rating: {rating}, rated bookings: {count}",
     customerNoRating: "Not rated yet",
     ratingLabel: "rating",
@@ -539,7 +543,21 @@ export const extraEn: MessageTree = {
     range10to15: "10–15 km from me",
     currencySum: "UZS",
     today: "Today",
-    clearRead: "Mark all as read",
+    deleteAllNotifications: "Delete all notifications",
+    deleteNotificationsFailed:
+      "Some notifications could not be deleted. Check your connection or contact support.",
+    notificationNewBooking: "New booking",
+    notificationBookingConfirmed: "Booking confirmed",
+    notificationBookingCancelled: "Booking cancelled",
+    notificationBookingRescheduled: "Booking rescheduled",
+    notificationPayment: "Payment",
+    notificationPaymentSuccessful: "Payment successful",
+    notificationPromotion: "Promotion",
+    notificationTimeSuffix: " at {time}",
+    notificationBookingCreatedDescription:
+      "{phone} booked {service} on {date}{timeSuffix}",
+    notificationBookingConfirmedDescription:
+      "{business} confirmed your booking on {date}{timeSuffix}",
     demoReminderTitle: "Booking reminder",
     demoReminderDesc: "You have a booking tomorrow at BronFitness",
     demoPaymentTitle: "Payment successful",

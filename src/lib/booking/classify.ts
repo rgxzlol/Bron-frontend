@@ -1,12 +1,3 @@
-const FINISHED_STATUSES = new Set([
-  "finished",
-  "completed",
-  "cancelled",
-  "canceled",
-  "past",
-  "rejected",
-]);
-
 /** Normalize API time values like "14:00", "14:00:00", "14:00:00.978Z". */
 export function normalizeBookingTime(value?: string | null): string | null {
   if (!value) return null;
@@ -14,11 +5,6 @@ export function normalizeBookingTime(value?: string | null): string | null {
   const match = trimmed.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (!match) return null;
   return `${match[1]}:${match[2]}:${match[3] ?? "00"}`;
-}
-
-export function isFinishedBookingStatus(status?: string | null) {
-  if (!status) return false;
-  return FINISHED_STATUSES.has(status.trim().toLowerCase());
 }
 
 /**
@@ -62,7 +48,6 @@ export function getBookingEndDateTime(booking: {
 /** Past bookings are classified by their scheduled end, not by attendance/status updates. */
 export function isPastBooking(
   booking: {
-    status?: string | null;
     booking_date?: string | null;
     start_time?: string | null;
     end_time?: string | null;

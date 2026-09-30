@@ -25,7 +25,10 @@ import type {
   BookingAttendanceStatus,
   BookingOrderItem,
 } from "@/lib/api/types";
-import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
+import {
+  formatUzbekPhoneInput,
+  UZBEK_PHONE_PREFIX,
+} from "@/lib/auth/validation";
 import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
@@ -96,7 +99,7 @@ export type BusinessBookingRequest = {
   customerName: string;
   serviceName: string;
   price: number;
-  status: "pending" | "waiting" | "accepted" | "cancelled";
+  status: "pending" | "waiting" | "accepted" | "cancelled" | "completed";
   attendanceStatus?: BookingAttendanceStatus;
   extraWaitMinutes?: number;
 };
@@ -243,7 +246,7 @@ function draftFromBusiness(business: SavedBusiness): BusinessDraft {
     description: business.description,
     category: business.category,
     website: business.website,
-    phone: business.phone,
+    phone: formatUzbekPhoneInput(business.phone, { keepPrefix: true }),
     address: business.address,
     lat: hasValidCoords(business) ? business.lat : null,
     lng: hasValidCoords(business) ? business.lng : null,
@@ -403,9 +406,10 @@ export const useBusinessStore = create<BusinessStore>()(
         if (!token) return;
 
         try {
-          const existing = get().businesses;
-          const existingById = new Map(existing.map((item) => [item.id, item]));
           const fromApi = await fetchMyBusinessesFromApi();
+          const existingById = new Map(
+            get().businesses.map((item) => [item.id, item]),
+          );
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );

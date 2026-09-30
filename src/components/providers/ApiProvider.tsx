@@ -51,15 +51,24 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       resetApplicationApi();
       return;
     }
-    void fetchBusinessesFromApi();
-    void fetchBusinessesFromApi();
+    const unsubscribeBusinessHydration = onStoreHydrated(
+      useBusinessStore,
+      () => {
+        void fetchBusinessesFromApi();
+      },
+    );
 
-    return onStoreHydrated(useBookingStore, () => {
+    const unsubscribeBookingHydration = onStoreHydrated(useBookingStore, () => {
       void fetchMyBookings();
       void fetchProfile();
       loadNotificationsForUser(userId);
       void fetchFavorites();
     });
+
+    return () => {
+      unsubscribeBusinessHydration?.();
+      unsubscribeBookingHydration?.();
+    };
   }, [
     hydrated,
     token,

@@ -880,6 +880,14 @@
 }
 
 @media (max-width: 768px) {
+  .business-item-screen,
+  .business-service-form-grid,
+  .business-product-form-grid {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+  }
+
   .business-service-form-grid {
     display: flex !important;
     flex-direction: column;
@@ -888,7 +896,18 @@
   }
 
   .business-service-form-grid > [data-field] {
+    box-sizing: border-box;
+    width: 100%;
     margin-bottom: 0 !important;
+  }
+
+  .business-product-form-grid > [data-field],
+  .business-item-screen input,
+  .business-item-screen select,
+  .business-item-screen textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
   }
 
   .business-service-form-grid > [data-field="actions"] {

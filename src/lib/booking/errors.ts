@@ -24,6 +24,8 @@ export function isSlotConflictError(error: unknown): boolean {
     message.includes("no longer available") ||
     message.includes("staff member is busy") ||
     message.includes("selected time is not available") ||
+    message.includes("booking is already at this time") ||
+    message.includes("already at this time") ||
     message.includes("недоступ") ||
     message.includes("занят") ||
     message.includes("conflict") ||

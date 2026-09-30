@@ -18,6 +18,7 @@ import {
 } from "@/lib/booking/timeSlots";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { isRemoteShopImage } from "@/lib/business/shopImages";
+import { isSlotConflictError } from "@/lib/booking/errors";
 
 const EMPTY_AVAILABLE_SLOTS: BookingAvailableSlotsResponse["slots"] = [];
 
@@ -65,6 +66,16 @@ function addHourToTime(time: string) {
   const hours = Math.floor(totalMinutes / 60) % 24;
   const minutes = totalMinutes % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function getBookingEditErrorMessage(error: unknown, t: (key: string) => string) {
+  if (!(error instanceof Error)) return t("bookingsEdit.updateError");
+
+  if (/booking with status ['"]completed['"] cannot be rescheduled/i.test(error.message)) {
+    return t("bookingsEdit.completedBookingCannotReschedule");
+  }
+
+  return error.message;
 }
 
 export const BookingEditModal = ({
@@ -149,7 +160,7 @@ export const BookingEditModal = ({
       (error: unknown) => {
         if (cancelled) return;
         setTargetStatus("error");
-        setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+        setSaveError(getBookingEditErrorMessage(error, t));
       },
     );
 
@@ -177,7 +188,7 @@ export const BookingEditModal = ({
         },
         (error: unknown) => {
           if (cancelled) return;
-          setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+          setSaveError(getBookingEditErrorMessage(error, t));
           setTargetStatus("error");
         },
       );
@@ -208,7 +219,7 @@ export const BookingEditModal = ({
         },
         (error: unknown) => {
           if (cancelled) return;
-          setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+          setSaveError(getBookingEditErrorMessage(error, t));
         },
       );
 
@@ -278,10 +289,35 @@ export const BookingEditModal = ({
         throw new Error("Данные доступности бронирования ещё не загружены.");
       }
       if (bookingTarget && !selectedAvailabilitySlot) {
-        throw new Error("Выберите свободный слот для переноса брони.");
+        setSaveError(t("booking.errorSlotUnavailableHint"));
+        return;
+      }
+      let confirmedSlot = selectedAvailabilitySlot;
+      if (bookingTarget) {
+        const latestAvailability = await bookingsApi.availableSlots({
+          business_id: bookingTarget.businessId,
+          service_id: bookingTarget.serviceId,
+          branch_id: bookingTarget.branchId,
+          date: toIsoDate(selectedDate),
+          staff_id: bookingTarget.staffId ?? undefined,
+        });
+        setSlotsState({
+          date: toIsoDate(selectedDate),
+          response: latestAvailability,
+        });
+        confirmedSlot = latestAvailability.slots.find(
+          (slot) => slot.start_time.slice(0, 5) === selectedTime,
+        );
+        if (
+          !confirmedSlot?.is_available ||
+          confirmedSlot.available_spots < (bookingTarget.guestCount || 1)
+        ) {
+          setSaveError(t("booking.errorSlotUnavailableHint"));
+          return;
+        }
       }
       const endTime =
-        selectedAvailabilitySlot?.end_time ?? addHourToTime(selectedTime);
+        confirmedSlot?.end_time ?? addHourToTime(selectedTime);
       await rescheduleBooking(bookingId, {
         booking_date: toIsoDate(selectedDate),
         start_time: selectedTime,
@@ -292,9 +328,9 @@ export const BookingEditModal = ({
     } catch (error) {
       console.warn("Не удалось сохранить изменения брони", error);
       setSaveError(
-        error instanceof Error
-          ? error.message
-          : t("bookingsEdit.updateError"),
+        isSlotConflictError(error)
+          ? t("booking.errorSlotUnavailableHint")
+          : getBookingEditErrorMessage(error, t),
       );
     } finally {
       setIsSaving(false);

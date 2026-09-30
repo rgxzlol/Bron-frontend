@@ -490,8 +490,20 @@ function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] 
   ) {
     return "accepted";
   }
-  if (normalizedStatus === "cancelled" || normalizedStatus === "rejected") {
+  if (
+    normalizedStatus === "cancelled" ||
+    normalizedStatus === "canceled" ||
+    normalizedStatus === "rejected"
+  ) {
     return "cancelled";
+  }
+  if (
+    normalizedStatus === "completed" ||
+    normalizedStatus === "finished" ||
+    normalizedStatus === "done" ||
+    normalizedStatus === "past"
+  ) {
+    return "completed";
   }
   return "pending";
 }
@@ -522,8 +534,8 @@ export function apiBookingToBusinessBookingRequest(
     customerRatingStatsAvailable: customer.ratingStatsAvailable,
     bookingId: booking.id,
     bookingDate: booking.booking_date,
-    endTime: booking.end_time.slice(0, 5),
-    time: booking.start_time.slice(0, 5),
+    endTime: booking.end_time?.slice(0, 5),
+    time: booking.start_time?.slice(0, 5) ?? "",
     customerName: customer.name?.trim() || `Клиент #${booking.user_id}`,
     serviceName,
     price: booking.total_price,

@@ -16,6 +16,7 @@ import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
 import { mergeBusinessFromApi } from "@/lib/business/photos"
 import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync"
+import { canShowShopOnMap } from "@/lib/map/mapVisibility"
 import { getDistanceKm } from "@/lib/distance"
 import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
@@ -423,7 +424,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     maxPriceFilter = appliedMaxPrice,
     locationFilter = appliedLocation,
   ): boolean {
-    if (!hasValidCoords(shop)) return false
+    if (!hasValidCoords(shop) || !canShowShopOnMap(shop)) return false
 
     const matchesPill =
       activeFilter === "Все"
@@ -926,7 +927,9 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const fallbackShops = [
     ...apiShops,
     ...businesses.map((business) => businessToShop(business)),
-  ].filter((shop, index, shops) => shops.findIndex((item) => item.id === shop.id) === index)
+  ]
+    .filter(canShowShopOnMap)
+    .filter((shop, index, shops) => shops.findIndex((item) => item.id === shop.id) === index)
 
   return (
     <div className="relative">

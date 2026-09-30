@@ -301,6 +301,8 @@ export const extraRu: MessageTree = {
     saveChanges: "Сохранить изменения",
     updatedToast: "Бронирование обновлено",
     updatedToastDesc: "Новая дата и время успешно сохранены.",
+    completedBookingCannotReschedule:
+      "Завершённое бронирование нельзя перенести.",
   },
   businessModal: {
     title: "Профиль бизнеса",
@@ -434,8 +436,10 @@ export const extraRu: MessageTree = {
     bookingsTabAll: "Все",
     bookingsTabPending: "Ожидает",
     bookingsTabConfirmed: "Подтвержденные",
+    bookingsTabPast: "Прошлые",
     emptyPendingBookings: "Нет заявок в ожидании",
     emptyConfirmedBookings: "Нет подтверждённых броней",
+    emptyPastBookings: "Прошлых бронирований пока нет",
     customerRating: "Рейтинг клиента: {rating}, оценённых броней: {count}",
     customerNoRating: "Пока нет оценок",
     ratingLabel: "рейтинг",
@@ -544,7 +548,21 @@ export const extraRu: MessageTree = {
     range10to15: "10-15км от меня",
     currencySum: "Сум",
     today: "Сегодня",
-    clearRead: "Отметить все прочитанными",
+    deleteAllNotifications: "Удалить все уведомления",
+    deleteNotificationsFailed:
+      "Не удалось удалить часть уведомлений. Проверьте подключение или обратитесь в поддержку.",
+    notificationNewBooking: "Новая бронь",
+    notificationBookingConfirmed: "Бронирование подтверждено",
+    notificationBookingCancelled: "Бронирование отменено",
+    notificationBookingRescheduled: "Бронирование перенесено",
+    notificationPayment: "Оплата",
+    notificationPaymentSuccessful: "Оплата прошла успешно",
+    notificationPromotion: "Акция",
+    notificationTimeSuffix: " в {time}",
+    notificationBookingCreatedDescription:
+      "Бронь от {phone}: {service}, {date}{timeSuffix}",
+    notificationBookingConfirmedDescription:
+      "{business} подтвердил бронирование: {date}{timeSuffix}",
     demoReminderTitle: "Напоминание о бронировании",
     demoReminderDesc: "У вас завтра бронь в BronFitness",
     demoPaymentTitle: "Платеж успешно выполнен",

@@ -21,6 +21,8 @@ export default function NotificationDropdown() {
   const router = useRouter();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeletingNotifications, setIsDeletingNotifications] = useState(false);
+  const [deleteNotificationsFailed, setDeleteNotificationsFailed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const items = useNotificationStore((state) => state.items);
@@ -37,8 +39,8 @@ export default function NotificationDropdown() {
   const deleteNotification = useNotificationStore(
     (state) => state.deleteNotification,
   );
-  const markAllNotificationsRead = useNotificationStore(
-    (state) => state.markAllNotificationsRead,
+  const deleteAllNotifications = useNotificationStore(
+    (state) => state.deleteAllNotifications,
   );
   const token = useAuthStore((state) => state.token);
   const bookings = useBookingStore((state) => state.bookings);
@@ -196,6 +198,17 @@ export default function NotificationDropdown() {
 
   const hasNotifications = items.length > 0;
 
+  async function handleDeleteAllNotifications() {
+    setIsDeletingNotifications(true);
+    setDeleteNotificationsFailed(false);
+    try {
+      const succeeded = await deleteAllNotifications();
+      setDeleteNotificationsFailed(!succeeded);
+    } finally {
+      setIsDeletingNotifications(false);
+    }
+  }
+
   const list = (
     <>
       <span className="block text-[13px] font-medium text-[var(--text-secondary)]">
@@ -212,6 +225,7 @@ export default function NotificationDropdown() {
               title={presentation.title}
               description={presentation.description}
               time={formatNotificationTime(item.time)}
+              isRead={item.read}
               onClick={() =>
                 void openNotification(item.id, item.booking_id, item.type)
               }
@@ -226,17 +240,25 @@ export default function NotificationDropdown() {
   );
 
   const clearButton = (
-    <button
-      type="button"
-      onClick={() => void markAllNotificationsRead()}
-      className="mx-auto flex items-center gap-2.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-7 py-[15px] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95"
-      data-testid="notifications-delete-read"
-    >
-      <Image src={assets.notification.trash} alt="" className="h-5 w-5 object-contain" />
-      <span className="text-[15px] font-semibold text-[var(--accent-fg)]">
-        {t("headerFilters.clearRead")}
-      </span>
-    </button>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void handleDeleteAllNotifications()}
+        disabled={isDeletingNotifications}
+        className="mx-auto flex items-center gap-2.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-7 py-[15px] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-60"
+        data-testid="notifications-delete-all"
+      >
+        <Image src={assets.notification.trash} alt="" className="h-5 w-5 object-contain" />
+        <span className="text-[15px] font-semibold text-[var(--accent-fg)]">
+          {t("headerFilters.deleteAllNotifications")}
+        </span>
+      </button>
+      {deleteNotificationsFailed && (
+        <p className="text-center text-[13px] text-[#e02424]" role="alert">
+          {t("headerFilters.deleteNotificationsFailed")}
+        </p>
+      )}
+    </div>
   );
 
   const panelBody = isLoading ? (

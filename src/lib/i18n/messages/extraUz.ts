@@ -298,6 +298,8 @@ export const extraUz: MessageTree = {
     saveChanges: "O‘zgarishlarni saqlash",
     updatedToast: "Bron yangilandi",
     updatedToastDesc: "Yangi sana va vaqt muvaffaqiyatli saqlandi.",
+    completedBookingCannotReschedule:
+      "Yakunlangan bron vaqtini o‘zgartirib bo‘lmaydi.",
   },
   businessModal: {
     title: "Biznes profili",
@@ -431,8 +433,10 @@ export const extraUz: MessageTree = {
     bookingsTabAll: "Hammasi",
     bookingsTabPending: "Kutilmoqda",
     bookingsTabConfirmed: "Tasdiqlangan",
+    bookingsTabPast: "O‘tgan",
     emptyPendingBookings: "Kutilayotgan so‘rovlar yo‘q",
     emptyConfirmedBookings: "Tasdiqlangan bronlar yo‘q",
+    emptyPastBookings: "O‘tgan bronlar hali yo‘q",
     customerRating: "Mijoz reytingi: {rating}, baholangan bronlar: {count}",
     customerNoRating: "Hali baholanmagan",
     ratingLabel: "reyting",
@@ -541,7 +545,21 @@ export const extraUz: MessageTree = {
     range10to15: "Mendan 10–15 km",
     currencySum: "So‘m",
     today: "Bugun",
-    clearRead: "Barchasini o‘qilgan deb belgilash",
+    deleteAllNotifications: "Barcha bildirishnomalarni o‘chirish",
+    deleteNotificationsFailed:
+      "Ayrim bildirishnomalarni o‘chirib bo‘lmadi. Internetni tekshiring yoki yordam xizmatiga murojaat qiling.",
+    notificationNewBooking: "Yangi bron",
+    notificationBookingConfirmed: "Bron tasdiqlandi",
+    notificationBookingCancelled: "Bron bekor qilindi",
+    notificationBookingRescheduled: "Bron vaqti o‘zgartirildi",
+    notificationPayment: "To‘lov",
+    notificationPaymentSuccessful: "To‘lov muvaffaqiyatli",
+    notificationPromotion: "Aksiya",
+    notificationTimeSuffix: " soat {time} da",
+    notificationBookingCreatedDescription:
+      "{phone} {service} xizmatiga {date}{timeSuffix} ga bron qildi",
+    notificationBookingConfirmedDescription:
+      "{business} broningizni tasdiqladi: {date}{timeSuffix}",
     demoReminderTitle: "Bron eslatmasi",
     demoReminderDesc: "Ertaga BronFitness’da broningiz bor",
     demoPaymentTitle: "To‘lov muvaffaqiyatli",

@@ -1,10 +1,11 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiUploadRequest } from "./client";
 import type {
   Product,
   ProductCreate,
   ProductListItem,
   ProductUpdate,
 } from "./types";
+import { assertApiImage } from "./media";
 
 export const productsApi = {
   list: () => apiRequest<ProductListItem[]>("/products"),
@@ -32,6 +33,24 @@ export const productsApi = {
     apiRequest<Product>(`/products/${productId}`, {
       method: "PUT",
       body,
+      auth: true,
+      token,
+    }),
+
+  uploadImage: (productId: number, image: File | Blob, token?: string) => {
+    assertApiImage(image);
+    const formData = new FormData();
+    formData.append("image", image);
+    return apiUploadRequest<Product>(
+      `/products/${productId}/image`,
+      formData,
+      { auth: true, token },
+    );
+  },
+
+  deleteImage: (productId: number, token?: string) =>
+    apiRequest<Product>(`/products/${productId}/image`, {
+      method: "DELETE",
       auth: true,
       token,
     }),

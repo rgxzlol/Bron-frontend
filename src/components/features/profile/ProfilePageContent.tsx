@@ -78,7 +78,13 @@ export default function ProfilePageContent({
     phone,
     email,
     rating,
-    reviewCount,
+    ratedBookingsCount,
+    onTimeCount,
+    lateCount,
+    noShowCount,
+    ratingStatsAvailable,
+    ratingLoading,
+    ratingError,
     avatarUrl,
     language,
     theme,
@@ -120,6 +126,17 @@ export default function ProfilePageContent({
 
   const displayName = looksLikePhoneUsername(fullName) ? "" : fullName;
 
+  function handleNotificationToggle(
+    key: "push" | "email" | "bookingReminder" | "promotions",
+  ) {
+    void toggleNotification(key).catch((error: unknown) => {
+      showToast(
+        t("common.errorTitle"),
+        error instanceof Error ? error.message : t("businessErrors.saveFailed"),
+      );
+    });
+  }
+
   useEffect(() => {
     if (token) {
       void fetchProfile();
@@ -128,9 +145,14 @@ export default function ProfilePageContent({
 
   useEffect(() => {
     if (section === "notifications") {
-      void fetchNotificationSettings();
+      void fetchNotificationSettings().catch((error: unknown) => {
+        showToast(
+          t("common.errorTitle"),
+          error instanceof Error ? error.message : t("businessErrors.saveFailed"),
+        );
+      });
     }
-  }, [section, fetchNotificationSettings]);
+  }, [section, fetchNotificationSettings, showToast, t]);
 
   useEffect(() => {
     onSectionChange?.(section);
@@ -374,7 +396,16 @@ export default function ProfilePageContent({
               </button>
             </div>
             <div className={s.ratingNameBlock}>
-              <ProfileRatingBadge value={rating} reviewCount={reviewCount} />
+              <ProfileRatingBadge
+                value={rating}
+                ratedBookingsCount={ratedBookingsCount}
+                onTimeCount={onTimeCount}
+                lateCount={lateCount}
+                noShowCount={noShowCount}
+                available={ratingStatsAvailable}
+                loading={ratingLoading}
+                error={ratingError}
+              />
             </div>
             <p className={s.phoneText}>{phone}</p>
           </div>
@@ -794,7 +825,7 @@ export default function ProfilePageContent({
               title={t("profile.pushTitle")}
               subtitle={t("profile.pushSubtitle")}
               value={notifications.push}
-              onToggle={() => toggleNotification("push")}
+              onToggle={() => handleNotificationToggle("push")}
               testId="profile-notification-push"
             />
             <SwitchRow
@@ -802,7 +833,7 @@ export default function ProfilePageContent({
               title={t("profile.emailTitle")}
               subtitle={t("profile.emailSubtitle")}
               value={notifications.email}
-              onToggle={() => toggleNotification("email")}
+              onToggle={() => handleNotificationToggle("email")}
               testId="profile-notification-email"
             />
             <SwitchRow
@@ -810,7 +841,7 @@ export default function ProfilePageContent({
               title={t("profile.bookingReminderTitle")}
               subtitle={t("profile.bookingReminderSubtitle")}
               value={notifications.bookingReminder}
-              onToggle={() => toggleNotification("bookingReminder")}
+              onToggle={() => handleNotificationToggle("bookingReminder")}
               testId="profile-notification-booking-reminder"
             />
             <SwitchRow
@@ -818,7 +849,7 @@ export default function ProfilePageContent({
               title={t("profile.promotionsTitle")}
               subtitle={t("profile.promotionsSubtitle")}
               value={notifications.promotions}
-              onToggle={() => toggleNotification("promotions")}
+              onToggle={() => handleNotificationToggle("promotions")}
               testId="profile-notification-promotions"
             />
           </div>
@@ -1109,27 +1140,58 @@ function InfoIcon() {
 
 function ProfileRatingBadge({
   value,
-  reviewCount,
+  ratedBookingsCount,
+  onTimeCount,
+  lateCount,
+  noShowCount,
+  available,
+  loading,
+  error,
 }: {
-  value: number;
-  reviewCount: number;
+  value: number | null;
+  ratedBookingsCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  noShowCount: number;
+  available: boolean;
+  loading: boolean;
+  error: boolean;
 }) {
   const { t } = useTranslation();
 
   return (
     <>
       <span className={s.ratingBadge} data-testid="profile-rating-badge">
-        <span className={s.ratingBar}>
-          <Image src={assets.profile.leftBarg} alt="" width={11} height={19} />
-        </span>
-        <span className={s.ratingValue}>{value.toFixed(1)}</span>
-        <span className={s.ratingBar}>
-          <Image src={assets.profile.rightBarg} alt="" width={11} height={19} />
-        </span>
+        {value !== null ? (
+          <>
+            <span className={s.ratingBar}>
+              <Image src={assets.profile.leftBarg} alt="" width={11} height={19} />
+            </span>
+            <span className={s.ratingValue}>{value.toFixed(2)}</span>
+            <span className={s.ratingBar}>
+              <Image src={assets.profile.rightBarg} alt="" width={11} height={19} />
+            </span>
+          </>
+        ) : null}
       </span>
       <span className={s.ratingCaption}>
-        {t("profile.ratingLabel")} ({reviewCount})
+        {loading
+          ? t("profile.ratingLoading")
+          : error || !available
+            ? t("profile.ratingUnavailable")
+            : ratedBookingsCount === 0
+              ? t("profile.noRating")
+              : t("profile.ratedBookingsCount", { count: ratedBookingsCount })}
       </span>
+      {available && ratedBookingsCount > 0 ? (
+        <span className={s.ratingAttendanceStats}>
+          {t("profile.bookingAttendanceStats", {
+            onTime: onTimeCount,
+            late: lateCount,
+            noShow: noShowCount,
+          })}
+        </span>
+      ) : null}
     </>
   );
 }
@@ -1138,10 +1200,13 @@ function ProfileRatingFrame({
   value,
   children,
 }: {
-  value: number;
+  value: number | null;
   children: ReactNode;
 }) {
-  const normalizedRating = Math.min(5, Math.max(0, Number.isFinite(value) ? value : 0));
+  const normalizedRating = Math.min(
+    5,
+    Math.max(0, value != null && Number.isFinite(value) ? value : 0),
+  );
   const progress = normalizedRating / 5;
   const color =
     normalizedRating < 2.5

@@ -40,28 +40,25 @@ import {
   pickBookableShopService,
   resolveBookingTargetIds,
 } from "@/lib/booking/payload";
-import type { BookingOrderItem } from "@/lib/api/types";
+import type { BookingItemCreate, ServiceAvailability } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import BookingExtrasModal, { type OrderLineItem } from "./BookingExtrasModal";
-import CardPaymentModal from "./CardPaymentModal";
 import ReviewModal from "@/components/features/review/ReviewModal";
-import { addMinutesToTime, formatBookingDate } from "@/lib/api/mappers";
+import { formatBookingDate } from "@/lib/api/mappers";
 import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import { useAuthStore } from "@/store/auth.store";
 import { useBookingStore } from "@/store/booking.store";
 import { useProfileStore } from "@/store/profile.store";
 import { useToastStore } from "@/store/toast.store";
-import { useNotificationStore } from "@/store/notification.store";
 import { servicesApi } from "@/lib/api/services";
 import type {
-  ServiceAvailability,
   ServiceAvailableDate,
 } from "@/lib/api/types";
 import s from "./bookingPage.module.css";
 import {
+  fetchAvailableSlots,
   fetchBookingApiContext,
   getShopHoursForDate,
-  isBookingDateUnavailable,
   type BookingApiContext,
 } from "@/lib/booking/apiContext";
 import { translateLocation } from "@/lib/i18n/location";
@@ -98,7 +95,6 @@ export default function BookingPage({
   const [lockedSchedule, setLockedSchedule] = useState<LockedSchedule | null>(null);
   const [showMobileCalendar, setShowMobileCalendar] = useState(false);
   const [showExtrasModal, setShowExtrasModal] = useState(false);
-  const [showCardModal, setShowCardModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => startOfDay(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
@@ -108,7 +104,6 @@ export default function BookingPage({
     return getDefaultBookingTime(slots, todayDate, new Date());
   });
   const [guests, setGuests] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("card");
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
   const [formErrors, setFormErrors] = useState<BookingFormErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -124,9 +119,6 @@ export default function BookingPage({
   const token = useAuthStore((state) => state.token);
   const createBooking = useBookingStore((state) => state.createBooking);
   const showToast = useToastStore((state) => state.showToast);
-  const addLocalNotification = useNotificationStore(
-    (state) => state.addLocalNotification,
-  );
   const profileFullName = useProfileStore((state) => state.fullName);
   const profilePhone = useProfileStore((state) => state.phone);
   const profileEmail = useProfileStore((state) => state.email);
@@ -166,7 +158,7 @@ export default function BookingPage({
       : null;
   const availabilityKey =
     shop.apiBusinessId != null && serviceId != null
-      ? `${shop.apiBusinessId}:${serviceId}:${formatBookingDate(selectedDate)}:${selectedStaffId ?? ""}:${availabilityRefreshKey}`
+      ? `${shop.apiBusinessId}:${serviceId}:${selectedBranchId ?? ""}:${formatBookingDate(selectedDate)}:${selectedStaffId ?? ""}:${availabilityRefreshKey}`
       : null;
   const currentAvailabilityState =
     availabilityKey != null && apiAvailabilityState?.key === availabilityKey
@@ -183,22 +175,31 @@ export default function BookingPage({
 
     let cancelled = false;
 
-    void fetchBookingApiContext(shop.apiBusinessId).then((context) => {
-      if (cancelled) return;
-      setApiContext(context);
-      setApiContextBusinessId(shop.apiBusinessId!);
-      const preferredBranchId = shop.apiBranchId;
-      const liveBranchId = context.branches.some((branch) => branch.id === preferredBranchId)
-        ? preferredBranchId
-        : (context.branches[0]?.id ?? null);
-      setSelectedBranchId(liveBranchId ?? null);
-      setSelectedStaffId(null);
-    });
+    void fetchBookingApiContext(shop.apiBusinessId).then(
+      (context) => {
+        if (cancelled) return;
+        setApiContext(context);
+        setApiContextBusinessId(shop.apiBusinessId!);
+        const preferredBranchId = shop.apiBranchId;
+        const liveBranchId = context.branches.some((branch) => branch.id === preferredBranchId)
+          ? preferredBranchId
+          : (context.branches[0]?.id ?? null);
+        setSelectedBranchId(liveBranchId ?? null);
+        setSelectedStaffId(null);
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        console.error("Не удалось загрузить параметры бронирования:", error);
+        setSlotConflictMessage(
+          error instanceof Error ? error.message : t("booking.errorSlotUnavailable"),
+        );
+      },
+    );
 
     return () => {
       cancelled = true;
     };
-  }, [shop.apiBusinessId, shop.apiBranchId]);
+  }, [shop.apiBusinessId, shop.apiBranchId, t]);
 
   useEffect(() => {
     if (!shop.apiBusinessId || serviceId == null || availableDatesKey == null) {
@@ -207,7 +208,7 @@ export default function BookingPage({
 
     let cancelled = false;
     void servicesApi
-      .availableDates(serviceId, 60, selectedStaffId ?? undefined)
+      .availableDates(serviceId, 14, selectedStaffId ?? undefined)
       .then(
         (dates: ServiceAvailableDate[]) => {
           if (cancelled) return;
@@ -231,16 +232,33 @@ export default function BookingPage({
   }, [shop.apiBusinessId, shop.services, selectedServiceIds, selectedStaffId, availableDatesKey, serviceId, t]);
 
   useEffect(() => {
-    if (serviceId == null || availabilityKey == null) {
+    if (
+      shop.apiBusinessId == null ||
+      serviceId == null ||
+      selectedBranchId == null ||
+      availabilityKey == null
+    ) {
       return;
     }
 
     let cancelled = false;
-    void servicesApi
-      .availability(serviceId, formatBookingDate(selectedDate), selectedStaffId ?? undefined)
+    void fetchAvailableSlots({
+      businessId: shop.apiBusinessId,
+      serviceId,
+      branchId: selectedBranchId,
+      date: formatBookingDate(selectedDate),
+      staffId: selectedStaffId,
+    })
       .then((availability) => {
         if (!cancelled) {
-          setApiAvailabilityState({ key: availabilityKey, availability, status: "ready" });
+          setApiAvailabilityState({
+            key: availabilityKey,
+            availability: {
+              slots: availability.slots,
+              capacity: availability.capacity,
+            },
+            status: "ready",
+          });
           setSlotConflictMessage(null);
         }
       })
@@ -266,6 +284,8 @@ export default function BookingPage({
     availabilityKey,
     selectedDate,
     selectedStaffId,
+    selectedBranchId,
+    shop.apiBusinessId,
     t,
   ]);
 
@@ -284,11 +304,9 @@ export default function BookingPage({
 
   const isDateDisabled = useCallback(
     (date: Date) =>
-      isBookingDateUnavailable(currentApiContext, date) ||
-      (shop.apiBusinessId && apiAvailableDates == null) ||
-      (apiAvailableDates != null &&
-        !apiAvailableDates.has(formatBookingDate(date))),
-    [currentApiContext, apiAvailableDates, shop.apiBusinessId],
+      apiAvailableDates == null ||
+      !apiAvailableDates.has(formatBookingDate(date)),
+    [apiAvailableDates],
   );
 
   const allTimeSlots = useMemo(
@@ -386,20 +404,17 @@ export default function BookingPage({
       20,
   );
   const guestCount = Math.min(guests, maxGuests);
-  const bookingPrice = useMemo(() => basePrice * guestCount, [basePrice, guestCount]);
+  const bookingPrice = basePrice;
 
   const baseLineItems = useMemo<OrderLineItem[]>(
-    () => [
-      {
-        id: "booking-base",
-        name:
-          guestCount > 1
-            ? t("booking.guestSuffix", { name: baseBookingName, guests: guestCount })
-            : baseBookingName,
-        price: bookingPrice,
-      },
-    ],
-    [baseBookingName, bookingPrice, guestCount, t],
+    () => selectedServices.length > 0
+      ? selectedServices.map((service) => ({
+          id: service.id,
+          name: service.title,
+          price: service.priceFrom,
+        }))
+      : [{ id: "booking-base", name: baseBookingName, price: bookingPrice }],
+    [baseBookingName, bookingPrice, selectedServices],
   );
 
   const availableExtras = useMemo<BookingExtra[]>(
@@ -557,7 +572,6 @@ export default function BookingPage({
 
   function completeBookingFlow() {
     setShowExtrasModal(false);
-    setShowCardModal(false);
     setStep(3);
     showToast(
       t("booking.successToast"),
@@ -568,7 +582,6 @@ export default function BookingPage({
   function handleSlotConflict() {
     setAvailabilityRefreshKey((key) => key + 1);
     setShowExtrasModal(false);
-    setShowCardModal(false);
     setLockedSchedule(null);
     setSubmitAttempted(false);
     setStep(1);
@@ -576,7 +589,7 @@ export default function BookingPage({
     showToast(t("booking.errorSlotUnavailable"), t("booking.errorSlotUnavailableHint"));
   }
 
-  async function finishExtras(isPaymentConfirmed = false) {
+  async function finishExtras() {
     if (!token) {
       alert(t("booking.errorLoginRequired"));
       return;
@@ -584,11 +597,6 @@ export default function BookingPage({
 
     if (!shop.apiBusinessId) {
       showToast(t("booking.errorBusinessUnavailable"));
-      return;
-    }
-
-    if (paymentMethod === "card" && !isPaymentConfirmed) {
-      setShowCardModal(true);
       return;
     }
 
@@ -618,7 +626,7 @@ export default function BookingPage({
         return;
       }
 
-      const { serviceId, branchId, durationMin } = resolved.targets;
+      const { serviceId, branchId } = resolved.targets;
       if (
         !selectedAvailabilitySlot?.is_available ||
         selectedAvailabilitySlot.available_spots < guestCount
@@ -635,29 +643,35 @@ export default function BookingPage({
         return;
       }
 
-      const orderItems: BookingOrderItem[] = [
-        {
-          id: "service",
-          name: baseBookingName,
-          price: bookingPrice,
-          quantity: 1,
-          kind: "service",
-        },
-        ...Object.entries(extraQuantities).flatMap(([id, quantity]) => {
+      const orderItems: BookingItemCreate[] = [];
+      const selectedServiceIdsForOrder = new Set<number>();
+      for (const service of selectedServices) {
+        const id = Number(service.id);
+        if (!Number.isSafeInteger(id) || id <= 0) {
+          throw new Error("Не удалось определить услугу для бронирования.");
+        }
+        selectedServiceIdsForOrder.add(id);
+        orderItems.push({ id, kind: "service", quantity: 1 });
+      }
+      if (!selectedServiceIdsForOrder.has(serviceId)) {
+        orderItems.unshift({ id: serviceId, kind: "service", quantity: 1 });
+      }
+      orderItems.push(...Object.entries(extraQuantities).flatMap(([id, quantity]) => {
           if (quantity <= 0) return [];
           const extra = availableExtras.find((item) => item.id === id);
           if (!extra) return [];
+          const productId = Number(id);
+          if (!Number.isSafeInteger(productId) || productId <= 0) {
+            throw new Error("Не удалось определить товар для бронирования.");
+          }
           return [
             {
-              id,
-              name: getExtraLabels(extra).name,
-              price: extra.price,
+              id: productId,
+              kind: "product" as const,
               quantity,
-              kind: "extra" as const,
             },
           ];
-        }),
-      ];
+        }));
 
       if (form.phone.trim() !== profilePhone.trim()) {
         await savePhone(form.phone);
@@ -667,14 +681,12 @@ export default function BookingPage({
         business_id: shop.apiBusinessId,
         service_id: serviceId,
         branch_id: branchId,
+        ...(selectedStaffId != null ? { staff_id: selectedStaffId } : {}),
         booking_date: bookingDate,
         start_time: activeTime,
-        end_time:
-          selectedAvailabilitySlot?.end_time ??
-          addMinutesToTime(activeTime, durationMin),
+        end_time: selectedAvailabilitySlot.end_time,
         guest_count: guestCount,
         items: orderItems,
-        total_price: total,
       });
 
       completeBookingFlow();
@@ -977,18 +989,16 @@ export default function BookingPage({
     );
   }
 
-  function renderPaymentSummary(
+  function renderOrderSummary(
     items: OrderLineItem[],
     itemsTotal: number,
-    payButtonText: string,
-    onPay?: () => void,
-    paid = false,
-    showPaymentMethods = true,
+    buttonText: string,
+    onContinue: () => void,
     title = t("booking.paymentTitle"),
   ) {
     return (
-      <aside className={s.payCard} data-testid="booking-payment-panel">
-        <h2 className={s.payTitle}>{title}</h2>
+      <aside className={s.orderSummary} data-testid="booking-order-summary">
+        <h2 className={s.orderSummaryTitle}>{title}</h2>
 
         <div className={s.orderItems} data-testid="booking-order-items">
           {items.map((item) => (
@@ -1008,45 +1018,11 @@ export default function BookingPage({
           </span>
         </div>
 
-        {!paid && showPaymentMethods && (
-          <div
-            className={s.payMethods}
-            role="radiogroup"
-            aria-label={t("booking.paymentMethodAria")}
-          >
-            {[
-              { id: "card", title: t("booking.payCard"), sub: t("booking.payCardSub") },
-              { id: "click", title: t("booking.payClick"), sub: t("booking.payClickSub") },
-              { id: "other", title: t("booking.payOther"), sub: t("booking.payOtherSub") },
-            ].map((method) => (
-              <label
-                key={method.id}
-                className={`${s.payOption} ${paymentMethod === method.id ? s.payOptionSelected : ""
-                  }`}
-                data-testid={`booking-payment-${method.id}`}
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  value={method.id}
-                  checked={paymentMethod === method.id}
-                  onChange={() => setPaymentMethod(method.id)}
-                />
-                <div>
-                  <div className={s.payOptionTitle}>{method.title}</div>
-                  <div className={s.payOptionSub}>{method.sub}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        )}
-
         <Button
-          text={payButtonText}
-          className={paid ? s.paidBtn : s.payBtn}
-          onClick={onPay}
-          disabled={paid}
-          data-testid="booking-pay-button"
+          text={buttonText}
+          className={s.continueDetailsBtn}
+          onClick={onContinue}
+          data-testid="booking-continue-details-button"
         />
       </aside>
     );
@@ -1239,13 +1215,11 @@ export default function BookingPage({
           </div>
         </form>
 
-        {renderPaymentSummary(
+        {renderOrderSummary(
           allLineItems,
           total,
           t("common.continue"),
           handleContinueFromDetails,
-          false,
-          false,
           t("booking.orderSummary"),
         )}
       </div>
@@ -1383,27 +1357,6 @@ export default function BookingPage({
           onSkip={finishExtras}
           onContinue={finishExtras}
           isSubmitting={isSubmitting}
-        />
-      )}
-
-      {showCardModal && (
-        <CardPaymentModal
-          amountText={formatPrice(total)}
-          onClose={() => setShowCardModal(false)}
-          onPay={async () => {
-            setShowCardModal(false);
-            try {
-              await finishExtras(true);
-              addLocalNotification({
-                id: `local-payment-${shop.apiBusinessId ?? shop.id}-${Date.now()}`,
-                type: "payment",
-                title: "Оплата бронирования подтверждена",
-                description: `Платёж на ${formatPrice(total)} сум успешно выполнен`,
-              });
-            } catch {
-              return;
-            }
-          }}
         />
       )}
 

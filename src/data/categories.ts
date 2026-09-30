@@ -12,4 +12,5 @@ export const categories: Category[] = [
   { id: 9, title: "Комп клуб", color: "#c88aff", iconColor: "#5b16bc", count: 0 },
   { id: 10, title: "Клининг", color: "#ffb1b1", iconColor: "#db0000", count: 0 },
   { id: 11, title: "Санатории", color: "#adffb5", iconColor: "#00a52e", count: 0 },
+  { id: 12, title: "Другое", color: "#e5e7eb", iconColor: "#4b5563", count: 0 },
 ];

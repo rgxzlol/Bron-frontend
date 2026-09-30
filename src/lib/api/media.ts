@@ -2,7 +2,12 @@ import { REMOTE_API_URL } from "@/config/api";
 
 const MEDIA_ORIGIN = REMOTE_API_URL.replace(/\/api\/?$/, "");
 const MAX_API_IMAGE_SIZE = 5 * 1024 * 1024;
-const API_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const API_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
 
 export function assertApiImage(image: File | Blob) {
   if (!API_IMAGE_TYPES.has(image.type.toLowerCase())) {

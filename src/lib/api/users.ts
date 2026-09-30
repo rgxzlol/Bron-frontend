@@ -39,53 +39,25 @@ export const usersApi = {
       token,
     }),
 
-  getNotificationSettings: async (token?: string) => {
-    try {
-      return await apiRequest<UserNotificationSettings>(
-        "/users/profile/notifications",
-        { ...NOTIFICATION_REQUEST_OPTIONS, token },
-      );
-    } catch {
-      try {
-        const profile = await apiRequest<UserProfile>("/users/profile", {
-          auth: true,
-          token,
-        });
-        return profile.notification_settings ?? null;
-      } catch {
-        return null;
-      }
-    }
-  },
+  getNotificationSettings: (token?: string) =>
+    apiRequest<UserNotificationSettings>(
+      "/users/profile/notifications",
+      { ...NOTIFICATION_REQUEST_OPTIONS, token },
+    ),
 
   updateNotificationSettings: async (
-    body: UserNotificationSettings,
+    body: Partial<UserNotificationSettings>,
     token?: string,
-  ) => {
-    try {
-      return await apiRequest<UserNotificationSettings>(
-        "/users/profile/notifications",
-        {
-          method: "PUT",
-          body,
-          ...NOTIFICATION_REQUEST_OPTIONS,
-          token,
-        },
-      );
-    } catch {
-      try {
-        await apiRequest<UserProfile>("/users/profile", {
-          method: "PUT",
-          body: { notification_settings: body },
-          auth: true,
-          token,
-        });
-      } catch {
-        // Local persisted preferences remain the source of truth.
-      }
-      return body;
-    }
-  },
+  ) =>
+    apiRequest<UserNotificationSettings>(
+      "/users/profile/notifications",
+      {
+        method: "PUT",
+        body,
+        ...NOTIFICATION_REQUEST_OPTIONS,
+        token,
+      },
+    ),
 
   deleteProfile: (token?: string) =>
     apiRequest<unknown>("/users/profile", {

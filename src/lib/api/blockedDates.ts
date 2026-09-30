@@ -9,10 +9,18 @@ export const blockedDatesApi = {
   getByBusiness: (businessId: number) =>
     apiRequest<BlockedDate[]>(`/blocked-dates/business/${businessId}`),
 
-  check: (businessId: number, date: string) =>
-    apiRequest<{ is_blocked: boolean }>(
-      `/blocked-dates/check?business_id=${businessId}&date=${encodeURIComponent(date)}`,
-    ),
+  check: (businessId: number, date: string) => {
+    const query = new URLSearchParams({
+      business_id: String(businessId),
+      date,
+    });
+    return apiRequest<{
+      business_id: number;
+      date: string;
+      is_blocked: boolean;
+      reason: string | null;
+    }>(`/blocked-dates/check?${query.toString()}`);
+  },
 
   get: (blockedDateId: number) =>
     apiRequest<BlockedDate>(`/blocked-dates/${blockedDateId}`),

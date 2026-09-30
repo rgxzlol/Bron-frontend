@@ -14,6 +14,7 @@ import type {
   BusinessStats,
   BusinessUpdate as ApiBusinessUpdate,
   Booking as ApiBooking,
+  CustomerRating,
   Product as ApiProduct,
   Service as ApiService,
   WorkingHours,
@@ -42,7 +43,73 @@ const UI_TO_API_CATEGORY: Record<string, string[]> = {
   "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
   Клининг: ["cleaning", "cleaning_service"],
   Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
+  Другое: ["other", "другое"],
 };
+
+export type BookingRatingStats = {
+  rating: number | null;
+  evaluatedBookingsCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  noShowCount: number;
+  available: boolean;
+};
+
+export function getCustomerDisplayName(
+  customer: Pick<CustomerRating, "username" | "full_name">,
+  customerId: number,
+) {
+  const fullName = customer.full_name?.trim();
+  if (fullName) return fullName;
+
+  const username = customer.username.trim();
+  if (username && !/^\+?[\d\s()-]+$/.test(username)) return username;
+
+  return `Клиент #${customerId}`;
+}
+
+export function apiCustomerRatingToStats(
+  response: CustomerRating,
+): BookingRatingStats {
+  const counts = [
+    response.evaluated_bookings_count,
+    response.on_time_count,
+    response.late_count,
+    response.no_show_count,
+  ];
+  const validCounts = counts.every(
+    (count) => Number.isInteger(count) && (count ?? -1) >= 0,
+  );
+  const evaluatedBookingsCount = response.evaluated_bookings_count ?? 0;
+  const validBookingRating =
+    evaluatedBookingsCount === 0
+      ? response.booking_rating == null
+      : typeof response.booking_rating === "number" &&
+        Number.isFinite(response.booking_rating) &&
+        response.booking_rating >= 0 &&
+        response.booking_rating <= 5;
+  const available =
+    validCounts &&
+    (response.on_time_count ?? 0) +
+      (response.late_count ?? 0) +
+      (response.no_show_count ?? 0) ===
+      evaluatedBookingsCount &&
+    validBookingRating;
+
+  return {
+    rating:
+      available &&
+      evaluatedBookingsCount > 0 &&
+      typeof response.booking_rating === "number"
+        ? response.booking_rating
+        : null,
+    evaluatedBookingsCount,
+    onTimeCount: response.on_time_count ?? 0,
+    lateCount: response.late_count ?? 0,
+    noShowCount: response.no_show_count ?? 0,
+    available,
+  };
+}
 
 const API_TO_UI_CATEGORY: Record<string, string> = {
   beauty_salon: "Салон красоты",
@@ -128,7 +195,8 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   образование: "Учебные заведения",
   развлечения: "Кинотеатры",
   еда: "Рестораны",
-  другое: "Кинотеатры",
+  other: "Другое",
+  другое: "Другое",
 };
 
 export function uiCategoryToApi(category: string) {
@@ -300,6 +368,7 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     type: "service",
     duration: service.duration,
     guestCapacity: service.capacity ?? 1,
+    availability: service.availability ?? [],
   };
 }
 
@@ -317,6 +386,7 @@ export function apiServiceListItemToBusinessService(
     type: "service",
     duration: service.duration,
     guestCapacity: service.capacity ?? 1,
+    availability: service.availability ?? [],
   };
 }
 
@@ -381,11 +451,6 @@ export function apiBusinessToSavedBusiness(
   const galleryUrls = (extras?.galleryUrls ?? []).map((url) => resolveMediaUrl(url)).filter(
     (url): url is string => Boolean(url),
   );
-  const photoUrls = collectBusinessPhotoUrls({
-    profilePhoto: resolveMediaUrl(business.logo),
-    gallery: galleryUrls,
-    services: mappedServices,
-  });
   const businessApprovalStatus = business.status?.toLowerCase();
 
   return {
@@ -405,7 +470,7 @@ export function apiBusinessToSavedBusiness(
     website: business.website ?? "",
     phone: business.phone,
     address: business.address,
-    gallery: photosToGallerySlots(photoUrls),
+    gallery: photosToGallerySlots(galleryUrls, true),
     schedule: extras?.schedule ?? DEFAULT_SCHEDULE.map((day) => ({ ...day })),
     lat: coords.lat,
     lng: coords.lng,
@@ -416,29 +481,58 @@ export function apiBusinessToSavedBusiness(
 }
 
 function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
-  if (status === "approved" || status === "accepted" || status === "waiting") {
+  const normalizedStatus = status.trim().toLowerCase();
+  if (
+    normalizedStatus === "approved" ||
+    normalizedStatus === "accepted" ||
+    normalizedStatus === "confirmed" ||
+    normalizedStatus === "waiting"
+  ) {
     return "accepted";
   }
-  if (status === "cancelled" || status === "rejected") return "cancelled";
+  if (normalizedStatus === "cancelled" || normalizedStatus === "rejected") {
+    return "cancelled";
+  }
   return "pending";
 }
 
 export function apiBookingToBusinessBookingRequest(
   booking: ApiBooking,
   serviceName = "Услуга",
-  customerName = "Клиент",
+  customer: {
+    name?: string;
+    avatar?: string | null;
+    bookingRating?: number | null;
+    evaluatedBookingsCount?: number;
+    onTimeCount?: number;
+    lateCount?: number;
+    noShowCount?: number;
+    ratingStatsAvailable?: boolean;
+  } = {},
 ): BusinessBookingRequest {
   return {
     id: String(booking.id),
     customerId: booking.user_id,
+    customerAvatar: resolveMediaUrl(customer.avatar),
+    customerRating: customer.bookingRating,
+    customerEvaluatedBookingsCount: customer.evaluatedBookingsCount,
+    customerOnTimeCount: customer.onTimeCount,
+    customerLateCount: customer.lateCount,
+    customerNoShowCount: customer.noShowCount,
+    customerRatingStatsAvailable: customer.ratingStatsAvailable,
     bookingId: booking.id,
     bookingDate: booking.booking_date,
+    endTime: booking.end_time.slice(0, 5),
     time: booking.start_time.slice(0, 5),
-    customerName,
+    customerName: customer.name?.trim() || `Клиент #${booking.user_id}`,
     serviceName,
     price: booking.total_price,
+    items: booking.items ?? [],
     status: apiBookingStatusToUi(booking.status),
-    attendanceStatus: booking.attendance_status,
+    attendanceStatus:
+      booking.attendance_status === "visited"
+        ? "on_time"
+        : booking.attendance_status,
     extraWaitMinutes: booking.extra_wait_minutes,
   };
 }

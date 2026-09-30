@@ -69,7 +69,7 @@ export const bookingsApi = {
       query.set("staff_id", String(params.staff_id));
     }
 
-    return apiRequest<string[] | BookingAvailableSlotsResponse>(
+    return apiRequest<BookingAvailableSlotsResponse>(
       `/bookings/available-slots?${query.toString()}`,
     );
   },

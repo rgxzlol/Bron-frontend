@@ -14,8 +14,9 @@ import {
 } from "@/store/business.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
+import { isBusinessBookingVisible } from "@/lib/booking/classify";
 import { useToastStore } from "@/store/toast.store";
-import CustomerReviewModal from "@/components/features/review/CustomerReviewModal";
+import { businessesApi } from "@/lib/api";
 import Image from "next/image";
 import { useEffect, useId, useMemo, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
@@ -45,6 +46,15 @@ const inputClass =
 
 const MAX_DESC = 120;
 
+function getCustomerInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase() ?? "")
+    .join("");
+}
+
 const TIME_SLOTS = [
   "10:00",
   "11:00",
@@ -62,6 +72,11 @@ const TIME_SLOTS = [
 
 const SERVICE_DURATION_OPTIONS = [30, 60, 90, 120] as const;
 
+function isAvailabilityTimeValid(time: string, durationMinutes: number) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes + durationMinutes <= 23 * 60 + 59;
+}
+
 const RU_MONTHS = [
   "Январь",
   "Февраль",
@@ -78,21 +93,6 @@ const RU_MONTHS = [
 ];
 
 const RU_WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"];
-
-const RU_MONTHS_GEN = [
-  "января",
-  "февраля",
-  "марта",
-  "апреля",
-  "мая",
-  "июня",
-  "июля",
-  "августа",
-  "сентября",
-  "октября",
-  "ноября",
-  "декабря",
-];
 
 /* ---------- icons ---------- */
 
@@ -129,54 +129,6 @@ function DashboardPinIcon() {
         strokeWidth="2"
       />
       <circle cx="12" cy="11" r="2.5" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function CalendarIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-    >
-      <rect
-        x="3.5"
-        y="5"
-        width="17"
-        height="16"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M3.5 9.5h17M8 3v4M16 3v4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M12 7.5V12l3 2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
@@ -413,7 +365,7 @@ type ServiceFormData = {
   duration?: number;
   guestCapacity: number | null;
   quantity: number | null;
-  dates: Date[];
+  availability?: NonNullable<BusinessService["availability"]>;
 };
 
 const emptyServiceForm = (): ServiceFormData => ({
@@ -424,8 +376,22 @@ const emptyServiceForm = (): ServiceFormData => ({
   photo: null,
   guestCapacity: null,
   quantity: null,
-  dates: [],
+
 });
+
+function parseLocalDate(value: string): Date | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function serviceToFormData(item: BusinessService): ServiceFormData {
   return {
@@ -437,7 +403,6 @@ function serviceToFormData(item: BusinessService): ServiceFormData {
     duration: item.duration,
     guestCapacity: item.guestCapacity ?? null,
     quantity: item.quantity ?? null,
-    dates: [],
   };
 }
 
@@ -836,6 +801,7 @@ function PhotoUploadField({
   testIdPrefix: string;
   onUploadError: (message: string) => void;
 }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const [previewFailed, setPreviewFailed] = useState(false);
   const previewPhoto =
@@ -861,7 +827,7 @@ function PhotoUploadField({
 
   return (
     <div
-      className="flex flex-col gap-[8px]"
+      className="relative flex flex-col gap-[8px]"
       data-testid={`${testIdPrefix}-photo-section`}
     >
       <span className="text-[14px] font-semibold">{label}</span>
@@ -901,6 +867,20 @@ function PhotoUploadField({
           </>
         )}
       </label>
+      {previewPhoto ? (
+        <button
+          type="button"
+          aria-label={`${uploadLabel}: ${t("common.delete")}`}
+          data-testid={`${testIdPrefix}-photo-delete`}
+          onClick={() => {
+            setPreviewFailed(false);
+            onPhotoChange(null);
+          }}
+          className="absolute right-[8px] top-[38px] rounded-full bg-black/65 px-[10px] py-[6px] text-[12px] font-semibold text-white"
+        >
+          {t("common.delete")}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -916,7 +896,7 @@ function AddItemScreen({
   onBack: () => void;
   onSave: (data: ServiceFormData) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const showToast = useToastStore((s) => s.showToast);
   const isService = kind === "service";
   const isEditing = Boolean(initialItem);
@@ -932,16 +912,29 @@ function AddItemScreen({
       requireProductQuantity: !isService,
     });
   const [descriptionLimitHit, setDescriptionLimitHit] = useState(false);
-  const [times, setTimes] = useState<string[]>([]);
+  const [times, setTimes] = useState<string[]>(
+    () => initialItem?.availability?.[0]?.times ?? [],
+  );
   const [dates, setDates] = useState<Date[]>(() => {
-    if (!initialItem || !initialItem.dates || !isService) return [];
-    return initialItem.dates
-      .map((dateStr) => {
-        const date = new Date(dateStr);
-        return isNaN(date.getTime()) ? null : date;
-      })
+    if (!initialItem || !initialItem.availability || !isService) return [];
+    return initialItem.availability
+      .map(({ date }) => parseLocalDate(date))
       .filter((d): d is Date => d !== null);
   });
+  const [availabilityTimesByDate, setAvailabilityTimesByDate] = useState<
+    Record<string, string[]>
+  >(() =>
+    Object.fromEntries(
+      (initialItem?.availability ?? []).map(({ date, times: dateTimes }) => [
+        date,
+        dateTimes,
+      ]),
+    ),
+  );
+  const [activeAvailabilityDate, setActiveAvailabilityDate] = useState(
+    () => initialItem?.availability?.[0]?.date ?? "",
+  );
+  const [customAvailabilityTime, setCustomAvailabilityTime] = useState("");
   const [durationMin, setDurationMin] = useState<number | null>(
     () => initialItem?.duration ?? null,
   );
@@ -949,10 +942,81 @@ function AddItemScreen({
   const [rules, setRules] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  function toggleTime(slot: string) {
-    setTimes((prev) =>
-      prev.includes(slot) ? prev.filter((value) => value !== slot) : [...prev, slot],
+  const selectedDateTimes = activeAvailabilityDate
+    ? availabilityTimesByDate[activeAvailabilityDate] ?? times
+    : times;
+  const availabilityTimeOptions = [
+    ...new Set([...TIME_SLOTS, ...selectedDateTimes]),
+  ].sort();
+
+  function updateDates(nextDates: Date[]) {
+    const nextDateKeys = nextDates.map(formatLocalDate);
+    if (new Set(nextDateKeys).size > 366) {
+      showToast(t("businessForms.dateLabel"), t("businessForms.availabilityDateLimit"));
+      return;
+    }
+    const activeTimes =
+      (activeAvailabilityDate &&
+        availabilityTimesByDate[activeAvailabilityDate]) ||
+      times;
+    setAvailabilityTimesByDate((current) =>
+      Object.fromEntries(
+        nextDateKeys.map((date) => [
+          date,
+          current[date] ?? activeTimes,
+        ]),
+      ),
     );
+    setDates(nextDates);
+    if (!nextDateKeys.includes(activeAvailabilityDate)) {
+      setActiveAvailabilityDate(nextDateKeys[0] ?? "");
+    }
+  }
+
+  function toggleTime(slot: string) {
+    const toggle = (current: string[]) =>
+      current.includes(slot)
+        ? current.filter((value) => value !== slot)
+        : [...current, slot];
+    const currentlySelected = selectedDateTimes.includes(slot);
+    if (!currentlySelected && !isAvailabilityTimeValid(slot, durationMin ?? 60)) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeOutOfRange"));
+      return;
+    }
+    if (activeAvailabilityDate && dates.some((date) => formatLocalDate(date) === activeAvailabilityDate)) {
+      setAvailabilityTimesByDate((current) => ({
+        ...current,
+        [activeAvailabilityDate]: toggle(
+          current[activeAvailabilityDate] ?? times,
+        ),
+      }));
+      return;
+    }
+    setTimes(toggle);
+  }
+
+  function addCustomAvailabilityTime() {
+    if (!activeAvailabilityDate) return;
+    const currentTimes = selectedDateTimes;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(customAvailabilityTime)) return;
+    if (!isAvailabilityTimeValid(customAvailabilityTime, durationMin ?? 60)) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeOutOfRange"));
+      return;
+    }
+    if (currentTimes.includes(customAvailabilityTime)) {
+      setCustomAvailabilityTime("");
+      return;
+    }
+    if (currentTimes.length >= 288) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeLimit"));
+      return;
+    }
+
+    setAvailabilityTimesByDate((current) => ({
+      ...current,
+      [activeAvailabilityDate]: [...currentTimes, customAvailabilityTime].sort(),
+    }));
+    setCustomAvailabilityTime("");
   }
 
   function formatDurationLabel(minutes: number): string {
@@ -1195,6 +1259,15 @@ function AddItemScreen({
                   <p className="text-[12px] font-semibold text-[var(--text-muted)]">
                     {t("businessForms.freeTimeHint")}
                   </p>
+                  {activeAvailabilityDate ? (
+                    <p className="mt-[3px] text-[12px] text-[var(--accent-fg)]">
+                      {parseLocalDate(activeAvailabilityDate)?.toLocaleDateString(locale, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
@@ -1214,12 +1287,14 @@ function AddItemScreen({
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-[10px]">
-                {TIME_SLOTS.map((slot) => {
-                  const selected = times.includes(slot);
+                {availabilityTimeOptions.map((slot) => {
+                  const selected = selectedDateTimes.includes(slot);
+                  const invalid = !selected && !isAvailabilityTimeValid(slot, durationMin ?? 60);
                   return (
                     <button
                       key={slot}
                       type="button"
+                      disabled={invalid || !activeAvailabilityDate}
                       data-testid={`business-service-time-slot-${slot.replace(":", "-")}`}
                       data-selected={selected ? "true" : "false"}
                       aria-pressed={selected}
@@ -1228,12 +1303,31 @@ function AddItemScreen({
                         selected
                           ? "bg-[#0a6af7] text-white"
                           : "border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
-                      }`}
+                      } ${invalid || !activeAvailabilityDate ? "cursor-not-allowed opacity-40" : ""}`}
                     >
                       {slot}
                     </button>
                   );
                 })}
+              </div>
+              <div className="flex items-center gap-[8px]">
+                <input
+                  type="time"
+                  step={60}
+                  value={customAvailabilityTime}
+                  disabled={!activeAvailabilityDate}
+                  onChange={(event) => setCustomAvailabilityTime(event.target.value)}
+                  aria-label={t("businessForms.availabilityTimePlaceholder")}
+                  className={`${inputClass} min-w-0 py-[10px]`}
+                />
+                <button
+                  type="button"
+                  disabled={!activeAvailabilityDate || !customAvailabilityTime}
+                  onClick={addCustomAvailabilityTime}
+                  className="shrink-0 rounded-[12px] bg-[var(--primary)] px-[14px] py-[10px] text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("businessForms.addTimeSlot")}
+                </button>
               </div>
               <div className="business-service-time-legend" aria-label={t("businessForms.timeLegend")}>
                 <span>
@@ -1253,31 +1347,50 @@ function AddItemScreen({
               </span>
               <CalendarField
                 value={dates}
-                onChange={setDates}
+                onChange={updateDates}
                 prevMonthLabel={t("businessForms.prevMonthAria")}
                 nextMonthLabel={t("businessForms.nextMonthAria")}
               />
               {dates.length > 0 && (
                 <div className="flex flex-wrap gap-[8px] mt-[12px]">
-                  {dates
+                  {[...dates]
                     .sort((a, b) => a.getTime() - b.getTime())
                     .map((date) => {
-                      const formatted = date.toLocaleDateString("ru-RU", {
+                      const formatted = date.toLocaleDateString(locale, {
                         month: "short",
                         day: "numeric",
                       });
+                      const dateKey = formatLocalDate(date);
+                      const isActive = dateKey === activeAvailabilityDate;
                       return (
-                        <button
+                        <div
                           key={date.toISOString()}
-                          type="button"
-                          onClick={() =>
-                            setDates(dates.filter((d) => d.getTime() !== date.getTime()))
-                          }
-                          className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-full bg-[#0a6af7] text-white text-[13px] font-semibold hover:bg-[#0856ce] transition"
+                          className={`inline-flex items-center gap-[6px] rounded-full px-[12px] py-[6px] text-[13px] font-semibold transition ${
+                            isActive
+                              ? "bg-[#0a6af7] text-white"
+                              : "border border-[var(--border-default)] text-[var(--text-primary)]"
+                          }`}
                         >
-                          {formatted}
-                          <span className="text-[16px] leading-none">×</span>
-                        </button>
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => setActiveAvailabilityDate(dateKey)}
+                          >
+                            {formatted}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`${formatted}: ${t("common.delete")}`}
+                            onClick={() =>
+                              updateDates(
+                                dates.filter((selected) => formatLocalDate(selected) !== dateKey),
+                              )
+                            }
+                            className="text-[16px] leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
                       );
                     })}
                 </div>
@@ -1358,7 +1471,13 @@ function AddItemScreen({
                   duration: isService ? durationMin ?? undefined : undefined,
                   guestCapacity: form.guestCapacity ?? 1,
                   quantity: form.quantity ?? 1,
-                  dates,
+                  availability: dates
+                    .map((date) => formatLocalDate(date))
+                    .sort()
+                    .map((date) => ({
+                      date,
+                      times: availabilityTimesByDate[date] ?? times,
+                    })),
                 });
               } finally {
                 setIsSaving(false);
@@ -1491,194 +1610,325 @@ function DeleteItemModal({
 
 /* ---------- booking card (Frame 236) ---------- */
 
-function BookingStatusBadge({
-  status,
-}: {
-  status: BusinessBookingRequest["status"];
-}) {
-  const { t } = useTranslation();
-
-  if (status === "pending") {
-    return (
-      <span
-        className="rounded-full bg-[#fff3e0] px-[12px] py-[5px] text-[12px] font-semibold text-[#ff9500]"
-        data-testid="business-booking-status-pending"
-      >
-        {t("businessDashboard.bookingStatusPending")}
-      </span>
-    );
-  }
-  if (status === "cancelled") {
-    return (
-      <span
-        className="rounded-full bg-[#fde8e8] px-[12px] py-[5px] text-[12px] font-semibold text-[#e02424]"
-        data-testid="business-booking-status-cancelled"
-      >
-        {t("business.cancelled")}
-      </span>
-    );
-  }
-  return (
-    <span
-      className="rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]"
-      data-testid="business-booking-status-confirmed"
-    >
-      {t("businessDashboard.bookingStatusConfirmed")}
-    </span>
-  );
-}
-
-function BookingChip({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
-  return (
-    <span className="flex items-center gap-[6px] rounded-[10px] bg-[var(--bg-surface-muted)] px-[10px] py-[7px] text-[13px] font-semibold text-[var(--text-primary)]">
-      <span className="text-[var(--text-secondary)]">{icon}</span>
-      {text}
-    </span>
-  );
-}
-
 function BookingCard({
   booking,
-  dateLabel,
-  onAccept,
-  onCancel,
+  onStatusChange,
   onAttendance,
-  onReviewCustomer,
 }: {
   booking: BusinessBookingRequest;
-  dateLabel: string;
-  onAccept: () => void;
-  onCancel: () => void;
-  onAttendance: (status: "on_time" | "late" | "no_show") => void;
-  onReviewCustomer: () => void;
+  onStatusChange: (status: "accepted" | "cancelled") => Promise<void>;
+  onAttendance: (status: "on_time" | "late" | "no_show") => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [attendanceSavingStatus, setAttendanceSavingStatus] = useState<
+    "on_time" | "late" | "no_show" | null
+  >(null);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
   const isConfirmed =
     booking.status === "accepted" || booking.status === "waiting";
-  const isCompleted =
-    Boolean(booking.bookingDate) &&
-    new Date(`${booking.bookingDate}T23:59:59`) < new Date();
-
+  const orderPanelId = useId();
+  const items = booking.items ?? [];
+  const orderItemCount = items.length
+    ? items.reduce((total, item) => total + item.quantity, 0)
+    : 1;
   return (
     <div
-      className="flex flex-col gap-[14px] rounded-[18px] bg-[var(--bg-surface)] p-[16px]"
+      className="flex flex-col gap-[8px] rounded-[16px] bg-[var(--bg-surface-muted)] p-[10px]"
       data-testid={`business-booking-card-${booking.id}`}
     >
-      <div className="flex items-start gap-[10px]">
-        <div className="relative h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
-          <Image
-            src={assets.profile.avatar}
-            alt=""
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
+      <div className="grid min-w-0 gap-[8px] xl:grid-cols-[minmax(245px,1.1fr)_minmax(120px,1fr)_auto_minmax(270px,1.2fr)] xl:items-center">
+        <div className="flex min-w-0 items-center gap-[8px]">
+          <span className="shrink-0 rounded-[10px] px-[6px] py-[8px] text-[13px] font-bold text-[var(--text-primary)]">
+            {booking.time}
+          </span>
+          <div className="flex min-w-0 flex-1 items-center gap-[8px] rounded-[12px] bg-[var(--bg-surface)] px-[10px] py-[7px]">
+            <div className="relative h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
+              {booking.customerAvatar ? (
+                <Image
+                  src={booking.customerAvatar}
+                  alt=""
+                  fill
+                  sizes="34px"
+                  className="object-cover"
+                />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[var(--text-secondary)]">
+                  {getCustomerInitials(booking.customerName)}
+                </span>
+              )}
+            </div>
+            <p
+              className="min-w-0 flex-1 truncate text-[13px] font-bold text-[var(--text-primary)]"
+              data-testid={`business-booking-customer-${booking.id}`}
+            >
+              {booking.customerName}
+            </p>
+            <div
+              className="flex shrink-0 flex-col items-center leading-none"
+              aria-label={
+                booking.customerRatingStatsAvailable &&
+                (booking.customerEvaluatedBookingsCount ?? 0) > 0 &&
+                booking.customerRating != null
+                  ? t("businessDashboard.customerRating", {
+                      rating: booking.customerRating.toFixed(2),
+                      count: booking.customerEvaluatedBookingsCount ?? 0,
+                    })
+                  : booking.customerRatingStatsAvailable
+                    ? t("profile.noRating")
+                    : t("profile.ratingUnavailable")
+              }
+              data-testid={`business-booking-customer-rating-${booking.id}`}
+            >
+              <span className="flex items-center justify-center gap-[3px] text-[12px] font-semibold leading-none text-[var(--text-primary)]">
+                <Image
+                  src={assets.profile.leftBarg}
+                  alt=""
+                  width={8}
+                  height={14}
+                  data-theme-invert
+                />
+                <span>
+                  {booking.customerRatingStatsAvailable &&
+                  (booking.customerEvaluatedBookingsCount ?? 0) > 0 &&
+                  booking.customerRating != null
+                    ? booking.customerRating.toFixed(2)
+                    : "—"}
+                </span>
+                <Image
+                  src={assets.profile.rightBarg}
+                  alt=""
+                  width={8}
+                  height={14}
+                  data-theme-invert
+                />
+              </span>
+              <span className="mt-[3px] whitespace-nowrap text-[9px] text-[var(--text-muted)]">
+                {booking.customerRatingStatsAvailable
+                  ? booking.customerEvaluatedBookingsCount
+                    ? t("profile.ratedBookingsCount", {
+                        count: booking.customerEvaluatedBookingsCount,
+                      })
+                    : t("profile.noRating")
+                  : t("profile.ratingUnavailable")}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className="truncate text-[15px] font-bold"
-            data-testid={`business-booking-customer-${booking.id}`}
-          >
-            {booking.customerName}
-          </p>
-          <p className="truncate text-[13px] text-[var(--text-muted)]">
-            {booking.serviceName}
-          </p>
-        </div>
-        <BookingStatusBadge status={booking.status} />
-      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-[8px]">
-        <div className="flex flex-wrap items-center gap-[8px]">
-          <BookingChip icon={<ClockIcon size={15} />} text={booking.time} />
-          <BookingChip icon={<CalendarIcon size={15} />} text={dateLabel} />
-        </div>
-        <span
-          className="text-[15px] font-bold"
-          data-testid={`business-booking-price-${booking.id}`}
-        >
+        <p className="min-w-0 px-[4px] text-[13px] font-semibold leading-tight text-[var(--text-secondary)]">
+          {booking.serviceName}
+        </p>
+
+        <span className="shrink-0 px-[4px] text-[13px] font-bold text-[var(--text-primary)] xl:text-right">
           {t("businessDashboard.bookingPrice", {
             price: `${formatPrice(booking.price)} ${t("businessForms.currencySum")}`,
           })}
         </span>
-      </div>
 
-      {booking.status === "pending" && (
-        <div className="flex gap-[10px]">
-          <button
-            type="button"
-            data-testid={`business-booking-cancel-${booking.id}`}
-            onClick={onCancel}
-            className="flex-1 rounded-[12px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[12px] text-[14px] font-semibold text-[var(--text-primary)]"
-          >
-            {t("business.cancelBooking")}
-          </button>
-          <button
-            type="button"
-            data-testid={`business-booking-accept-${booking.id}`}
-            onClick={onAccept}
-            className="flex-1 rounded-[12px] bg-[#0a6af7] py-[12px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce]"
-          >
-            {t("business.acceptBooking")}
-          </button>
-        </div>
-      )}
-
-      {isConfirmed && (
-        <>
-          <div
-            className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[var(--accent-fg)]"
-            data-testid={`business-booking-accepted-${booking.id}`}
-          >
-            {t("business.accepted")}
-          </div>
-          {isCompleted && (
-            <>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  ["on_time", "businessDashboard.attendanceOnTime"],
-                  ["late", "businessDashboard.attendanceLate"],
-                  ["no_show", "businessDashboard.attendanceNoShow"],
-                ] as const).map(([status, labelKey]) => (
+        <div className="flex min-w-0 items-center gap-[8px]">
+          {isConfirmed ? (
+            <div className="grid min-w-0 flex-1 grid-cols-3 gap-[7px]">
+              {([
+                ["no_show", "businessDashboard.attendanceNoShow", "bg-[#FFE9E8]/80 text-[#E92026]", "bg-[#FFE9E8]/50 text-[#E92026]"],
+                ["late", "businessDashboard.attendanceLate", "bg-[#FFF3E3]/80 text-[#EC8009]", "bg-[#FFF3E3]/50 text-[#EC8009]"],
+                ["on_time", "businessDashboard.attendanceOnTime", "bg-[#E7F8EF]/80 text-[#00BD08]", "bg-[#E7F8EF]/50 text-[#00BD08]"],
+              ] as const).map(([status, labelKey, baseClass, selectedClass]) => {
+                const selected = booking.attendanceStatus === status;
+                return (
                   <button
                     key={status}
                     type="button"
-                    onClick={() => onAttendance(status)}
-                    disabled={booking.attendanceStatus === status}
-                    className="rounded-[10px] border border-[var(--border-default)] px-2 py-2 text-[12px] font-semibold text-[var(--text-primary)] disabled:border-[#0a6af7] disabled:bg-[#eef4ff] disabled:text-[#0a6af7]"
+                    onClick={async () => {
+                      if (attendanceSubmitting) return;
+                      setAttendanceSubmitting(true);
+                      setAttendanceSavingStatus(status);
+                      setAttendanceError(null);
+                      try {
+                        await onAttendance(status);
+                      } catch (error) {
+                        setAttendanceError(
+                          error instanceof Error && error.message.trim()
+                            ? error.message
+                            : t("businessDashboard.attendanceUpdateError"),
+                        );
+                      } finally {
+                        setAttendanceSubmitting(false);
+                        setAttendanceSavingStatus(null);
+                      }
+                    }}
+                    disabled={attendanceSubmitting || selected}
+                    aria-pressed={selected}
+                    className={`whitespace-nowrap rounded-[9px] px-[10px] py-[13px] text-[10px] font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+                      selected ? selectedClass : baseClass
+                    }`}
                     data-testid={`business-booking-attendance-${status}-${booking.id}`}
                   >
-                    {t(labelKey)}
+                    {attendanceSavingStatus === status
+                      ? t("common.loading")
+                      : t(labelKey)}
                   </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={onReviewCustomer}
-                className="rounded-[12px] bg-[#f2b705] py-[12px] text-[14px] font-semibold text-white"
-                data-testid={`business-booking-review-customer-${booking.id}`}
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {booking.customerRatingStatsAvailable ? (
+        <p
+          className="text-[10px] leading-tight text-[var(--text-muted)] xl:pl-[250px]"
+          data-testid={`business-booking-customer-attendance-stats-${booking.id}`}
+        >
+          {t("profile.bookingAttendanceStats", {
+            onTime: booking.customerOnTimeCount ?? 0,
+            late: booking.customerLateCount ?? 0,
+            noShow: booking.customerNoShowCount ?? 0,
+          })}
+        </p>
+      ) : null}
+
+      {booking.status === "pending" ? (
+        <div className="flex gap-[8px]">
+          <button
+            type="button"
+            onClick={async () => {
+              if (statusSubmitting) return;
+              setStatusSubmitting(true);
+              setStatusError(null);
+              try {
+                await onStatusChange("cancelled");
+              } catch (error) {
+                setStatusError(
+                  error instanceof Error && error.message.trim()
+                    ? error.message
+                    : t("businessErrors.itemSaveFailed"),
+                );
+              } finally {
+                setStatusSubmitting(false);
+              }
+            }}
+            disabled={statusSubmitting}
+            className="flex-1 rounded-[9px] bg-[var(--bg-surface)] px-[10px] py-[11px] text-[13px] font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
+            data-testid={`business-booking-reject-${booking.id}`}
+          >
+            {statusSubmitting ? t("common.loading") : t("businessDashboard.rejectBooking")}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (statusSubmitting) return;
+              setStatusSubmitting(true);
+              setStatusError(null);
+              try {
+                await onStatusChange("accepted");
+              } catch (error) {
+                setStatusError(
+                  error instanceof Error && error.message.trim()
+                    ? error.message
+                    : t("businessErrors.itemSaveFailed"),
+                );
+              } finally {
+                setStatusSubmitting(false);
+              }
+            }}
+            disabled={statusSubmitting}
+            className="flex-1 rounded-[9px] bg-[#0a6af7] px-[10px] py-[11px] text-[13px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-wait disabled:opacity-60"
+            data-testid={`business-booking-accept-${booking.id}`}
+          >
+            {statusSubmitting ? t("common.loading") : t("business.acceptBooking")}
+          </button>
+        </div>
+      ) : null}
+
+      {statusError ? (
+        <p
+          className="text-[12px] font-medium text-[#d14343]"
+          role="alert"
+          data-testid={`business-booking-status-error-${booking.id}`}
+        >
+          {statusError}
+        </p>
+      ) : null}
+
+      {attendanceError ? (
+        <p
+          className="text-[12px] font-medium text-[#d14343]"
+          role="alert"
+          data-testid={`business-booking-attendance-error-${booking.id}`}
+        >
+          {attendanceError}
+        </p>
+      ) : null}
+
+      <div className="overflow-hidden rounded-[10px] bg-[var(--bg-surface)]">
+        <button
+          type="button"
+          onClick={() => setIsOrderOpen((open) => !open)}
+          aria-expanded={isOrderOpen}
+          aria-controls={orderPanelId}
+          className="flex w-full items-center justify-between gap-[8px] px-[10px] py-[9px] text-left transition-colors hover:bg-[var(--bg-hover)]"
+          data-testid={`business-booking-order-toggle-${booking.id}`}
+        >
+          <span className="flex min-w-0 items-center gap-[7px]">
+            <Image
+              src={assets.booking.bagIcon}
+              alt=""
+              width={16}
+              height={16}
+              data-theme-invert
+            />
+            <span className="truncate text-[12px] font-bold text-[var(--text-primary)]">
+              {t("bookingsCard.orderComposition")}
+            </span>
+            <span className="shrink-0 text-[12px] font-semibold text-[var(--accent-fg)]">
+              {t("bookingsCard.itemsCount", { count: orderItemCount })}
+            </span>
+          </span>
+          <span
+            className={`text-[var(--text-secondary)] transition-transform ${isOrderOpen ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          >
+            <ChevronDownIcon />
+          </span>
+        </button>
+        {isOrderOpen ? (
+          <ul
+            id={orderPanelId}
+            className="flex flex-col gap-[6px] px-[10px] pb-[9px]"
+            data-testid={`business-booking-order-items-${booking.id}`}
+          >
+            {items.map((item) => (
+              <li
+                key={`${item.kind}-${item.id}`}
+                className="flex items-center justify-between gap-[8px] text-[12px] text-[var(--text-secondary)]"
               >
-                Оценить клиента
-              </button>
-            </>
-          )}
-        </>
-      )}
+                <span className="min-w-0 truncate">
+                  {item.name}
+                  {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                </span>
+                <span className="shrink-0 font-semibold text-[var(--text-primary)]">
+                  {formatPrice(item.price * item.quantity)}{" "}
+                  {t("businessForms.currencySum")}
+                </span>
+              </li>
+            ))}
+            {items.length === 0 ? (
+              <li className="flex items-center justify-between gap-[8px] text-[12px] text-[var(--text-secondary)]">
+                <span className="min-w-0 truncate">{booking.serviceName}</span>
+                <span className="shrink-0 font-semibold text-[var(--text-primary)]">
+                  {formatPrice(booking.price)} {t("businessForms.currencySum")}
+                </span>
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
-}
-
-function formatBookingDateLabel(value?: string) {
-  if (!value) return "";
-  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
-  if (!year || !month || !day) return value;
-  return `${day} ${RU_MONTHS_GEN[month - 1]} ${year}`;
 }
 
 /* ---------- main component ---------- */
@@ -1698,6 +1948,7 @@ export default function BusinessDashboard({
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
   const updateBookingAttendance = useBusinessStore((s) => s.updateBookingAttendance);
+  const updateBusinessViews = useBusinessStore((s) => s.updateBusinessViews);
   const refreshBusinessBookings = useBusinessStore(
     (s) => s.refreshBusinessBookings,
   );
@@ -1715,13 +1966,42 @@ export default function BusinessDashboard({
     };
   }, [businessId, businesses]);
 
+  useEffect(() => {
+    if (!/^\d+$/.test(businessId)) return;
+
+    let cancelled = false;
+    const refreshViews = async () => {
+      try {
+        const currentBusiness = await businessesApi.get(Number(businessId));
+        if (cancelled || currentBusiness.views_count == null) return;
+        updateBusinessViews(businessId, currentBusiness.views_count);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn(`Не удалось обновить просмотры бизнеса ${businessId}:`, error);
+        }
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshViews();
+      }
+    };
+
+    void refreshViews();
+    const intervalId = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [businessId, updateBusinessViews]);
+
   const [view, setView] = useState<View>("servicesStaff");
   const [bookingTab, setBookingTab] = useState<BookingTab>("all");
-  const [customerReviewBooking, setCustomerReviewBooking] =
-    useState<BusinessBookingRequest | null>(null);
-  const [reviewedCustomerBookingIds, setReviewedCustomerBookingIds] = useState<
-    string[]
-  >([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
@@ -1774,13 +2054,19 @@ export default function BusinessDashboard({
   const services = business.services.filter((s) => s.type !== "product");
   const products = business.services.filter((s) => s.type === "product");
 
-  const pendingBookings = business.bookingRequests.filter(
+  const visibleBookings = business.bookingRequests.filter((booking) =>
+    isBusinessBookingVisible({
+      booking_date: booking.bookingDate,
+      end_time: booking.endTime,
+    }),
+  );
+  const pendingBookings = visibleBookings.filter(
     (b) => b.status === "pending",
   );
-  const confirmedBookings = business.bookingRequests.filter(
+  const confirmedBookings = visibleBookings.filter(
     (b) => b.status === "accepted" || b.status === "waiting",
   );
-  const cancelledBookings = business.bookingRequests.filter(
+  const cancelledBookings = visibleBookings.filter(
     (b) => b.status === "cancelled",
   );
 
@@ -1805,11 +2091,7 @@ export default function BusinessDashboard({
         duration: data.duration,
         guestCapacity: data.guestCapacity ?? undefined,
         type: "service",
-        dates: data.dates.length > 0 
-          ? data.dates
-              .sort((a, b) => a.getTime() - b.getTime())
-              .map((d) => d.toISOString().split("T")[0])
-          : undefined,
+        availability: data.availability ?? [],
       });
       if (nextId !== businessId) {
         onBusinessIdChange?.(nextId);
@@ -1880,22 +2162,19 @@ export default function BusinessDashboard({
           : { quantity: data.quantity ?? undefined }),
         ...(editingItem.type === "service"
           ? {
-              dates:
-                data.dates.length > 0
-                  ? data.dates
-                      .sort((a, b) => a.getTime() - b.getTime())
-                      .map((d) => d.toISOString().split("T")[0])
-                  : undefined,
+              availability: data.availability ?? [],
             }
           : {}),
       });
       closeEditItem();
-    } catch {
+    } catch (error) {
       showToast(
         editingItem.type === "product"
           ? t("businessForms.editProductTitle")
           : t("businessForms.editServiceTitle"),
-        t("businessErrors.saveFailed"),
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : t("businessErrors.saveFailed"),
       );
     }
   }
@@ -1916,9 +2195,9 @@ export default function BusinessDashboard({
               ? t("businessDashboard.typeService")
               : t("businessDashboard.typeProduct")}
           </p>
-          {isService && item.dates && item.dates.length > 0 && (
+          {isService && item.availability && item.availability.length > 0 && (
             <p className="mt-[4px] text-[11px] text-[#0a6af7] font-medium">
-              {t("businessForms.dateLabel")}: {item.dates.length} {item.dates.length === 1 ? "дата" : "даты"}
+              {t("businessForms.dateLabel")}: {item.availability.length} {item.availability.length === 1 ? "дата" : "даты"}
             </p>
           )}
         </div>
@@ -2033,42 +2312,12 @@ export default function BusinessDashboard({
       <BookingCard
         key={booking.id}
         booking={booking}
-        dateLabel={formatBookingDateLabel(booking.bookingDate)}
-        onAccept={() => {
-          void updateBookingStatus(businessId, booking.id, "accepted").catch(
-            (error) => {
-              const message =
-                error instanceof Error && error.message.trim()
-                  ? error.message
-                  : t("businessErrors.itemSaveFailed");
-              showToast(t("business.acceptBooking"), message);
-            },
-          );
-        }}
-        onCancel={() => {
-          void updateBookingStatus(businessId, booking.id, "cancelled").catch(
-            (error) => {
-              const message =
-                error instanceof Error && error.message.trim()
-                  ? error.message
-                  : t("businessErrors.itemSaveFailed");
-              showToast(t("business.cancelBooking"), message);
-            },
-          );
-        }}
-        onAttendance={(attendanceStatus) => {
-          void updateBookingAttendance(businessId, booking.id, attendanceStatus).catch(
-            (error) => {
-              showToast(
-                t("businessDashboard.bookingsTitle"),
-                error instanceof Error
-                  ? error.message
-                  : t("businessDashboard.attendanceUpdateError"),
-              );
-            },
-          );
-        }}
-        onReviewCustomer={() => setCustomerReviewBooking(booking)}
+        onStatusChange={(status) =>
+          updateBookingStatus(businessId, booking.id, status)
+        }
+        onAttendance={(attendanceStatus) =>
+          updateBookingAttendance(businessId, booking.id, attendanceStatus)
+        }
       />
     );
   }
@@ -2360,7 +2609,7 @@ export default function BusinessDashboard({
               className="mt-[16px] flex flex-col gap-[12px]"
               data-testid="business-bookings-list"
             >
-              {business.bookingRequests.length === 0 && (
+              {visibleBookings.length === 0 && (
                 <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
                   {t("businessDashboard.emptyBookings")}
                 </p>
@@ -2381,7 +2630,7 @@ export default function BusinessDashboard({
               {bookingTab === "pending" && (
                 <>
                   {pendingBookings.length === 0 &&
-                    business.bookingRequests.length > 0 && (
+                    visibleBookings.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
                         {t("businessDashboard.emptyPendingBookings")}
                       </p>
@@ -2392,7 +2641,7 @@ export default function BusinessDashboard({
               {bookingTab === "confirmed" && (
                 <>
                   {confirmedBookings.length === 0 &&
-                    business.bookingRequests.length > 0 && (
+                    visibleBookings.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
                         {t("businessDashboard.emptyConfirmedBookings")}
                       </p>
@@ -2448,12 +2697,14 @@ export default function BusinessDashboard({
               await removeService(businessId, deleteTarget.id);
               setDeleteTarget(null);
               setItemMenuId(null);
-            } catch {
+            } catch (error) {
               showToast(
                 deleteTarget.type === "product"
                   ? t("businessDashboard.deleteProductTitle")
                   : t("businessDashboard.deleteTitle"),
-                t("businessErrors.saveFailed"),
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.saveFailed"),
               );
             }
           }}
@@ -2472,21 +2723,6 @@ export default function BusinessDashboard({
         }}
       />
 
-      {customerReviewBooking &&
-        !reviewedCustomerBookingIds.includes(customerReviewBooking.id) && (
-          <CustomerReviewModal
-            customerId={customerReviewBooking.customerId}
-            bookingId={customerReviewBooking.bookingId}
-            customerName={customerReviewBooking.customerName}
-            onClose={() => setCustomerReviewBooking(null)}
-            onSubmitted={() => {
-              setReviewedCustomerBookingIds((current) => [
-                ...current,
-                customerReviewBooking.id,
-              ]);
-            }}
-          />
-        )}
     </>
   );
 }

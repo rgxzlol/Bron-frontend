@@ -5,8 +5,9 @@ import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useBusinessStore } from "@/store/business.store";
 import { useToastStore } from "@/store/toast.store";
+import { businessesApi } from "@/lib/api/businesses";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 import desktop from "./businessDesktop.module.css";
@@ -38,7 +39,7 @@ function useBusinessCards() {
     const galleryPhotos = business.gallery.filter((photo): photo is string =>
       Boolean(photo),
     );
-    const coverPhoto = galleryPhotos[0] ?? business.profilePhoto;
+    const coverPhoto = business.profilePhoto ?? galleryPhotos[0] ?? null;
 
     return {
       id: business.id,
@@ -63,6 +64,7 @@ export default function MyBusiness({
   const { t } = useTranslation();
   const cards = useBusinessCards();
   const removeBusiness = useBusinessStore((s) => s.removeBusiness);
+  const setBusinessViews = useBusinessStore((s) => s.setBusinessViews);
   const showToast = useToastStore((s) => s.showToast);
   const [openMenu, setOpenMenu] = useState<{
     id: string;
@@ -72,6 +74,49 @@ export default function MyBusiness({
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteTarget = cards.find((business) => business.id === deleteTargetId);
   const [openMenuAnchor, setOpenMenuAnchor] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let refreshing = false;
+
+    async function refreshViews() {
+      if (refreshing) return;
+      refreshing = true;
+
+      try {
+        const businesses = await businessesApi.my();
+        if (cancelled) return;
+
+        businesses.forEach((business) => {
+          if (typeof business.views_count === "number") {
+            setBusinessViews(String(business.id), business.views_count);
+          }
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Не удалось обновить просмотры бизнесов:", error);
+        }
+      } finally {
+        refreshing = false;
+      }
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshViews();
+    };
+
+    void refreshViews();
+    const refreshInterval = window.setInterval(refreshWhenVisible, 15_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [setBusinessViews]);
 
   return (
     <div data-testid="my-business-dashboard">

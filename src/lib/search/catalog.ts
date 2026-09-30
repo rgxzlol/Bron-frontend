@@ -50,7 +50,7 @@ function buildCatalog(): SearchCatalogItem[] {
   const categoryItems = categories.map((category) => ({
     id: `category-${category.id}`,
     title: category.title,
-    description: `${category.count} услуг`,
+    description: "",
     categoryId: category.id,
     keywords: buildKeywords(category.title),
   }));

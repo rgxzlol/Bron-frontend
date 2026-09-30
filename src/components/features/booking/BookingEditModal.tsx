@@ -1,5 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { bookingsApi, servicesApi } from "@/lib/api";
+import type {
+  BookingAvailableSlotsResponse,
+  ServiceAvailableDate,
+} from "@/lib/api/types";
 import Image, { type StaticImageData } from "next/image";
 import DatePicker from "@/components/shared/DatePicker";
 import { useBookingStore } from "@/store/booking.store";
@@ -14,11 +19,14 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { isRemoteShopImage } from "@/lib/business/shopImages";
 
+const EMPTY_AVAILABLE_SLOTS: BookingAvailableSlotsResponse["slots"] = [];
+
 interface BookingEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   hours?: string;
   bookingId?: number;
+  businessId?: number;
   bookingDate?: string;
   bookingTime?: string;
   shopName?: string;
@@ -64,6 +72,7 @@ export const BookingEditModal = ({
   onClose,
   hours = "10:00 - 23:00",
   bookingId,
+  businessId,
   bookingDate,
   bookingTime,
   shopName = "",
@@ -84,15 +93,26 @@ export const BookingEditModal = ({
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [bookingTarget, setBookingTarget] = useState<{
+    businessId: number;
+    serviceId: number;
+    branchId: number;
+    staffId: number | null;
+    guestCount: number;
+  } | null>(null);
+  const [targetStatus, setTargetStatus] = useState<"loading" | "ready" | "error">(
+    bookingId != null && bookingId > 0 ? "loading" : "ready",
+  );
+  const [availableDates, setAvailableDates] = useState<Set<string> | null>(null);
+  const [slotsState, setSlotsState] = useState<{
+    date: string;
+    response: BookingAvailableSlotsResponse;
+  } | null>(null);
 
   const timeGroups = useMemo(() => buildTimeGroupsFromHours(hours), [hours]);
-  const allTimeSlots = useMemo(
+  const fallbackTimeSlots = useMemo(
     () => timeGroups.flatMap((group) => group.slots),
     [timeGroups],
-  );
-  const displaySlots = useMemo(
-    () => allTimeSlots.filter((slot) => slot.endsWith(":00")),
-    [allTimeSlots],
   );
 
   const [requestedTime, setRequestedTime] = useState(() => {
@@ -104,17 +124,132 @@ export const BookingEditModal = ({
     return getDefaultBookingTime(slots, startOfDay(new Date()), new Date());
   });
 
+  useEffect(() => {
+    if (!isOpen || bookingId == null || bookingId <= 0) return;
+
+    let cancelled = false;
+    void bookingsApi.get(bookingId).then(
+      (booking) => {
+        if (cancelled) return;
+        const target = {
+          businessId: booking.business_id || Number(businessId) || 0,
+          serviceId: booking.service_id,
+          branchId: booking.branch_id,
+          staffId: booking.staff_id,
+          guestCount: booking.guest_count,
+        };
+        if (!target.businessId || !target.serviceId || !target.branchId) {
+          setTargetStatus("error");
+          setSaveError("Не удалось определить данные бронирования для переноса.");
+          return;
+        }
+        setBookingTarget(target);
+        setTargetStatus("ready");
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        setTargetStatus("error");
+        setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId, bookingId, isOpen, t]);
+
+  useEffect(() => {
+    if (!isOpen || !bookingTarget) return;
+
+    let cancelled = false;
+    void servicesApi
+      .availableDates(bookingTarget.serviceId, 14, bookingTarget.staffId ?? undefined)
+      .then(
+        (dates: ServiceAvailableDate[]) => {
+          if (cancelled) return;
+          setAvailableDates(
+            new Set(
+              dates
+                .filter((item) => item.free_slots > 0)
+                .map((item) => item.date.slice(0, 10)),
+            ),
+          );
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+          setTargetStatus("error");
+        },
+      );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingTarget, isOpen, t]);
+
+  const selectedDateKey = toIsoDate(selectedDate);
+  const slotsResponse =
+    slotsState?.date === selectedDateKey ? slotsState.response : null;
+  useEffect(() => {
+    if (!isOpen || !bookingTarget) return;
+
+    let cancelled = false;
+    void bookingsApi
+      .availableSlots({
+        business_id: bookingTarget.businessId,
+        service_id: bookingTarget.serviceId,
+        branch_id: bookingTarget.branchId,
+        date: selectedDateKey,
+        staff_id: bookingTarget.staffId ?? undefined,
+      })
+      .then(
+        (response) => {
+          if (!cancelled) setSlotsState({ date: selectedDateKey, response });
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          setSaveError(error instanceof Error ? error.message : t("bookingsEdit.updateError"));
+        },
+      );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingTarget, isOpen, selectedDateKey, t]);
+
+  const apiAvailableSlots = slotsResponse?.slots ?? EMPTY_AVAILABLE_SLOTS;
+  const displaySlots = useMemo(
+    () =>
+      bookingTarget
+        ? apiAvailableSlots.map((slot) => slot.start_time.slice(0, 5))
+        : fallbackTimeSlots.filter((slot) => slot.endsWith(":00")),
+    [apiAvailableSlots, bookingTarget, fallbackTimeSlots],
+  );
   const availableTimeSlots = useMemo(
-    () => getAvailableSlotsForDate(displaySlots, selectedDate, new Date()),
-    [displaySlots, selectedDate],
+    () =>
+      bookingTarget
+        ? apiAvailableSlots
+            .filter(
+              (slot) =>
+                slot.is_available &&
+                slot.available_spots >= (bookingTarget.guestCount || 1),
+            )
+            .map((slot) => slot.start_time.slice(0, 5))
+        : getAvailableSlotsForDate(displaySlots, selectedDate, new Date()),
+    [apiAvailableSlots, bookingTarget, displaySlots, selectedDate],
   );
   const selectedTime =
     availableTimeSlots.length > 0 && !availableTimeSlots.includes(requestedTime)
-      ? getDefaultBookingTime(displaySlots, selectedDate, new Date())
+      ? availableTimeSlots[0]
       : requestedTime;
+  const selectedAvailabilitySlot = apiAvailableSlots.find(
+    (slot) =>
+      slot.start_time.slice(0, 5) === selectedTime &&
+      slot.is_available &&
+      slot.available_spots >= (bookingTarget?.guestCount || 1),
+  );
   const disabledTimeSlots = useMemo(() => {
-    const available = availableTimeSlots;
-    const availableSet = new Set(available);
+    const availableSet = new Set(availableTimeSlots);
     return new Set(displaySlots.filter((slot) => !availableSet.has(slot)));
   }, [availableTimeSlots, displaySlots]);
 
@@ -137,8 +272,16 @@ export const BookingEditModal = ({
       return;
     }
     setIsSaving(true);
+    setSaveError(null);
     try {
-      const endTime = addHourToTime(selectedTime);
+      if (bookingId > 0 && targetStatus !== "ready") {
+        throw new Error("Данные доступности бронирования ещё не загружены.");
+      }
+      if (bookingTarget && !selectedAvailabilitySlot) {
+        throw new Error("Выберите свободный слот для переноса брони.");
+      }
+      const endTime =
+        selectedAvailabilitySlot?.end_time ?? addHourToTime(selectedTime);
       await rescheduleBooking(bookingId, {
         booking_date: toIsoDate(selectedDate),
         start_time: selectedTime,
@@ -267,6 +410,9 @@ export const BookingEditModal = ({
               }}
               today={today}
               minDate={today}
+              isDateDisabled={(date) =>
+                availableDates != null && !availableDates.has(toIsoDate(date))
+              }
             />
           </div>
         ) : null}
@@ -300,7 +446,13 @@ export const BookingEditModal = ({
         <button
           type="button"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={
+            isSaving ||
+            (bookingId != null &&
+              bookingId > 0 &&
+              (targetStatus !== "ready" ||
+                (bookingTarget != null && !selectedAvailabilitySlot)))
+          }
           className="mt-[20px] w-full rounded-[14px] bg-[var(--primary)] py-4 text-[16px] font-semibold text-white transition-colors duration-200 hover:bg-[var(--primary-hover)] active:scale-[0.99] disabled:opacity-60"
           data-testid={
             bookingId != null ? `booking-edit-save-${bookingId}` : "booking-edit-save"

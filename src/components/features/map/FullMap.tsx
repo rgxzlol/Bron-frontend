@@ -5,6 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import Image from "next/image"
 import { servicesApi } from "@/lib/api/services"
+import { productsApi } from "@/lib/api/products"
+import { businessesApi } from "@/lib/api/businesses"
+import { resolveMediaUrl } from "@/lib/api/media"
 import { ShopsType } from "@/types/shops.types"
 import { parsePrice } from "@/lib/formatPrice"
 import { getBusinessCategoryIcon } from "@/lib/business/categoryIcons"
@@ -216,6 +219,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const serviceRequestIdRef = useRef(0)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
+  const [viewsCounts, setViewsCounts] = useState<Record<number, number>>({})
   const [serviceSelectionShop, setServiceSelectionShop] =
     useState<ShopsType | null>(null)
   const showToast = useToastStore((state) => state.showToast)
@@ -240,6 +244,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const businesses = useBusinessStore((s) =>
     Array.isArray(s.businesses) ? s.businesses : [],
   )
+  const updateBusinessViews = useBusinessStore((s) => s.updateBusinessViews)
   const mapFocusBusinessId = useBusinessStore((s) => s.mapFocusBusinessId)
   const clearMapFocus = useBusinessStore((s) => s.clearMapFocus)
   const businessMapKey = businesses
@@ -258,6 +263,64 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const applyCategoryFromNavigation = useMapFilterStore(
     (s) => s.applyCategoryFromNavigation,
   )
+
+  const registerBusinessView = useCallback((shop: ShopsType) => {
+    const businessId = shop.apiBusinessId
+    if (businessId == null) return
+
+    void businessesApi.recordView(businessId).then(
+      ({ views_count }) => {
+        setViewsCounts((current) => ({
+          ...current,
+          [businessId]: Math.max(current[businessId] ?? 0, views_count),
+        }))
+        updateBusinessViews(String(businessId), views_count)
+      },
+      (error: unknown) => {
+        console.warn(`Не удалось учесть просмотр бизнеса ${businessId}:`, error)
+      },
+    )
+  }, [updateBusinessViews])
+
+  useEffect(() => {
+    const businessId = selectedShop?.apiBusinessId;
+    if (businessId == null) return;
+
+    let cancelled = false;
+    const refreshViewsCount = async () => {
+      try {
+        const business = await businessesApi.get(businessId);
+        const viewsCount = business.views_count;
+        if (cancelled || viewsCount == null) return;
+        setViewsCounts((current) => ({
+          ...current,
+          [businessId]: Math.max(current[businessId] ?? 0, viewsCount),
+        }));
+        updateBusinessViews(String(businessId), viewsCount);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn(`Не удалось обновить просмотры бизнеса ${businessId}:`, error);
+        }
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshViewsCount();
+      }
+    };
+
+    void refreshViewsCount();
+    const intervalId = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [selectedShop?.apiBusinessId, updateBusinessViews]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -412,7 +475,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     }
 
     try {
-      const items = await servicesApi.listByBusiness(shop.apiBusinessId)
+      const [items, products] = await Promise.all([
+        servicesApi.listByBusiness(shop.apiBusinessId),
+        productsApi.listByBusiness(shop.apiBusinessId),
+      ])
       if (requestId !== serviceRequestIdRef.current) return
 
       const services = items
@@ -429,9 +495,21 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           kind: "service" as const,
           category: service.category,
         }))
+      const productItems = products
+        .filter((product) => product.is_active !== false)
+        .map((product) => ({
+          id: String(product.id),
+          title: product.name,
+          description: product.description ?? "",
+          priceFrom: parsePrice(String(product.price)),
+          durationMin: 0,
+          kind: "product" as const,
+          icon: resolveMediaUrl(product.image) ?? undefined,
+        }))
+      const inventory = [...services, ...productItems]
       const shopWithServices = {
         ...shop,
-        services,
+        services: inventory,
         ...(services.length > 0
           ? { price: Math.min(...services.map((service) => service.priceFrom)) }
           : {}),
@@ -528,7 +606,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         .setLngLat([coords.lng, coords.lat])
         .addTo(map)
 
-      const openMarkerShop = () => openShopOrServiceSelection(shop, map)
+      const openMarkerShop = () => {
+        registerBusinessView(shop)
+        void openShopOrServiceSelection(shop, map)
+      }
 
       marker.getElement().addEventListener("click", (event) => {
         event.preventDefault()
@@ -570,6 +651,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     appliedLocation,
     apiShops,
     apiLoadCompleted,
+    registerBusinessView,
   ])
 
   const syncMarkersRef = useRef(syncMarkers)
@@ -984,7 +1066,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
                 type="button"
                 className="rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 text-[14px] font-semibold text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition hover:border-[var(--primary)] hover:text-[var(--accent-fg)]"
                 data-testid={`fallback-map-marker-${shop.id}`}
-                onClick={() => setSelectedShop(shop)}
+                onClick={() => {
+                  registerBusinessView(shop)
+                  setSelectedShop(shop)
+                }}
               >
                 {shop.title}
               </button>
@@ -1011,6 +1096,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         <ShopDetailPanel
           key={selectedShop.id}
           shop={selectedShop}
+          viewsCount={
+            selectedShop.apiBusinessId == null
+              ? null
+              : viewsCounts[selectedShop.apiBusinessId] ?? null
+          }
           onClose={() => setSelectedShop(null)}
           onBook={handleShopBook}
         />

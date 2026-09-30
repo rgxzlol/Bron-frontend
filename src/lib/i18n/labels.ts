@@ -136,6 +136,7 @@ export const HOME_CATEGORY_KEYS: Record<number, string> = {
   9: "categories.pcClub",
   10: "categories.cleaning",
   11: "categories.sanatoriums",
+  12: "categories.other",
 };
 
 export const REVIEW_TAG_KEYS: Record<string, string> = {

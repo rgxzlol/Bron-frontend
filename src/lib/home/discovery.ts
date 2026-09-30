@@ -81,19 +81,24 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
     return staticCategories
       .map((category) => {
         const target = getHomeCategoryMapTarget(category.id);
-        const match = apiCategories.find(
+        const apiIndex = apiCategories.findIndex(
           (item) =>
             target != null &&
             (apiCategoryToUi(item) === target.businessCategory ||
               item.name.trim().toLowerCase() ===
                 target.businessCategory.toLowerCase()),
         );
+        const match = apiIndex >= 0 ? apiCategories[apiIndex] : undefined;
         return {
-          ...category,
-          count: match?.business_count ?? 0,
+          category: {
+            ...category,
+            count: match?.business_count ?? 0,
+          },
+          apiIndex: apiIndex < 0 ? Number.MAX_SAFE_INTEGER : apiIndex,
         };
       })
-      .filter((category) => category.count > 0);
+      .sort((left, right) => left.apiIndex - right.apiIndex)
+      .map(({ category }) => category);
   } catch {
     return [];
   }
@@ -136,7 +141,7 @@ export async function resolveShopById(shopId: number): Promise<ShopsType | null>
     const shop = apiBusinessToShop(business, mappedServices, branchId, branch);
     const [workingHours, galleryUrls] = await Promise.all([
       workingHoursApi.getByBusiness(shopId).catch(() => []),
-      fetchBusinessGalleryUrls(shopId).catch(() => []),
+      fetchBusinessGalleryUrls(shopId),
     ]);
     const todayHours = workingHoursToRangeString(workingHours, new Date());
     const remoteGallery = galleryUrls

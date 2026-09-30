@@ -23,7 +23,7 @@ export default function Categories() {
     void fetchCategoriesWithCounts()
       .then((nextCategories) => {
         if (!cancelled) {
-          setCategories(nextCategories);
+          setCategories(nextCategories.filter((category) => category.count > 0));
         }
       })
       .finally(() => {

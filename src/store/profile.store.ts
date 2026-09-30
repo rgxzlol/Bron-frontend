@@ -11,6 +11,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { toUserFacingEmail } from "@/lib/auth/syntheticEmail";
 import { looksLikePhoneUsername } from "@/lib/auth/validation";
 import { reviewsApi } from "@/lib/api/reviews";
+import { apiCustomerRatingToStats } from "@/lib/api/mappers";
 
 export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
@@ -24,8 +25,8 @@ export type PaymentHistoryItem = {
   date: string;
 };
 
-const DEFAULT_PROFILE_RATING = 4;
 const REGISTERED_NAMES_STORAGE_KEY = "bron-registered-profile-names";
+let notificationUpdateQueue: Promise<void> = Promise.resolve();
 
 function mapApiLanguage(language: string): ProfileLanguage {
   if (language === "uz" || language === "en") return language;
@@ -74,10 +75,6 @@ function applyProfileToState(profile: UserProfile, currentFullName: string) {
     phone: profile.phone,
     email: toUserFacingEmail(profile.email),
     language: mapApiLanguage(profile.language),
-    rating:
-      typeof profile.rating === "number" && Number.isFinite(profile.rating)
-        ? profile.rating
-        : DEFAULT_PROFILE_RATING,
   };
 }
 
@@ -85,8 +82,14 @@ type ProfileState = {
   fullName: string;
   phone: string;
   email: string;
-  rating: number;
-  reviewCount: number;
+  rating: number | null;
+  ratedBookingsCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  noShowCount: number;
+  ratingStatsAvailable: boolean;
+  ratingLoading: boolean;
+  ratingError: boolean;
   avatarUrl: string | null;
   role: string | null;
   language: ProfileLanguage;
@@ -101,7 +104,7 @@ type ProfileState = {
   setAvatarUrl: (avatarUrl: string | null) => void;
   setLanguage: (language: ProfileLanguage) => void;
   setTheme: (theme: ProfileTheme) => void;
-  toggleNotification: (key: keyof NotificationSettings) => void;
+  toggleNotification: (key: keyof NotificationSettings) => Promise<void>;
   saveNotificationSettings: () => Promise<void>;
   savePersonalInfo: (payload: {
     fullName: string;
@@ -148,8 +151,14 @@ export const useProfileStore = create<ProfileState>()(
       fullName: "",
       phone: "",
       email: "",
-      rating: DEFAULT_PROFILE_RATING,
-      reviewCount: 0,
+      rating: null,
+      ratedBookingsCount: 0,
+      onTimeCount: 0,
+      lateCount: 0,
+      noShowCount: 0,
+      ratingStatsAvailable: false,
+      ratingLoading: false,
+      ratingError: false,
       avatarUrl: null,
       role: null,
       language: "ru",
@@ -173,24 +182,34 @@ export const useProfileStore = create<ProfileState>()(
             avatarUrl: profile.avatar ?? null,
             role: profile.role ?? null,
             isProfileLoading: false,
+            rating: null,
+            ratedBookingsCount: 0,
+            onTimeCount: 0,
+            lateCount: 0,
+            noShowCount: 0,
+            ratingStatsAvailable: false,
+            ratingLoading: true,
+            ratingError: false,
           }));
-          const userId = useAuthStore.getState().userId;
-          if (userId != null) {
-            try {
-              const customerRating = await reviewsApi.getCustomerRating(userId, token);
-              set({
-                rating: Number.isFinite(customerRating.rating)
-                  ? customerRating.rating
-                  : DEFAULT_PROFILE_RATING,
-                reviewCount: customerRating.reviews_count,
-              });
-            } catch {
-              // Profile data remains usable when rating is unavailable.
-            }
+          try {
+            const customerRating = await reviewsApi.getCustomerRating(profile.id, token);
+            const stats = apiCustomerRatingToStats(customerRating);
+            set({
+              rating: stats.rating,
+              ratedBookingsCount: stats.evaluatedBookingsCount,
+              onTimeCount: stats.onTimeCount,
+              lateCount: stats.lateCount,
+              noShowCount: stats.noShowCount,
+              ratingStatsAvailable: stats.available,
+              ratingLoading: false,
+            });
+          } catch {
+            set({ ratingLoading: false, ratingError: true });
           }
         } catch (error) {
           set({
             isProfileLoading: false,
+            ratingLoading: false,
             profileError:
               error instanceof Error
                 ? error.message
@@ -205,7 +224,15 @@ export const useProfileStore = create<ProfileState>()(
 
       fetchNotificationSettings: async () => {
         const userId = useAuthStore.getState().userId;
-        set({ notifications: loadNotificationSettings(userId) });
+        const token = useAuthStore.getState().token;
+        if (!token) {
+          set({ notifications: loadNotificationSettings(userId) });
+          return;
+        }
+
+        const settings = await usersApi.getNotificationSettings(token);
+        set({ notifications: settings });
+        saveNotificationSettings(userId, settings);
       },
 
       setAvatarUrl: (avatarUrl) => set({ avatarUrl }),
@@ -231,18 +258,20 @@ export const useProfileStore = create<ProfileState>()(
         const token = useAuthStore.getState().token;
         if (!token) return;
 
-        try {
-          await usersApi.updateNotificationSettings(notifications, token);
-        } catch {
-          // Local storage remains the source of truth.
-        }
+        const saved = await usersApi.updateNotificationSettings(
+          notifications,
+          token,
+        );
+        set({ notifications: saved });
+        saveNotificationSettings(userId, saved);
       },
 
-      toggleNotification: (key) => {
+      toggleNotification: async (key) => {
         const userId = useAuthStore.getState().userId;
+        const previous = get().notifications;
         const next = {
-          ...get().notifications,
-          [key]: !get().notifications[key],
+          ...previous,
+          [key]: !previous[key],
         };
 
         set({ notifications: next });
@@ -251,7 +280,31 @@ export const useProfileStore = create<ProfileState>()(
         const token = useAuthStore.getState().token;
         if (!token) return;
 
-        void usersApi.updateNotificationSettings(next, token);
+        const update = notificationUpdateQueue.then(async () => {
+          const saved = await usersApi.updateNotificationSettings(
+            { [key]: next[key] },
+            token,
+          );
+          const notifications = { ...get().notifications, [key]: saved[key] };
+          set({ notifications });
+          saveNotificationSettings(userId, notifications);
+        });
+        notificationUpdateQueue = update.then(
+          () => undefined,
+          () => undefined,
+        );
+
+        try {
+          await update;
+        } catch (error) {
+          const current = get().notifications;
+          if (current[key] === next[key]) {
+            const notifications = { ...current, [key]: previous[key] };
+            set({ notifications });
+            saveNotificationSettings(userId, notifications);
+          }
+          throw error;
+        }
       },
 
       savePersonalInfo: async ({ fullName, phone, email }) => {
@@ -318,8 +371,14 @@ export const useProfileStore = create<ProfileState>()(
           fullName: "",
           phone: "",
           email: "",
-          rating: DEFAULT_PROFILE_RATING,
-          reviewCount: 0,
+          rating: null,
+          ratedBookingsCount: 0,
+          onTimeCount: 0,
+          lateCount: 0,
+          noShowCount: 0,
+          ratingStatsAvailable: false,
+          ratingLoading: false,
+          ratingError: false,
           avatarUrl: null,
           role: null,
           isProfileLoading: false,
@@ -328,13 +387,11 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 7,
+      version: 8,
       partialize: (state) => ({
         fullName: state.fullName,
         phone: state.phone,
         email: state.email,
-        rating: state.rating,
-        reviewCount: state.reviewCount,
         avatarUrl: state.avatarUrl,
         role: state.role,
         language: state.language,
@@ -342,24 +399,30 @@ export const useProfileStore = create<ProfileState>()(
         paymentHistory: state.paymentHistory,
       }),
       migrate: (persisted) => {
-        const state = persisted as Record<string, unknown>;
-        const { cards: _cards, ...rest } = state;
+        const rest = { ...(persisted as Record<string, unknown>) };
+        [
+          "cards",
+          "rating",
+          "reviewCount",
+          "ratedBookingsCount",
+          "onTimeCount",
+          "lateCount",
+          "noShowCount",
+          "ratingStatsAvailable",
+          "ratingLoading",
+          "ratingError",
+        ].forEach((key) => delete rest[key]);
 
         return {
-          ...rest,
           fullName: looksLikePhoneUsername(String(rest.fullName ?? ""))
             ? ""
             : String(rest.fullName ?? ""),
+          phone: String(rest.phone ?? ""),
           email: toUserFacingEmail(String(rest.email ?? "")),
-          rating:
-            typeof rest.rating === "number" && Number.isFinite(rest.rating)
-              ? rest.rating
-              : DEFAULT_PROFILE_RATING,
-          reviewCount:
-            typeof rest.reviewCount === "number" && Number.isFinite(rest.reviewCount)
-              ? rest.reviewCount
-              : 0,
-          avatarUrl: (rest.avatarUrl as string | null | undefined) ?? null,
+          avatarUrl: typeof rest.avatarUrl === "string" ? rest.avatarUrl : null,
+          role: typeof rest.role === "string" ? rest.role : null,
+          language: mapApiLanguage(String(rest.language ?? "ru")),
+          theme: rest.theme === "dark" ? "dark" : "light",
           paymentHistory: (
             (rest.paymentHistory as PaymentHistoryItem[] | undefined) ??
             DEFAULT_PAYMENT_HISTORY

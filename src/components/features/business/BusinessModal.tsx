@@ -29,15 +29,23 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { translateBusinessCategory } from "@/lib/i18n/labels";
 import AddressAutocomplete from "./AddressAutocomplete";
 import DeleteBusinessModal from "./DeleteBusinessModal";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { useToastStore } from "@/store/toast.store";
 import { reviewsApi } from "@/lib/api/reviews";
 import s from "./businessModal.module.css";
 import desktop from "./businessDesktop.module.css";
 
-const GALLERY_SLOT_COUNT = 6;
 const MOBILE_GALLERY_SLOT_COUNT = 3;
+const subscribeToNothing = () => () => {};
+const getClientMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
 const DAY_I18N_KEYS: Record<DayKey, string> = {
   mon: "businessModal.dayMon",
   tue: "businessModal.dayTue",
@@ -313,7 +321,11 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
   const profileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    getClientMountedSnapshot,
+    getServerMountedSnapshot,
+  );
   const [isDesktop, setIsDesktop] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -333,10 +345,6 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   function getDayShortLabel(key: DayKey) {
     return t(DAY_SHORT_I18N_KEYS[key]);
   }
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -466,7 +474,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             ? t("businessErrors.saveFailed")
             : error instanceof ApiError
               ? error.message
-              : t("businessErrors.saveFailed");
+              : error instanceof Error
+                ? error.message
+                : t("businessErrors.saveFailed");
       alert(message);
     } finally {
       setSaving(false);
@@ -507,7 +517,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
       : "relative flex h-full min-h-[100px] w-full flex-col items-center justify-center gap-[8px] overflow-hidden rounded-[14px] border border-dashed border-[#0a6af7]/45 bg-[var(--bg-active-soft)] transition hover:border-[#0a6af7]/70 hover:bg-[var(--bg-hover)]";
 
     return (
-      <div key={index} className={className} data-testid={`business-gallery-slot-${index}`}>
+      <div key={index} className={`relative ${className}`} data-testid={`business-gallery-slot-${index}`}>
         <input
           ref={(el) => {
             galleryInputRefs.current[index] = el;
@@ -550,6 +560,21 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </>
           )}
         </button>
+        {image ? (
+          <button
+            type="button"
+            aria-label={`${t("common.delete")} ${t("businessModal.uploadPhoto")}`}
+            data-testid={`business-gallery-delete-${index}`}
+            onClick={() => {
+              const gallery = [...useBusinessStore.getState().draft.gallery];
+              gallery[index] = null;
+              updateDraft({ gallery });
+            }}
+            className="absolute right-[8px] top-[8px] z-[2] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/80"
+          >
+            <TrashIcon />
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -650,7 +675,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <input
               ref={profileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/jpg"
+              accept="image/jpeg,image/png,image/jpg,image/webp"
               className="hidden"
               data-testid="business-profile-photo-input"
               onChange={(e) => {

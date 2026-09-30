@@ -1,4 +1,7 @@
-import { REGISTER_PHONE_PATTERN } from "@/lib/auth/validation";
+import {
+  formatUzbekPhoneInput,
+  REGISTER_PHONE_PATTERN,
+} from "@/lib/auth/validation";
 import type { BusinessDraft } from "@/store/business.store";
 
 export const BUSINESS_DESCRIPTION_MAX_LENGTH = 180;
@@ -53,7 +56,9 @@ export function validateBusinessForm(draft: BusinessDraft): BusinessFormErrorCod
   const phone = draft.phone.trim();
   if (!phone) {
     errors.phone = "phoneRequired";
-  } else if (!REGISTER_PHONE_PATTERN.test(phone)) {
+  } else if (
+    !REGISTER_PHONE_PATTERN.test(formatUzbekPhoneInput(phone, { preserveOverflow: true }))
+  ) {
     errors.phone = "phoneInvalid";
   }
 

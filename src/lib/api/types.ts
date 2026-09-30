@@ -128,6 +128,7 @@ export type BusinessCategory = {
   slug: string;
   icon?: string | null;
   business_count?: number;
+  order?: number;
 };
 
 export type Category = BusinessCategory;
@@ -210,6 +211,7 @@ export type Service = {
   is_active: boolean;
   image?: string | null;
   capacity?: number;
+  availability?: ServiceDateAvailability[];
 };
 
 export type ServiceListItem = {
@@ -222,6 +224,12 @@ export type ServiceListItem = {
   is_active?: boolean;
   image?: string | null;
   capacity?: number;
+  availability?: ServiceDateAvailability[];
+};
+
+export type ServiceDateAvailability = {
+  date: string;
+  times: string[];
 };
 
 export type ServiceCreate = {
@@ -232,10 +240,11 @@ export type ServiceCreate = {
   duration: number;
   price: number;
   capacity?: number;
+  availability?: ServiceDateAvailability[] | null;
 };
 
 export type ServiceUpdate = Partial<
-  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active" | "capacity">
+  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active" | "capacity" | "availability">
 >;
 
 export type ServiceAvailableDate = {
@@ -380,14 +389,21 @@ export type BlockedDateUpdate = {
 };
 
 export type BookingOrderItem = {
-  id: string;
+  id: number;
   name: string;
   price: number;
   quantity: number;
-  kind?: "service" | "extra" | "product";
+  kind: "service" | "product";
+};
+
+export type BookingItemCreate = {
+  id: number;
+  kind: "service" | "product";
+  quantity: number;
 };
 
 export type BookingAttendanceStatus = "on_time" | "late" | "no_show";
+export type ApiBookingAttendanceStatus = "visited" | "late" | "no_show";
 
 export type Booking = {
   id: number;
@@ -402,7 +418,7 @@ export type Booking = {
   guest_count: number;
   total_price: number;
   status: string;
-  attendance_status: BookingAttendanceStatus;
+  attendance_status: ApiBookingAttendanceStatus;
   extra_wait_minutes: number;
   items?: BookingOrderItem[];
 };
@@ -416,7 +432,7 @@ export type BookingListItem = {
   total_price: number;
   business_id?: number;
   guest_count?: number;
-  attendance_status?: BookingAttendanceStatus;
+  attendance_status?: ApiBookingAttendanceStatus;
   extra_wait_minutes?: number;
   items?: BookingOrderItem[];
   business_name?: string;
@@ -434,9 +450,7 @@ export type BookingCreate = {
   start_time: string;
   end_time: string;
   guest_count?: number;
-  product_ids?: number[];
-  items?: BookingOrderItem[];
-  total_price?: number;
+  items: BookingItemCreate[];
 };
 
 export type BookingUpdate = {
@@ -444,7 +458,7 @@ export type BookingUpdate = {
 };
 
 export type BookingAttendanceUpdate = {
-  status: BookingAttendanceStatus;
+  status: ApiBookingAttendanceStatus;
   extra_wait_minutes?: number;
 };
 
@@ -455,14 +469,21 @@ export type BookingReschedule = {
 };
 
 export type BookingAvailableSlotsResponse = {
-  slots: ServiceAvailabilitySlot[];
+  business_id: number;
+  service_id: number;
+  branch_id: number;
+  staff_id: number | null;
+  date: string;
+  duration: number;
   capacity: number;
+  slots: ServiceAvailabilitySlot[];
 };
 
 export type BusinessGalleryImage = {
   id: number;
   business_id: number;
   image: string;
+  sort_order: number;
   created_at: string;
 };
 
@@ -500,8 +521,14 @@ export type CustomerReviewCreate = {
 export type CustomerRating = {
   user_id: number;
   username: string;
+  full_name?: string | null;
   rating: number;
   reviews_count: number;
+  booking_rating?: number | null;
+  evaluated_bookings_count?: number;
+  on_time_count?: number;
+  late_count?: number;
+  no_show_count?: number;
 };
 
 export type ReviewUpdate = {

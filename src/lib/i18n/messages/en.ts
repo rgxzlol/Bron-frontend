@@ -175,6 +175,12 @@ export const en: MessageTree = {
     cardExpiryPlaceholder: "MM\\ YY",
     saveCardAria: "Save card for future payments",
     ratingLabel: "Rating",
+    noRating: "No ratings",
+    ratingLoading: "Loading rating…",
+    ratingUnavailable: "Rating unavailable",
+    ratedBookingsCount: "Rated bookings: {count}",
+    bookingAttendanceStats:
+      "On time: {onTime} · Late: {late} · No-show: {noShow}",
   },
   auth: {
     loginTab: "Sign in",

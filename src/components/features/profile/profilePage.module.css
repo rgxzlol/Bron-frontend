@@ -486,6 +486,25 @@
   font-weight: 600;
 }
 
+.passwordInputWrap {
+  position: relative;
+}
+
+.field .passwordInput {
+  padding-right: 52px;
+}
+
+.passwordEyeBtn {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  transform: translateY(-50%);
+}
+
 .field input::placeholder {
   color: var(--text-muted);
   font-weight: 500;

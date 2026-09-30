@@ -49,16 +49,31 @@ type UploadOptions = {
 function normalizeApiPath(path: string) {
   const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
   const [pathname, ...searchParts] = withLeadingSlash.split("?");
+  const preserveTrailingSlash = pathname.endsWith("/");
   const normalizedPathname =
     pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const search = searchParts.join("?");
+  const finalPathname =
+    preserveTrailingSlash && normalizedPathname !== "/"
+      ? `${normalizedPathname}/`
+      : normalizedPathname;
 
-  return search ? `${normalizedPathname}?${search}` : normalizedPathname;
+  return search ? `${finalPathname}?${search}` : finalPathname;
 }
 
 function buildUrl(path: string) {
-  const base = getApiBaseUrl().replace(/\/+$/, "");
+  const apiBaseUrl = getApiBaseUrl();
+  const base = apiBaseUrl.replace(/\/+$/, "");
   const normalizedPath = normalizeApiPath(path);
+  if (
+    apiBaseUrl === "/backend" &&
+    normalizedPath.length > 1 &&
+    normalizedPath.endsWith("/")
+  ) {
+    const pathWithoutTrailingSlash = normalizedPath.slice(0, -1);
+    const separator = pathWithoutTrailingSlash.includes("?") ? "&" : "?";
+    return `${base}${pathWithoutTrailingSlash}${separator}__preserve_trailing_slash=1`;
+  }
   return `${base}${normalizedPath}`;
 }
 

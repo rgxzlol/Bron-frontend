@@ -29,5 +29,8 @@ export function isSyntheticEmail(email: string | null | undefined) {
 /** Real user-facing email, or empty when the stored value is a synthetic placeholder. */
 export function toUserFacingEmail(email: string | null | undefined) {
   const trimmed = email?.trim() ?? "";
-  return isSyntheticEmail(trimmed) ? "" : trimmed;
+  if (isSyntheticEmail(trimmed)) return "";
+
+  const isPhoneNumber = /^\+?[\d\s().-]+$/.test(trimmed) && (trimmed.match(/\d/g)?.length ?? 0) >= 9;
+  return isPhoneNumber ? "" : trimmed;
 }

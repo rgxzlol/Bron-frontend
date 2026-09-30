@@ -413,9 +413,13 @@ export type Booking = {
   first_name?: string | null;
   last_name?: string | null;
   customer_name?: string | null;
-  user?: Pick<UserOut, "username" | "first_name" | "last_name"> & {
+  user?: Pick<
+    UserOut,
+    "username" | "first_name" | "last_name" | "avatar" | "phone"
+  > & {
     full_name?: string | null;
   };
+  phone?: string | null;
   business_id: number;
   service_id: number;
   branch_id: number;

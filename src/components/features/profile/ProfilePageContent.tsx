@@ -19,6 +19,7 @@ import {
 } from "@/lib/profile/validation";
 import { useToastStore } from "@/store/toast.store";
 import { useNotificationStore } from "@/store/notification.store";
+import PasswordInput from "@/components/shared/PasswordInput";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -319,6 +320,9 @@ export default function ProfilePageContent({
     try {
       if (!token) throw new Error("Требуется авторизация");
       const profile = await usersApi.uploadAvatar(file, token);
+      if (!profile.avatar?.trim()) {
+        throw new Error("Сервер не вернул адрес загруженной фотографии.");
+      }
       setAvatarUrl(profile.avatar ?? null);
     } catch (error) {
       showToast(
@@ -532,6 +536,9 @@ export default function ProfilePageContent({
           <label className={`${s.field} ${personalFieldErrors.email ? s.fieldError : ""}`}>
             <span>{t("profile.emailAddress")}</span>
             <input
+              type="email"
+              name="email"
+              autoComplete="email"
               value={emailDraft}
               onChange={(e) => {
                 setEmailDraft(e.target.value);
@@ -584,26 +591,34 @@ export default function ProfilePageContent({
             <h3 className={s.blockTitle}>{t("profile.changePassword")}</h3>
             <label className={s.field}>
               <span>{t("profile.currentPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
+                onChange={setOldPassword}
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
             <label className={s.field}>
               <span>{t("profile.newPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
             <label className={s.field}>
               <span>{t("profile.confirmNewPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
             {passwordError && <p className={s.errorText}>{passwordError}</p>}

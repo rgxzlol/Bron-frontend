@@ -64,10 +64,18 @@ async function readProxyBody(request: NextRequest): Promise<{
 }
 
 async function proxyRequest(request: NextRequest) {
-  const apiPath = request.nextUrl.pathname
-    .replace(/^\/backend\/?/, "")
-    .replace(/\/+$/, "");
-  const targetUrl = `${REMOTE_API_URL}/${apiPath}${request.nextUrl.search}`;
+  const requestPath = request.nextUrl.pathname.replace(/^\/backend\/?/, "");
+  const normalizedPath = requestPath.replace(/\/+$/, "");
+  const preserveTrailingSlash =
+    request.nextUrl.searchParams.get("__preserve_trailing_slash") === "1";
+  const apiPath =
+    normalizedPath && (requestPath.endsWith("/") || preserveTrailingSlash)
+      ? `${normalizedPath}/`
+      : normalizedPath;
+  const searchParams = new URLSearchParams(request.nextUrl.searchParams);
+  searchParams.delete("__preserve_trailing_slash");
+  const search = searchParams.toString();
+  const targetUrl = `${REMOTE_API_URL}/${apiPath}${search ? `?${search}` : ""}`;
 
   const headers = new Headers();
   headers.set("Accept", "application/json");

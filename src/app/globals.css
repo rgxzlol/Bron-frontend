@@ -475,7 +475,15 @@
 }
 
 .business-service-form-grid {
-  row-gap: 0 !important;
+  grid-template-areas:
+    "name duration"
+    "category price"
+    "description quantity"
+    "description rules"
+    "time photo"
+    "time date"
+    "actions actions";
+  gap: 8px 16px;
 }
 
 .business-item-screen label,
@@ -809,39 +817,18 @@
   grid-row: 1;
 }
 
-@media (min-width: 769px) {
-  .business-service-form-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-template-areas:
-      "name name name duration price quantity"
-      "category category category rules rules rules"
-      "description description description photo photo photo"
-      "time time time date date date"
-      "time time time date date date"
-      "actions actions actions actions actions actions";
-    column-gap: 16px;
-    row-gap: 0 !important;
-    align-items: start;
-  }
+.business-service-form-grid > [data-field="name"] > span,
+.business-service-form-grid > [data-field="duration"] > span,
+.business-service-form-grid > [data-field="price"] > div > span,
+.business-service-form-grid > [data-field="quantity"] > [data-testid="business-service-guest-capacity"] > span {
+  display: block;
+  min-height: 32px;
+  line-height: 16px;
+}
 
-  .business-service-form-grid > [data-field="category"],
-  .business-service-form-grid > [data-field="description"],
-  .business-service-form-grid > [data-field="time"] {
-    align-self: start;
-  }
-
-  .business-service-form-grid > [data-field="actions"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 16px;
-  }
-
-  .business-service-form-grid > [data-field="actions"] button:first-child {
-    grid-column: 2;
-  }
-
-  .business-service-form-grid > [data-field="actions"] button:last-child {
-    grid-column: 1;
-  }
+.business-service-form-grid > [data-field="rules"] textarea {
+  min-height: 84px !important;
+  height: 84px;
 }
 
 .business-product-form-grid {
@@ -939,7 +926,67 @@
   }
 }
 
+@media (min-width: 641px) and (max-width: 768px) {
+  .business-service-form-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "name name name duration price quantity"
+      "category category category rules rules rules"
+      "description description description photo photo photo"
+      "time time time date date date"
+      "actions actions actions actions actions actions";
+    gap: 8px 12px !important;
+  }
+
+  .business-service-form-grid > [data-field="actions"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .business-service-form-grid > [data-field="actions"] button:first-child {
+    grid-column: 2;
+  }
+
+  .business-service-form-grid > [data-field="actions"] button:last-child {
+    grid-column: 1;
+  }
+}
+
 @media (min-width: 769px) {
+  .business-service-form-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+      "name name name duration price quantity"
+      "category category category rules rules rules"
+      "description description description photo photo photo"
+      "time time time date date date"
+      "actions actions actions actions actions actions";
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: start;
+  }
+
+  .business-service-form-grid > [data-field="category"],
+  .business-service-form-grid > [data-field="description"],
+  .business-service-form-grid > [data-field="time"] {
+    align-self: start;
+  }
+
+  .business-service-form-grid > [data-field="actions"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+  }
+
+  .business-service-form-grid > [data-field="actions"] button:first-child {
+    grid-column: 2;
+  }
+
+  .business-service-form-grid > [data-field="actions"] button:last-child {
+    grid-column: 1;
+  }
+
   .business-service-form-grid > [data-field="duration"],
   .business-service-form-grid > [data-field="price"],
   .business-service-form-grid > [data-field="quantity"] {
@@ -955,34 +1002,6 @@
   .business-service-form-grid > [data-field="quantity"] > [data-testid="business-service-guest-capacity"] > div > button {
     height: 28px;
     width: 28px;
-  }
-
-  .business-service-form-grid > [data-field="duration"] {
-    transform: translateY(-14px);
-  }
-
-  .business-service-form-grid > [data-field="category"] {
-    transform: translateY(-35px);
-  }
-
-  .business-service-form-grid > [data-field="description"] {
-    transform: translateY(-109px);
-  }
-
-  .business-service-form-grid > [data-field="time"] {
-    transform: translateY(-97px);
-  }
-
-  .business-service-form-grid > [data-field="date"] {
-    transform: translateY(-75px);
-  }
-
-  .business-service-form-grid > [data-field="actions"] {
-    transform: translateY(-90px);
-  }
-
-  .business-service-form-grid > [data-field] {
-    margin-bottom: 20px !important;
   }
 }
 

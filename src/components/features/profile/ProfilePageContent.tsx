@@ -177,7 +177,7 @@ export default function ProfilePageContent({
 
   const canChangePassword =
     oldPassword.trim().length > 0 &&
-    newPassword.trim().length > 0 &&
+    REGISTER_PASSWORD_RULES.every((rule) => rule.test(newPassword)) &&
     confirmPassword.trim().length > 0;
 
   function goTo(next: ProfileSection) {
@@ -610,6 +610,21 @@ export default function ProfilePageContent({
                 toggleClassName={s.passwordEyeBtn}
               />
             </label>
+            <ul className={s.passwordRules}>
+              {REGISTER_PASSWORD_RULES.map((rule) => {
+                const isValid = rule.test(newPassword);
+
+                return (
+                  <li
+                    key={rule.id}
+                    className={`${s.passwordRule} ${isValid ? s.passwordRuleValid : ""}`}
+                  >
+                    <span aria-hidden="true">{isValid ? "✓" : "•"}</span>
+                    {t(`auth.passwordRules.${rule.id}`)}
+                  </li>
+                );
+              })}
+            </ul>
             <label className={s.field}>
               <span>{t("profile.confirmNewPassword")}</span>
               <PasswordInput

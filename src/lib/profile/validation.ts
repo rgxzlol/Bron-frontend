@@ -54,9 +54,7 @@ export function validateProfilePersonalInfo(
   }
 
   const trimmedEmail = email.trim();
-  if (!trimmedEmail) {
-    errors.email = "emailRequired";
-  } else if (!isValidEmailAddress(trimmedEmail)) {
+  if (trimmedEmail && !isValidEmailAddress(trimmedEmail)) {
     errors.email = "emailInvalid";
   }
 

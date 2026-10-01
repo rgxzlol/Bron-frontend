@@ -320,6 +320,7 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = await usersApi.updateProfile(
           {
+            username: trimmedName,
             phone: trimmedPhone,
             email: trimmedEmail,
             first_name: trimmedName.split(/\s+/)[0] ?? "",

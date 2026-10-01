@@ -19,10 +19,13 @@ import { useFavoriteStore } from "@/store/favorite.store";
 import { getEffectiveShopRating, useReviewStore } from "@/store/review.store";
 import type { ShopsType } from "@/types/shops.types";
 import Button from "@/components/shared/Button";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 import s from "./fullMap.module.css";
+import { translateLocation } from "@/lib/i18n/location";
 
 type ShopDetailPanelProps = {
   shop: ShopsType;
+  viewsCount: number | null;
   onClose: () => void;
   onBook: () => void;
 };
@@ -47,10 +50,11 @@ function GalleryImage({
 
 export default function ShopDetailPanel({
   shop,
+  viewsCount,
   onClose,
   onBook,
 }: ShopDetailPanelProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const token = useAuthStore((state) => state.token);
   const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
   const isFavorite = useFavoriteStore((state) => state.isFavorite);
@@ -58,22 +62,18 @@ export default function ShopDetailPanel({
   const shopReviewStats = useReviewStore((state) => state.shopReviewStats);
   const gallery = getShopGallery(shop);
   const [imageIndex, setImageIndex] = useState(0);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(null);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
   const businessId = shop.apiBusinessId;
+  const localizedAddress = translateLocation(shop.address, language);
+  const localizedDistrict = translateLocation(shop.district, language);
 
   async function handleToggleFavorite() {
     if (!businessId) return;
     await toggleFavorite(businessId);
   }
-
-  useEffect(() => {
-    setImageIndex(0);
-    setExpanded(false);
-    setApiRating(null);
-  }, [shop.id]);
 
   useEffect(() => {
     if (!token) return;
@@ -83,11 +83,18 @@ export default function ShopDetailPanel({
   useEffect(() => {
     if (!businessId) return;
 
-    void fetchBusinessReviewStats(businessId).then(({ stats }) => {
-      if (stats.reviews > 0) {
-        setApiRating(stats);
-      }
-    });
+    let cancelled = false;
+    void fetchBusinessReviewStats(businessId).then(
+      ({ stats }) => {
+        if (!cancelled) setApiRating(stats);
+      },
+      (error: unknown) => {
+        console.error("Не удалось загрузить рейтинг бизнеса:", error);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [businessId]);
 
   function showPrevImage() {
@@ -98,22 +105,12 @@ export default function ShopDetailPanel({
     setImageIndex((index) => (index < gallery.length - 1 ? index + 1 : 0));
   }
 
-  const priceRows =
-    activeServices.length > 0
-      ? activeServices.map((service) => ({
-          id: service.id,
-          name: service.title,
-          duration: `${service.durationMin} мин`,
-          price: service.priceFrom,
-        }))
-      : [
-          {
-            id: "base",
-            name: shop.category,
-            duration: shop.type === "Больница" ? `${shop.time} мин` : "1 час",
-            price: shop.price,
-          },
-        ];
+  const priceRows = activeServices.map((service) => ({
+    id: service.id,
+    name: service.title,
+    duration: `${service.durationMin} мин`,
+    price: service.priceFrom,
+  }));
 
   const { rating: displayRating, reviews: displayReviews } = getEffectiveShopRating(
     shop.id,
@@ -129,6 +126,11 @@ export default function ShopDetailPanel({
       <span className={s.sheetRatingMuted}>
         ({displayReviews} {pluralizeReviews(displayReviews)})
       </span>
+      {viewsCount != null ? (
+        <span className={s.sheetRatingMuted}>
+          {t("businessModal.viewsCount", { count: viewsCount })}
+        </span>
+      ) : null}
     </div>
   );
 
@@ -154,7 +156,7 @@ export default function ShopDetailPanel({
 
       <button
         type="button"
-        className={s.sheetClose}
+        className={`${s.sheetClose} theme-close-button`}
         onClick={onClose}
         aria-label={t("common.close")}
       >
@@ -177,14 +179,45 @@ export default function ShopDetailPanel({
         <div className={s.sheetCard}>
           <div className={s.sheetPhoto}>
             <GalleryImage
-              image={gallery[0] ?? shop.img}
+              image={currentImage}
               alt={shop.title}
               className={s.photoImg}
               sizes="104px"
             />
+            {gallery.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={`${s.galleryNav} ${s.galleryNavPrev}`}
+                  onClick={showPrevImage}
+                  aria-label="Предыдущее фото"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className={`${s.galleryNav} ${s.galleryNavNext}`}
+                  onClick={showNextImage}
+                  aria-label="Следующее фото"
+                >
+                  ›
+                </button>
+              </>
+            )}
+            <span className={s.slideCounter}>
+              {imageIndex + 1}/{gallery.length}
+            </span>
           </div>
           <div className={s.sheetInfo}>
-            <span className={s.sheetTag}>{shop.type}</span>
+            <span className={s.sheetTag}>
+              <BusinessCategoryIcon
+                category={shop.category || shop.type}
+                size={14}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+              {shop.category}
+            </span>
             <h2 className={s.sheetTitle} data-testid="map-vendor-title">
               {shop.title}
             </h2>
@@ -196,7 +229,7 @@ export default function ShopDetailPanel({
               {shop.hours}
             </p>
             <p className={s.sheetAddress} data-testid="map-vendor-address">
-              {shop.address}
+              {localizedAddress}
             </p>
           </div>
         </div>
@@ -255,8 +288,8 @@ export default function ShopDetailPanel({
                   height={20}
                 />
                 <div className={s.addressText}>
-                  <span className={s.addressMain}>{shop.address}</span>
-                  <span className={s.addressSub}>{shop.district}</span>
+                  <span className={s.addressMain}>{localizedAddress}</span>
+                  <span className={s.addressSub}>{localizedDistrict}</span>
                 </div>
               </div>
 
@@ -309,30 +342,28 @@ export default function ShopDetailPanel({
 
             <div className={s.sheetSection}>
               <h3 className={s.sheetSectionTitle}>Цена</h3>
-              {priceRows.map((row) => (
-                <div key={row.id} className={s.priceItem}>
-                  <span className={s.priceCircle} aria-hidden="true">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    >
-                      <path d="M6.5 9v6M4 10.5v3M17.5 9v6M20 10.5v3M6.5 12h11" />
-                    </svg>
-                  </span>
-                  <div className={s.priceInfo}>
-                    <span className={s.priceName}>{row.name}</span>
-                    <span className={s.priceDuration}>{row.duration}</span>
+              {priceRows.length > 0 ? (
+                priceRows.map((row) => (
+                  <div key={row.id} className={s.priceItem}>
+                    <span className={s.priceCircle} aria-hidden="true">
+                      <BusinessCategoryIcon
+                        category={shop.category || shop.type}
+                        size={20}
+                        strokeWidth={1.8}
+                      />
+                    </span>
+                    <div className={s.priceInfo}>
+                      <span className={s.priceName}>{row.name}</span>
+                      <span className={s.priceDuration}>{row.duration}</span>
+                    </div>
+                    <span className={s.priceAmount}>
+                      {formatPrice(row.price)} сум
+                    </span>
                   </div>
-                  <span className={s.priceAmount}>
-                    {formatPrice(row.price)} сум
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className={s.noServices}>{t("map.noServices")}</p>
+              )}
             </div>
 
             <div className={s.sheetSection}>
@@ -384,7 +415,7 @@ export default function ShopDetailPanel({
             )}
             <button
               type="button"
-              className={s.closeBtn}
+              className={`${s.closeBtn} theme-close-button`}
               onClick={onClose}
               aria-label={t("common.close")}
             >
@@ -434,7 +465,15 @@ export default function ShopDetailPanel({
               </div>
             </div>
 
-            <p className={s.category}>{shop.category}</p>
+            <p className={s.category}>
+              <BusinessCategoryIcon
+                category={shop.category || shop.type}
+                size={15}
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+              {shop.category}
+            </p>
             <p className={s.priceFrom} data-testid="map-vendor-price">
               {priceLabel}
             </p>
@@ -468,9 +507,9 @@ export default function ShopDetailPanel({
                 />
                 <div className={s.addressText}>
                   <span className={s.addressMain} data-testid="map-vendor-address">
-                    {shop.address}
+                    {localizedAddress}
                   </span>
-                  <span className={s.addressSub}>{shop.district}</span>
+                  <span className={s.addressSub}>{localizedDistrict}</span>
                 </div>
                 <span className={s.distance}>{shop.distance}</span>
               </div>

@@ -3,10 +3,28 @@ import type { TranslateParams } from "./types";
 
 /** Canonical RU labels → message keys (kept as storage/API IDs). */
 export const BUSINESS_CATEGORY_KEYS: Record<string, string> = {
+  "Салон красоты": "categories.beautySalon",
+  Здоровье: "categories.health",
+  "Фитнес зал": "categories.gym",
+  "Учебные заведения": "categories.education",
+  Рестораны: "categories.restaurants",
+  Кафейни: "categories.cafes",
+  "Авто сервис": "categories.autoService",
+  Кинотеатры: "categories.cinema",
+  "Комп клуб": "categories.pcClub",
+  Клининг: "categories.cleaning",
+  Санатории: "categories.sanatoriums",
+  "Кафе и рестораны": "categories.restaurants",
+  "Спорт и фитнес": "categories.gym",
+  "Красота и уход": "categories.beautySalon",
+  Медицина: "categories.health",
+  "Здоровье и SPA": "categories.sanatoriums",
+  "Отели и отдых": "categories.sanatoriums",
+  Автосервисы: "categories.autoService",
+  Образование: "categories.education",
+  Развлечения: "categories.cinema",
   "Спорт зал": "categories.sportGym",
   Красота: "categories.beauty",
-  Здоровье: "categories.health",
-  Образование: "categories.education",
   Еда: "categories.food",
   Другое: "categories.other",
   Клуб: "categories.club",
@@ -38,18 +56,34 @@ export const MAP_FILTER_PILL_KEYS: Record<string, string> = {
 
 /** Shop/business type badges shown on map & booking cards. */
 export const SHOP_TYPE_KEYS: Record<string, string> = {
+  "Салон красоты": "categories.beautySalon",
+  Здоровье: "categories.health",
+  "Фитнес зал": "categories.gym",
+  "Учебные заведения": "categories.education",
+  Рестораны: "categories.restaurants",
+  Кафейни: "categories.cafes",
+  "Авто сервис": "categories.autoService",
+  Кинотеатры: "categories.cinema",
+  "Комп клуб": "categories.pcClub",
+  Клининг: "categories.cleaning",
+  Санатории: "categories.sanatoriums",
   "Спорт зал": "categories.sportGym",
   Спортзал: "map.filterGym",
   Кофейня: "map.filterCafe",
   Больница: "map.filterHospital",
   Ресторан: "map.filterRestaurant",
-  "Салон красоты": "categories.beautySalon",
   Красота: "categories.beauty",
-  Здоровье: "categories.health",
-  Образование: "categories.education",
   Еда: "categories.food",
   Другое: "categories.other",
   Клуб: "categories.club",
+  "Кафе и рестораны": "categories.restaurants",
+  "Спорт и фитнес": "categories.gym",
+  "Красота и уход": "categories.beautySalon",
+  Медицина: "categories.health",
+  "Здоровье и SPA": "categories.sanatoriums",
+  "Отели и отдых": "categories.sanatoriums",
+  Автосервисы: "categories.autoService",
+  Развлечения: "categories.cinema",
 };
 
 export const SHOP_CATEGORY_KEYS: Record<string, string> = {
@@ -102,6 +136,7 @@ export const HOME_CATEGORY_KEYS: Record<number, string> = {
   9: "categories.pcClub",
   10: "categories.cleaning",
   11: "categories.sanatoriums",
+  12: "categories.other",
 };
 
 export const REVIEW_TAG_KEYS: Record<string, string> = {

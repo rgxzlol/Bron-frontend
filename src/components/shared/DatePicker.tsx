@@ -104,7 +104,6 @@ export default function DatePicker({
           const selected = isSameDay(date, selectedDate);
           const isToday = isSameDay(date, today);
           const isDisabled =
-            !inMonth ||
             isDateBeforeDay(date, minSelectableDate) ||
             (isDateDisabled?.(date) ?? false);
 
@@ -113,15 +112,23 @@ export default function DatePicker({
               key={date.toISOString()}
               type="button"
               className={`aspect-square w-[44px] h-[44px] max-h-[44px] rounded-full text-[14px] font-semibold flex items-center justify-center transition-all duration-200
-                ${!inMonth ? "text-[var(--text-muted)] opacity-50 cursor-not-allowed" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"}
-                ${isDisabled && inMonth ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}
+                ${!inMonth ? "text-[var(--text-muted)] opacity-70 hover:bg-[var(--bg-hover)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"}
+                ${isDisabled ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}
                 ${selected ? "!bg-[#0a6af7] !text-white hover:!bg-[#0856c6]" : ""}
                 ${isToday && !selected ? "border-2 border-[#0a6af7]" : ""}
               `}
-              onClick={() => !isDisabled && onSelectedDateChange(date)}
+              onClick={() => {
+                if (isDisabled) return;
+                onSelectedDateChange(date);
+                if (!inMonth) {
+                  onViewMonthChange(
+                    new Date(date.getFullYear(), date.getMonth(), 1),
+                  );
+                }
+              }}
               disabled={isDisabled}
               data-testid={
-                inMonth && !isDisabled ? toBookingDateTestId(date) : undefined
+                !isDisabled ? toBookingDateTestId(date) : undefined
               }
             >
               {date.getDate()}

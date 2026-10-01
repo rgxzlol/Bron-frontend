@@ -8,6 +8,8 @@ export type RegisterRequest = {
   email: string;
   phone: string;
   password: string;
+  first_name?: string;
+  last_name?: string;
 };
 
 export type RegisterResponse = {
@@ -27,6 +29,9 @@ export type UserOut = {
   username: string;
   email: string;
   phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  avatar?: string | null;
   role?: string;
 };
 
@@ -37,13 +42,39 @@ export type UserNotificationSettings = {
   promotions: boolean;
 };
 
-export type InAppNotificationType = "booking" | "payment" | "promotion";
+export type InAppNotificationType =
+  | "booking"
+  | "payment"
+  | "promotion"
+  | "booking_created"
+  | "booking_confirmed"
+  | "booking_rejected"
+  | "booking_cancelled"
+  | "booking_rescheduled";
 
 export type InAppNotification = {
   id: string;
   type: InAppNotificationType;
   time: string;
   read: boolean;
+  title?: string;
+  description?: string;
+  booking_id?: number | null;
+};
+
+export type ApiNotification = {
+  id: number;
+  notification_type: InAppNotificationType;
+  title: string;
+  message: string;
+  is_read: boolean;
+  booking_id: number | null;
+  created_at: string;
+};
+
+export type NotificationsResponse = {
+  items: ApiNotification[];
+  count: number;
 };
 
 export type UserProfile = {
@@ -51,6 +82,12 @@ export type UserProfile = {
   username: string;
   email: string;
   phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+  avatar?: string | null;
+  rating?: number | null;
+  reviews_count?: number | null;
   telegram_id: number | null;
   role: string;
   language: string;
@@ -62,6 +99,8 @@ export type UserProfileUpdate = {
   username?: string | null;
   email?: string | null;
   phone?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   language?: string | null;
   telegram_id?: number | null;
   notification_settings?: UserNotificationSettings;
@@ -76,47 +115,82 @@ export type BusinessListItem = {
   id: number;
   owner_id?: number;
   name: string;
-  category: string;
+  category: BusinessCategory | string;
   address: string;
   phone: string;
   logo: string | null;
+  views_count?: number;
+};
+
+export type BusinessCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  business_count?: number;
+  order?: number;
+};
+
+export type Category = BusinessCategory;
+
+export type BusinessSocialLinks = {
+  instagram?: string | null;
+  telegram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
 };
 
 export type Business = {
   id: number;
   owner_id: number;
-  owner_username: string;
+  owner_username?: string;
   name: string;
   description: string | null;
   logo: string | null;
-  category: string;
+  category: BusinessCategory | string;
   address: string;
   phone: string;
   latitude: number | null;
   longitude: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, unknown>;
+  social_links?: BusinessSocialLinks;
   comments?: string | null;
   status?: string | null;
   created_at: string;
+  email?: string | null;
+  owner_name?: string | null;
+  views_count?: number;
 };
 
 export type BusinessCreate = {
   name: string;
+  category_id: number;
   description?: string | null;
-  category: string;
   address: string;
   phone: string;
+  email: string;
+  owner_name: string;
   latitude?: number | null;
   longitude?: number | null;
   tin?: string | null;
   website?: string | null;
-  social_links?: Record<string, unknown>;
+  social_links?: BusinessSocialLinks;
   comments?: string | null;
 };
 
 export type BusinessUpdate = Partial<BusinessCreate>;
+
+export type BusinessCreateResponse = {
+  message: string;
+  business_id: number;
+};
+
+export type BusinessViewResponse = {
+  counted: boolean;
+  views_count: number;
+};
 
 export type BusinessStats = {
   total_bookings: number;
@@ -136,6 +210,8 @@ export type Service = {
   price: number | string;
   is_active: boolean;
   image?: string | null;
+  capacity?: number;
+  availability?: ServiceDateAvailability[];
 };
 
 export type ServiceListItem = {
@@ -147,6 +223,13 @@ export type ServiceListItem = {
   description?: string | null;
   is_active?: boolean;
   image?: string | null;
+  capacity?: number;
+  availability?: ServiceDateAvailability[];
+};
+
+export type ServiceDateAvailability = {
+  date: string;
+  times: string[];
 };
 
 export type ServiceCreate = {
@@ -156,11 +239,30 @@ export type ServiceCreate = {
   category: string;
   duration: number;
   price: number;
+  capacity?: number;
+  availability?: ServiceDateAvailability[] | null;
 };
 
 export type ServiceUpdate = Partial<
-  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active">
+  Pick<Service, "title" | "description" | "category" | "duration" | "price" | "is_active" | "capacity" | "availability">
 >;
+
+export type ServiceAvailableDate = {
+  date: string;
+  free_slots: number;
+};
+
+export type ServiceAvailabilitySlot = {
+  start_time: string;
+  end_time: string;
+  available_spots: number;
+  is_available: boolean;
+};
+
+export type ServiceAvailability = {
+  slots: ServiceAvailabilitySlot[];
+  capacity: number;
+};
 
 export type Product = {
   id: number;
@@ -287,16 +389,37 @@ export type BlockedDateUpdate = {
 };
 
 export type BookingOrderItem = {
-  id: string;
+  id: number;
   name: string;
   price: number;
   quantity: number;
-  kind?: "service" | "extra" | "product";
+  kind: "service" | "product";
 };
+
+export type BookingItemCreate = {
+  id: number;
+  kind: "service" | "product";
+  quantity: number;
+};
+
+export type BookingAttendanceStatus = "on_time" | "late" | "no_show";
+export type ApiBookingAttendanceStatus = "visited" | "late" | "no_show";
 
 export type Booking = {
   id: number;
   user_id: number;
+  username?: string | null;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  customer_name?: string | null;
+  user?: Pick<
+    UserOut,
+    "username" | "first_name" | "last_name" | "avatar" | "phone"
+  > & {
+    full_name?: string | null;
+  };
+  phone?: string | null;
   business_id: number;
   service_id: number;
   branch_id: number;
@@ -307,6 +430,8 @@ export type Booking = {
   guest_count: number;
   total_price: number;
   status: string;
+  attendance_status: ApiBookingAttendanceStatus;
+  extra_wait_minutes: number;
   items?: BookingOrderItem[];
 };
 
@@ -319,7 +444,13 @@ export type BookingListItem = {
   total_price: number;
   business_id?: number;
   guest_count?: number;
+  attendance_status?: ApiBookingAttendanceStatus;
+  extra_wait_minutes?: number;
   items?: BookingOrderItem[];
+  business_name?: string;
+  business_address?: string;
+  business_category?: string;
+  business_logo?: string | null;
 };
 
 export type BookingCreate = {
@@ -331,23 +462,40 @@ export type BookingCreate = {
   start_time: string;
   end_time: string;
   guest_count?: number;
-  product_ids?: number[];
-  items?: BookingOrderItem[];
-  total_price?: number;
+  items: BookingItemCreate[];
 };
 
 export type BookingUpdate = {
-  status?: string | null;
   staff_id?: number | null;
-  booking_date?: string;
-  start_time?: string;
-  end_time?: string;
+};
+
+export type BookingAttendanceUpdate = {
+  status: ApiBookingAttendanceStatus;
+  extra_wait_minutes?: number;
+};
+
+export type BookingReschedule = {
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type BookingAvailableSlotsResponse = {
+  business_id: number;
+  service_id: number;
+  branch_id: number;
+  staff_id: number | null;
+  date: string;
+  duration: number;
+  capacity: number;
+  slots: ServiceAvailabilitySlot[];
 };
 
 export type BusinessGalleryImage = {
   id: number;
   business_id: number;
   image: string;
+  sort_order: number;
   created_at: string;
 };
 
@@ -361,6 +509,9 @@ export type Review = {
   user_id: number;
   user_username: string;
   business_id: number;
+  customer_id?: number | null;
+  booking_id?: number | null;
+  review_type?: string;
   rating: number;
   comment: string;
   created_at: string;
@@ -368,8 +519,28 @@ export type Review = {
 
 export type ReviewCreate = {
   business_id: number;
+  booking_id?: number | null;
   rating: number;
-  comment: string;
+  comment?: string | null;
+};
+
+export type CustomerReviewCreate = {
+  booking_id: number;
+  rating: number;
+  comment?: string | null;
+};
+
+export type CustomerRating = {
+  user_id: number;
+  username: string;
+  full_name?: string | null;
+  rating: number;
+  reviews_count: number;
+  booking_rating?: number | null;
+  evaluated_bookings_count?: number;
+  on_time_count?: number;
+  late_count?: number;
+  no_show_count?: number;
 };
 
 export type ReviewUpdate = {
@@ -408,20 +579,39 @@ export type BusinessApplication = {
   website?: string | null;
   social_links?: Record<string, unknown>;
   comments?: string | null;
+  email?: string | null;
+  owner_name?: string | null;
+  category_id?: number | null;
   status: BusinessApplicationStatusValue | string;
   created_at: string;
 };
 
 export type BusinessApplicationCreate = {
-  company_name: string;
-  tin: string;
-  sphere: string;
-  location: string;
+  name: string;
+  category_id: number;
+  address: string;
   phone: string;
-  description: string;
-  latitude: number;
-  longitude: number;
-  website: string;
-  social_links: Record<string, string>;
-  comments: string;
+  email: string;
+  owner_name: string;
+  tin?: string | null;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  website?: string | null;
+  social_links?: BusinessSocialLinks;
+  comments?: string | null;
+};
+
+export type BusinessContactApplicationCreate = {
+  full_name: string;
+  phone: string;
+  email?: string;
+  social?: string;
+  comment?: string;
+};
+
+export type BusinessContactApplication = BusinessContactApplicationCreate & {
+  id: number;
+  status: string;
+  created_at: string;
 };

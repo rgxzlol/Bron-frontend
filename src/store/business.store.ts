@@ -6,27 +6,36 @@ import {
   ensureWritableBusinessId,
   fetchBusinessBookingsFromApi,
   fetchMyBusinessesFromApi,
-  getCurrentUserId,
+  getCustomerRatingFromApi,
   removeBusinessFromApi,
   removeServiceFromApi,
   saveBusinessDraftToApi,
+  updateBusinessBookingAttendanceOnApi,
   updateBusinessBookingStatusOnApi,
   updateServiceOnApi,
 } from "@/lib/api/businessSync";
-import { getFallbackBusinessBookings } from "@/lib/business/demoBookings";
-import {
-  getDemoSavedBusiness,
-  isPlaceholderDemoBusiness,
-} from "@/lib/business/demoBusiness";
 import { getAuthToken } from "@/lib/api/token";
+import { useNotificationStore } from "@/store/notification.store";
 import { ApiError } from "@/lib/api/client";
-import { UZBEK_PHONE_PREFIX } from "@/lib/auth/validation";
-import { GeocodingError } from "@/lib/geocoding";
+import {
+  apiCustomerRatingToStats,
+  apiBookingStatusToUi,
+  getCustomerDisplayName,
+} from "@/lib/api/mappers";
+import type {
+  BookingAttendanceStatus,
+  BookingOrderItem,
+} from "@/lib/api/types";
+import {
+  formatUzbekPhoneInput,
+  UZBEK_PHONE_PREFIX,
+} from "@/lib/auth/validation";
 import {
   DEFAULT_SCHEDULE,
   type DaySchedule,
 } from "@/lib/business/schedule";
 import { mergeBusinessFromApi } from "@/lib/business/photos";
+import { isLegacyDemoBusiness } from "@/lib/business/legacyDemoBusiness";
 import {
   hasValidCoords,
   normalizeCoords,
@@ -34,11 +43,17 @@ import {
 } from "@/lib/geocoding";
 
 export const BUSINESS_CATEGORIES = [
-  "Спорт зал",
-  "Красота",
+  "Салон красоты",
   "Здоровье",
-  "Образование",
-  "Еда",
+  "Фитнес зал",
+  "Учебные заведения",
+  "Рестораны",
+  "Кафейни",
+  "Авто сервис",
+  "Кинотеатры",
+  "Комп клуб",
+  "Клининг",
+  "Санатории",
   "Другое",
 ] as const;
 
@@ -59,17 +74,36 @@ export type BusinessService = {
   photo: string | null;
   active: boolean;
   type: "service" | "product";
+  duration?: number;
   guestCapacity?: number;
   quantity?: number;
+  dates?: string[];
+  availability?: { date: string; times: string[] }[];
 };
 
 export type BusinessBookingRequest = {
   id: string;
+  bookingId: number;
+  customerId: number;
+  customerAvatar?: string | null;
+  customerPhone?: string | null;
+  customerRating?: number | null;
+  customerReviewsCount?: number;
+  customerEvaluatedBookingsCount?: number;
+  customerOnTimeCount?: number;
+  customerLateCount?: number;
+  customerNoShowCount?: number;
+  customerRatingStatsAvailable?: boolean;
+  bookingDate?: string;
+  endTime?: string;
+  items?: BookingOrderItem[];
   time: string;
   customerName: string;
   serviceName: string;
   price: number;
-  status: "pending" | "waiting" | "accepted" | "cancelled";
+  status: "pending" | "waiting" | "accepted" | "cancelled" | "completed";
+  attendanceStatus?: BookingAttendanceStatus;
+  extraWaitMinutes?: number;
 };
 
 export type BusinessDraft = {
@@ -89,6 +123,7 @@ export type BusinessDraft = {
 export type SavedBusiness = BusinessDraft & {
   id: string;
   status: "confirmed";
+  approvalStatus?: "pending" | "approved";
   bookings: number;
   views: number;
   lat: number;
@@ -124,17 +159,33 @@ function normalizeBusiness(business: SavedBusiness): SavedBusiness {
   };
 }
 
-function ensureNewBusinessDefaults(business: SavedBusiness): SavedBusiness {
-  return normalizeBusiness(business);
+function withoutPersistedCustomerRatings(business: SavedBusiness): SavedBusiness {
+  return {
+    ...business,
+    bookingRequests: business.bookingRequests.map((booking) => {
+      const withoutRating = { ...booking };
+      delete withoutRating.customerRating;
+      delete withoutRating.customerReviewsCount;
+      delete withoutRating.customerEvaluatedBookingsCount;
+      delete withoutRating.customerOnTimeCount;
+      delete withoutRating.customerLateCount;
+      delete withoutRating.customerNoShowCount;
+      delete withoutRating.customerRatingStatsAvailable;
+      return withoutRating;
+    }),
+  };
 }
 
 type BusinessStore = {
   businesses: SavedBusiness[];
+  hasLoadedBusinesses: boolean;
   draft: BusinessDraft;
   editingId: string | null;
   showMyBusiness: boolean;
   mapFocusBusinessId: string | null;
   updateDraft: (partial: Partial<BusinessDraft>) => void;
+  updateBusinessViews: (businessId: string, views: number) => void;
+  setBusinessViews: (businessId: string, views: number) => void;
   setDraftSchedule: (schedule: DaySchedule[]) => void;
   resetDraft: () => void;
   loadForEdit: (id: string) => void;
@@ -158,7 +209,20 @@ type BusinessStore = {
   updateService: (
     businessId: string,
     serviceId: string,
-    partial: Partial<Pick<BusinessService, "name" | "category" | "price" | "description" | "photo">>,
+    partial: Partial<
+      Pick<
+        BusinessService,
+        | "name"
+        | "category"
+        | "price"
+        | "description"
+        | "photo"
+        | "duration"
+        | "guestCapacity"
+        | "quantity"
+        | "availability"
+      >
+    >,
   ) => Promise<void>;
   toggleService: (
     businessId: string,
@@ -170,6 +234,12 @@ type BusinessStore = {
     bookingId: string,
     status: BusinessBookingRequest["status"],
   ) => Promise<void>;
+  updateBookingAttendance: (
+    businessId: string,
+    bookingId: string,
+    attendanceStatus: BookingAttendanceStatus,
+    extraWaitMinutes?: number,
+  ) => Promise<void>;
 };
 
 function draftFromBusiness(business: SavedBusiness): BusinessDraft {
@@ -179,7 +249,7 @@ function draftFromBusiness(business: SavedBusiness): BusinessDraft {
     description: business.description,
     category: business.category,
     website: business.website,
-    phone: business.phone,
+    phone: formatUzbekPhoneInput(business.phone, { keepPrefix: true }),
     address: business.address,
     lat: hasValidCoords(business) ? business.lat : null,
     lng: hasValidCoords(business) ? business.lng : null,
@@ -202,16 +272,29 @@ function countAcceptedBookings(bookings: BusinessBookingRequest[]) {
   return bookings.filter((booking) => booking.status === "accepted").length;
 }
 
-function resolveBusinessesWithDemo(
-  businesses: SavedBusiness[],
-  previous: SavedBusiness[] = [],
+function notifyBusinessBookingStatus(
+  businessId: string,
+  booking: BusinessBookingRequest,
+  status: string,
 ) {
-  if (businesses.length > 0) {
-    return businesses;
-  }
+  const normalized = status.toLowerCase();
+  const isCancelled = normalized === "cancelled" || normalized === "rejected";
+  const isConfirmed = normalized === "accepted" || normalized === "approved";
 
-  const previousDemo = previous.find(isPlaceholderDemoBusiness);
-  return [previousDemo ? normalizeBusiness(previousDemo) : getDemoSavedBusiness()];
+  useNotificationStore.getState().addLocalNotification({
+    id: `local-business-booking-${businessId}-${booking.id}-${normalized}`,
+    type: "booking",
+    title: isCancelled
+      ? "Пользователь отменил бронирование"
+      : isConfirmed
+        ? "Бронирование подтверждено"
+        : "Новое бронирование",
+    description: isCancelled
+      ? `${booking.customerName} отменил бронирование на ${booking.time}`
+      : isConfirmed
+        ? `Бронирование клиента ${booking.customerName} подтверждено`
+        : `Клиент ${booking.customerName} ожидает подтверждения`,
+  });
 }
 
 function replaceBusiness(
@@ -228,14 +311,41 @@ function replaceBusiness(
 export const useBusinessStore = create<BusinessStore>()(
   persist(
     (set, get) => ({
-      businesses: [getDemoSavedBusiness()],
+      businesses: [],
+      hasLoadedBusinesses: false,
       draft: createEmptyDraft(),
       editingId: null,
-      showMyBusiness: true,
+      showMyBusiness: false,
       mapFocusBusinessId: null,
 
       updateDraft: (partial) =>
         set((state) => ({ draft: { ...state.draft, ...partial } })),
+
+      updateBusinessViews: (businessId, views) =>
+        set((state) => {
+          const currentBusiness = state.businesses.find(
+            (business) => business.id === businessId,
+          );
+          if (!currentBusiness) return state;
+
+          const nextViews = Math.max(currentBusiness.views, views);
+          if (nextViews === currentBusiness.views) return state;
+
+          return {
+            businesses: state.businesses.map((business) =>
+              business.id === businessId
+                ? { ...business, views: nextViews }
+                : business,
+            ),
+          };
+        }),
+
+      setBusinessViews: (businessId, views) =>
+        set((state) => ({
+          businesses: state.businesses.map((business) =>
+            business.id === businessId ? { ...business, views } : business,
+          ),
+        })),
 
       setDraftSchedule: (schedule) =>
         set((state) => ({ draft: { ...state.draft, schedule } })),
@@ -257,103 +367,39 @@ export const useBusinessStore = create<BusinessStore>()(
         const { draft, businesses, editingId } = get();
         const token = getAuthToken();
 
-        const persistLocally = async (): Promise<SavedBusiness> => {
-          if (editingId) {
-            const coords = await resolveDraftCoords(draft);
-            let updatedBusiness: SavedBusiness | null = null;
-            const next = businesses.map((business) => {
-              if (business.id !== editingId) return business;
-              updatedBusiness = normalizeBusiness({
-                ...business,
-                ...draft,
-                lat: coords.lat,
-                lng: coords.lng,
-              });
-              return updatedBusiness;
-            });
-            if (!updatedBusiness) throw new Error("Business not found");
-            const savedBusiness: SavedBusiness = updatedBusiness;
-            set({
-              businesses: next,
-              draft: createEmptyDraft(),
-              editingId: null,
-              showMyBusiness: true,
-              mapFocusBusinessId: savedBusiness.id,
-            });
-            return savedBusiness;
-          }
+        if (!token) throw new ApiError(401, "Требуется авторизация");
 
-          const coords = await resolveDraftCoords(draft);
-          const saved: SavedBusiness = ensureNewBusinessDefaults({
-            ...draft,
-            id: crypto.randomUUID(),
-            status: "confirmed",
-            bookings: 0,
-            views: 0,
-            lat: coords.lat,
-            lng: coords.lng,
-            services: [],
-            bookingRequests: [],
-          });
-          set({
-            businesses: [...businesses, saved],
-            draft: createEmptyDraft(),
-            editingId: null,
-            showMyBusiness: true,
-            mapFocusBusinessId: saved.id,
-          });
-          return saved;
-        };
+        const coords = await resolveDraftCoords(draft);
+        const saved = await saveBusinessDraftToApi(draft, editingId);
+        const resolved = normalizeCoords(coords.lat, coords.lng);
+        const normalized: SavedBusiness = normalizeBusiness({
+          ...saved,
+          lat: resolved?.lat ?? coords.lat,
+          lng: resolved?.lng ?? coords.lng,
+          profilePhoto: saved.profilePhoto ?? draft.profilePhoto,
+          gallery: saved.gallery.some(Boolean) ? saved.gallery : draft.gallery,
+          website: saved.website || draft.website,
+          description: saved.description || draft.description,
+        });
 
-        if (token) {
-          try {
-            const coords = await resolveDraftCoords(draft);
-            const saved = await saveBusinessDraftToApi(draft, editingId);
-            const resolved = normalizeCoords(coords.lat, coords.lng);
-            const normalized: SavedBusiness = normalizeBusiness({
-              ...saved,
-              lat: resolved?.lat ?? coords.lat,
-              lng: resolved?.lng ?? coords.lng,
-              profilePhoto: saved.profilePhoto ?? draft.profilePhoto,
-              gallery: saved.gallery.some(Boolean) ? saved.gallery : draft.gallery,
-              website: saved.website || draft.website,
-              description: saved.description || draft.description,
-            });
-
-            set({
-              businesses: replaceBusiness(businesses, editingId, normalized),
-              draft: createEmptyDraft(),
-              editingId: null,
-              showMyBusiness: true,
-              mapFocusBusinessId: normalized.id,
-            });
-            return normalized;
-          } catch (error) {
-            if (error instanceof GeocodingError || error instanceof ApiError) {
-              throw error;
-            }
-
-            console.warn("API business save failed, using local fallback:", error);
-            return persistLocally();
-          }
-        }
-
-        return persistLocally();
+        set({
+          businesses: replaceBusiness(businesses, editingId, normalized),
+          draft: createEmptyDraft(),
+          editingId: null,
+          showMyBusiness: true,
+          mapFocusBusinessId: normalized.id,
+        });
+        return normalized;
       },
 
       removeBusiness: async (id) => {
-        try {
-          await removeBusinessFromApi(id);
-        } catch (error) {
-          console.warn("API business delete failed, removing locally:", error);
-        }
+        await removeBusinessFromApi(id);
 
         set((state) => {
           const remaining = state.businesses.filter((b) => b.id !== id);
-          const businesses = resolveBusinessesWithDemo(remaining, state.businesses);
           return {
-            businesses,
-            showMyBusiness: businesses.length > 0,
+            businesses: remaining,
+            showMyBusiness: remaining.length > 0,
           };
         });
       },
@@ -362,34 +408,36 @@ export const useBusinessStore = create<BusinessStore>()(
         const token = getAuthToken();
         if (!token) return;
 
-        const userId = await getCurrentUserId();
-        if (!userId) return;
-
         try {
-          const existing = get().businesses;
-          const existingById = new Map(existing.map((item) => [item.id, item]));
-          const fromApi = await fetchMyBusinessesFromApi(userId);
+          const fromApi = await fetchMyBusinessesFromApi();
+          const existingById = new Map(
+            get().businesses.map((item) => [item.id, item]),
+          );
           const merged = fromApi.map((item) =>
             mergeBusinessFromApi(item, existingById.get(item.id)),
           );
-          const apiIds = new Set(merged.map((item) => item.id));
-          const localOnly = existing.filter(
-            (item) =>
-              !apiIds.has(item.id) && !isPlaceholderDemoBusiness(item),
-          );
-          const mergedList =
-            merged.length > 0 ? [...merged, ...localOnly] : localOnly;
-          const businesses = resolveBusinessesWithDemo(mergedList, existing);
-
+          merged.forEach((item) => {
+            const previous = existingById.get(item.id);
+            const previousBookings = new Map(
+              previous?.bookingRequests.map((booking) => [booking.id, booking]) ?? [],
+            );
+            item.bookingRequests.forEach((booking) => {
+              const oldBooking = previousBookings.get(booking.id);
+              if (oldBooking && oldBooking.status !== booking.status) {
+                notifyBusinessBookingStatus(item.id, booking, booking.status);
+              } else if (!oldBooking) {
+                notifyBusinessBookingStatus(item.id, booking, "pending");
+              }
+            });
+          });
           set({
-            businesses,
-            showMyBusiness: businesses.length > 0,
+            businesses: merged,
+            showMyBusiness: merged.length > 0,
+            hasLoadedBusinesses: true,
           });
         } catch (error) {
           console.error("Не удалось загрузить бизнесы:", error);
-          const current = get().businesses;
-          const businesses = resolveBusinessesWithDemo(current, current);
-          set({ businesses, showMyBusiness: businesses.length > 0 });
+          set({ hasLoadedBusinesses: true });
         }
       },
 
@@ -397,21 +445,17 @@ export const useBusinessStore = create<BusinessStore>()(
         const business = get().businesses.find((item) => item.id === businessId);
         if (!business) return;
 
-        let bookingRequests: BusinessBookingRequest[] = [];
+        if (!/^\d+$/.test(businessId)) return;
 
-        if (/^\d+$/.test(businessId)) {
-          try {
-            bookingRequests = await fetchBusinessBookingsFromApi(
-              Number(businessId),
-              business.services,
-            );
-          } catch (error) {
-            console.error("Не удалось обновить бронирования:", error);
-          }
-        }
-
-        if (bookingRequests.length === 0) {
-          bookingRequests = getFallbackBusinessBookings(business.services);
+        let bookingRequests: BusinessBookingRequest[];
+        try {
+          bookingRequests = await fetchBusinessBookingsFromApi(
+            Number(businessId),
+            business.services,
+          );
+        } catch (error) {
+          console.error("Не удалось обновить бронирования:", error);
+          return;
         }
 
         set((state) => ({
@@ -433,6 +477,7 @@ export const useBusinessStore = create<BusinessStore>()(
         set({
           businesses: [],
           showMyBusiness: false,
+          hasLoadedBusinesses: false,
           mapFocusBusinessId: null,
         }),
 
@@ -610,6 +655,7 @@ export const useBusinessStore = create<BusinessStore>()(
           }));
           throw error;
         }
+
       },
 
       toggleService: async (businessId, serviceId, active) => {
@@ -644,42 +690,123 @@ export const useBusinessStore = create<BusinessStore>()(
       },
 
       updateBookingStatus: async (businessId, bookingId, status) => {
-        const business = get().businesses.find((item) => item.id === businessId);
-        const previousRequests = business?.bookingRequests ?? [];
-        const nextRequests = previousRequests.map((req) =>
-          req.id === bookingId ? { ...req, status } : req,
-        );
-
-        set((state) => ({
-          businesses: updateBusiness(state.businesses, businessId, (b) => ({
-            ...b,
-            bookingRequests: b.bookingRequests.map((req) =>
-              req.id === bookingId ? { ...req, status } : req,
-            ),
-            bookings: countAcceptedBookings(nextRequests),
-          })),
-        }));
-
         try {
           if (status === "accepted" || status === "cancelled") {
             await updateBusinessBookingStatusOnApi(bookingId, status);
           }
         } catch (error) {
           console.warn("Failed to update booking status:", error);
+          await get().refreshBusinessBookings(businessId);
+          throw error;
+        }
+
+        const currentBusiness = get().businesses.find(
+          (item) => item.id === businessId,
+        );
+        const nextRequests = (currentBusiness?.bookingRequests ?? []).map(
+          (request) =>
+            request.id === bookingId ? { ...request, status } : request,
+        );
+        set((state) => ({
+          businesses: updateBusiness(state.businesses, businessId, (item) => ({
+            ...item,
+            bookingRequests: nextRequests,
+            bookings: countAcceptedBookings(nextRequests),
+          })),
+        }));
+
+        const updatedBooking = nextRequests.find((booking) => booking.id === bookingId);
+        if (updatedBooking) {
+          notifyBusinessBookingStatus(businessId, updatedBooking, status);
+        }
+      },
+
+      updateBookingAttendance: async (
+        businessId,
+        bookingId,
+        attendanceStatus,
+        extraWaitMinutes = 0,
+      ) => {
+        const business = get().businesses.find((item) => item.id === businessId);
+        const booking = business?.bookingRequests.find((item) => item.id === bookingId);
+        if (
+          !business ||
+          !booking ||
+          booking.status === "cancelled" ||
+          booking.attendanceStatus === attendanceStatus
+        ) {
+          return;
+        }
+
+        const updated = await updateBusinessBookingAttendanceOnApi(
+          bookingId,
+          attendanceStatus,
+          extraWaitMinutes,
+        );
+        if (!updated) return;
+
+        set((state) => ({
+          businesses: updateBusiness(state.businesses, businessId, (item) => {
+            const attendanceStatus: BookingAttendanceStatus =
+              updated.attendance_status === "visited"
+                ? "on_time"
+                : updated.attendance_status;
+            const bookingRequests = item.bookingRequests.map((request) =>
+              request.id === bookingId
+                ? {
+                    ...request,
+                    status: apiBookingStatusToUi(updated.status),
+                    attendanceStatus,
+                    extraWaitMinutes: updated.extra_wait_minutes,
+                  }
+                : request,
+            );
+            return {
+              ...item,
+              bookingRequests,
+              bookings: countAcceptedBookings(bookingRequests),
+            };
+          }),
+        }));
+
+        try {
+          const rating = await getCustomerRatingFromApi(booking.customerId);
+          const stats = apiCustomerRatingToStats(rating);
           set((state) => ({
-            businesses: updateBusiness(state.businesses, businessId, (b) => ({
-              ...b,
-              bookingRequests: previousRequests,
-              bookings: countAcceptedBookings(previousRequests),
+            businesses: updateBusiness(state.businesses, businessId, (item) => ({
+              ...item,
+              bookingRequests: item.bookingRequests.map((request) =>
+                request.id === bookingId
+                  ? {
+                      ...request,
+                      customerName: getCustomerDisplayName(
+                        rating,
+                        booking.customerId,
+                        booking.customerName,
+                      ),
+                      customerRating: stats.rating,
+                      customerEvaluatedBookingsCount:
+                        stats.evaluatedBookingsCount,
+                      customerOnTimeCount: stats.onTimeCount,
+                      customerLateCount: stats.lateCount,
+                      customerNoShowCount: stats.noShowCount,
+                      customerRatingStatsAvailable: stats.available,
+                    }
+                  : request,
+              ),
             })),
           }));
-          throw error;
+        } catch (error) {
+          console.warn(
+            `Attendance was saved, but customer rating could not be refreshed for customer ${booking.customerId}:`,
+            error,
+          );
         }
       },
     }),
     {
       name: "business-storage",
-      version: 5,
+      version: 8,
       migrate: (persisted) => {
         const state = persisted as {
           businesses?: SavedBusiness[];
@@ -687,20 +814,37 @@ export const useBusinessStore = create<BusinessStore>()(
         };
         if (!state) return persisted;
 
-        const businesses = resolveBusinessesWithDemo(
-          (state.businesses ?? []).map((b) =>
-            normalizeBusiness(b as SavedBusiness),
-          ),
-        );
+        const businesses = (state.businesses ?? [])
+          .filter((business) => !isLegacyDemoBusiness(business))
+          .map((b) =>
+            withoutPersistedCustomerRatings(
+              normalizeBusiness(b as SavedBusiness),
+            ),
+          );
 
         return {
           ...state,
           businesses,
-          showMyBusiness: businesses.length > 0 ? true : state.showMyBusiness,
+          showMyBusiness: businesses.length > 0,
+        };
+      },
+      merge: (persisted, current) => {
+        const state = persisted as Partial<BusinessStore> | undefined;
+        const businesses = (state?.businesses ?? [])
+          .filter((business) => !isLegacyDemoBusiness(business))
+          .map((business) =>
+            withoutPersistedCustomerRatings(normalizeBusiness(business)),
+          );
+
+        return {
+          ...current,
+          ...state,
+          businesses,
+          showMyBusiness: businesses.length > 0,
         };
       },
       partialize: (state) => ({
-        businesses: state.businesses,
+        businesses: state.businesses.map(withoutPersistedCustomerRatings),
         showMyBusiness: state.showMyBusiness,
       }),
     },

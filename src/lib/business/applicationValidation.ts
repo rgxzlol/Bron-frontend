@@ -7,7 +7,7 @@ import {
   clampBusinessDescription,
 } from "@/lib/business/validation";
 
-export const BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH = 500;
+export const BUSINESS_APPLICATION_COMMENTS_MAX_LENGTH = 120;
 
 export type BusinessApplicationFieldErrors = {
   companyName?: string;
@@ -19,6 +19,9 @@ export type BusinessApplicationFieldErrors = {
   website?: string;
   socialTelegram?: string;
   socialInstagram?: string;
+  socialFacebook?: string;
+  socialTiktok?: string;
+  socialYoutube?: string;
   comments?: string;
 };
 
@@ -34,6 +37,9 @@ export type BusinessApplicationFormData = {
   website: string;
   socialTelegram: string;
   socialInstagram: string;
+  socialFacebook: string;
+  socialTiktok: string;
+  socialYoutube: string;
   comments: string;
 };
 
@@ -93,8 +99,6 @@ export function validateBusinessApplication(
     errors.location = messages.locationRequired;
   } else if (INVALID_SYMBOLS_PATTERN.test(location)) {
     errors.location = messages.locationInvalid;
-  } else if (data.latitude == null || data.longitude == null) {
-    errors.location = messages.locationCoordsRequired;
   }
 
   const phone = data.phone.trim();
@@ -105,25 +109,30 @@ export function validateBusinessApplication(
   }
 
   const description = data.description.trim();
-  if (!description) {
-    errors.description = messages.descriptionRequired;
-  } else if (description.length > BUSINESS_DESCRIPTION_MAX_LENGTH) {
+  if (description.length > BUSINESS_DESCRIPTION_MAX_LENGTH) {
     errors.description = messages.descriptionLimitReached;
   }
 
   const website = data.website.trim();
-  if (!website) {
-    errors.website = messages.websiteRequired;
-  } else if (!WEBSITE_PATTERN.test(website)) {
+  if (website && !WEBSITE_PATTERN.test(website)) {
     errors.website = messages.websiteInvalid;
   }
 
-  if (!data.socialTelegram.trim()) {
-    errors.socialTelegram = messages.socialTelegramRequired;
+  const urlPattern = /^https?:\/\/\S+$/i;
+  if (data.socialTelegram.trim() && !urlPattern.test(data.socialTelegram.trim())) {
+    errors.socialTelegram = messages.websiteInvalid;
   }
-
-  if (!data.socialInstagram.trim()) {
-    errors.socialInstagram = messages.socialInstagramRequired;
+  if (data.socialInstagram.trim() && !urlPattern.test(data.socialInstagram.trim())) {
+    errors.socialInstagram = messages.websiteInvalid;
+  }
+  for (const [field, value] of [
+    ["socialFacebook", data.socialFacebook],
+    ["socialTiktok", data.socialTiktok],
+    ["socialYoutube", data.socialYoutube],
+  ] as const) {
+    if (value.trim() && !urlPattern.test(value.trim())) {
+      errors[field] = messages.websiteInvalid;
+    }
   }
 
   const comments = data.comments.trim();

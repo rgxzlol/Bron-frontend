@@ -124,7 +124,7 @@ export default function DeleteBusinessModal({
           <button
             type="button"
             onClick={onClose}
-            className={desktop.deleteCloseButton}
+            className={`${desktop.deleteCloseButton} theme-close-button`}
             aria-label={t("common.close")}
             data-testid="business-delete-modal-close"
           >

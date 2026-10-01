@@ -29,14 +29,23 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { translateBusinessCategory } from "@/lib/i18n/labels";
 import AddressAutocomplete from "./AddressAutocomplete";
 import DeleteBusinessModal from "./DeleteBusinessModal";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { useToastStore } from "@/store/toast.store";
+import { reviewsApi } from "@/lib/api/reviews";
 import s from "./businessModal.module.css";
 import desktop from "./businessDesktop.module.css";
 
-const GALLERY_SLOT_COUNT = 6;
 const MOBILE_GALLERY_SLOT_COUNT = 3;
+const subscribeToNothing = () => () => {};
+const getClientMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
 const DAY_I18N_KEYS: Record<DayKey, string> = {
   mon: "businessModal.dayMon",
   tue: "businessModal.dayTue",
@@ -56,14 +65,6 @@ const DAY_SHORT_I18N_KEYS: Record<DayKey, string> = {
   sat: "businessModal.daySatShort",
   sun: "businessModal.daySunShort",
 };
-
-const REVIEW_DISTRIBUTION = [
-  { stars: 5, percent: 72 },
-  { stars: 4, percent: 18 },
-  { stars: 3, percent: 6 },
-  { stars: 2, percent: 3 },
-  { stars: 1, percent: 1 },
-];
 
 type Props = {
   onClose: () => void;
@@ -267,7 +268,7 @@ function ScheduleToggle({
 }
 
 export default function BusinessModal({ onClose, onSaved }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const draft = useBusinessStore((s2) => s2.draft);
   const updateDraft = useBusinessStore((s2) => s2.updateDraft);
   const setDraftSchedule = useBusinessStore((s2) => s2.setDraftSchedule);
@@ -275,11 +276,56 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   const saveDraft = useBusinessStore((s2) => s2.saveDraft);
   const removeBusiness = useBusinessStore((s2) => s2.removeBusiness);
   const editingId = useBusinessStore((s2) => s2.editingId);
+  const [reviews, setReviews] = useState<
+    Awaited<ReturnType<typeof reviewsApi.listByBusiness>>
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!editingId || !/^\d+$/.test(editingId)) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void reviewsApi
+      .listByBusiness(Number(editingId))
+      .then((result) => {
+        if (!cancelled) setReviews(result);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setReviews([]);
+          console.error("Не удалось загрузить отзывы бизнеса:", error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingId]);
+
+  const reviewAverage =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+  const reviewDistribution = [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviews.filter((review) => review.rating === stars).length;
+    return {
+      stars,
+      percent: reviews.length > 0 ? (count / reviews.length) * 100 : 0,
+    };
+  });
   const showToast = useToastStore((s2) => s2.showToast);
 
   const profileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    getClientMountedSnapshot,
+    getServerMountedSnapshot,
+  );
   const [isDesktop, setIsDesktop] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -299,10 +345,6 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   function getDayShortLabel(key: DayKey) {
     return t(DAY_SHORT_I18N_KEYS[key]);
   }
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -432,7 +474,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             ? t("businessErrors.saveFailed")
             : error instanceof ApiError
               ? error.message
-              : t("businessErrors.saveFailed");
+              : error instanceof Error
+                ? error.message
+                : t("businessErrors.saveFailed");
       alert(message);
     } finally {
       setSaving(false);
@@ -473,7 +517,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
       : "relative flex h-full min-h-[100px] w-full flex-col items-center justify-center gap-[8px] overflow-hidden rounded-[14px] border border-dashed border-[#0a6af7]/45 bg-[var(--bg-active-soft)] transition hover:border-[#0a6af7]/70 hover:bg-[var(--bg-hover)]";
 
     return (
-      <div key={index} className={className} data-testid={`business-gallery-slot-${index}`}>
+      <div key={index} className={`relative ${className}`} data-testid={`business-gallery-slot-${index}`}>
         <input
           ref={(el) => {
             galleryInputRefs.current[index] = el;
@@ -516,6 +560,21 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             </>
           )}
         </button>
+        {image ? (
+          <button
+            type="button"
+            aria-label={`${t("common.delete")} ${t("businessModal.uploadPhoto")}`}
+            data-testid={`business-gallery-delete-${index}`}
+            onClick={() => {
+              const gallery = [...useBusinessStore.getState().draft.gallery];
+              gallery[index] = null;
+              updateDraft({ gallery });
+            }}
+            className="absolute right-[8px] top-[8px] z-[2] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/80"
+          >
+            <TrashIcon />
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -616,7 +675,7 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <input
               ref={profileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/jpg"
+              accept="image/jpeg,image/png,image/jpg,image/webp"
               className="hidden"
               data-testid="business-profile-photo-input"
               onChange={(e) => {
@@ -1175,14 +1234,19 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
             <div className="shrink-0">
               <div className="flex items-center gap-[10px]">
                 <StarIcon size={isDesktop ? 36 : 32} />
-                <span className="text-[28px] font-bold leading-none lg:text-[42px]">4,6</span>
+                <span className="text-[28px] font-bold leading-none lg:text-[42px]">
+                  {reviewAverage.toLocaleString(locale, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+                </span>
               </div>
               <p className="mt-[10px] text-[13px] text-[var(--text-muted)] lg:text-[15px]">
-                {t("businessModal.reviewsCount")}
+                {t("businessModal.reviewsCount", { count: reviews.length })}
               </p>
             </div>
             <div className="hidden min-w-0 flex-1 flex-col gap-[8px] lg:flex">
-              {REVIEW_DISTRIBUTION.map((row) => (
+              {reviewDistribution.map((row) => (
                 <div key={row.stars} className={desktop.reviewBarRow}>
                   <span className={desktop.reviewBarLabel}>
                     {row.stars}

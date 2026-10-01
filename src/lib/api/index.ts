@@ -1,8 +1,14 @@
 export { API_BASE_URL } from "@/config/api";
-export { ApiError, apiRequest, apiUploadRequest } from "./client";
+export {
+  ApiError,
+  apiRequest,
+  apiUploadRequest,
+  getApiFieldErrors,
+} from "./client";
 export { setTokenGetter, getAuthToken } from "./token";
 
 export { authApi } from "./auth";
+export { categoriesApi } from "./categories";
 export { usersApi } from "./users";
 export { businessesApi } from "./businesses";
 export { servicesApi } from "./services";
@@ -15,6 +21,7 @@ export { bookingsApi } from "./bookings";
 export { businessGalleryApi } from "./businessGallery";
 export { reviewsApi } from "./reviews";
 export { favoritesApi } from "./favorites";
+export { notificationsApi } from "./notifications";
 
 export { businessApplicationsApi } from "./businessApplications";
 

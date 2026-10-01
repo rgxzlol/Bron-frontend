@@ -46,6 +46,10 @@
   cursor: pointer;
 }
 
+:global([data-theme="dark"]) .closeBtn {
+  background: #fff;
+}
+
 .sheetBody {
   padding: 52px 16px 24px;
 }

@@ -1,4 +1,7 @@
-import { normalizePhoneForApi } from "@/lib/auth/validation";
+import {
+  looksLikePhoneUsername,
+  normalizePhoneForApi,
+} from "@/lib/auth/validation";
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
 import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
@@ -9,10 +12,12 @@ import type {
 import type {
   Branch,
   Business as ApiBusiness,
+  BusinessCategory as ApiBusinessCategory,
   BusinessCreate as ApiBusinessCreate,
   BusinessStats,
   BusinessUpdate as ApiBusinessUpdate,
   Booking as ApiBooking,
+  CustomerRating,
   Product as ApiProduct,
   Service as ApiService,
   WorkingHours,
@@ -29,32 +34,229 @@ import type {
   ServiceListItem,
 } from "./types";
 
-const UI_TO_API_CATEGORY: Record<string, string> = {
-  "Спорт зал": "gym",
-  Красота: "beauty",
-  Здоровье: "health",
-  Образование: "education",
-  Еда: "food",
-  Другое: "other",
+const UI_TO_API_CATEGORY: Record<string, string[]> = {
+  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty"],
+  Здоровье: ["health", "healthcare", "medical", "medicine", "clinic"],
+  "Фитнес зал": ["gym", "fitness", "sport"],
+  "Учебные заведения": ["education", "school"],
+  Рестораны: ["restaurants", "restaurant", "food"],
+  Кафейни: ["cafes", "cafe", "coffee"],
+  "Авто сервис": ["auto_service", "autoservice", "auto", "car_service"],
+  Кинотеатры: ["cinema", "cinemas", "movie_theater"],
+  "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
+  Клининг: ["cleaning", "cleaning_service"],
+  Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
+  Другое: ["other", "другое"],
 };
 
+export type BookingRatingStats = {
+  rating: number | null;
+  evaluatedBookingsCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  noShowCount: number;
+  available: boolean;
+};
+
+export function getCustomerDisplayName(
+  customer: Pick<CustomerRating, "username" | "full_name">,
+  customerId: number,
+  fallbackName?: string,
+) {
+  const fullName = customer.full_name?.trim();
+  if (fullName) return fullName;
+
+  const username = customer.username.trim();
+  if (username && !looksLikePhoneUsername(username)) return username;
+
+  return fallbackName?.trim() || `Клиент #${customerId}`;
+}
+
+export function apiCustomerRatingToStats(
+  response: CustomerRating,
+): BookingRatingStats {
+  const counts = [
+    response.evaluated_bookings_count,
+    response.on_time_count,
+    response.late_count,
+    response.no_show_count,
+  ];
+  const validCounts = counts.every(
+    (count) => Number.isInteger(count) && (count ?? -1) >= 0,
+  );
+  const evaluatedBookingsCount = response.evaluated_bookings_count ?? 0;
+  const validBookingRating =
+    evaluatedBookingsCount === 0
+      ? response.booking_rating == null
+      : typeof response.booking_rating === "number" &&
+        Number.isFinite(response.booking_rating) &&
+        response.booking_rating >= 0 &&
+        response.booking_rating <= 5;
+  const available =
+    validCounts &&
+    (response.on_time_count ?? 0) +
+      (response.late_count ?? 0) +
+      (response.no_show_count ?? 0) ===
+      evaluatedBookingsCount &&
+    validBookingRating;
+
+  return {
+    rating:
+      available &&
+      evaluatedBookingsCount > 0 &&
+      typeof response.booking_rating === "number"
+        ? response.booking_rating
+        : null,
+    evaluatedBookingsCount,
+    onTimeCount: response.on_time_count ?? 0,
+    lateCount: response.late_count ?? 0,
+    noShowCount: response.no_show_count ?? 0,
+    available,
+  };
+}
+
 const API_TO_UI_CATEGORY: Record<string, string> = {
-  gym: "Спорт зал",
-  beauty: "Красота",
+  beauty_salon: "Салон красоты",
+  salon_beauty: "Салон красоты",
+  beauty: "Салон красоты",
+  "салон красоты": "Салон красоты",
+  салон_красоты: "Салон красоты",
   health: "Здоровье",
-  education: "Образование",
-  food: "Еда",
-  club: "Клуб",
+  healthcare: "Здоровье",
+  medical: "Здоровье",
+  clinic: "Здоровье",
+  hospital: "Здоровье",
+  gym: "Фитнес зал",
+  fitness: "Фитнес зал",
+  sport: "Фитнес зал",
+  education: "Учебные заведения",
+  school: "Учебные заведения",
+  restaurant: "Рестораны",
+  restaurants: "Рестораны",
+  food: "Рестораны",
+  cafe: "Кафейни",
+  cafes: "Кафейни",
+  coffee: "Кафейни",
+  auto_service: "Авто сервис",
+  autoservice: "Авто сервис",
+  car_service: "Авто сервис",
+  auto: "Авто сервис",
+  cinema: "Кинотеатры",
+  cinemas: "Кинотеатры",
+  movie_theater: "Кинотеатры",
+  pc_club: "Комп клуб",
+  computer_club: "Комп клуб",
+  gaming_club: "Комп клуб",
+  club: "Комп клуб",
+  cleaning: "Клининг",
+  cleaning_service: "Клининг",
+  sanatorium: "Санатории",
+  sanatoriums: "Санатории",
+  spa: "Санатории",
+  wellness: "Санатории",
+  "спорт зал": "Фитнес зал",
+  спорт_зал: "Фитнес зал",
+  "фитнес зал": "Фитнес зал",
+  фитнес_зал: "Фитнес зал",
+  "учебные заведения": "Учебные заведения",
+  учебные_заведения: "Учебные заведения",
+  рестораны: "Рестораны",
+  кафейни: "Кафейни",
+  "авто сервис": "Авто сервис",
+  авто_сервис: "Авто сервис",
+  кинотеатры: "Кинотеатры",
+  "комп клуб": "Комп клуб",
+  комп_клуб: "Комп клуб",
+  клининг: "Клининг",
+  санатории: "Санатории",
+  "кафе и рестораны": "Рестораны",
+  кафе_и_рестораны: "Рестораны",
+  restaurants_cafes: "Рестораны",
+  sports_fitness: "Фитнес зал",
+  sports_and_fitness: "Фитнес зал",
+  beauty_care: "Салон красоты",
+  beauty_and_care: "Салон красоты",
+  cafe_and_restaurants: "Рестораны",
+  cafes_and_restaurants: "Рестораны",
+  medicine: "Здоровье",
+  health_spa: "Санатории",
+  health_and_spa: "Санатории",
+  hotels_recreation: "Санатории",
+  hotels_and_recreation: "Санатории",
+  auto_services: "Авто сервис",
+  entertainment: "Кинотеатры",
+  leisure: "Кинотеатры",
+  "спорт и фитнес": "Фитнес зал",
+  спорт_и_фитнес: "Фитнес зал",
+  "красота и уход": "Салон красоты",
+  красота_и_уход: "Салон красоты",
+  медицина: "Здоровье",
+  "здоровье и spa": "Санатории",
+  здоровье_и_spa: "Санатории",
+  "отели и отдых": "Санатории",
+  отели_и_отдых: "Санатории",
+  автосервисы: "Авто сервис",
+  образование: "Учебные заведения",
+  развлечения: "Кинотеатры",
+  еда: "Рестораны",
   other: "Другое",
+  другое: "Другое",
 };
 
 export function uiCategoryToApi(category: string) {
-  return UI_TO_API_CATEGORY[category] ?? category;
+  return UI_TO_API_CATEGORY[category]?.[0] ?? category;
 }
 
-export function apiCategoryToUi(category: string) {
-  const normalized = category.trim().toLowerCase();
-  return API_TO_UI_CATEGORY[normalized] ?? category;
+export function findApiCategoryForUi(
+  categories: ApiBusinessCategory[],
+  uiCategory: string,
+): ApiBusinessCategory | undefined {
+  const expectedSlugs = new Set(
+    (UI_TO_API_CATEGORY[uiCategory] ?? [uiCategory]).map((slug) =>
+      slug.toLowerCase().replace(/[\s-]+/g, "_"),
+    ),
+  );
+
+  return (
+    categories.find((category) =>
+      expectedSlugs.has(category.slug.toLowerCase().replace(/[\s-]+/g, "_")),
+    ) ??
+    categories.find(
+      (category) => category.name.trim().toLowerCase() === uiCategory.toLowerCase(),
+    ) ??
+    categories.find((category) => apiCategoryToUi(category) === uiCategory)
+  );
+}
+
+export function apiCategoryToUi(category: unknown): string {
+  if (typeof category === "string") {
+    const value = category.trim();
+    if (!value) return "Другое";
+
+    const normalizedValue = value.toLowerCase().replace(/[\s-]+/g, "_");
+    return API_TO_UI_CATEGORY[normalizedValue] ??
+      API_TO_UI_CATEGORY[value.toLowerCase()] ??
+      value;
+  }
+
+  if (typeof category !== "object" || category === null) {
+    return "Другое";
+  }
+
+  const slug = "slug" in category && typeof category.slug === "string"
+    ? category.slug.trim()
+    : "";
+  const name = "name" in category && typeof category.name === "string"
+    ? category.name.trim()
+    : "";
+  const normalizedSlug = slug.toLowerCase().replace(/[\s-]+/g, "_");
+
+  if (!slug && !name) return "Другое";
+
+  const normalizedName = name.toLowerCase().replace(/[\s-]+/g, "_");
+  return API_TO_UI_CATEGORY[normalizedSlug] ??
+    API_TO_UI_CATEGORY[normalizedName] ??
+    (name || slug);
 }
 
 function parsePrice(value: number | string) {
@@ -115,13 +317,21 @@ export function workingHoursToSchedule(hours: WorkingHours[]): DaySchedule[] {
 export function draftToBusinessCreate(
   draft: BusinessDraft,
   coords?: { lat: number; lng: number },
+  categoryId?: number,
+  owner?: { email: string; name: string },
 ): ApiBusinessCreate {
+  if (categoryId == null || !owner?.email.trim() || !owner.name.trim()) {
+    throw new Error("Для создания бизнеса нужны категория, email и имя владельца.");
+  }
+
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: uiCategoryToApi(draft.category),
+    category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
+    email: owner.email.trim(),
+    owner_name: owner.name.trim(),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
     website: draft.website?.trim() || null,
@@ -132,11 +342,16 @@ export function draftToBusinessCreate(
 export function draftToBusinessUpdate(
   draft: BusinessDraft,
   coords?: { lat: number; lng: number },
+  categoryId?: number,
 ): ApiBusinessUpdate {
+  if (categoryId == null) {
+    throw new Error("Не удалось определить категорию бизнеса.");
+  }
+
   return {
     name: draft.name.trim(),
     description: draft.description?.trim() || null,
-    category: uiCategoryToApi(draft.category),
+    category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
@@ -155,6 +370,9 @@ export function apiServiceToBusinessService(service: ApiService): BusinessServic
     photo: resolveMediaUrl(service.image),
     active: service.is_active ?? true,
     type: "service",
+    duration: service.duration,
+    guestCapacity: service.capacity ?? 1,
+    availability: service.availability ?? [],
   };
 }
 
@@ -170,6 +388,9 @@ export function apiServiceListItemToBusinessService(
     photo: resolveMediaUrl(service.image),
     active: service.is_active ?? true,
     type: "service",
+    duration: service.duration,
+    guestCapacity: service.capacity ?? 1,
+    availability: service.availability ?? [],
   };
 }
 
@@ -234,25 +455,26 @@ export function apiBusinessToSavedBusiness(
   const galleryUrls = (extras?.galleryUrls ?? []).map((url) => resolveMediaUrl(url)).filter(
     (url): url is string => Boolean(url),
   );
-  const photoUrls = collectBusinessPhotoUrls({
-    profilePhoto: resolveMediaUrl(business.logo),
-    gallery: galleryUrls,
-    services: mappedServices,
-  });
+  const businessApprovalStatus = business.status?.toLowerCase();
 
   return {
     id: String(business.id),
     status: "confirmed",
+    approvalStatus:
+      businessApprovalStatus === "pending" ||
+      businessApprovalStatus === "approved"
+        ? businessApprovalStatus
+        : undefined,
     bookings: extras?.stats?.total_bookings ?? 0,
-    views: extras?.stats?.approved_bookings ?? 0,
+    views: business.views_count ?? 0,
     profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",
     category: apiCategoryToUi(business.category),
-    website: "",
+    website: business.website ?? "",
     phone: business.phone,
     address: business.address,
-    gallery: photosToGallerySlots(photoUrls),
+    gallery: photosToGallerySlots(galleryUrls, true),
     schedule: extras?.schedule ?? DEFAULT_SCHEDULE.map((day) => ({ ...day })),
     lat: coords.lat,
     lng: coords.lng,
@@ -262,26 +484,74 @@ export function apiBusinessToSavedBusiness(
   };
 }
 
-function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
-  if (status === "approved" || status === "accepted" || status === "waiting") {
+export function apiBookingStatusToUi(status: string): BusinessBookingRequest["status"] {
+  const normalizedStatus = status.trim().toLowerCase();
+  if (
+    normalizedStatus === "approved" ||
+    normalizedStatus === "accepted" ||
+    normalizedStatus === "confirmed" ||
+    normalizedStatus === "waiting"
+  ) {
     return "accepted";
   }
-  if (status === "cancelled" || status === "rejected") return "cancelled";
+  if (
+    normalizedStatus === "cancelled" ||
+    normalizedStatus === "canceled" ||
+    normalizedStatus === "rejected"
+  ) {
+    return "cancelled";
+  }
+  if (
+    normalizedStatus === "completed" ||
+    normalizedStatus === "finished" ||
+    normalizedStatus === "done" ||
+    normalizedStatus === "past"
+  ) {
+    return "completed";
+  }
   return "pending";
 }
 
 export function apiBookingToBusinessBookingRequest(
   booking: ApiBooking,
   serviceName = "Услуга",
-  customerName = "Клиент",
+  customer: {
+    name?: string;
+    avatar?: string | null;
+    phone?: string | null;
+    bookingRating?: number | null;
+    evaluatedBookingsCount?: number;
+    onTimeCount?: number;
+    lateCount?: number;
+    noShowCount?: number;
+    ratingStatsAvailable?: boolean;
+  } = {},
 ): BusinessBookingRequest {
   return {
     id: String(booking.id),
-    time: booking.start_time.slice(0, 5),
-    customerName,
+    customerId: booking.user_id,
+    customerAvatar: resolveMediaUrl(customer.avatar ?? booking.user?.avatar),
+    customerPhone: customer.phone ?? booking.user?.phone ?? booking.phone ?? null,
+    customerRating: customer.bookingRating,
+    customerEvaluatedBookingsCount: customer.evaluatedBookingsCount,
+    customerOnTimeCount: customer.onTimeCount,
+    customerLateCount: customer.lateCount,
+    customerNoShowCount: customer.noShowCount,
+    customerRatingStatsAvailable: customer.ratingStatsAvailable,
+    bookingId: booking.id,
+    bookingDate: booking.booking_date,
+    endTime: booking.end_time?.slice(0, 5),
+    time: booking.start_time?.slice(0, 5) ?? "",
+    customerName: customer.name?.trim() || `Клиент #${booking.user_id}`,
     serviceName,
     price: booking.total_price,
+    items: booking.items ?? [],
     status: apiBookingStatusToUi(booking.status),
+    attendanceStatus:
+      booking.attendance_status === "visited"
+        ? "on_time"
+        : booking.attendance_status,
+    extraWaitMinutes: booking.extra_wait_minutes,
   };
 }
 

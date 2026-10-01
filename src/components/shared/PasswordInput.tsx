@@ -65,7 +65,14 @@ export default function PasswordInput({
         aria-pressed={visible}
         data-testid="password-visibility-toggle"
       >
-        <Image src={assets.auth.eyeIcon} alt="" width={22} height={22} aria-hidden />
+        <Image
+          src={assets.auth.eyeIcon}
+          alt=""
+          width={22}
+          height={22}
+          aria-hidden
+          data-theme-invert
+        />
       </button>
     </div>
   );

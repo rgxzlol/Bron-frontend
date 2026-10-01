@@ -1,12 +1,3 @@
-const FINISHED_STATUSES = new Set([
-  "finished",
-  "completed",
-  "cancelled",
-  "canceled",
-  "past",
-  "rejected",
-]);
-
 /** Normalize API time values like "14:00", "14:00:00", "14:00:00.978Z". */
 export function normalizeBookingTime(value?: string | null): string | null {
   if (!value) return null;
@@ -16,14 +7,8 @@ export function normalizeBookingTime(value?: string | null): string | null {
   return `${match[1]}:${match[2]}:${match[3] ?? "00"}`;
 }
 
-export function isFinishedBookingStatus(status?: string | null) {
-  if (!status) return false;
-  return FINISHED_STATUSES.has(status.trim().toLowerCase());
-}
-
 /**
- * Build a local Date for the booking start (or end if start is missing).
- * API may return time-only or ISO-ish strings; booking_date is YYYY-MM-DD.
+ * API booking dates and times are in Uzbekistan time (UTC+05:00).
  */
 export function getBookingDateTime(
   booking: {
@@ -41,29 +26,49 @@ export function getBookingDateTime(
     normalizeBookingTime(preferEnd ? booking.start_time : booking.end_time) ??
     "00:00:00";
 
-  const parsed = new Date(`${date}T${time}`);
+  const parsed = new Date(`${date}T${time}+05:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-/** Past = finished status, or booking start (else end) is already over. */
+export function getBookingEndDateTime(booking: {
+  booking_date?: string | null;
+  end_time?: string | null;
+}) {
+  const endTime = normalizeBookingTime(booking.end_time);
+  if (!endTime) return null;
+  return getBookingDateTime(
+    {
+      booking_date: booking.booking_date,
+      end_time: endTime,
+    },
+    true,
+  );
+}
+
+/** Past bookings are classified by their scheduled end, not by attendance/status updates. */
 export function isPastBooking(
   booking: {
-    status?: string | null;
     booking_date?: string | null;
     start_time?: string | null;
     end_time?: string | null;
   },
   now = new Date(),
 ) {
-  if (isFinishedBookingStatus(booking.status)) return true;
+  const end = getBookingEndDateTime(booking);
+  return end != null && end.getTime() <= now.getTime();
+}
 
-  const end = getBookingDateTime(booking, true);
-  if (end) return end.getTime() < now.getTime();
-
-  const start = getBookingDateTime(booking, false);
-  if (start) return start.getTime() < now.getTime();
-
-  return false;
+/** Keep business bookings visible through one hour after their scheduled end. */
+export function isBusinessBookingVisible(
+  booking: {
+    booking_date?: string | null;
+    end_time?: string | null;
+  },
+  now = new Date(),
+) {
+  const end = getBookingEndDateTime(booking);
+  if (!end) return true;
+  return end.getTime() + 60 * 60 * 1000 > now.getTime();
 }
 
 export function compareBookingsByTime(

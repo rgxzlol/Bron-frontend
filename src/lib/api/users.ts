@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiUploadRequest } from "./client";
 import type {
   ChangePasswordRequest,
   LoginResponse,
@@ -6,8 +6,9 @@ import type {
   UserProfile,
   UserProfileUpdate,
 } from "./types";
+import { assertApiImage } from "./media";
 
-const NOTIFICATION_REQUEST_OPTIONS = { auth: true as const, skipDemo: true as const };
+const NOTIFICATION_REQUEST_OPTIONS = { auth: true as const };
 
 export const usersApi = {
   getProfile: (token?: string) =>
@@ -21,55 +22,42 @@ export const usersApi = {
       token,
     }),
 
-  getNotificationSettings: async (token?: string) => {
-    try {
-      return await apiRequest<UserNotificationSettings>(
-        "/users/profile/notifications",
-        { ...NOTIFICATION_REQUEST_OPTIONS, token },
-      );
-    } catch {
-      try {
-        const profile = await apiRequest<UserProfile>("/users/profile", {
-          auth: true,
-          token,
-          skipDemo: true,
-        });
-        return profile.notification_settings ?? null;
-      } catch {
-        return null;
-      }
-    }
+  uploadAvatar: (image: File | Blob, token?: string) => {
+    assertApiImage(image);
+    const formData = new FormData();
+    formData.append("image", image);
+    return apiUploadRequest<UserProfile>("/users/profile/avatar", formData, {
+      auth: true,
+      token,
+    });
   },
 
+  deleteAvatar: (token?: string) =>
+    apiRequest<UserProfile>("/users/profile/avatar", {
+      method: "DELETE",
+      auth: true,
+      token,
+    }),
+
+  getNotificationSettings: (token?: string) =>
+    apiRequest<UserNotificationSettings>(
+      "/users/profile/notifications",
+      { ...NOTIFICATION_REQUEST_OPTIONS, token },
+    ),
+
   updateNotificationSettings: async (
-    body: UserNotificationSettings,
+    body: Partial<UserNotificationSettings>,
     token?: string,
-  ) => {
-    try {
-      return await apiRequest<UserNotificationSettings>(
-        "/users/profile/notifications",
-        {
-          method: "PUT",
-          body,
-          ...NOTIFICATION_REQUEST_OPTIONS,
-          token,
-        },
-      );
-    } catch {
-      try {
-        await apiRequest<UserProfile>("/users/profile", {
-          method: "PUT",
-          body: { notification_settings: body },
-          auth: true,
-          token,
-          skipDemo: true,
-        });
-      } catch {
-        // Local persisted preferences remain the source of truth.
-      }
-      return body;
-    }
-  },
+  ) =>
+    apiRequest<UserNotificationSettings>(
+      "/users/profile/notifications",
+      {
+        method: "PUT",
+        body,
+        ...NOTIFICATION_REQUEST_OPTIONS,
+        token,
+      },
+    ),
 
   deleteProfile: (token?: string) =>
     apiRequest<unknown>("/users/profile", {

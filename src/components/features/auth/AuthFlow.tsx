@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
-import { authApi, ApiError } from "@/lib/api";
+import { authApi, ApiError, usersApi } from "@/lib/api";
 import { useAuthHydrated } from "@/lib/auth/useAuthHydrated";
 import { useAuthStore } from "@/store/auth.store";
 import { Logo } from "@/components/shared/Logo";
@@ -40,12 +40,49 @@ export type AuthScreen =
   | "telegram"
   | "google-phone";
 
+const REGISTERED_NAMES_STORAGE_KEY = "bron-registered-profile-names";
+
+type RegisteredProfileNames = Record<string, string>;
+
+function readRegisteredProfileNames(): RegisteredProfileNames {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const stored = window.localStorage.getItem(REGISTERED_NAMES_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([key, value]) => key.trim() && typeof value === "string" && value.trim(),
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveRegisteredProfileName(userId: number, username: string, name: string) {
+  if (typeof window === "undefined" || !name.trim()) return;
+
+  const names = readRegisteredProfileNames();
+  names[`id:${userId}`] = name.trim();
+  if (username.trim()) names[`username:${username.trim()}`] = name.trim();
+  window.localStorage.setItem(REGISTERED_NAMES_STORAGE_KEY, JSON.stringify(names));
+}
+
+function findRegisteredProfileName(userId: number, username: string) {
+  const names = readRegisteredProfileNames();
+  return names[`id:${userId}`] ?? names[`username:${username.trim()}`];
+}
+
 /* ------------------------------ shared UI ------------------------------ */
 
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen justify-center bg-[var(--bg-page)] sm:items-center sm:p-6">
-      <div className="flex w-full max-w-[440px] flex-col bg-[var(--bg-surface)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
+      <div className="flex w-full max-w-[700px] flex-col bg-[var(--bg-block)] px-5 pb-8 pt-6 sm:min-h-[640px] sm:rounded-[28px] sm:px-8 sm:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)]">
         {children}
       </div>
     </div>
@@ -241,7 +278,7 @@ function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[17px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
+      className="w-full rounded-[25px] bg-[#0a6af7] py-4 text-[24px] font-semibold text-white transition-all duration-200 hover:bg-[#0858ce] active:scale-[0.99] disabled:opacity-60"
     >
       {children}
     </button>
@@ -409,7 +446,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const [screen, setScreen] = useState<AuthScreen>(initialScreen);
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState(UZBEK_PHONE_PREFIX);
-  const [loginName, setLoginName] = useState("");
+  const [loginName, setLoginName] = useState(UZBEK_PHONE_PREFIX);
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -490,6 +527,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       avatarUrl?: string | null;
     },
   ) {
+    const storedFullName =
+      profile?.fullName ?? findRegisteredProfileName(session.user_id, session.username);
+
     setSession({
       token: session.access_token,
       userId: session.user_id,
@@ -498,7 +538,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
     applyAuthProfile({
       fullName:
-        profile?.fullName ??
+        storedFullName ??
         (looksLikePhoneUsername(session.username) ? undefined : session.username),
       email: profile?.email,
       phone: profile?.phone,
@@ -651,6 +691,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     setRegisterFieldErrors({});
     setSubmitting(true);
     const displayName = firstName.trim();
+    const [apiFirstName = "", ...apiLastNameParts] = displayName.split(/\s+/);
     const normalizedPhone = normalizePhoneForApi(phone);
     const apiUsername = normalizedPhone;
     // Synthetic email is API-only; booking/profile UI leave the field empty.
@@ -663,9 +704,19 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
           email: syntheticEmail,
           phone: normalizedPhone,
           password,
+          first_name: apiFirstName,
+          last_name: apiLastNameParts.join(" "),
         },
         { username: apiUsername, password },
       );
+      await usersApi.updateProfile(
+        {
+          first_name: apiFirstName,
+          last_name: apiLastNameParts.join(" "),
+        },
+        session.access_token,
+      );
+      saveRegisteredProfileName(session.user_id, session.username, displayName);
       await completeAuthSession(session, {
         fullName: displayName,
         phone: normalizedPhone,
@@ -774,7 +825,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               placeholder="+998 99 999 99 99"
               value={loginName}
               onChange={(value) => {
-                setLoginName(formatUzbekPhoneInput(value));
+                setLoginName(formatUzbekPhoneInput(value, { keepPrefix: true }));
                 if (fieldErrors.loginName) {
                   setFieldErrors((current) => ({ ...current, loginName: undefined }));
                 }
@@ -943,7 +994,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </button>
             </div>
 
-            <p className="text-[14px] font-semibold text-[var(--text-secondary)]">
+            <p className="w-full text-center text-[14px] font-semibold text-[var(--text-secondary)]">
               {t("auth.alreadyHaveAccount")}{" "}
               <button type="button" onClick={() => go("login")} className="text-[var(--accent-fg)] hover:underline">
                 {t("auth.login")}
@@ -981,77 +1032,55 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
     );
   }
 
-  if (screen === "forgot") {
+    if (screen === "forgot") {
     return (
       <AuthShell>
-        <StepHeader title={t("auth.forgotTitle")} onBack={() => go("login")} />
-        <form
-          className="mt-6 flex flex-1 flex-col"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleSaveNewPassword();
-          }}
-          noValidate
-        >
-          <h2 className="text-[22px] font-semibold text-[var(--text-primary)]">{t("auth.newPasswordTitle")}</h2>
-          <p className="mt-1 text-[14px] font-semibold text-[var(--text-secondary)]">
-            {t("auth.newPasswordSubtitle")}
-          </p>
+        <div className="flex flex-1 flex-col">
+          <h1 className="text-center text-[32px] font-semibold text-[var(--text-primary)]">
+            {t("auth.cantLoginTitle")}
+          </h1>
 
           <div className="mt-6 flex flex-col gap-5">
-            {errorBanner}
-            <Field
-              id="recovery-new-password"
-              label={t("auth.newPasswordLabel")}
-              required
-              placeholder={t("auth.passwordPlaceholder")}
-              value={newPassword}
-              inputRef={newPasswordInputRef}
-              onChange={(value) => {
-                setNewPassword(value);
-                if (recoveryErrors.newPassword || recoveryErrors.form) {
-                  setRecoveryErrors((current) => ({
-                    ...current,
-                    newPassword: undefined,
-                    form: undefined,
-                  }));
-                  setError(null);
-                }
-              }}
-              password
-              autoComplete="new-password"
-              maxLength={AUTH_FIELD_LIMITS.password}
-              error={recoveryErrors.newPassword}
-            />
-            <Field
-              id="recovery-confirm-password"
-              label={t("auth.confirmPassword")}
-              required
-              placeholder={t("auth.confirmPasswordPlaceholder")}
-              value={confirmNewPassword}
-              inputRef={confirmPasswordInputRef}
-              onChange={(value) => {
-                setConfirmNewPassword(value);
-                if (recoveryErrors.confirmPassword || recoveryErrors.form) {
-                  setRecoveryErrors((current) => ({
-                    ...current,
-                    confirmPassword: undefined,
-                    form: undefined,
-                  }));
-                  setError(null);
-                }
-              }}
-              password
-              autoComplete="new-password"
-              maxLength={AUTH_FIELD_LIMITS.password}
-              error={recoveryErrors.confirmPassword}
-            />
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.telegramLabel")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportTelegramValue")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.phone")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportPhoneValue")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[20px] font-semibold text-[var(--text-secondary)]">
+                {t("auth.emailLabel")}
+              </span>
+              <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
+                <span className="text-[24px] font-semibold text-[var(--text-primary)]">
+                  {t("auth.supportEmailValue")}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="mt-auto pt-8">
-            <PrimaryButton type="submit">{t("common.save")}</PrimaryButton>
+            <PrimaryButton onClick={() => go("login")}>
+              {t("common.close")}
+            </PrimaryButton>
           </div>
-        </form>
+        </div>
       </AuthShell>
     );
   }

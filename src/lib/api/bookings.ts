@@ -1,8 +1,11 @@
 import { apiRequest } from "./client";
 import type {
   Booking,
+  BookingAttendanceUpdate,
   BookingCreate,
   BookingListItem,
+  BookingAvailableSlotsResponse,
+  BookingReschedule,
   BookingUpdate,
 } from "./types";
 
@@ -18,8 +21,8 @@ export const bookingsApi = {
   my: (token?: string) =>
     apiRequest<BookingListItem[]>("/bookings/my", { auth: true, token }),
 
-  get: (bookingId: number) =>
-    apiRequest<Booking>(`/bookings/${bookingId}`),
+  get: (bookingId: number, token?: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}`, { auth: true, token }),
 
   update: (bookingId: number, body: BookingUpdate, token?: string) =>
     apiRequest<Booking>(`/bookings/${bookingId}`, {
@@ -66,7 +69,9 @@ export const bookingsApi = {
       query.set("staff_id", String(params.staff_id));
     }
 
-    return apiRequest<string[]>(`/bookings/available-slots?${query.toString()}`);
+    return apiRequest<BookingAvailableSlotsResponse>(
+      `/bookings/available-slots?${query.toString()}`,
+    );
   },
 
   cancel: (bookingId: number, token?: string) =>
@@ -86,6 +91,26 @@ export const bookingsApi = {
   reject: (bookingId: number, token?: string) =>
     apiRequest<Booking>(`/bookings/${bookingId}/reject`, {
       method: "PATCH",
+      auth: true,
+      token,
+    }),
+
+  reschedule: (bookingId: number, body: BookingReschedule, token?: string) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/reschedule`, {
+      method: "PATCH",
+      body,
+      auth: true,
+      token,
+    }),
+
+  attendance: (
+    bookingId: number,
+    body: BookingAttendanceUpdate,
+    token?: string,
+  ) =>
+    apiRequest<Booking>(`/bookings/${bookingId}/attendance`, {
+      method: "PATCH",
+      body,
       auth: true,
       token,
     }),

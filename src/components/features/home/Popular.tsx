@@ -1,11 +1,8 @@
 "use client";
 
-import { popularPlaces as fallbackPopularPlaces } from "@/data/popular";
-import { ShopsPlace } from "@/data/shops";
 import { assets } from "@/lib/assets";
 import { isRemoteShopImage } from "@/lib/business/shopImages";
 import { fetchPopularPlaces } from "@/lib/home/discovery";
-import { canShowShopOnMap } from "@/lib/map/mapVisibility";
 import { formatDurationMinutes, pluralizeReviews } from "@/lib/pluralize";
 import { routes } from "@/config/routes";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -16,18 +13,8 @@ import { useEffect, useState } from "react";
 import s from "./homePage.module.css";
 import popularStyles from "./popular.module.css";
 
-function getInitialPopularPlaces(): PopularPlace[] {
-  const mappableShopIds = new Set(
-    ShopsPlace.filter(canShowShopOnMap).map((shop) => shop.id),
-  );
-
-  return fallbackPopularPlaces.filter(
-    (place) => place.shopId != null && mappableShopIds.has(place.shopId),
-  );
-}
-
-function buildBookHref(shopId?: number) {
-  return `${routes.book}?shopId=${shopId ?? 1}`;
+function buildBookHref(shopId: number) {
+  return `${routes.book}?shopId=${shopId}`;
 }
 
 function PopularCardImage({ place }: { place: PopularPlace }) {
@@ -35,7 +22,7 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
     "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105";
 
   return (
-    <div className="relative h-[169px] w-full shrink-0 overflow-hidden">
+    <div className={`${popularStyles.cardImage} relative h-[169px] w-full shrink-0 overflow-hidden`}>
       {isRemoteShopImage(place.img) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img className={imageClassName} src={place.img} alt={place.title} />
@@ -54,7 +41,9 @@ function PopularCardImage({ place }: { place: PopularPlace }) {
 
 export default function Popular() {
   const { t } = useTranslation();
-  const [places, setPlaces] = useState<PopularPlace[]>(getInitialPopularPlaces);
+  const [places, setPlaces] = useState<
+    Array<PopularPlace & { shopId: number }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -80,6 +69,8 @@ export default function Popular() {
   const cardClassName = `${popularStyles.card} group flex h-full flex-col overflow-hidden rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg`;
   const seeAllClassName = `${popularStyles.card} ${popularStyles.seeAll} group rounded-[18px] bg-white transition-all duration-300 hover:shadow-lg`;
 
+  if (!isLoading && places.length === 0) return null;
+
   return (
     <section className={`${s.homeSection} w-full`}>
       <h2 className="mb-[20px] w-full text-[24px] font-semibold">
@@ -97,35 +88,34 @@ export default function Popular() {
                   {place.title}
                 </span>
 
-                <div className="flex flex-col gap-x-[15px] gap-y-[6px]">
+                {place.rating != null && place.reviews != null ? (
                   <div className="flex items-center gap-[6px]">
                     <Image
                       src={assets.popular.starRating}
                       alt={t("home.rating")}
                     />
-
                     <p className="text-[15px] font-semibold">{place.rating}</p>
-
                     <p className="text-[15px] font-semibold opacity-75">
                       ({place.reviews} {pluralizeReviews(place.reviews)})
                     </p>
                   </div>
+                ) : null}
 
+                {place.time != null ? (
                   <div className="flex items-center gap-[6px]">
                     <Image src={assets.popular.timeIcon} alt={t("home.time")} />
-
                     <p className="text-[15px] font-semibold">
                       {formatDurationMinutes(place.time)}
                     </p>
                   </div>
-                </div>
+                ) : null}
 
                 <p className={`${popularStyles.description} line-clamp-2 min-h-[40px] text-[13px] font-semibold leading-[20px]`}>
                   {place.desc}
                 </p>
               </div>
 
-              <Link
+              <a
                 href={buildBookHref(place.shopId)}
                 className={popularStyles.bookLink}
                 data-testid="popular-book-button"
@@ -133,7 +123,7 @@ export default function Popular() {
                 <span className={popularStyles.bookButton}>
                   {t("map.bookPlace")}
                 </span>
-              </Link>
+              </a>
             </div>
           </article>
         ))}

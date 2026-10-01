@@ -7,6 +7,7 @@ export type ShopService = {
   priceFrom: number;
   durationMin: number;
   kind?: "service" | "product";
+  category?: string;
   icon?: StaticImageData | string;
 };
 

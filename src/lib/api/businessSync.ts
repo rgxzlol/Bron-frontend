@@ -3,15 +3,24 @@ import {
   bookingsApi,
   branchesApi,
   businessesApi,
+  categoriesApi,
   productsApi,
+  reviewsApi,
   servicesApi,
+  usersApi,
   workingHoursApi,
 } from "@/lib/api";
-import { fetchBusinessGalleryUrls, syncBusinessMediaFromDraft } from "@/lib/api/mediaUpload";
+import {
+  dataUrlToFile,
+  fetchBusinessGalleryUrls,
+  syncBusinessMediaFromDraft,
+} from "@/lib/api/mediaUpload";
 import { resolveMediaUrl } from "@/lib/api/media";
 import { ApiError } from "@/lib/api/client";
 import {
   apiBookingToBusinessBookingRequest,
+  apiCustomerRatingToStats,
+  getCustomerDisplayName,
   apiBusinessToSavedBusiness,
   apiProductListItemToBusinessService,
   apiProductToBusinessService,
@@ -19,15 +28,20 @@ import {
   apiServiceToBusinessService,
   draftToBusinessCreate,
   draftToBusinessUpdate,
+  findApiCategoryForUi,
   resolveApiBusinessCoords,
   scheduleToWorkingHoursPayload,
   workingHoursToSchedule,
 } from "@/lib/api/mappers";
+import { normalizePhoneForApi } from "@/lib/auth/validation";
 import { getAuthToken } from "@/lib/api/token";
 import { geocodeAddress, hasValidCoords, resolveDraftCoords } from "@/lib/geocoding";
-import type { BusinessDraft, BusinessService, SavedBusiness, BusinessBookingRequest } from "@/store/business.store";
-import type { Branch, Business as ApiBusiness, Booking } from "@/lib/api/types";
-import { getFallbackBusinessBookings, isLocalDemoBookingId } from "@/lib/business/demoBookings";
+import type { BusinessDraft, BusinessService, BusinessBookingRequest } from "@/store/business.store";
+import type {
+  BookingAttendanceStatus,
+  Branch,
+  Business as ApiBusiness,
+} from "@/lib/api/types";
 
 async function resolveCoordsForBusiness(
   business: ApiBusiness,
@@ -51,32 +65,81 @@ async function loadBusinessBookings(businessId: number, services: BusinessServic
   const token = getAuthToken();
   const serviceMap = new Map(services.map((service) => [service.id, service.name]));
 
-  const mapBookings = (bookings: Array<Booking & { customer_name?: string }>) =>
-    bookings.map((booking) =>
-      apiBookingToBusinessBookingRequest(
+  if (!token) return [];
+
+  const bookings = await bookingsApi.listByBusiness(businessId, token);
+  const customerRatings = new Map<
+    number,
+    ReturnType<typeof reviewsApi.getCustomerRating>
+  >();
+  const bookingsWithCustomers = await Promise.all(
+    bookings.map(async (booking) => {
+      const embeddedUser = booking.user;
+      const embeddedUsername =
+        embeddedUser?.username || booking.username || "";
+      const embeddedFullName =
+        embeddedUser?.full_name?.trim() ||
+        [embeddedUser?.first_name, embeddedUser?.last_name]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        booking.customer_name?.trim() ||
+        booking.full_name?.trim() ||
+        [booking.first_name, booking.last_name].filter(Boolean).join(" ").trim();
+      let customer: {
+        name: string;
+        avatar?: string | null;
+        phone?: string | null;
+        bookingRating?: number | null;
+        evaluatedBookingsCount?: number;
+        onTimeCount?: number;
+        lateCount?: number;
+        noShowCount?: number;
+        ratingStatsAvailable?: boolean;
+      } = {
+        name: getCustomerDisplayName(
+          { username: embeddedUsername, full_name: embeddedFullName },
+          booking.user_id,
+        ),
+        avatar: embeddedUser?.avatar,
+        phone: embeddedUser?.phone ?? booking.phone,
+      };
+
+      let ratingRequest = customerRatings.get(booking.user_id);
+      if (!ratingRequest) {
+        ratingRequest = reviewsApi.getCustomerRating(booking.user_id, token);
+        customerRatings.set(booking.user_id, ratingRequest);
+      }
+
+      try {
+        const rating = await ratingRequest;
+        const bookingRating = apiCustomerRatingToStats(rating);
+        customer = {
+          ...customer,
+          name: getCustomerDisplayName(rating, booking.user_id, customer.name),
+          bookingRating: bookingRating.rating,
+          evaluatedBookingsCount: bookingRating.evaluatedBookingsCount,
+          onTimeCount: bookingRating.onTimeCount,
+          lateCount: bookingRating.lateCount,
+          noShowCount: bookingRating.noShowCount,
+          ratingStatsAvailable: bookingRating.available,
+        };
+      } catch (error) {
+        console.warn(
+          `Не удалось загрузить имя и рейтинг клиента ${booking.user_id}:`,
+          error,
+        );
+      }
+
+      return apiBookingToBusinessBookingRequest(
         booking,
         serviceMap.get(String(booking.service_id)) ?? "Услуга",
-        booking.customer_name ?? "Клиент",
-      ),
-    );
+        customer,
+      );
+    }),
+  );
 
-  // Without auth, keep local demo cards that can be accepted/rejected offline.
-  if (!token) {
-    return getFallbackBusinessBookings(services);
-  }
-
-  try {
-    const bookings = await bookingsApi.listByBusiness(businessId, token);
-    if (bookings.length > 0) {
-      return mapBookings(bookings);
-    }
-  } catch (error) {
-    console.warn("Failed to load business bookings from API:", error);
-  }
-
-  // Empty/failed API must not inject fake numeric booking ids — approving those
-  // hits the real backend and returns "Booking not found".
-  return getFallbackBusinessBookings(services);
+  return bookingsWithCustomers;
 }
 
 export async function fetchBusinessBookingsFromApi(
@@ -143,15 +206,19 @@ async function mapProductsFromApiList(
   );
 }
 
-async function loadBusinessDetails(businessId: number, withOwnerData = false) {
+async function loadBusinessDetails(
+  businessId: number,
+  withOwnerData = false,
+  knownBusiness?: ApiBusiness,
+) {
   const [business, services, products, branches, schedule, galleryUrls] =
     await Promise.all([
-    businessesApi.get(businessId),
-    servicesApi.listByBusiness(businessId).catch(() => []),
-    productsApi.listByBusiness(businessId).catch(() => []),
-    branchesApi.listByBusiness(businessId).catch(() => []),
-    workingHoursApi.getByBusiness(businessId).catch(() => []),
-    fetchBusinessGalleryUrls(businessId).catch(() => []),
+    knownBusiness ? Promise.resolve(knownBusiness) : businessesApi.get(businessId),
+    servicesApi.listByBusiness(businessId),
+    productsApi.listByBusiness(businessId),
+    branchesApi.listByBusiness(businessId),
+    workingHoursApi.getByBusiness(businessId),
+    fetchBusinessGalleryUrls(businessId),
   ]);
 
   const [mappedServices, mappedProducts] = await Promise.all([
@@ -165,7 +232,13 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
     withOwnerData
       ? Promise.all([
           loadBusinessStats(businessId),
-          loadBusinessBookings(businessId, mappedItems),
+          loadBusinessBookings(businessId, mappedItems).catch((error) => {
+            console.error(
+              `Не удалось загрузить бронирования бизнеса ${businessId}:`,
+              error,
+            );
+            return [];
+          }),
         ])
       : Promise.resolve<[undefined, BusinessBookingRequest[]]>([undefined, []]),
     branches[0]?.id
@@ -189,24 +262,13 @@ async function loadBusinessDetails(businessId: number, withOwnerData = false) {
   });
 }
 
-export async function fetchMyBusinessesFromApi(userId: number) {
-  const list = await businessesApi.list();
-  const ownedItems = await Promise.all(
-    list.map(async (item) => {
-      if (item.owner_id != null) {
-        return item.owner_id === userId ? item : null;
-      }
-
-      const detail = await businessesApi.get(item.id);
-      return detail.owner_id === userId ? item : null;
-    }),
+export async function fetchMyBusinessesFromApi() {
+  const businesses = await businessesApi.my();
+  return Promise.all(
+    businesses.map((business) =>
+      loadBusinessDetails(business.id, true, business),
+    ),
   );
-
-  const owned = ownedItems.filter(
-    (item): item is NonNullable<typeof item> => item != null,
-  );
-
-  return Promise.all(owned.map((item) => loadBusinessDetails(item.id, true)));
 }
 
 export async function fetchPublicBusinessesFromApi() {
@@ -215,6 +277,15 @@ export async function fetchPublicBusinessesFromApi() {
     const results = await Promise.allSettled(
       list.map((item) => loadBusinessDetails(item.id)),
     );
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(
+          `Не удалось загрузить бизнес ${list[index].id} с API:`,
+          result.reason,
+        );
+      }
+    });
 
     return results.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : [],
@@ -252,7 +323,7 @@ async function ensureDefaultBranch(
       branches[0].id,
       {
         address: draft.address,
-        phone: draft.phone,
+        phone: normalizePhoneForApi(draft.phone),
         latitude: coords.lat,
         longitude: coords.lng,
       },
@@ -266,7 +337,7 @@ async function ensureDefaultBranch(
       business_id: businessId,
       name: draft.name || "Главный филиал",
       address: draft.address,
-      phone: draft.phone,
+      phone: normalizePhoneForApi(draft.phone),
       latitude: coords.lat,
       longitude: coords.lng,
     },
@@ -276,19 +347,8 @@ async function ensureDefaultBranch(
   return branch.id;
 }
 
-async function resolveCreatedBusinessId(
-  draft: BusinessDraft,
-  userId: number,
-): Promise<number> {
-  const list = await businessesApi.list();
-  const owned = await Promise.all(
-    list.map(async (item) => {
-      const detail = await businessesApi.get(item.id);
-      return detail.owner_id === userId ? detail : null;
-    }),
-  );
-
-  const mine = owned.filter((item): item is NonNullable<typeof item> => item != null);
+async function resolveCreatedBusinessId(draft: BusinessDraft): Promise<number> {
+  const mine = await businessesApi.my();
   const byName = mine.find((item) => item.name === draft.name.trim());
   if (byName) return byName.id;
 
@@ -311,20 +371,11 @@ function isMissingBusinessError(error: unknown) {
 async function getOwnedApiBusinessId(businessId: string): Promise<number | null> {
   if (!/^\d+$/.test(businessId)) return null;
 
-  let userId: number | null = null;
   try {
-    userId = await getCurrentUserId();
-  } catch (error) {
-    console.warn("Failed to resolve current user for business ownership:", error);
-    return null;
-  }
-  if (!userId) return null;
-
-  try {
-    const detail = await businessesApi.get(Number(businessId));
-    if (detail.owner_id === userId) {
-      return detail.id;
-    }
+    const mine = await businessesApi.my();
+    return mine.some((business) => business.id === Number(businessId))
+      ? Number(businessId)
+      : null;
   } catch (error) {
     if (!isMissingBusinessError(error)) {
       throw error;
@@ -341,9 +392,15 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
   }
 
   const coords = await resolveDraftCoords(draft);
+  const categories = await categoriesApi.list();
+  const category = findApiCategoryForUi(categories, draft.category);
+  if (!category) {
+    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+  }
+
   await businessesApi.update(
     businessId,
-    draftToBusinessUpdate(draft, coords),
+    draftToBusinessUpdate(draft, coords, category.id),
     token,
   );
 
@@ -359,11 +416,7 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
     console.warn("Default branch sync failed:", error);
   }
 
-  try {
-    await syncBusinessMediaFromDraft(businessId, draft);
-  } catch (error) {
-    console.warn("Business media sync failed:", error);
-  }
+  await syncBusinessMediaFromDraft(businessId, draft);
 
   return loadBusinessDetails(businessId);
 }
@@ -375,17 +428,33 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
   }
 
   const coords = await resolveDraftCoords(draft);
+  const [categories, profile] = await Promise.all([
+    categoriesApi.list(),
+    usersApi.getProfile(token),
+  ]);
+  const category = findApiCategoryForUi(categories, draft.category);
+  if (!category) {
+    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+  }
+
+  const ownerName =
+    profile.full_name?.trim() ||
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+    profile.username;
+  if (!profile.email.trim() || !ownerName.trim()) {
+    throw new Error("Заполните email и имя в профиле перед созданием бизнеса.");
+  }
+
   const created = await businessesApi.create(
-    draftToBusinessCreate(draft, coords),
+    draftToBusinessCreate(draft, coords, category.id, {
+      email: profile.email,
+      name: ownerName,
+    }),
     token,
   );
 
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    throw new Error("Не удалось определить пользователя");
-  }
-
-  const businessId = created?.id ?? (await resolveCreatedBusinessId(draft, userId));
+  const businessId =
+    created.business_id ?? (await resolveCreatedBusinessId(draft));
   return persistBusinessToApi(draft, businessId);
 }
 
@@ -453,13 +522,25 @@ export async function removeBusinessFromApi(businessId: string) {
   }
 }
 
-function isRecoverableItemSyncError(error: unknown) {
-  if (!(error instanceof ApiError)) return true;
-  // Auth errors should surface to the UI.
-  if (error.status === 401 || error.status === 403) {
-    return false;
+async function rollbackCreatedItemAfterImageFailure(
+  removeCreatedItem: () => Promise<unknown>,
+  uploadError: unknown,
+  itemLabel: string,
+): Promise<never> {
+  try {
+    await removeCreatedItem();
+  } catch (cleanupError) {
+    console.error(`Не удалось удалить созданный ${itemLabel} после ошибки фото:`, {
+      uploadError,
+      cleanupError,
+    });
+    throw new AggregateError(
+      [uploadError, cleanupError],
+      `Фото ${itemLabel} не загрузилось, и созданный ${itemLabel} не удалось удалить.`,
+    );
   }
-  return true;
+
+  throw uploadError;
 }
 
 export async function createServiceOnApi(
@@ -467,7 +548,8 @@ export async function createServiceOnApi(
   service: Omit<BusinessService, "id" | "active" | "type">,
 ) {
   const token = getAuthToken();
-  if (!token || !/^\d+$/.test(businessId)) return null;
+  if (!/^\d+$/.test(businessId)) return null;
+  if (!token) throw new Error("Войдите в аккаунт, чтобы добавить услугу.");
 
   try {
     const created = await servicesApi.create(
@@ -476,19 +558,41 @@ export async function createServiceOnApi(
         title: service.name,
         description: service.description,
         category: service.category,
-        duration: 60,
+        duration: service.duration ?? 60,
         price: service.price,
+        capacity: service.guestCapacity ?? 1,
+        availability: service.availability ?? [],
       },
       token,
     );
 
+    if (service.photo?.startsWith("data:")) {
+      try {
+        const mimeType = service.photo.match(/^data:([^;]+);base64,/)?.[1];
+        const extension =
+          mimeType === "image/jpeg" ? "jpg" :
+            mimeType === "image/webp" ? "webp" :
+              mimeType === "image/png" ? "png" : null;
+        const image = extension
+          ? dataUrlToFile(service.photo, `service.${extension}`)
+          : null;
+        if (!image) throw new Error("Не удалось обработать фото услуги.");
+        return apiServiceToBusinessService(
+          await servicesApi.uploadImage(created.id, image, token),
+        );
+      } catch (error) {
+        return rollbackCreatedItemAfterImageFailure(
+          () => servicesApi.remove(created.id, token),
+          error,
+          "услугу",
+        );
+      }
+    }
+
     return apiServiceToBusinessService(created);
   } catch (error) {
-    console.warn("API service create failed, saving locally:", error);
-    if (!isRecoverableItemSyncError(error)) {
-      throw error;
-    }
-    return null;
+    console.error("API service create failed:", error);
+    throw error;
   }
 }
 
@@ -497,27 +601,43 @@ export async function createProductOnApi(
   product: Omit<BusinessService, "id" | "active" | "type">,
 ) {
   const token = getAuthToken();
-  if (!token || !/^\d+$/.test(businessId)) return null;
+  if (!/^\d+$/.test(businessId)) return null;
+  if (!token) throw new Error("Войдите в аккаунт, чтобы добавить товар.");
 
-  try {
-    const created = await productsApi.create(
-      {
-        business_id: Number(businessId),
-        name: product.name,
-        description: product.description || null,
-        price: product.price,
-      },
-      token,
-    );
+  const created = await productsApi.create(
+    {
+      business_id: Number(businessId),
+      name: product.name,
+      description: product.description || null,
+      price: product.price,
+    },
+    token,
+  );
 
-    return apiProductToBusinessService(created);
-  } catch (error) {
-    console.warn("API product create failed, saving locally:", error);
-    if (!isRecoverableItemSyncError(error)) {
-      throw error;
+  if (product.photo?.startsWith("data:")) {
+    try {
+      const mimeType = product.photo.match(/^data:([^;]+);base64,/)?.[1];
+      const extension =
+        mimeType === "image/jpeg" ? "jpg" :
+          mimeType === "image/webp" ? "webp" :
+            mimeType === "image/png" ? "png" : null;
+      const image = extension
+        ? dataUrlToFile(product.photo, `product.${extension}`)
+        : null;
+      if (!image) throw new Error("Не удалось обработать фото товара.");
+      return apiProductToBusinessService(
+        await productsApi.uploadImage(created.id, image, token),
+      );
+    } catch (error) {
+      return rollbackCreatedItemAfterImageFailure(
+        () => productsApi.remove(created.id, token),
+        error,
+        "товар",
+      );
     }
-    return null;
   }
+
+  return apiProductToBusinessService(created);
 }
 
 export async function updateServiceOnApi(
@@ -525,11 +645,12 @@ export async function updateServiceOnApi(
   partial: Partial<BusinessService>,
 ) {
   const token = getAuthToken();
-  if (!token || !/^\d+$/.test(serviceId)) return null;
+  if (!/^\d+$/.test(serviceId)) return null;
+  if (!token) throw new Error("Войдите в аккаунт, чтобы изменить услугу или товар.");
 
   try {
     if (partial.type === "product") {
-      const updated = await productsApi.update(
+      let updated = await productsApi.update(
         Number(serviceId),
         {
           name: partial.name,
@@ -539,6 +660,20 @@ export async function updateServiceOnApi(
         },
         token,
       );
+      if (partial.photo?.startsWith("data:")) {
+        const mimeType = partial.photo.match(/^data:([^;]+);base64,/)?.[1];
+        const extension =
+          mimeType === "image/jpeg" ? "jpg" :
+            mimeType === "image/webp" ? "webp" :
+              mimeType === "image/png" ? "png" : null;
+        const image = extension
+          ? dataUrlToFile(partial.photo, `product.${extension}`)
+          : null;
+        if (!image) throw new Error("Не удалось обработать фото товара.");
+        updated = await productsApi.uploadImage(Number(serviceId), image, token);
+      } else if (partial.photo === null && updated.image) {
+        updated = await productsApi.deleteImage(Number(serviceId), token);
+      }
       return apiProductToBusinessService(updated);
     }
 
@@ -548,21 +683,49 @@ export async function updateServiceOnApi(
         title: partial.name,
         description: partial.description,
         category: partial.category,
+        duration: partial.duration,
         price: partial.price,
         is_active: partial.active,
+        capacity: partial.guestCapacity,
+        availability: partial.availability,
       },
       token,
     );
+    if (partial.photo?.startsWith("data:")) {
+      const mimeType = partial.photo.match(/^data:([^;]+);base64,/)?.[1];
+      const extension =
+        mimeType === "image/jpeg" ? "jpg" :
+          mimeType === "image/webp" ? "webp" :
+            mimeType === "image/png" ? "png" : null;
+      const image = extension
+        ? dataUrlToFile(partial.photo, `service.${extension}`)
+        : null;
+      if (!image) throw new Error("Не удалось обработать фото услуги.");
+      return apiServiceToBusinessService(
+        await servicesApi.uploadImage(Number(serviceId), image, token),
+      );
+    }
+
+    if (partial.photo === null) {
+      const current = await servicesApi.get(Number(serviceId));
+      if (current.image) {
+        return apiServiceToBusinessService(
+          await servicesApi.deleteImage(Number(serviceId), token),
+        );
+      }
+    }
+
     return apiServiceToBusinessService(updated);
   } catch (error) {
-    console.warn("API item update failed, keeping local changes:", error);
-    return null;
+    console.error("API item update failed:", error);
+    throw error;
   }
 }
 
 export async function removeServiceFromApi(serviceId: string, type: "service" | "product") {
   const token = getAuthToken();
-  if (!token || !/^\d+$/.test(serviceId)) return;
+  if (!/^\d+$/.test(serviceId)) return;
+  if (!token) throw new Error("Войдите в аккаунт, чтобы удалить услугу или товар.");
 
   try {
     if (type === "product") {
@@ -572,7 +735,8 @@ export async function removeServiceFromApi(serviceId: string, type: "service" | 
 
     await servicesApi.remove(Number(serviceId), token);
   } catch (error) {
-    console.warn("API item delete failed, removing locally:", error);
+    console.error("API item delete failed:", error);
+    throw error;
   }
 }
 
@@ -582,7 +746,7 @@ export async function updateBusinessBookingStatusOnApi(
 ) {
   const token = getAuthToken();
   // Local/demo booking cards use non-numeric ids and are stored only in the client.
-  if (!token || isLocalDemoBookingId(bookingId)) return null;
+  if (!token || !/^\d+$/.test(bookingId)) return null;
 
   try {
     if (status === "accepted") {
@@ -591,13 +755,37 @@ export async function updateBusinessBookingStatusOnApi(
 
     return await bookingsApi.reject(Number(bookingId), token);
   } catch (error) {
-    // Stale/demo numeric ids or already-removed bookings should not block the UI.
-    if (error instanceof ApiError && error.status === 404) {
-      console.warn("Booking missing on API, keeping local status update:", bookingId);
-      return null;
-    }
     throw error;
   }
+}
+
+export async function updateBusinessBookingAttendanceOnApi(
+  bookingId: string,
+  status: BookingAttendanceStatus,
+  extraWaitMinutes = 0,
+) {
+  const token = getAuthToken();
+  if (!token || !/^\d+$/.test(bookingId)) {
+    throw new ApiError(401, "Не удалось подтвердить авторизацию для отметки посещения.");
+  }
+
+  return bookingsApi.attendance(
+    Number(bookingId),
+    {
+      status: status === "on_time" ? "visited" : status,
+      extra_wait_minutes: status === "late" ? extraWaitMinutes : 0,
+    },
+    token,
+  );
+}
+
+export async function getCustomerRatingFromApi(customerId: number) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new ApiError(401, "Войдите в аккаунт, чтобы загрузить рейтинг клиента.");
+  }
+
+  return reviewsApi.getCustomerRating(customerId, token);
 }
 
 export async function getCurrentUserId() {

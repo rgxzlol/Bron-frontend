@@ -99,7 +99,7 @@ export default function AuthPageContent() {
   if (hydrated && token) {
     return (
       <div className={s.authPage}>
-        <p className={s.errorText} style={{ color: "rgba(0,0,0,0.6)" }}>
+        <p className={s.errorText} style={{ color: "var(--text-secondary)" }}>
           {t("auth.redirectingToProfile")}
         </p>
       </div>

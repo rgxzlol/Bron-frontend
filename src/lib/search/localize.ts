@@ -10,7 +10,7 @@ import type { SearchCatalogItem } from "./catalog";
 
 const CATEGORY_TITLE_KEYS: Record<string, string> = {
   "Салон красоты": "categories.beautySalon",
-  "Здоровье": "categories.health",
+  Здоровье: "categories.health",
   "Фитнес зал": "categories.gym",
   "Учебные заведения": "categories.education",
   Рестораны: "categories.restaurants",
@@ -20,7 +20,6 @@ const CATEGORY_TITLE_KEYS: Record<string, string> = {
   "Комп клуб": "categories.pcClub",
   Клининг: "categories.cleaning",
   Санатории: "categories.sanatoriums",
-  Клиника: "categories.clinic",
 };
 
 const SEARCH_TITLE_KEYS: Record<string, string> = {

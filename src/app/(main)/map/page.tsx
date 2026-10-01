@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import FullMap from "@/components/features/map/FullMap";
 import BookingPage from "@/components/features/map/BookingPage";
-import { ShopsPlace } from "@/data/shops";
+import { resolveShopById } from "@/lib/home/discovery";
 import type { ShopsType } from "@/types/shops.types";
 
 export type MapBookingState = {
@@ -15,16 +15,18 @@ export default function MapPage() {
   const [booking, setBooking] = useState<MapBookingState | null>(null);
 
   useEffect(() => {
-    // Read the shopId query parameter on mount safely on the client
     const params = new URLSearchParams(window.location.search);
     const shopIdParam = params.get("shopId");
-    if (shopIdParam) {
-      const id = parseInt(shopIdParam, 10);
-      const foundShop = ShopsPlace.find((s) => s.id === id);
-      if (foundShop) {
-        setBooking({ shop: foundShop });
-      }
-    }
+    const id = Number.parseInt(shopIdParam ?? "", 10);
+    if (!Number.isInteger(id) || id <= 0) return;
+
+    let cancelled = false;
+    void resolveShopById(id).then((shop) => {
+      if (!cancelled && shop) setBooking({ shop });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleBack = () => {

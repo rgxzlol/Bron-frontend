@@ -87,6 +87,14 @@ import bookandpen from "@/assets/images/bookandpen.svg";
 import clock from "@/assets/images/clock.svg";
 import securityIcon from "@/assets/images/securityIcon.svg";
 import profile from "@/assets/images/profile.jpg";
+import leftBarg from "@/assets/images/leftBarg.svg";
+import rightBarg from "@/assets/images/rightBarg.svg";
+import Btop from "@/assets/images/Btop.svg";
+import Bbottom from "@/assets/images/Bbottom.svg";
+import bronR from "@/assets/images/bronR.svg";
+import bronO from "@/assets/images/bronO.svg";
+import bronN from "@/assets/images/bronN.svg";
+import protectedIcon from "@/assets/images/protectedIcon.svg";
 
 
 export const assets = {
@@ -165,6 +173,12 @@ export const assets = {
   },
   bussines: {
     photo1: bussinesPhoto,
+    btop: Btop,
+    bbottom: Bbottom,
+    r:bronR,
+    o:bronO,
+    n:bronN,
+    protected: protectedIcon
   },
   support: {
     phone: callPhone,
@@ -209,5 +223,7 @@ export const assets = {
     edit: editIcon,
     arrow: arrowDown,
     avatar: profile,
+    leftBarg,
+    rightBarg,
   },
 } as const;

@@ -13,6 +13,7 @@
 
 .modal {
   width: 100%;
+  max-height: 88vh;
   max-height: 88dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -109,6 +110,20 @@
   border-radius: 50%;
   background: var(--text-primary);
   color: var(--bg-surface);
+}
+
+:global([data-theme="dark"]) .locationIcon {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+:global([data-theme="dark"]) .locationIcon svg {
+  stroke: #fff;
+}
+
+:global([data-theme="dark"]) .closeBtn {
+  background: #3a3a3a;
+  color: #fff;
 }
 
 .locationActive {

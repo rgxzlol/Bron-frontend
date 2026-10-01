@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
-import { looksLikePhoneUsername } from "@/lib/auth/validation";
+import {
+  looksLikePhoneUsername,
+  REGISTER_PASSWORD_RULES,
+} from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";

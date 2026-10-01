@@ -7,7 +7,10 @@ import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
 import { readImageFile } from "@/lib/readImageFile";
-import { looksLikePhoneUsername } from "@/lib/auth/validation";
+import {
+  looksLikePhoneUsername,
+  REGISTER_PASSWORD_RULES,
+} from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";
@@ -152,7 +155,7 @@ export default function ProfilePageContent({
 
   const canChangePassword =
     oldPassword.trim().length > 0 &&
-    newPassword.trim().length > 0 &&
+    REGISTER_PASSWORD_RULES.every((rule) => rule.test(newPassword)) &&
     confirmPassword.trim().length > 0;
 
   function goTo(next: ProfileSection) {
@@ -431,6 +434,16 @@ export default function ProfilePageContent({
                 <Image src={assets.profile.camera} alt="" width={16} height={16} />
               </button>
             </div>
+            {avatarUrl ? (
+              <button
+                type="button"
+                className={s.removePhotoBtn}
+                onClick={() => setAvatarUrl(null)}
+                data-testid="profile-remove-photo"
+              >
+                {t("profile.removePhoto")}
+              </button>
+            ) : null}
           </div>
 
           <label className={`${s.field} ${personalFieldErrors.fullName ? s.fieldError : ""}`}>
@@ -533,6 +546,21 @@ export default function ProfilePageContent({
                 onChange={(e) => setNewPassword(e.target.value)}
               />
             </label>
+            <ul className={s.passwordRules}>
+              {REGISTER_PASSWORD_RULES.map((rule) => {
+                const isValid = rule.test(newPassword);
+
+                return (
+                  <li
+                    key={rule.id}
+                    className={`${s.passwordRule} ${isValid ? s.passwordRuleValid : ""}`}
+                  >
+                    <span aria-hidden="true">{isValid ? "✓" : "•"}</span>
+                    {t(`auth.passwordRules.${rule.id}`)}
+                  </li>
+                );
+              })}
+            </ul>
             <label className={s.field}>
               <span>{t("profile.confirmNewPassword")}</span>
               <input

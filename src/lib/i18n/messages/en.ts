@@ -99,6 +99,7 @@ export const en: MessageTree = {
     sectionLogout: "Log out",
     addCard: "Add card",
     changePhoto: "Change photo",
+    removePhoto: "Remove photo",
     personalInformation: "Personal information",
     personalData: "Personal details",
     personalDataSubtitle: "Edit your details",

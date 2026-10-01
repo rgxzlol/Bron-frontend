@@ -128,6 +128,7 @@ export const useProfileStore = create<ProfileState>()(
           set((state) => ({
             ...applyProfileToState(profile, state.fullName),
             avatarUrl: state.avatarUrl,
+            language: state.language,
             isProfileLoading: false,
           }));
         } catch (error) {
@@ -208,8 +209,9 @@ export const useProfileStore = create<ProfileState>()(
 
         const updated = await usersApi.updateProfile(
           {
+            username: trimmedName,
             phone: trimmedPhone,
-            email: trimmedEmail,
+            ...(trimmedEmail ? { email: trimmedEmail } : {}),
             language: get().language,
           },
           token,

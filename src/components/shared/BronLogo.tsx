@@ -2,7 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { assets } from "@/lib/assets";
+import bronLogoBTop from "@/assets/images/Btop.svg";
+import bronLogoBBottom from "@/assets/images/Bbottom.svg";
+import bronLogoR from "@/assets/images/bronR.svg";
+import bronLogoO from "@/assets/images/bronO.svg";
+import bronLogoN from "@/assets/images/bronN.svg";
 import { useProfileStore } from "@/store/profile.store";
 
 type BronLogoProps = {
@@ -11,35 +15,35 @@ type BronLogoProps = {
 
 const logoParts = [
   {
-    image: assets.bussines.logoBTop,
+    image: bronLogoBTop,
     left: "0%",
     top: "0%",
     width: "29.4915%",
     height: "75.6522%",
   },
   {
-    image: assets.bussines.logoBBottom,
+    image: bronLogoBBottom,
     left: "0%",
     top: "53.0435%",
     width: "32.2034%",
     height: "46.9565%",
   },
   {
-    image: assets.bussines.logoR,
+    image: bronLogoR,
     left: "33.5593%",
     top: "28.6957%",
     width: "14.5763%",
     height: "71.3043%",
   },
   {
-    image: assets.bussines.logoO,
+    image: bronLogoO,
     left: "49.4915%",
     top: "27.8261%",
     width: "26.7797%",
     height: "72.1739%",
   },
   {
-    image: assets.bussines.logoN,
+    image: bronLogoN,
     left: "77.6271%",
     top: "28.6957%",
     width: "22.3729%",

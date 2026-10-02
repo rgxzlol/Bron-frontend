@@ -322,7 +322,7 @@ export const useProfileStore = create<ProfileState>()(
           {
             username: trimmedName,
             phone: trimmedPhone,
-            email: trimmedEmail,
+            ...(trimmedEmail ? { email: trimmedEmail } : {}),
             first_name: trimmedName.split(/\s+/)[0] ?? "",
             last_name: trimmedName.split(/\s+/).slice(1).join(" "),
             language: get().language,

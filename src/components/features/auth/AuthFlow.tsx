@@ -289,16 +289,19 @@ function SecondaryButton({
   children,
   onClick,
   icon,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-4 text-[17px] font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-[0.99]"
+      disabled={disabled}
+      className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-4 text-[17px] font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-[0.99] disabled:opacity-60"
     >
       {icon}
       {children}
@@ -778,6 +781,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
             <SecondaryButton
               onClick={handleGoogleOAuth}
+              disabled={submitting}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
               {submitting ? t("common.loading") : t("auth.loginWithGoogle")}
@@ -977,6 +981,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
             <SecondaryButton
               onClick={handleGoogleOAuth}
+              disabled={submitting}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
               {submitting ? t("common.loading") : "Google"}

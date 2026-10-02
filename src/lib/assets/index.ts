@@ -42,11 +42,6 @@ import quitIcon from "@/assets/images/quitIcon.svg";
 import security from "@/assets/images/security.svg";
 
 import bussinesPhoto from "@/assets/images/businessPhoto.png";
-import bronBTop from "@/assets/images/Btop.svg";
-import bronBBottom from "@/assets/images/Bbottom.svg";
-import bronR from "@/assets/images/bronR.svg";
-import bronO from "@/assets/images/bronO.svg";
-import bronN from "@/assets/images/bronN.svg";
 import callPhone from "@/assets/images/call.svg";
 import tg from "@/assets/images/tg.svg";
 import email from "@/assets/images/email.svg";
@@ -180,9 +175,14 @@ export const assets = {
     photo1: bussinesPhoto,
     btop: Btop,
     bbottom: Bbottom,
+    logoBTop: Btop,
+    logoBBottom: Bbottom,
     r:bronR,
     o:bronO,
     n:bronN,
+    logoR: bronR,
+    logoO: bronO,
+    logoN: bronN,
     protected: protectedIcon
   },
   support: {

@@ -1,27 +1,30 @@
 "use client"
 
 import mapboxgl from "mapbox-gl"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import Image from "next/image"
-import { ShopsPlace } from "@/data/shops"
+import { servicesApi } from "@/lib/api/services"
+import { productsApi } from "@/lib/api/products"
+import { businessesApi } from "@/lib/api/businesses"
+import { resolveMediaUrl } from "@/lib/api/media"
 import { ShopsType } from "@/types/shops.types"
+import { parsePrice } from "@/lib/formatPrice"
+import { getBusinessCategoryIcon } from "@/lib/business/categoryIcons"
 import { hasValidCoords, normalizeCoords } from "@/lib/geocoding"
-import {
-  businessMatchesBusinessCategory,
-  shopMatchesBusinessCategory,
-} from "@/lib/business/mapCategory"
-import { businessMatchesMapFilter } from "@/lib/business/coordinates"
+import { shopMatchesBusinessCategory } from "@/lib/business/mapCategory"
 import { businessToShop } from "@/lib/business/toShop"
 import { mergeBusinessFromApi } from "@/lib/business/photos"
 import { fetchPublicBusinessesFromApi } from "@/lib/api/businessSync"
+import { canShowShopOnMap } from "@/lib/map/mapVisibility"
 import { getDistanceKm } from "@/lib/distance"
 import { assets } from "@/lib/assets"
 import { useBusinessStore } from "@/store/business.store"
 import { useMapFilterStore } from "@/store/mapFilter.store"
 import { useProfileStore } from "@/store/profile.store"
 import { useAuthStore } from "@/store/auth.store"
+import { useToastStore } from "@/store/toast.store"
 import type { MapLocationFilter } from "@/store/mapFilter.store"
-import type { SavedBusiness } from "@/store/business.store"
 import ShopDetailPanel from "./ShopDetailPanel"
 import HospitalServicesModal from "./HospitalServicesModal"
 import MapCategoriesModal from "./MapCategoriesModal"
@@ -43,77 +46,85 @@ type FullMapProps = {
 const filters = ["Ресторан", "Спортзал", "Кофейня", "Больница"]
 const INITIAL_MAP_CENTER: [number, number] = [69.2797, 41.3111]
 const INITIAL_MAP_ZOOM = 12
+const SHOP_MARKER_LABEL_MIN_ZOOM = 12.5
 const LIGHT_MAP_STYLE = "mapbox://styles/mapbox/streets-v12"
 const DARK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
+function subscribeToMapNavigation(onChange: () => void) {
+  window.addEventListener("popstate", onChange)
+  return () => window.removeEventListener("popstate", onChange)
+}
 
-function createShopMarkerElement(title: string, isHospital: boolean) {
+function getMapNavigationFilter() {
+  return new URLSearchParams(window.location.search).get("filter") ?? "Все"
+}
+
+function getServerMapNavigationFilter() {
+  return "Все"
+}
+
+function setShopMarkerPresentation(
+  element: HTMLElement,
+  showLabel: boolean,
+) {
+  element.style.cssText = showLabel
+    ? [
+        "display:flex",
+        "align-items:center",
+        "gap:8px",
+        "padding:8px 16px",
+        "border-radius:9999px",
+        "background:#ffffff",
+        "border:1px solid #e0e0e8",
+        "box-shadow:0 4px 14px rgba(0,0,0,0.12)",
+        "cursor:pointer",
+        "white-space:nowrap",
+        "color:#111111",
+        "font-weight:600",
+        "font-size:14px",
+        "line-height:1.2",
+      ].join(";")
+    : [
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "width:40px",
+        "height:40px",
+        "padding:0",
+        "border-radius:9999px",
+        "background:#ffffff",
+        "border:1px solid #d8dce5",
+        "box-shadow:0 4px 14px rgba(0,0,0,0.18)",
+        "cursor:pointer",
+      ].join(";")
+
+  const label = element.querySelector<HTMLElement>("[data-marker-label]")
+  if (label) label.style.display = showLabel ? "" : "none"
+}
+
+function createShopMarkerElement(
+  title: string,
+  category: string,
+  showLabel: boolean,
+) {
   const el = document.createElement("div")
-  el.style.cssText = [
-    "display:flex",
-    "align-items:center",
-    "gap:8px",
-    "padding:8px 16px",
-    "border-radius:9999px",
-    "background:#ffffff",
-    "border:1px solid #e0e0e8",
-    "box-shadow:0 4px 14px rgba(0,0,0,0.12)",
-    "cursor:pointer",
-    "white-space:nowrap",
-    "color:#111111",
-    "font-weight:600",
-    "font-size:14px",
-    "line-height:1.2",
-  ].join(";")
+  el.className = "map-shop-marker"
 
-  if (isHospital) {
-    const icon = document.createElement("img")
-    icon.src = assets.categories.health.src
-    icon.width = 16
-    icon.height = 16
-    icon.alt = ""
-    el.appendChild(icon)
-  }
+  const icon = document.createElement("span")
+  icon.style.cssText =
+    "display:inline-flex;align-items:center;justify-content:center;color:#0a6af7;flex:none"
+  const Icon = getBusinessCategoryIcon(category)
+  icon.innerHTML = renderToStaticMarkup(
+    <Icon aria-hidden="true" size={20} strokeWidth={2.4} />,
+  )
+  el.appendChild(icon)
 
   const label = document.createElement("span")
+  label.dataset.markerLabel = "true"
   label.textContent = title
   el.appendChild(label)
 
+  setShopMarkerPresentation(el, showLabel)
   return el
-}
-
-function createUserBusinessMarkerElement(title: string) {
-  const el = document.createElement("div")
-  el.style.cssText = [
-    "padding:8px 16px",
-    "border-radius:9999px",
-    "background:#ede8ff",
-    "border:2px solid #6b4ee6",
-    "box-shadow:0 4px 14px rgba(107,78,230,0.25)",
-    "cursor:pointer",
-    "white-space:nowrap",
-    "color:#6b4ee6",
-    "font-weight:600",
-    "font-size:14px",
-    "line-height:1.2",
-  ].join(";")
-  el.textContent = title
-  return el
-}
-
-function getShopServices(shop: ShopsType) {
-  return shop.services ?? []
-}
-
-function shouldOpenServiceSelection(shop: ShopsType) {
-  return getShopServices(shop).length > 1
-}
-
-function businessHasActiveServices(business: SavedBusiness) {
-  return business.services.some((service) => service.active)
-}
-
-function shopHasActiveServices(shop: ShopsType) {
-  return (shop.services?.length ?? 0) > 0
 }
 
 function getShopMinPrice(shop: ShopsType) {
@@ -122,14 +133,6 @@ function getShopMinPrice(shop: ShopsType) {
   }
 
   return shop.price
-}
-
-function getBusinessMinPrice(business: SavedBusiness) {
-  const activeServices = business.services.filter((service) => service.active)
-  if (activeServices.length > 0) {
-    return Math.min(...activeServices.map((service) => service.price))
-  }
-  return 50000
 }
 
 function getUserLocationForDistanceFilter(
@@ -214,17 +217,35 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null)
   const locationFilterReadyRef = useRef(false)
   const mapViewportModeRef = useRef<MapViewportMode>("idle")
+  const serviceRequestIdRef = useRef(0)
 
   const [selectedShop, setSelectedShop] = useState<ShopsType | null>(null)
+  const [viewsCounts, setViewsCounts] = useState<Record<number, number>>({})
   const [serviceSelectionShop, setServiceSelectionShop] =
     useState<ShopsType | null>(null)
+  const showToast = useToastStore((state) => state.showToast)
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
 
-  const [activeFilter, setActiveFilter] = useState("Все")
+  const navigationFilter = useSyncExternalStore(
+    subscribeToMapNavigation,
+    getMapNavigationFilter,
+    getServerMapNavigationFilter,
+  )
+  const [activeFilterOverride, setActiveFilterOverride] = useState<string | null>(null)
+  const activeFilter = activeFilterOverride ?? navigationFilter
   const [apiShops, setApiShops] = useState<ShopsType[]>([])
+  const [apiLoadCompleted, setApiLoadCompleted] = useState(false)
+  const [isMapLoading, setIsMapLoading] = useState(() => isMapboxConfigured())
+  const initialMapReadyRef = useRef(false)
+  const initialApiReadyRef = useRef(false)
+  const initialBusinessStoreReadyRef = useRef(false)
+  const initialLocationReadyRef = useRef(false)
   const theme = useProfileStore((s) => s.theme)
   const token = useAuthStore((s) => s.token)
-  const businesses = useBusinessStore((s) => s.businesses)
+  const businesses = useBusinessStore((s) =>
+    Array.isArray(s.businesses) ? s.businesses : [],
+  )
+  const updateBusinessViews = useBusinessStore((s) => s.updateBusinessViews)
   const mapFocusBusinessId = useBusinessStore((s) => s.mapFocusBusinessId)
   const clearMapFocus = useBusinessStore((s) => s.clearMapFocus)
   const businessMapKey = businesses
@@ -244,6 +265,64 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     (s) => s.applyCategoryFromNavigation,
   )
 
+  const registerBusinessView = useCallback((shop: ShopsType) => {
+    const businessId = shop.apiBusinessId
+    if (businessId == null) return
+
+    void businessesApi.recordView(businessId).then(
+      ({ views_count }) => {
+        setViewsCounts((current) => ({
+          ...current,
+          [businessId]: Math.max(current[businessId] ?? 0, views_count),
+        }))
+        updateBusinessViews(String(businessId), views_count)
+      },
+      (error: unknown) => {
+        console.warn(`Не удалось учесть просмотр бизнеса ${businessId}:`, error)
+      },
+    )
+  }, [updateBusinessViews])
+
+  useEffect(() => {
+    const businessId = selectedShop?.apiBusinessId;
+    if (businessId == null) return;
+
+    let cancelled = false;
+    const refreshViewsCount = async () => {
+      try {
+        const business = await businessesApi.get(businessId);
+        const viewsCount = business.views_count;
+        if (cancelled || viewsCount == null) return;
+        setViewsCounts((current) => ({
+          ...current,
+          [businessId]: Math.max(current[businessId] ?? 0, viewsCount),
+        }));
+        updateBusinessViews(String(businessId), viewsCount);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn(`Не удалось обновить просмотры бизнеса ${businessId}:`, error);
+        }
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshViewsCount();
+      }
+    };
+
+    void refreshViewsCount();
+    const intervalId = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [selectedShop?.apiBusinessId, updateBusinessViews]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const category = params.get("category")
@@ -255,23 +334,23 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     }
 
     if (filter) {
-      setActiveFilter(filter)
       mapViewportModeRef.current = "fit-markers"
     }
 
     if (category || filter) {
       const url = new URL(window.location.href)
       url.searchParams.delete("category")
-      url.searchParams.delete("filter")
       window.history.replaceState({}, "", url.pathname + url.search)
     }
   }, [applyCategoryFromNavigation])
 
   useEffect(() => {
+    let cancelled = false
     const localById = new Map(businesses.map((business) => [business.id, business]))
 
     void fetchPublicBusinessesFromApi()
       .then((items) => {
+        if (cancelled) return
         setApiShops(
           items.map((business) => {
             const local = localById.get(business.id)
@@ -283,6 +362,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         )
       })
       .catch((error) => console.error(error))
+      .finally(() => {
+        if (cancelled) return
+        initialApiReadyRef.current = true
+        setApiLoadCompleted(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [businessMapKey, businesses, token])
 
   function createUserMarkerElement() {
@@ -336,7 +424,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     maxPriceFilter = appliedMaxPrice,
     locationFilter = appliedLocation,
   ): boolean {
-    if (!hasValidCoords(shop)) return false
+    if (!hasValidCoords(shop) || !canShowShopOnMap(shop)) return false
 
     const matchesPill =
       activeFilter === "Все"
@@ -377,8 +465,77 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     return true
   }
 
-  function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
-    openShop(shop, map)
+  async function openShopOrServiceSelection(shop: ShopsType, map: mapboxgl.Map) {
+    const requestId = ++serviceRequestIdRef.current
+    setSelectedShop(null)
+    setServiceSelectionShop(null)
+
+    if (shop.apiBusinessId == null) {
+      openShop({ ...shop, services: [] }, map)
+      return
+    }
+
+    try {
+      const [items, products] = await Promise.all([
+        servicesApi.listByBusiness(shop.apiBusinessId),
+        productsApi.listByBusiness(shop.apiBusinessId),
+      ])
+      if (requestId !== serviceRequestIdRef.current) return
+
+      const services = items
+        .filter((service) => service.is_active !== false)
+        .map((service) => ({
+          id: String(service.id),
+          title: service.title,
+          description: service.description ?? "",
+          priceFrom: parsePrice(String(service.price)),
+          durationMin:
+            typeof service.duration === "number" && service.duration > 0
+              ? service.duration
+              : 60,
+          kind: "service" as const,
+          category: service.category,
+        }))
+      const productItems = products
+        .filter((product) => product.is_active !== false)
+        .map((product) => ({
+          id: String(product.id),
+          title: product.name,
+          description: product.description ?? "",
+          priceFrom: parsePrice(String(product.price)),
+          durationMin: 0,
+          kind: "product" as const,
+          icon: resolveMediaUrl(product.image) ?? undefined,
+        }))
+      const inventory = [...services, ...productItems]
+      const shopWithServices = {
+        ...shop,
+        services: inventory,
+        ...(services.length > 0
+          ? { price: Math.min(...services.map((service) => service.priceFrom)) }
+          : {}),
+      }
+
+      const coords = normalizeCoords(shop.lat, shop.lng)
+      if (coords) {
+        map.flyTo({
+          center: [coords.lng, coords.lat],
+          zoom: 15,
+          speed: 1.2,
+        })
+      }
+
+      if (services.length > 1) {
+        setServiceSelectionShop(enrichShopWithDistance(shopWithServices))
+      } else {
+        openShop(shopWithServices, map)
+      }
+    } catch (error) {
+      if (requestId !== serviceRequestIdRef.current) return
+      console.error(`Не удалось загрузить услуги бизнеса ${shop.apiBusinessId}:`, error)
+      showToast(t("map.servicesLoadFailed"))
+      openShop({ ...shop, services: [] }, map)
+    }
   }
 
   function openShop(shop: ShopsType, map: mapboxgl.Map) {
@@ -408,64 +565,25 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    const userBusinessIds = new Set(businesses.map((business) => business.id))
+    const localShops = businesses.map((business) => businessToShop(business))
+    const mapShops = [...apiShops, ...localShops].filter(
+      (shop, index, shops) =>
+        shops.findIndex(
+          (item) =>
+            item.apiBusinessId != null &&
+            item.apiBusinessId === shop.apiBusinessId,
+        ) === index ||
+        shop.apiBusinessId == null,
+    )
 
-    const filteredShops = [...ShopsPlace, ...apiShops].filter((shop) => {
-      if (
-        shop.apiBusinessId != null &&
-        userBusinessIds.has(String(shop.apiBusinessId))
-      ) {
-        return false
-      }
-
-      if (shop.apiBusinessId != null && !shopHasActiveServices(shop)) {
-        return false
-      }
-
-      return matchesShopFilters(
+    const filteredShops = mapShops.filter((shop) =>
+      matchesShopFilters(
         shop,
         currentAppliedCategory,
         currentAppliedMaxPrice,
         currentAppliedLocation,
-      )
-    })
-
-    const filteredUserBusinesses = businesses.filter((business) => {
-      if (!hasValidCoords(business)) return false
-      if (!businessHasActiveServices(business)) return false
-      if (!businessMatchesMapFilter(business.category || "Другое", activeFilter)) {
-        return false
-      }
-      if (
-        currentAppliedCategory &&
-        !businessMatchesBusinessCategory(business.category || "Другое", currentAppliedCategory)
-      ) {
-        return false
-      }
-
-      if (
-        currentAppliedMaxPrice != null &&
-        getBusinessMinPrice(business) > currentAppliedMaxPrice
-      ) {
-        return false
-      }
-
-      const userLocation = getUserLocationForDistanceFilter(userLocationRef.current)
-      if (
-        currentAppliedLocation &&
-        !matchesDistanceFilter(
-          userLocation.lat,
-          userLocation.lng,
-          business.lat,
-          business.lng,
-          currentAppliedLocation,
-        )
-      ) {
-        return false
-      }
-
-      return true
-    })
+      ),
+    )
 
     const markerCoordinates: [number, number][] = []
 
@@ -475,8 +593,11 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       markerCoordinates.push([coords.lng, coords.lat])
 
-      const isHospital = shop.type === "Больница"
-      const el = createShopMarkerElement(shop.title, isHospital)
+      const el = createShopMarkerElement(
+        shop.title,
+        shop.category || shop.type,
+        map.getZoom() >= SHOP_MARKER_LABEL_MIN_ZOOM,
+      )
       el.setAttribute("data-testid", `map-shop-marker-${shop.id}`)
       el.setAttribute("role", "button")
       el.setAttribute("tabindex", "0")
@@ -486,7 +607,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         .setLngLat([coords.lng, coords.lat])
         .addTo(map)
 
-      const openMarkerShop = () => openShopOrServiceSelection(shop, map)
+      const openMarkerShop = () => {
+        registerBusinessView(shop)
+        void openShopOrServiceSelection(shop, map)
+      }
 
       marker.getElement().addEventListener("click", (event) => {
         event.preventDefault()
@@ -502,26 +626,6 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       markersRef.current.push(marker)
     })
 
-    filteredUserBusinesses.forEach((business) => {
-      const coords = normalizeCoords(business.lat, business.lng)
-      if (!coords) return
-
-      markerCoordinates.push([coords.lng, coords.lat])
-
-      const el = createUserBusinessMarkerElement(business.name || "Мой бизнес")
-
-      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([coords.lng, coords.lat])
-        .addTo(map)
-
-      marker.getElement().addEventListener("click", () => {
-        const shop = businessToShop(business, userLocationRef.current)
-        openShopOrServiceSelection(shop, map)
-      })
-
-      markersRef.current.push(marker)
-    })
-
     const viewportMode = mapViewportModeRef.current
     if (viewportMode === "user" && userLocationRef.current) {
       const { lat, lng } = userLocationRef.current
@@ -531,6 +635,15 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       fitMapToCoordinates(map, markerCoordinates)
       mapViewportModeRef.current = "idle"
     }
+
+    if (
+      initialMapReadyRef.current &&
+      initialApiReadyRef.current &&
+      initialBusinessStoreReadyRef.current &&
+      initialLocationReadyRef.current
+    ) {
+      setIsMapLoading(false)
+    }
   }, [
     activeFilter,
     businesses,
@@ -538,10 +651,14 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     appliedMaxPrice,
     appliedLocation,
     apiShops,
+    apiLoadCompleted,
+    registerBusinessView,
   ])
 
   const syncMarkersRef = useRef(syncMarkers)
-  syncMarkersRef.current = syncMarkers
+  useEffect(() => {
+    syncMarkersRef.current = syncMarkers
+  }, [syncMarkers])
 
   useEffect(() => {
     if (!mapContainer.current || !isMapboxConfigured()) return
@@ -559,9 +676,18 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     })
 
     mapRef.current = map
+    const handleZoomEnd = () => {
+      const showLabels = map.getZoom() >= SHOP_MARKER_LABEL_MIN_ZOOM
+      markersRef.current.forEach((marker) =>
+        setShopMarkerPresentation(marker.getElement(), showLabels),
+      )
+    }
+    map.on("zoomend", handleZoomEnd)
 
     const handleMapReady = () => {
       if (cancelled || mapRef.current !== map) return
+      initialMapReadyRef.current = true
+      setIsMapLoading(false)
       syncMarkersRef.current()
     }
 
@@ -575,6 +701,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           const lng = position.coords.longitude
           const lat = position.coords.latitude
           userLocationRef.current = { lat, lng }
+          initialLocationReadyRef.current = true
 
           whenMapReady(map, () => {
             placeUserMarker(map, lng, lat)
@@ -592,6 +719,7 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
         },
         (error) => {
           console.error(error)
+          initialLocationReadyRef.current = true
           locationFilterReadyRef.current = Boolean(
             useMapFilterStore.getState().appliedLocation,
           )
@@ -603,6 +731,8 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
           enableHighAccuracy: true,
         },
       )
+    } else {
+      initialLocationReadyRef.current = true
     }
 
     return () => {
@@ -611,13 +741,17 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       markersRef.current = []
       userMarkerRef.current?.remove()
       userMarkerRef.current = null
+      map.off("zoomend", handleZoomEnd)
       map.remove()
       mapRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    const sync = () => syncMarkersRef.current()
+    const sync = () => {
+      initialBusinessStoreReadyRef.current = true
+      syncMarkersRef.current()
+    }
 
     return onStoreHydrated(useBusinessStore, sync)
   }, [])
@@ -681,7 +815,10 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
   function handleFilterSelect(filter: string) {
     mapViewportModeRef.current = "fit-markers"
-    setActiveFilter((prev) => (prev === filter ? "Все" : filter))
+    setActiveFilterOverride((previous) => {
+      const current = previous ?? navigationFilter
+      return current === filter ? "Все" : filter
+    })
   }
 
   function handleOpenCategories() {
@@ -787,27 +924,38 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
     )
   }
 
+  const fallbackShops = [
+    ...apiShops,
+    ...businesses.map((business) => businessToShop(business)),
+  ]
+    .filter(canShowShopOnMap)
+    .filter((shop, index, shops) => shops.findIndex((item) => item.id === shop.id) === index)
+
   return (
     <div className="relative">
       <div className="absolute top-4 left-4 z-10 flex max-w-[calc(100%-32px)] gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:max-w-[70%]">
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            data-testid={`map-filter-${filter}`}
-            onClick={() => handleFilterSelect(filter)}
-            className={`
-              px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
-              ${
-                activeFilter === filter
-                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                  : "bg-[var(--bg-surface)] text-[var(--accent-fg)] border-[var(--primary)]"
-              }
-            `}
-          >
-            {translateLabel(t, filter, MAP_FILTER_PILL_KEYS)}
-          </button>
-        ))}
+        {filters.map((filter) => {
+          const Icon = getBusinessCategoryIcon(filter)
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`map-filter-${filter}`}
+              onClick={() => handleFilterSelect(filter)}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap border text-[14px] transition font-semibold
+                ${
+                  activeFilter === filter
+                    ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                    : "bg-[var(--bg-surface)] text-[var(--accent-fg)] border-[var(--primary)]"
+                }
+              `}
+            >
+              <Icon size={16} strokeWidth={2} aria-hidden="true" />
+              {translateLabel(t, filter, MAP_FILTER_PILL_KEYS)}
+            </button>
+          )
+        })}
       </div>
 
       <div className="absolute top-[72px] right-4 z-10 flex flex-col gap-3 lg:hidden">
@@ -880,35 +1028,67 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
       <div
         ref={mapContainer}
         data-testid="interactive-map"
+        className="h-[80vh] h-[80dvh]"
         style={{
           width: "100%",
-          height: "80dvh",
           borderRadius: "26px",
         }}
       />
 
-      {!isMapboxConfigured() && (
+      {isMapLoading && (
         <div
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface-muted)] px-6 text-center"
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-[26px] bg-[var(--bg-surface)]"
           style={{ height: "80dvh" }}
+          role="status"
+          aria-live="polite"
         >
-          <div className="max-w-md">
-            <p className="text-[18px] font-semibold text-[var(--text-primary)]">
-              Карта недоступна
+          <div className="flex flex-col items-center gap-3 text-[var(--text-secondary)]">
+            <span
+              className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--border-default)] border-t-[var(--primary)]"
+              aria-hidden="true"
+            />
+            <span className="text-[15px] font-semibold">{t("common.loading")}</span>
+          </div>
+        </div>
+      )}
+
+      {!isMapboxConfigured() && (
+        <div className="absolute inset-0 z-20 rounded-[26px] bg-[var(--bg-surface-muted)] p-6">
+          <div className="mb-4 rounded-[14px] bg-[var(--bg-surface)] px-4 py-3 text-center shadow-sm">
+            <p className="text-[16px] font-semibold text-[var(--text-primary)]">
+              Бизнесы рядом
             </p>
-            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
-              Укажите реальный токен Mapbox в файле{" "}
-              <code className="rounded bg-[var(--bg-surface)] px-1 py-0.5">.env.local</code>:
+            <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
+              Для полноценной карты добавьте NEXT_PUBLIC_MAPBOX_TOKEN в .env.local
             </p>
-            <pre className="mt-3 overflow-x-auto rounded-[12px] bg-[var(--bg-surface)] p-3 text-left text-[13px] text-[var(--text-primary)]">
-              NEXT_PUBLIC_MAPBOX_TOKEN=pk.ваш_токен
-            </pre>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {fallbackShops.map((shop) => (
+              <button
+                key={`fallback-map-shop-${shop.id}`}
+                type="button"
+                className="rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 text-[14px] font-semibold text-[var(--text-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.12)] transition hover:border-[var(--primary)] hover:text-[var(--accent-fg)]"
+                data-testid={`fallback-map-marker-${shop.id}`}
+                onClick={() => {
+                  registerBusinessView(shop)
+                  setSelectedShop(shop)
+                }}
+              >
+                {shop.title}
+              </button>
+            ))}
+            {fallbackShops.length === 0 ? (
+              <p className="text-center text-[14px] text-[var(--text-secondary)]">
+                {t("map.emptyBusinesses")}
+              </p>
+            ) : null}
           </div>
         </div>
       )}
 
       {serviceSelectionShop && (
         <HospitalServicesModal
+          key={serviceSelectionShop.id}
           shop={serviceSelectionShop}
           onClose={() => setServiceSelectionShop(null)}
           onContinue={handleServiceSelectionContinue}
@@ -917,7 +1097,13 @@ export default function FullMap({ onStartBooking }: FullMapProps) {
 
       {selectedShop && (
         <ShopDetailPanel
+          key={selectedShop.id}
           shop={selectedShop}
+          viewsCount={
+            selectedShop.apiBusinessId == null
+              ? null
+              : viewsCounts[selectedShop.apiBusinessId] ?? null
+          }
           onClose={() => setSelectedShop(null)}
           onBook={handleShopBook}
         />

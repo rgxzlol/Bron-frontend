@@ -27,7 +27,6 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
   const resetProfile = useProfileStore((state) => state.resetProfile);
   const fetchFavorites = useFavoriteStore((state) => state.fetchFavorites);
   const resetApplication = useBusinessApplicationStore((state) => state.resetApplication);
-  const fetchApplication = useBusinessApplicationApiStore((state) => state.fetchApplication);
   const resetApplicationApi = useBusinessApplicationApiStore((state) => state.reset);
 
   useEffect(() => {
@@ -52,15 +51,24 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
       resetApplicationApi();
       return;
     }
+    const unsubscribeBusinessHydration = onStoreHydrated(
+      useBusinessStore,
+      () => {
+        void fetchBusinessesFromApi();
+      },
+    );
 
-    return onStoreHydrated(useBookingStore, () => {
-      void fetchBusinessesFromApi();
+    const unsubscribeBookingHydration = onStoreHydrated(useBookingStore, () => {
       void fetchMyBookings();
       void fetchProfile();
       loadNotificationsForUser(userId);
       void fetchFavorites();
-      void fetchApplication();
     });
+
+    return () => {
+      unsubscribeBusinessHydration?.();
+      unsubscribeBookingHydration?.();
+    };
   }, [
     hydrated,
     token,
@@ -73,7 +81,6 @@ export default function ApiProvider({ children }: { children: React.ReactNode })
     resetProfile,
     fetchFavorites,
     resetApplication,
-    fetchApplication,
     resetApplicationApi,
   ]);
 

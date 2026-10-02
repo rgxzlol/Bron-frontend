@@ -14,11 +14,19 @@ import {
 } from "@/store/business.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
+import {
+  compareBookingsByTime,
+  isBusinessBookingVisible,
+  isPastBooking,
+} from "@/lib/booking/classify";
 import { useToastStore } from "@/store/toast.store";
+import { businessesApi } from "@/lib/api";
 import Image from "next/image";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
+import desktop from "./businessDashboardDesktop.module.css";
+import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 
 type Props = {
   businessId: string;
@@ -35,12 +43,21 @@ type View =
   | "editService"
   | "editProduct";
 
-type BookingTab = "all" | "pending" | "confirmed";
+type BookingTab = "all" | "pending" | "confirmed" | "past";
 
 const inputClass =
   "w-full rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[16px] py-[14px] text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[#0a6af7]/30";
 
 const MAX_DESC = 120;
+
+function getCustomerInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase() ?? "")
+    .join("");
+}
 
 const TIME_SLOTS = [
   "10:00",
@@ -59,6 +76,11 @@ const TIME_SLOTS = [
 
 const SERVICE_DURATION_OPTIONS = [30, 60, 90, 120] as const;
 
+function isAvailabilityTimeValid(time: string, durationMinutes: number) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes + durationMinutes <= 23 * 60 + 59;
+}
+
 const RU_MONTHS = [
   "Январь",
   "Февраль",
@@ -75,21 +97,6 @@ const RU_MONTHS = [
 ];
 
 const RU_WEEKDAYS = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"];
-
-const RU_MONTHS_GEN = [
-  "января",
-  "февраля",
-  "марта",
-  "апреля",
-  "мая",
-  "июня",
-  "июля",
-  "августа",
-  "сентября",
-  "октября",
-  "ноября",
-  "декабря",
-];
 
 /* ---------- icons ---------- */
 
@@ -117,102 +124,15 @@ function DotsVerticalIcon() {
   );
 }
 
-function PencilIcon() {
+function DashboardPinIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M4 20h4L18.5 9.5a2.1 2.1 0 000-3L16.5 4.5a2.1 2.1 0 00-3 0L3 15v5h1z"
+        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z"
         stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
+        strokeWidth="2"
       />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 8h14l-1 12H6L5 8z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 10V6a3 3 0 016 0v4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function LayersIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 3l9 5-9 5-9-5 9-5z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3 13l9 5 9-5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CalendarIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-    >
-      <rect
-        x="3.5"
-        y="5"
-        width="17"
-        height="16"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M3.5 9.5h17M8 3v4M16 3v4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M12 7.5V12l3 2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <circle cx="12" cy="11" r="2.5" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
@@ -323,18 +243,40 @@ function ScreenHeader({
   title,
   onBack,
   action,
+  sticky = false,
+  className,
 }: {
   title: string;
   onBack: () => void;
   action?: React.ReactNode;
+  sticky?: boolean;
+  className?: string;
 }) {
+  const [isBackFixed, setIsBackFixed] = useState(false);
+
+  useEffect(() => {
+    if (!sticky) return;
+
+    const handleScroll = () => {
+      setIsBackFixed(window.scrollY > 80);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [sticky]);
+
   return (
-    <div className="relative mb-[18px] flex min-h-[44px] items-center justify-center">
+    <div
+      className={`relative mb-[18px] flex min-h-[44px] items-center justify-center ${className ?? ""}`}
+    >
       <button
         type="button"
         onClick={onBack}
         aria-label="Назад"
-        className="absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
+        className={`absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)] ${
+          isBackFixed ? "business-item-screen-sticky-back" : ""
+        }`}
       >
         <ChevronLeftIcon />
       </button>
@@ -424,8 +366,10 @@ type ServiceFormData = {
   category: string;
   description: string;
   photo: string | null;
+  duration?: number;
   guestCapacity: number | null;
   quantity: number | null;
+  availability?: NonNullable<BusinessService["availability"]>;
 };
 
 const emptyServiceForm = (): ServiceFormData => ({
@@ -436,7 +380,47 @@ const emptyServiceForm = (): ServiceFormData => ({
   photo: null,
   guestCapacity: null,
   quantity: null,
+
 });
+
+function parseLocalDate(value: string): Date | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatBookingDate(value: string, locale: string) {
+  const date = parseLocalDate(value);
+  if (!date) return undefined;
+  return `${date.toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+  })}, ${date.toLocaleDateString(locale, { weekday: "short" })}`;
+}
+
+function getBookingDurationMinutes(startTime: string, endTime?: string) {
+  const parseTime = (value: string) => {
+    const match = value.match(/^(\d{2}):(\d{2})/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  };
+  const start = parseTime(startTime);
+  const end = endTime ? parseTime(endTime) : null;
+  if (start == null || end == null) return null;
+  const duration = end - start;
+  return duration > 0 ? duration : duration < 0 ? duration + 24 * 60 : null;
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function serviceToFormData(item: BusinessService): ServiceFormData {
   return {
@@ -445,6 +429,7 @@ function serviceToFormData(item: BusinessService): ServiceFormData {
     category: item.category,
     description: item.description,
     photo: item.photo,
+    duration: item.duration,
     guestCapacity: item.guestCapacity ?? null,
     quantity: item.quantity ?? null,
   };
@@ -580,10 +565,10 @@ function PriceField({
   return (
     <div className="flex flex-col gap-[8px]">
       <span className="text-[14px] font-semibold">{label}</span>
-      <div className="flex items-stretch gap-[8px]">
+      <div className="relative">
         <input
           type="text"
-          className={`${inputClass} min-w-0 flex-1 ${error ? "border-[#e02424]" : ""}`}
+          className={`${inputClass} w-full ${error ? "border-[#e02424]" : ""}`}
           placeholder={placeholder}
           inputMode="numeric"
           autoComplete="off"
@@ -592,18 +577,6 @@ function PriceField({
           aria-invalid={error || undefined}
           onChange={(e) => onChange(formatPriceInputOnChange(e.target.value))}
         />
-        <div className="relative w-[96px] shrink-0">
-          <select
-            className="h-full w-full appearance-none rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[14px] pl-[16px] pr-[32px] text-[15px] font-semibold text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[#0a6af7]/30"
-            defaultValue="sum"
-            aria-label="Currency"
-          >
-            <option value="sum">UZS</option>
-          </select>
-          <span className="pointer-events-none absolute right-[13px] top-1/2 -translate-y-1/2 text-[var(--text-primary)]">
-            <ChevronDownIcon />
-          </span>
-        </div>
       </div>
       <FieldError show={error} message={errorMessage} testId={errorTestId} />
     </div>
@@ -694,90 +667,146 @@ function CalendarField({
   prevMonthLabel,
   nextMonthLabel,
 }: {
-  value: Date;
-  onChange: (date: Date) => void;
+  value: Date[];
+  onChange: (dates: Date[]) => void;
   prevMonthLabel: string;
   nextMonthLabel: string;
 }) {
-  const [month, setMonth] = useState(
-    () => new Date(value.getFullYear(), value.getMonth(), 1),
-  );
+  const [month, setMonth] = useState(() => new Date());
 
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
 
-  const isSelected = (day: number) =>
-    value.getFullYear() === year &&
-    value.getMonth() === monthIndex &&
-    value.getDate() === day;
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const prevMonthDays = new Date(year, monthIndex, 0).getDate();
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const days: { date: Date; inMonth: boolean }[] = [];
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, monthIndex - 1, prevMonthDays - i),
+        inMonth: false,
+      });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        date: new Date(year, monthIndex, day),
+        inMonth: true,
+      });
+    }
+
+    while (days.length % 7 !== 0) {
+      const nextDay = days.length - startOffset - daysInMonth + 1;
+      days.push({
+        date: new Date(year, monthIndex + 1, nextDay),
+        inMonth: false,
+      });
+    }
+
+    return days;
+  }, [monthIndex, year]);
+
+  const isSelected = (date: Date) =>
+    value.some(
+      (d) =>
+        d.getFullYear() === date.getFullYear() &&
+        d.getMonth() === date.getMonth() &&
+        d.getDate() === date.getDate(),
+    );
+
+  function toggleDate(date: Date) {
+    if (isSelected(date)) {
+      onChange(value.filter((d) => !isSameDay(d, date)));
+    } else {
+      onChange([...value, date]);
+    }
+  }
+
+  function isSameDay(a: Date, b: Date): boolean {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
 
   return (
     <div
-      className="rounded-[18px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[16px]"
+      className="rounded-[20px] bg-[#f3f3f2] p-[12px] sm:p-[14px]"
       data-testid="business-service-calendar"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-[17px] font-bold">
-          {RU_MONTHS[monthIndex]} {year}
+      <div className="mb-[10px] flex items-center justify-between gap-[10px]">
+        <button
+          type="button"
+          aria-label={prevMonthLabel}
+          data-testid="business-service-calendar-prev"
+          onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
+          className="flex h-[36px] w-[36px] items-center justify-center text-[22px] leading-none text-[#7a7a7a] transition hover:text-[#0a6af7]"
+        >
+          <ChevronLeftIcon />
+        </button>
+
+        <span className="text-center text-[30px] font-bold tracking-[-0.03em] text-white">
+          {RU_MONTHS[monthIndex]}
         </span>
-        <div className="flex items-center gap-[4px]">
-          <button
-            type="button"
-            aria-label={prevMonthLabel}
-            data-testid="business-service-calendar-prev"
-            onClick={() => setMonth(new Date(year, monthIndex - 1, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
-          >
+
+        <button
+          type="button"
+          aria-label={nextMonthLabel}
+          data-testid="business-service-calendar-next"
+          onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
+          className="flex h-[36px] w-[36px] items-center justify-center text-[22px] leading-none text-[#7a7a7a] transition hover:text-[#0a6af7]"
+        >
+          <span className="rotate-180">
             <ChevronLeftIcon />
-          </button>
-          <button
-            type="button"
-            aria-label={nextMonthLabel}
-            data-testid="business-service-calendar-next"
-            onClick={() => setMonth(new Date(year, monthIndex + 1, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-surface-muted)]"
-          >
-            <span className="rotate-180">
-              <ChevronLeftIcon />
-            </span>
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
 
-      <div className="mb-[14px] mt-[10px] border-b border-[var(--border-default)]" />
-
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-x-[8px] gap-y-[8px]">
         {RU_WEEKDAYS.map((day) => (
           <span
             key={day}
-            className="pb-[10px] text-center text-[11px] font-semibold tracking-[0.06em] text-[var(--text-muted)]"
+            className="pb-[6px] text-center text-[14px] font-medium text-[#5d5d5d]"
           >
             {day}
           </span>
         ))}
-        {Array.from({ length: offset }).map((_, i) => (
-          <span key={`empty-${i}`} />
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const selected = isSelected(day);
+
+        {calendarDays.map(({ date, inMonth }) => {
+          const selected = isSelected(date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const day = new Date(date);
+          day.setHours(0, 0, 0, 0);
+          const isPast = day < today;
+
           return (
             <button
-              key={day}
+              key={date.toISOString()}
               type="button"
-              data-testid={`business-service-calendar-day-${day}`}
+              data-testid={`business-service-calendar-day-${date.getDate()}`}
               data-selected={selected ? "true" : "false"}
+              data-in-month={inMonth ? "true" : "false"}
+              data-date-state={
+                isPast ? "past" : day.getTime() === today.getTime() ? "today" : "future"
+              }
               aria-pressed={selected}
-              onClick={() => onChange(new Date(year, monthIndex, day))}
-              className={`mx-auto my-[3px] flex h-[36px] w-[36px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
-                selected
-                  ? "bg-[#2596a5] text-white"
-                  : "text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)]"
+              aria-disabled={isPast}
+              disabled={isPast}
+              onClick={() => !isPast && toggleDate(date)}
+              className={`mx-auto flex h-[42px] w-[42px] items-center justify-center rounded-full text-[15px] font-semibold transition ${
+                selected && !isPast
+                  ? "bg-[#0a6af7] text-white shadow-sm"
+                  : isPast
+                    ? "text-[#7a7a7a]"
+                    : "text-white hover:bg-[var(--bg-hover)]"
               }`}
             >
-              {day}
+              {date.getDate()}
             </button>
           );
         })}
@@ -801,6 +830,7 @@ function PhotoUploadField({
   testIdPrefix: string;
   onUploadError: (message: string) => void;
 }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const [previewFailed, setPreviewFailed] = useState(false);
   const previewPhoto =
@@ -813,12 +843,9 @@ function PhotoUploadField({
       ? photo
       : null;
 
-  useEffect(() => {
-    setPreviewFailed(false);
-  }, [photo]);
-
   async function handleFileChange(file: File | undefined) {
     if (!file) return;
+    setPreviewFailed(false);
     const result = await validateGalleryImageFile(file);
     if (!result.ok) {
       onUploadError(`businessErrors.${result.errorKey}`);
@@ -829,7 +856,7 @@ function PhotoUploadField({
 
   return (
     <div
-      className="flex flex-col gap-[8px]"
+      className="relative flex flex-col gap-[8px]"
       data-testid={`${testIdPrefix}-photo-section`}
     >
       <span className="text-[14px] font-semibold">{label}</span>
@@ -869,6 +896,20 @@ function PhotoUploadField({
           </>
         )}
       </label>
+      {previewPhoto ? (
+        <button
+          type="button"
+          aria-label={`${uploadLabel}: ${t("common.delete")}`}
+          data-testid={`${testIdPrefix}-photo-delete`}
+          onClick={() => {
+            setPreviewFailed(false);
+            onPhotoChange(null);
+          }}
+          className="absolute right-[8px] top-[38px] rounded-full bg-black/65 px-[10px] py-[6px] text-[12px] font-semibold text-white"
+        >
+          {t("common.delete")}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -882,9 +923,9 @@ function AddItemScreen({
   kind: "service" | "product";
   initialItem?: BusinessService;
   onBack: () => void;
-  onSave: (data: ServiceFormData) => void;
+  onSave: (data: ServiceFormData) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const showToast = useToastStore((s) => s.showToast);
   const isService = kind === "service";
   const isEditing = Boolean(initialItem);
@@ -900,14 +941,111 @@ function AddItemScreen({
       requireProductQuantity: !isService,
     });
   const [descriptionLimitHit, setDescriptionLimitHit] = useState(false);
-  const [times, setTimes] = useState<string[]>([]);
-  const [date, setDate] = useState<Date>(() => new Date());
-  const [durationMin, setDurationMin] = useState<number | null>(null);
+  const [times, setTimes] = useState<string[]>(
+    () => initialItem?.availability?.[0]?.times ?? [],
+  );
+  const [dates, setDates] = useState<Date[]>(() => {
+    if (!initialItem || !initialItem.availability || !isService) return [];
+    return initialItem.availability
+      .map(({ date }) => parseLocalDate(date))
+      .filter((d): d is Date => d !== null);
+  });
+  const [availabilityTimesByDate, setAvailabilityTimesByDate] = useState<
+    Record<string, string[]>
+  >(() =>
+    Object.fromEntries(
+      (initialItem?.availability ?? []).map(({ date, times: dateTimes }) => [
+        date,
+        dateTimes,
+      ]),
+    ),
+  );
+  const [activeAvailabilityDate, setActiveAvailabilityDate] = useState(
+    () => initialItem?.availability?.[0]?.date ?? "",
+  );
+  const [customAvailabilityTime, setCustomAvailabilityTime] = useState("");
+  const [durationMin, setDurationMin] = useState<number | null>(
+    () => initialItem?.duration ?? null,
+  );
+  const [showOnlyFree, setShowOnlyFree] = useState(true);
+  const [rules, setRules] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const selectedDateTimes = activeAvailabilityDate
+    ? availabilityTimesByDate[activeAvailabilityDate] ?? times
+    : times;
+  const availabilityTimeOptions = [
+    ...new Set([...TIME_SLOTS, ...selectedDateTimes]),
+  ].sort();
+
+  function updateDates(nextDates: Date[]) {
+    const nextDateKeys = nextDates.map(formatLocalDate);
+    if (new Set(nextDateKeys).size > 366) {
+      showToast(t("businessForms.dateLabel"), t("businessForms.availabilityDateLimit"));
+      return;
+    }
+    const activeTimes =
+      (activeAvailabilityDate &&
+        availabilityTimesByDate[activeAvailabilityDate]) ||
+      times;
+    setAvailabilityTimesByDate((current) =>
+      Object.fromEntries(
+        nextDateKeys.map((date) => [
+          date,
+          current[date] ?? activeTimes,
+        ]),
+      ),
+    );
+    setDates(nextDates);
+    if (!nextDateKeys.includes(activeAvailabilityDate)) {
+      setActiveAvailabilityDate(nextDateKeys[0] ?? "");
+    }
+  }
 
   function toggleTime(slot: string) {
-    setTimes((prev) =>
-      prev.includes(slot) ? prev.filter((value) => value !== slot) : [...prev, slot],
-    );
+    const toggle = (current: string[]) =>
+      current.includes(slot)
+        ? current.filter((value) => value !== slot)
+        : [...current, slot];
+    const currentlySelected = selectedDateTimes.includes(slot);
+    if (!currentlySelected && !isAvailabilityTimeValid(slot, durationMin ?? 60)) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeOutOfRange"));
+      return;
+    }
+    if (activeAvailabilityDate && dates.some((date) => formatLocalDate(date) === activeAvailabilityDate)) {
+      setAvailabilityTimesByDate((current) => ({
+        ...current,
+        [activeAvailabilityDate]: toggle(
+          current[activeAvailabilityDate] ?? times,
+        ),
+      }));
+      return;
+    }
+    setTimes(toggle);
+  }
+
+  function addCustomAvailabilityTime() {
+    if (!activeAvailabilityDate) return;
+    const currentTimes = selectedDateTimes;
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(customAvailabilityTime)) return;
+    if (!isAvailabilityTimeValid(customAvailabilityTime, durationMin ?? 60)) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeOutOfRange"));
+      return;
+    }
+    if (currentTimes.includes(customAvailabilityTime)) {
+      setCustomAvailabilityTime("");
+      return;
+    }
+    if (currentTimes.length >= 288) {
+      showToast(t("businessForms.freeTimeLabel"), t("businessForms.availabilityTimeLimit"));
+      return;
+    }
+
+    setAvailabilityTimesByDate((current) => ({
+      ...current,
+      [activeAvailabilityDate]: [...currentTimes, customAvailabilityTime].sort(),
+    }));
+    setCustomAvailabilityTime("");
   }
 
   function formatDurationLabel(minutes: number): string {
@@ -938,7 +1076,7 @@ function AddItemScreen({
   }
 
   return (
-    <div data-testid={formTestId}>
+    <div className="business-item-screen" data-testid={formTestId}>
       <ScreenHeader
         title={
           isService
@@ -950,15 +1088,22 @@ function AddItemScreen({
               : t("businessForms.addProductTitle")
         }
         onBack={onBack}
+        sticky
       />
 
-      <p className="mb-[16px] text-[14px] text-[var(--text-secondary)]">
+      <p className="business-item-subtitle mb-[16px] text-[14px] text-[var(--text-secondary)]">
         {isService
           ? t("businessForms.addServiceSubtitle")
           : t("businessForms.addProductSubtitle")}
       </p>
 
-      <div className="flex flex-col gap-[18px]">
+      <div
+        className={
+          isService
+            ? "business-service-form-grid"
+            : "business-product-form-grid"
+        }
+      >
         {submitAttempted && hasFormFieldErrors(fieldErrors) ? (
           <div
             role="alert"
@@ -969,7 +1114,7 @@ function AddItemScreen({
           </div>
         ) : null}
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="name">
           <span className="text-[14px] font-semibold">
             {isService
               ? t("businessForms.serviceName")
@@ -998,23 +1143,25 @@ function AddItemScreen({
           />
         </label>
 
-        <PriceField
-          label={
-            isService ? t("businessForms.servicePrice") : t("businessForms.price")
-          }
-          value={form.price}
-          error={fieldErrors.price}
-          errorMessage={t("businessForms.required")}
-          placeholder={t("businessForms.pricePlaceholder")}
-          testId={`${fieldPrefix}-price-input`}
-          errorTestId={`${fieldPrefix}-price-error`}
-          onChange={(price) => {
-            setForm((current) => ({ ...current, price }));
-            if (parsePrice(price) > 0) clearFieldError("price");
-          }}
-        />
+        <div data-field="price">
+          <PriceField
+            label={
+              isService ? t("businessForms.servicePrice") : t("businessForms.price")
+            }
+            value={form.price}
+            error={fieldErrors.price}
+            errorMessage={t("businessForms.required")}
+            placeholder={t("businessForms.servicePricePlaceholder")}
+            testId={`${fieldPrefix}-price-input`}
+            errorTestId={`${fieldPrefix}-price-error`}
+            onChange={(price) => {
+              setForm((current) => ({ ...current, price }));
+              if (parsePrice(price) > 0) clearFieldError("price");
+            }}
+          />
+        </div>
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="category">
           <span className="text-[14px] font-semibold">
             {t("businessForms.category")}
           </span>
@@ -1036,51 +1183,55 @@ function AddItemScreen({
         </label>
 
         {isService ? (
-          <QuantityStepperField
-            label={t("businessForms.guestCapacity")}
-            value={form.guestCapacity}
-            error={fieldErrors.guestCapacity}
-            errorMessage={t("businessForms.required")}
-            placeholder={t("businessForms.guestCapacityPlaceholder")}
-            decreaseLabel={t("businessForms.guestCapacityDecrease")}
-            increaseLabel={t("businessForms.guestCapacityIncrease")}
-            testId="business-service-guest-capacity"
-            decreaseTestId="business-service-guest-decrease"
-            increaseTestId="business-service-guest-increase"
-            countTestId="business-service-guest-count"
-            errorTestId="business-service-guest-capacity-error"
-            onChange={(guestCapacity) => {
-              setForm((current) => ({ ...current, guestCapacity }));
-              if (guestCapacity != null && guestCapacity > 0) {
-                clearFieldError("guestCapacity");
-              }
-            }}
-          />
+          <div data-field="quantity">
+            <QuantityStepperField
+              label={t("businessForms.guestCapacity")}
+              value={form.guestCapacity}
+              error={fieldErrors.guestCapacity}
+              errorMessage={t("businessForms.required")}
+              placeholder={t("businessForms.guestCapacityPlaceholder")}
+              decreaseLabel={t("businessForms.guestCapacityDecrease")}
+              increaseLabel={t("businessForms.guestCapacityIncrease")}
+              testId="business-service-guest-capacity"
+              decreaseTestId="business-service-guest-decrease"
+              increaseTestId="business-service-guest-increase"
+              countTestId="business-service-guest-count"
+              errorTestId="business-service-guest-capacity-error"
+              onChange={(guestCapacity) => {
+                setForm((current) => ({ ...current, guestCapacity }));
+                if (guestCapacity != null && guestCapacity > 0) {
+                  clearFieldError("guestCapacity");
+                }
+              }}
+            />
+          </div>
         ) : (
-          <QuantityStepperField
-            label={t("businessForms.productQuantity")}
-            value={form.quantity}
-            error={fieldErrors.quantity}
-            errorMessage={t("businessForms.required")}
-            placeholder={t("businessForms.productQuantityPlaceholder")}
-            decreaseLabel={t("businessForms.productQuantityDecrease")}
-            increaseLabel={t("businessForms.productQuantityIncrease")}
-            testId="business-product-quantity"
-            decreaseTestId="business-product-quantity-decrease"
-            increaseTestId="business-product-quantity-increase"
-            countTestId="business-product-quantity-count"
-            errorTestId="business-product-quantity-error"
-            max={999}
-            onChange={(quantity) => {
-              setForm((current) => ({ ...current, quantity }));
-              if (quantity != null && quantity > 0) {
-                clearFieldError("quantity");
-              }
-            }}
-          />
+          <div data-field="quantity">
+            <QuantityStepperField
+              label={t("businessForms.productQuantity")}
+              value={form.quantity}
+              error={fieldErrors.quantity}
+              errorMessage={t("businessForms.required")}
+              placeholder={t("businessForms.productQuantityPlaceholder")}
+              decreaseLabel={t("businessForms.productQuantityDecrease")}
+              increaseLabel={t("businessForms.productQuantityIncrease")}
+              testId="business-product-quantity"
+              decreaseTestId="business-product-quantity-decrease"
+              increaseTestId="business-product-quantity-increase"
+              countTestId="business-product-quantity-count"
+              errorTestId="business-product-quantity-error"
+              max={999}
+              onChange={(quantity) => {
+                setForm((current) => ({ ...current, quantity }));
+                if (quantity != null && quantity > 0) {
+                  clearFieldError("quantity");
+                }
+              }}
+            />
+          </div>
         )}
 
-        <label className="flex flex-col gap-[8px]">
+        <label className="flex flex-col gap-[8px]" data-field="description">
           <span className="text-[14px] font-semibold">
             {isService
               ? t("businessForms.serviceDescription")
@@ -1128,17 +1279,51 @@ function AddItemScreen({
 
         {isService ? (
           <>
-            <div className="flex flex-col gap-[12px]" data-testid="business-service-time-slots">
-              <span className="text-[14px] font-semibold">
-                {t("businessForms.freeTimeLabel")}
-              </span>
+            <div className="flex flex-col gap-[12px]" data-field="time" data-testid="business-service-time-slots">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="text-[14px] font-semibold">
+                    {t("businessForms.freeTimeLabel")}
+                  </span>
+                  <p className="text-[12px] font-semibold text-[var(--text-muted)]">
+                    {t("businessForms.freeTimeHint")}
+                  </p>
+                  {activeAvailabilityDate ? (
+                    <p className="mt-[3px] text-[12px] text-[var(--accent-fg)]">
+                      {parseLocalDate(activeAvailabilityDate)?.toLocaleDateString(locale, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showOnlyFree}
+                  aria-label={t("businessForms.freeTimeToggle")}
+                  onClick={() => setShowOnlyFree((value) => !value)}
+                  className={`relative h-[24px] w-[48px] shrink-0 rounded-full transition ${
+                    showOnlyFree ? "bg-[#0a6af7]" : "bg-[var(--border-default)]"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition ${
+                      showOnlyFree ? "right-[3px]" : "left-[3px]"
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="grid grid-cols-4 gap-[10px]">
-                {TIME_SLOTS.map((slot) => {
-                  const selected = times.includes(slot);
+                {availabilityTimeOptions.map((slot) => {
+                  const selected = selectedDateTimes.includes(slot);
+                  const invalid = !selected && !isAvailabilityTimeValid(slot, durationMin ?? 60);
                   return (
                     <button
                       key={slot}
                       type="button"
+                      disabled={invalid || !activeAvailabilityDate}
                       data-testid={`business-service-time-slot-${slot.replace(":", "-")}`}
                       data-selected={selected ? "true" : "false"}
                       aria-pressed={selected}
@@ -1147,28 +1332,101 @@ function AddItemScreen({
                         selected
                           ? "bg-[#0a6af7] text-white"
                           : "border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
-                      }`}
+                      } ${invalid || !activeAvailabilityDate ? "cursor-not-allowed opacity-40" : ""}`}
                     >
                       {slot}
                     </button>
                   );
                 })}
               </div>
+              <div className="flex items-center gap-[8px]">
+                <input
+                  type="time"
+                  step={60}
+                  value={customAvailabilityTime}
+                  disabled={!activeAvailabilityDate}
+                  onChange={(event) => setCustomAvailabilityTime(event.target.value)}
+                  aria-label={t("businessForms.availabilityTimePlaceholder")}
+                  className={`${inputClass} min-w-0 py-[10px]`}
+                />
+                <button
+                  type="button"
+                  disabled={!activeAvailabilityDate || !customAvailabilityTime}
+                  onClick={addCustomAvailabilityTime}
+                  className="shrink-0 rounded-[12px] bg-[var(--primary)] px-[14px] py-[10px] text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("businessForms.addTimeSlot")}
+                </button>
+              </div>
+              <div className="business-service-time-legend" aria-label={t("businessForms.timeLegend")}>
+                <span>
+                  <i className="business-service-time-legend-dot business-service-time-legend-dot-free" />
+                  {t("businessForms.availableTime")}
+                </span>
+                <span>
+                  <i className="business-service-time-legend-dot business-service-time-legend-dot-busy" />
+                  {t("businessForms.busyTime")}
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[8px]" data-field="date">
               <span className="text-[14px] font-semibold">
                 {t("businessForms.dateLabel")}
               </span>
               <CalendarField
-                value={date}
-                onChange={setDate}
+                value={dates}
+                onChange={updateDates}
                 prevMonthLabel={t("businessForms.prevMonthAria")}
                 nextMonthLabel={t("businessForms.nextMonthAria")}
               />
+              {dates.length > 0 && (
+                <div className="flex flex-wrap gap-[8px] mt-[12px]">
+                  {[...dates]
+                    .sort((a, b) => a.getTime() - b.getTime())
+                    .map((date) => {
+                      const formatted = date.toLocaleDateString(locale, {
+                        month: "short",
+                        day: "numeric",
+                      });
+                      const dateKey = formatLocalDate(date);
+                      const isActive = dateKey === activeAvailabilityDate;
+                      return (
+                        <div
+                          key={date.toISOString()}
+                          className={`inline-flex items-center gap-[6px] rounded-full px-[12px] py-[6px] text-[13px] font-semibold transition ${
+                            isActive
+                              ? "bg-[#0a6af7] text-white"
+                              : "border border-[var(--border-default)] text-[var(--text-primary)]"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => setActiveAvailabilityDate(dateKey)}
+                          >
+                            {formatted}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`${formatted}: ${t("common.delete")}`}
+                            onClick={() =>
+                              updateDates(
+                                dates.filter((selected) => formatLocalDate(selected) !== dateKey),
+                              )
+                            }
+                            className="text-[16px] leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
 
-            <label className="flex flex-col gap-[8px]">
+            <label className="flex flex-col gap-[8px]" data-field="duration">
               <span className="text-[14px] font-semibold">
                 {t("businessForms.bookingDuration")}
               </span>
@@ -1195,40 +1453,70 @@ function AddItemScreen({
                 </span>
               </div>
             </label>
+
+            <label className="flex flex-col gap-[8px]" data-field="rules">
+              <span className="text-[14px] font-semibold">
+                {t("businessForms.bookingRules")}
+              </span>
+              <textarea
+                className={`${inputClass} min-h-[90px] resize-none`}
+                placeholder={t("businessForms.bookingRulesPlaceholder")}
+                value={rules}
+                onChange={(event) => setRules(event.target.value)}
+              />
+            </label>
           </>
         ) : null}
 
-        <PhotoUploadField
-          label={
-            isService
-              ? t("businessForms.photo")
-              : t("businessForms.photoServiceOrProduct")
-          }
-          uploadLabel={t("businessForms.uploadPhoto")}
-          testIdPrefix={fieldPrefix}
-          photo={form.photo}
-          onPhotoChange={(photo) => setForm((current) => ({ ...current, photo }))}
-          onUploadError={(messageKey) => {
-            showToast(t("businessForms.uploadPhoto"), t(messageKey));
-          }}
-        />
+        <div data-field="photo">
+          <PhotoUploadField
+            label={
+              isService
+                ? t("businessForms.photo")
+                : t("businessForms.photoServiceOrProduct")
+            }
+            uploadLabel={t("businessForms.uploadPhoto")}
+            testIdPrefix={fieldPrefix}
+            photo={form.photo}
+            onPhotoChange={(photo) => setForm((current) => ({ ...current, photo }))}
+            onUploadError={(messageKey) => {
+              showToast(t("businessForms.uploadPhoto"), t(messageKey));
+            }}
+          />
+        </div>
 
-        <div className="mt-[10px] flex flex-col gap-[10px]">
+        <div className="mt-[10px] flex flex-col gap-[10px]" data-field="actions">
           <button
             type="button"
             data-testid={`${fieldPrefix}-save-button`}
-            onClick={() => {
+            disabled={isSaving}
+            onClick={async () => {
               if (!validate()) return;
-              onSave({
-                ...form,
-                price: String(parsePrice(form.price)),
-                guestCapacity: form.guestCapacity ?? 1,
-                quantity: form.quantity ?? 1,
-              });
+              setIsSaving(true);
+              try {
+                await onSave({
+                  ...form,
+                  price: String(parsePrice(form.price)),
+                  duration: isService ? durationMin ?? undefined : undefined,
+                  guestCapacity: form.guestCapacity ?? 1,
+                  quantity: form.quantity ?? 1,
+                  availability: dates
+                    .map((date) => formatLocalDate(date))
+                    .sort()
+                    .map((date) => ({
+                      date,
+                      times: availabilityTimesByDate[date] ?? times,
+                    })),
+                });
+              } finally {
+                setIsSaving(false);
+              }
             }}
-            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+            className="w-full rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isService
+            {isSaving
+              ? t("common.loading")
+              : isService
               ? t("businessForms.saveService")
               : t("businessForms.saveServiceOrProduct")}
           </button>
@@ -1351,146 +1639,553 @@ function DeleteItemModal({
 
 /* ---------- booking card (Frame 236) ---------- */
 
-function BookingStatusBadge({
-  status,
-}: {
-  status: BusinessBookingRequest["status"];
-}) {
-  const { t } = useTranslation();
-
-  if (status === "pending") {
-    return (
-      <span
-        className="rounded-full bg-[#fff3e0] px-[12px] py-[5px] text-[12px] font-semibold text-[#ff9500]"
-        data-testid="business-booking-status-pending"
-      >
-        {t("businessDashboard.bookingStatusPending")}
-      </span>
-    );
-  }
-  if (status === "cancelled") {
-    return (
-      <span
-        className="rounded-full bg-[#fde8e8] px-[12px] py-[5px] text-[12px] font-semibold text-[#e02424]"
-        data-testid="business-booking-status-cancelled"
-      >
-        {t("business.cancelled")}
-      </span>
-    );
-  }
-  return (
-    <span
-      className="rounded-full bg-[#e7f8ef] px-[12px] py-[5px] text-[12px] font-semibold text-[#00bd08]"
-      data-testid="business-booking-status-confirmed"
-    >
-      {t("businessDashboard.bookingStatusConfirmed")}
-    </span>
-  );
-}
-
-function BookingChip({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
-  return (
-    <span className="flex items-center gap-[6px] rounded-[10px] bg-[var(--bg-surface-muted)] px-[10px] py-[7px] text-[13px] font-semibold text-[var(--text-primary)]">
-      <span className="text-[var(--text-secondary)]">{icon}</span>
-      {text}
-    </span>
-  );
-}
-
 function BookingCard({
   booking,
-  dateLabel,
-  onAccept,
-  onCancel,
+  readOnly = false,
+  onStatusChange,
+  onAttendance,
 }: {
   booking: BusinessBookingRequest;
-  dateLabel: string;
-  onAccept: () => void;
-  onCancel: () => void;
+  readOnly?: boolean;
+  onStatusChange: (status: "accepted" | "cancelled") => Promise<void>;
+  onAttendance: (
+    status: "on_time" | "late" | "no_show",
+    extraWaitMinutes?: number,
+  ) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [attendanceSavingStatus, setAttendanceSavingStatus] = useState<
+    "on_time" | "late" | "no_show" | null
+  >(null);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
+  const [isCustomerSummaryOpen, setIsCustomerSummaryOpen] = useState(false);
   const isConfirmed =
     booking.status === "accepted" || booking.status === "waiting";
+  const canUpdateAttendance =
+    isConfirmed ||
+    (booking.status === "completed" && booking.attendanceStatus != null);
+  const isCancelled = booking.status === "cancelled";
+  const orderPanelId = useId();
+  const items = booking.items ?? [];
+  const orderItemCount = items.length
+    ? items.reduce((total, item) => total + item.quantity, 0)
+    : 1;
+  const bookingDate = booking.bookingDate
+    ? formatBookingDate(booking.bookingDate, locale)
+    : undefined;
+  const bookingDuration = getBookingDurationMinutes(booking.time, booking.endTime);
+
+  useEffect(() => {
+    if (!isCustomerSummaryOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsCustomerSummaryOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCustomerSummaryOpen]);
 
   return (
     <div
-      className="flex flex-col gap-[14px] rounded-[18px] bg-[var(--bg-surface)] p-[16px]"
+      className="flex flex-col gap-[8px] rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)] p-[10px]"
       data-testid={`business-booking-card-${booking.id}`}
     >
-      <div className="flex items-start gap-[10px]">
-        <div className="relative h-[40px] w-[40px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
-          <Image
-            src={assets.profile.avatar}
-            alt=""
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-[10px] xl:grid-cols-[minmax(78px,0.45fr)_minmax(190px,1.15fr)_minmax(150px,1fr)_minmax(120px,0.7fr)_minmax(0,1.4fr)]">
+        <div className="flex min-w-0 flex-col items-start">
+          <span className="px-[6px] text-[20px] font-bold leading-tight text-[var(--text-primary)]">
+            {booking.time}
+          </span>
+          {bookingDate && (
+            <span
+              className="mt-[3px] px-[6px] text-[12px] font-medium text-[var(--text-secondary)]"
+              data-testid={`business-booking-date-${booking.id}`}
+            >
+              {bookingDate}
+            </span>
+          )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className="truncate text-[15px] font-bold"
-            data-testid={`business-booking-customer-${booking.id}`}
-          >
-            {booking.customerName}
-          </p>
-          <p className="truncate text-[13px] text-[var(--text-muted)]">
+
+        <div className="flex min-w-0 items-center gap-[8px]">
+            <div className="relative h-[34px] w-[34px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
+              <span className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[var(--text-secondary)]">
+                {getCustomerInitials(booking.customerName)}
+              </span>
+              {booking.customerAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={booking.customerAvatar}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="min-w-0 flex-1 truncate text-left text-[13px] font-bold text-[var(--text-primary)] hover:underline"
+              onClick={() => setIsCustomerSummaryOpen(true)}
+              aria-haspopup="dialog"
+              aria-label={t("businessDashboard.customerSummaryAria", {
+                name: booking.customerName,
+              })}
+              data-testid={`business-booking-customer-${booking.id}`}
+            >
+              {booking.customerName}
+            </button>
+            <div
+              className="flex shrink-0 flex-col items-center leading-none"
+              aria-label={
+                booking.customerRatingStatsAvailable &&
+                (booking.customerEvaluatedBookingsCount ?? 0) > 0 &&
+                booking.customerRating != null
+                  ? t("businessDashboard.customerRating", {
+                      rating: booking.customerRating.toFixed(2),
+                      count: booking.customerEvaluatedBookingsCount ?? 0,
+                    })
+                  : booking.customerRatingStatsAvailable
+                    ? t("profile.noRating")
+                    : t("profile.ratingUnavailable")
+              }
+              data-testid={`business-booking-customer-rating-${booking.id}`}
+            >
+              <span className="flex items-center justify-center gap-[3px] text-[12px] font-semibold leading-none text-[var(--text-primary)]">
+                <Image
+                  src={assets.profile.leftBarg}
+                  alt=""
+                  width={8}
+                  height={14}
+                  data-theme-invert
+                />
+                <span>
+                  {booking.customerRatingStatsAvailable &&
+                  (booking.customerEvaluatedBookingsCount ?? 0) > 0 &&
+                  booking.customerRating != null
+                    ? booking.customerRating.toFixed(2)
+                    : "—"}
+                </span>
+                <Image
+                  src={assets.profile.rightBarg}
+                  alt=""
+                  width={8}
+                  height={14}
+                  data-theme-invert
+                />
+              </span>
+              <span className="mt-[3px] whitespace-nowrap text-[9px] text-[var(--text-muted)]">
+                {booking.customerRatingStatsAvailable
+                  ? booking.customerEvaluatedBookingsCount
+                    ? t("profile.ratedBookingsCount", {
+                        count: booking.customerEvaluatedBookingsCount,
+                      })
+                    : t("profile.noRating")
+                  : t("profile.ratingUnavailable")}
+              </span>
+            </div>
+        </div>
+
+        <div className="col-span-2 row-start-2 min-w-0 px-[4px] xl:col-span-1 xl:row-start-auto">
+          <p className="truncate text-[14px] font-semibold leading-tight text-[var(--text-primary)]">
             {booking.serviceName}
           </p>
+          {bookingDuration != null && (
+            <p className="mt-[4px] flex items-center gap-[4px] text-[12px] text-[var(--text-secondary)]">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              {new Intl.NumberFormat(locale, {
+                style: "unit",
+                unit: "minute",
+                unitDisplay: "short",
+              }).format(bookingDuration)}
+            </p>
+          )}
         </div>
-        <BookingStatusBadge status={booking.status} />
+
+        <div className="col-start-1 row-start-3 px-[4px] xl:col-start-auto xl:row-start-auto">
+          <p className="text-[12px] text-[var(--text-secondary)]">
+            {t("businessDashboard.bookingPriceLabel")}
+          </p>
+          <p className="mt-[2px] text-[15px] font-bold text-[var(--text-primary)]">
+            {formatPrice(booking.price)} {t("businessForms.currencySum")}
+          </p>
+        </div>
+
+        <div className="col-start-2 row-start-3 flex min-w-0 flex-col items-stretch gap-[7px] xl:col-start-auto xl:row-start-auto">
+          {!isConfirmed && (
+            <span
+              className={`w-fit rounded-[9px] px-[10px] py-[6px] text-[12px] font-semibold ${
+                booking.status === "pending"
+                  ? "bg-[#FFF3E3]/80 text-[#EC8009]"
+                  : isCancelled
+                    ? "bg-[#FFE9E8]/80 text-[#E92026]"
+                    : "bg-[#E8F2FF] text-[#0A6AF7]"
+              }`}
+              data-testid={`business-booking-status-${booking.id}`}
+            >
+              {booking.status === "pending"
+                ? t("businessDashboard.bookingStatusPending")
+                : isCancelled
+                  ? t("bookings.statusCancelled")
+                  : t("bookings.statusCompleted")}
+            </span>
+          )}
+          {canUpdateAttendance && !readOnly ? (
+            <div className="flex min-w-0 flex-col gap-[7px]">
+              <div className="flex min-w-0 flex-wrap gap-[7px] xl:grid xl:grid-cols-[repeat(3,minmax(0,1fr))]">
+              {([
+                ["no_show", "businessDashboard.attendanceNoShow", "bg-[#FFE9E8]/80 text-[#E92026]", "bg-[#FFE9E8]/50 text-[#E92026]"],
+                ["late", "businessDashboard.attendanceLate", "bg-[#FFF3E3]/80 text-[#EC8009]", "bg-[#FFF3E3]/50 text-[#EC8009]"],
+                ["on_time", "businessDashboard.attendanceOnTime", "bg-[#E7F8EF]/80 text-[#00BD08]", "bg-[#E7F8EF]/50 text-[#00BD08]"],
+              ] as const).map(([status, labelKey, baseClass, selectedClass]) => {
+                const selected = booking.attendanceStatus === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={async () => {
+                      if (attendanceSubmitting) return;
+                      setAttendanceSubmitting(true);
+                      setAttendanceSavingStatus(status);
+                      setAttendanceError(null);
+                      try {
+                        await onAttendance(status);
+                      } catch (error) {
+                        setAttendanceError(
+                          error instanceof Error && error.message.trim()
+                            ? error.message
+                            : t("businessDashboard.attendanceUpdateError"),
+                        );
+                      } finally {
+                        setAttendanceSubmitting(false);
+                        setAttendanceSavingStatus(null);
+                      }
+                    }}
+                    disabled={attendanceSubmitting || selected}
+                    aria-pressed={selected}
+                    className={`min-w-0 whitespace-normal rounded-[9px] px-[6px] py-[12px] text-center text-[12px] font-semibold leading-tight transition disabled:cursor-wait disabled:opacity-60 ${
+                      selected ? selectedClass : baseClass
+                    }`}
+                    data-testid={`business-booking-attendance-${status}-${booking.id}`}
+                  >
+                    {attendanceSavingStatus === status
+                      ? t("common.loading")
+                      : t(labelKey)}
+                  </button>
+                );
+              })}
+              </div>
+            </div>
+          ) : booking.status === "pending" && !readOnly ? (
+            <div className="flex min-w-0 gap-[7px]">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (statusSubmitting) return;
+                  setStatusSubmitting(true);
+                  setStatusError(null);
+                  try {
+                    await onStatusChange("accepted");
+                  } catch (error) {
+                    setStatusError(
+                      error instanceof Error && error.message.trim()
+                        ? error.message
+                        : t("businessErrors.itemSaveFailed"),
+                    );
+                  } finally {
+                    setStatusSubmitting(false);
+                  }
+                }}
+                disabled={statusSubmitting}
+                className="min-w-0 flex-1 rounded-[9px] bg-[#0a6af7] px-[10px] py-[10px] text-[12px] font-semibold text-white transition hover:bg-[#0858ce] disabled:cursor-wait disabled:opacity-60"
+                data-testid={`business-booking-accept-${booking.id}`}
+              >
+                {statusSubmitting
+                  ? t("common.loading")
+                  : t("business.acceptBooking")}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (statusSubmitting) return;
+                  setStatusSubmitting(true);
+                  setStatusError(null);
+                  try {
+                    await onStatusChange("cancelled");
+                  } catch (error) {
+                    setStatusError(
+                      error instanceof Error && error.message.trim()
+                        ? error.message
+                        : t("businessErrors.itemSaveFailed"),
+                    );
+                  } finally {
+                    setStatusSubmitting(false);
+                  }
+                }}
+                disabled={statusSubmitting}
+                className="min-w-0 flex-1 rounded-[9px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[10px] text-[12px] font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
+                data-testid={`business-booking-reject-${booking.id}`}
+              >
+                {statusSubmitting
+                  ? t("common.loading")
+                  : t("businessDashboard.rejectBooking")}
+              </button>
+            </div>
+          ) : isConfirmed && !readOnly ? (
+            <button
+              type="button"
+              onClick={async () => {
+                if (statusSubmitting) return;
+                setStatusSubmitting(true);
+                setStatusError(null);
+                try {
+                  await onStatusChange("cancelled");
+                } catch (error) {
+                  setStatusError(
+                    error instanceof Error && error.message.trim()
+                      ? error.message
+                      : t("businessErrors.itemSaveFailed"),
+                  );
+                } finally {
+                  setStatusSubmitting(false);
+                }
+              }}
+              disabled={statusSubmitting}
+              className="rounded-[9px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-[10px] py-[10px] text-[12px] font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:cursor-wait disabled:opacity-60"
+              data-testid={`business-booking-cancel-${booking.id}`}
+            >
+              {statusSubmitting
+                ? t("common.loading")
+                : t("businessDashboard.rejectBooking")}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-[8px]">
-        <div className="flex flex-wrap items-center gap-[8px]">
-          <BookingChip icon={<ClockIcon size={15} />} text={booking.time} />
-          <BookingChip icon={<CalendarIcon size={15} />} text={dateLabel} />
-        </div>
-        <span
-          className="text-[15px] font-bold"
-          data-testid={`business-booking-price-${booking.id}`}
+      {statusError ? (
+        <p
+          className="text-[12px] font-medium text-[#d14343]"
+          role="alert"
+          data-testid={`business-booking-status-error-${booking.id}`}
         >
-          {t("businessDashboard.bookingPrice", {
-            price: `${formatPrice(booking.price)} ${t("businessForms.currencySum")}`,
-          })}
-        </span>
+          {statusError}
+        </p>
+      ) : null}
+
+      {attendanceError ? (
+        <p
+          className="text-[12px] font-medium text-[#d14343]"
+          role="alert"
+          data-testid={`business-booking-attendance-error-${booking.id}`}
+        >
+          {attendanceError}
+        </p>
+      ) : null}
+
+      <div className="mt-[4px] overflow-hidden rounded-[10px] bg-[var(--bg-surface)]">
+        <button
+          type="button"
+          onClick={() => setIsOrderOpen((open) => !open)}
+          aria-expanded={isOrderOpen}
+          aria-controls={orderPanelId}
+          className=" flex w-full items-center justify-between gap-[8px] px-[10px] py-[9px] text-left transition-colors hover:bg-[var(--bg-hover)]"
+          data-testid={`business-booking-order-toggle-${booking.id}`}
+        >
+          <span className="flex min-w-0 items-center gap-[7px]">
+            <Image
+              src={assets.booking.bagIcon}
+              alt=""
+              width={16}
+              height={16}
+              data-theme-invert
+            />
+            <span className="truncate text-[12px] font-bold text-[var(--text-primary)]">
+              {t("bookingsCard.orderComposition")}
+            </span>
+            <span className="shrink-0 text-[12px] font-semibold text-[var(--accent-fg)]">
+              {t("bookingsCard.itemsCount", { count: orderItemCount })}
+            </span>
+          </span>
+          <span
+            className={`text-[var(--text-secondary)] transition-transform ${isOrderOpen ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          >
+            <ChevronDownIcon />
+          </span>
+        </button>
+        {isOrderOpen ? (
+          <ul
+            id={orderPanelId}
+            className="mt-[10px] flex flex-col gap-[6px] px-[10px] pb-[9px]"
+            data-testid={`business-booking-order-items-${booking.id}`}
+          >
+            {items.map((item) => (
+              <li
+                key={`${item.kind}-${item.id}`}
+                className="flex items-center justify-between gap-[8px] text-[12px] text-[var(--text-secondary)]"
+              >
+                <span className="min-w-0 truncate">
+                  {item.name}
+                  {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                </span>
+                <span className="shrink-0 font-semibold text-[var(--text-primary)]">
+                  {formatPrice(item.price * item.quantity)}{" "}
+                  {t("businessForms.currencySum")}
+                </span>
+              </li>
+            ))}
+            {items.length === 0 ? (
+              <li className="flex items-center justify-between gap-[8px] text-[12px] text-[var(--text-secondary)]">
+                <span className="min-w-0 truncate">{booking.serviceName}</span>
+                <span className="shrink-0 font-semibold text-[var(--text-primary)]">
+                  {formatPrice(booking.price)} {t("businessForms.currencySum")}
+                </span>
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
       </div>
 
-      {booking.status === "pending" && (
-        <div className="flex gap-[10px]">
-          <button
-            type="button"
-            data-testid={`business-booking-cancel-${booking.id}`}
-            onClick={onCancel}
-            className="flex-1 rounded-[12px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-[12px] text-[14px] font-semibold text-[var(--text-primary)]"
-          >
-            {t("business.cancelBooking")}
-          </button>
-          <button
-            type="button"
-            data-testid={`business-booking-accept-${booking.id}`}
-            onClick={onAccept}
-            className="flex-1 rounded-[12px] bg-[#0a6af7] py-[12px] text-[14px] font-semibold text-white transition hover:bg-[#0858ce]"
-          >
-            {t("business.acceptBooking")}
-          </button>
-        </div>
-      )}
-
-      {isConfirmed && (
+      {isCustomerSummaryOpen ? (
         <div
-          className="rounded-[12px] border border-[#0a6af7] py-[12px] text-center text-[14px] font-semibold text-[var(--accent-fg)]"
-          data-testid={`business-booking-accepted-${booking.id}`}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--backdrop)] p-4"
+          onClick={() => setIsCustomerSummaryOpen(false)}
+          role="presentation"
         >
-          {t("business.accepted")}
+          <section
+            className="flex h-[378px] max-h-[calc(100dvh-32px)] w-[480px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-[24px] bg-[var(--bg-surface)] p-[20px] text-[var(--text-primary)] shadow-[var(--shadow-modal)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("businessDashboard.customerSummaryAria", {
+              name: booking.customerName,
+            })}
+            data-testid={`business-booking-customer-summary-${booking.id}`}
+          >
+            <div className="flex items-start gap-[14px]">
+              <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-full bg-[var(--bg-surface-muted)]">
+                <span className="flex h-full w-full items-center justify-center text-[24px] font-bold text-[var(--text-secondary)]">
+                  {getCustomerInitials(booking.customerName)}
+                </span>
+                {booking.customerAvatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={booking.customerAvatar}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="line-clamp-2 text-[23px] font-semibold leading-tight">
+                  {booking.customerName}
+                </h2>
+                {booking.customerPhone ? (
+                  <a
+                    href={`tel:${booking.customerPhone}`}
+                    className="mt-[3px] inline-block text-[14px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    data-testid={`business-booking-customer-phone-${booking.id}`}
+                  >
+                    {booking.customerPhone}
+                  </a>
+                ) : null}
+                <div className="mt-[9px] flex flex-wrap items-center gap-x-[20px] gap-y-[4px] text-[13px] text-[var(--text-secondary)]">
+                  <span className="inline-flex items-center gap-[5px]">
+                    <Image
+                      src={assets.profile.leftBarg}
+                      alt=""
+                      width={10}
+                      height={17}
+                      data-theme-invert
+                    />
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {booking.customerRatingStatsAvailable &&
+                      booking.customerRating != null
+                        ? booking.customerRating.toFixed(2)
+                        : "—"}
+                    </span>
+                    <Image
+                      src={assets.profile.rightBarg}
+                      alt=""
+                      width={10}
+                      height={17}
+                      data-theme-invert
+                    />
+                    <span>{t("profile.ratingLabel")}</span>
+                  </span>
+                  <span>
+                    {t("profile.ratedBookingsCount", {
+                      count: booking.customerEvaluatedBookingsCount ?? 0,
+                    })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCustomerSummaryOpen(false)}
+                className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[12px] bg-[var(--bg-surface-soft)] text-[25px] leading-none text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                aria-label={t("common.close")}
+              >
+                ×
+              </button>
+            </div>
+
+            <h3 className="mb-[8px] mt-[22px] text-[18px] font-semibold">
+              {t("profile.bookingAttendanceTitle")}
+            </h3>
+            <div className="flex min-h-0 flex-1 flex-col justify-center gap-[8px] overflow-y-auto rounded-[18px] bg-[var(--bg-surface-soft)] p-[10px]">
+              {([
+                [
+                  "businessDashboard.attendanceOnTime",
+                  booking.customerOnTimeCount,
+                  "bg-[#E7F8EF] text-[#00A82D]",
+                ],
+                [
+                  "businessDashboard.attendanceLate",
+                  booking.customerLateCount,
+                  "bg-[#FFF3E3] text-[#D87500]",
+                ],
+                [
+                  "businessDashboard.attendanceNoShow",
+                  booking.customerNoShowCount,
+                  "bg-[#FFE9E8] text-[#D91F26]",
+                ],
+              ] as const).map(([labelKey, count, colorClass]) => (
+                <div
+                  key={labelKey}
+                  className="flex min-h-[52px] items-center justify-between gap-[12px] rounded-[14px] bg-[var(--bg-surface)] px-[16px] py-[10px]"
+                >
+                  <span className="text-[14px] font-medium">
+                    {t(labelKey)}
+                  </span>
+                  <span
+                    className={`min-w-[54px] rounded-[12px] px-[14px] py-[8px] text-center text-[16px] font-semibold ${colorClass}`}
+                    data-testid={`business-booking-customer-summary-${labelKey.split(".").pop()}-${booking.id}`}
+                  >
+                    {count ?? 0}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1511,6 +2206,8 @@ export default function BusinessDashboard({
   const removeService = useBusinessStore((s) => s.removeService);
   const toggleService = useBusinessStore((s) => s.toggleService);
   const updateBookingStatus = useBusinessStore((s) => s.updateBookingStatus);
+  const updateBookingAttendance = useBusinessStore((s) => s.updateBookingAttendance);
+  const updateBusinessViews = useBusinessStore((s) => s.updateBusinessViews);
   const refreshBusinessBookings = useBusinessStore(
     (s) => s.refreshBusinessBookings,
   );
@@ -1528,23 +2225,81 @@ export default function BusinessDashboard({
     };
   }, [businessId, businesses]);
 
+  useEffect(() => {
+    if (!/^\d+$/.test(businessId)) return;
+
+    let cancelled = false;
+    const refreshViews = async () => {
+      try {
+        const currentBusiness = await businessesApi.get(Number(businessId));
+        if (cancelled || currentBusiness.views_count == null) return;
+        updateBusinessViews(businessId, currentBusiness.views_count);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn(`Не удалось обновить просмотры бизнеса ${businessId}:`, error);
+        }
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshViews();
+      }
+    };
+
+    void refreshViews();
+    const intervalId = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [businessId, updateBusinessViews]);
+
   const [view, setView] = useState<View>("servicesStaff");
   const [bookingTab, setBookingTab] = useState<BookingTab>("all");
+  const [now, setNow] = useState(() => new Date());
   const [photoIndex, setPhotoIndex] = useState(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
   const [itemMenuId, setItemMenuId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<BusinessService | null>(null);
   const [showDeleteBusiness, setShowDeleteBusiness] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BusinessService | null>(
     null,
   );
-  const menuAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const headerMenuAnchorRef = useRef<HTMLDivElement | null>(null);
+  const [itemMenuAnchor, setItemMenuAnchor] = useState<HTMLElement | null>(null);
+  const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(null);
+  const [desktopMenuAnchor, setDesktopMenuAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (view !== "bookings") return;
-    void refreshBusinessBookings(businessId);
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        void refreshBusinessBookings(businessId);
+      }
+    };
+
+    refresh();
+    const interval = window.setInterval(refresh, 15_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [view, businessId, refreshBusinessBookings]);
+
+  useEffect(() => {
+    if (view !== "bookings") return;
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, [view]);
 
   const categoryTags = useMemo(() => {
     if (!business) return [];
@@ -1565,23 +2320,47 @@ export default function BusinessDashboard({
   const services = business.services.filter((s) => s.type !== "product");
   const products = business.services.filter((s) => s.type === "product");
 
-  const pendingBookings = business.bookingRequests.filter(
+  const visibleBookings = business.bookingRequests.filter((booking) =>
+    isBusinessBookingVisible({
+      booking_date: booking.bookingDate,
+      end_time: booking.endTime,
+    }),
+  );
+  const pastBookings = business.bookingRequests
+    .filter((booking) =>
+      isPastBooking(
+        {
+          booking_date: booking.bookingDate,
+          start_time: booking.time,
+          end_time: booking.endTime,
+        },
+        now,
+      ),
+    )
+    .sort((a, b) =>
+      compareBookingsByTime(
+        {
+          booking_date: b.bookingDate,
+          start_time: b.time,
+        },
+        {
+          booking_date: a.bookingDate,
+          start_time: a.time,
+        },
+      ),
+    );
+  const pendingBookings = visibleBookings.filter(
     (b) => b.status === "pending",
   );
-  const confirmedBookings = business.bookingRequests.filter(
+  const confirmedBookings = visibleBookings.filter(
     (b) => b.status === "accepted" || b.status === "waiting",
   );
-  const cancelledBookings = business.bookingRequests.filter(
+  const cancelledBookings = visibleBookings.filter(
     (b) => b.status === "cancelled",
   );
 
   const income = confirmedBookings.reduce((sum, b) => sum + b.price, 0);
   const activeServicesCount = services.filter((s) => s.active).length;
-
-  const today = new Date();
-  const bookingDateLabel = `${today.getDate()} ${
-    RU_MONTHS_GEN[today.getMonth()]
-  } ${today.getFullYear()}`;
 
   function handleGalleryScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -1598,8 +2377,10 @@ export default function BusinessDashboard({
         price: parsePrice(data.price),
         description: data.description,
         photo: data.photo,
+        duration: data.duration,
         guestCapacity: data.guestCapacity ?? undefined,
         type: "service",
+        availability: data.availability ?? [],
       });
       if (nextId !== businessId) {
         onBusinessIdChange?.(nextId);
@@ -1663,16 +2444,26 @@ export default function BusinessDashboard({
         description: data.description,
         photo: data.photo,
         ...(editingItem.type === "service"
+          ? { duration: data.duration }
+          : {}),
+        ...(editingItem.type === "service"
           ? { guestCapacity: data.guestCapacity ?? undefined }
           : { quantity: data.quantity ?? undefined }),
+        ...(editingItem.type === "service"
+          ? {
+              availability: data.availability ?? [],
+            }
+          : {}),
       });
       closeEditItem();
-    } catch {
+    } catch (error) {
       showToast(
         editingItem.type === "product"
           ? t("businessForms.editProductTitle")
           : t("businessForms.editServiceTitle"),
-        t("businessErrors.saveFailed"),
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : t("businessErrors.saveFailed"),
       );
     }
   }
@@ -1683,7 +2474,7 @@ export default function BusinessDashboard({
     return (
       <div
         key={item.id}
-        className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] items-center gap-[10px] border-b border-[var(--border-default)] px-[12px] py-[12px] last:border-b-0"
+        className={`${desktop.inventoryRow} grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] items-center gap-[10px] border-b border-[var(--border-default)] px-[12px] py-[12px] last:border-b-0`}
         data-testid={`business-inventory-row-${item.id}`}
       >
         <div className="min-w-0">
@@ -1698,6 +2489,12 @@ export default function BusinessDashboard({
           {item.category || t("businessDashboard.defaultCategory")}
         </p>
         <p className="text-[13px] font-semibold">{formatPrice(item.price)}</p>
+        <p className={desktop.inventoryDescription}>
+          {item.description || "—"}
+        </p>
+        <div className={desktop.inventoryPhoto}>
+          <ItemPhoto photo={item.photo} alt={item.name} />
+        </div>
         <ServiceStatusToggle
           active={item.active}
           ariaLabel={t("businessDashboard.serviceStatusAria", { name: item.name })}
@@ -1709,18 +2506,15 @@ export default function BusinessDashboard({
           onToggle={() => void toggleService(businessId, item.id, !item.active)}
         />
         <div className="relative flex justify-end">
-          <div
-            ref={(el) => {
-              menuAnchorRefs.current[`row-${item.id}`] = el;
-            }}
-          >
+          <div>
             <button
               type="button"
               aria-label={t("businessDashboard.deleteAria", { name: item.name })}
               data-testid={`business-inventory-menu-${item.id}`}
-              onClick={() =>
-                setItemMenuId(itemMenuId === item.id ? null : item.id)
-              }
+              onClick={(event) => {
+                setItemMenuAnchor(event.currentTarget.parentElement);
+                setItemMenuId(itemMenuId === item.id ? null : item.id);
+              }}
               className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
             >
               <DotsVerticalIcon />
@@ -1728,12 +2522,15 @@ export default function BusinessDashboard({
           </div>
           {itemMenuId === item.id && (
             <BusinessCardMenu
-              anchorEl={menuAnchorRefs.current[`row-${item.id}`]}
+              anchorEl={itemMenuAnchor}
               editLabel={t("businessDashboard.menuEdit")}
               deleteLabel={t("common.delete")}
               onEdit={() => openEditItem(item)}
               onDelete={() => setDeleteTarget(item)}
-              onClose={() => setItemMenuId(null)}
+              onClose={() => {
+                setItemMenuId(null);
+                setItemMenuAnchor(null);
+              }}
             />
           )}
         </div>
@@ -1763,30 +2560,29 @@ export default function BusinessDashboard({
         </div>
 
         <div className="absolute right-[8px] top-[8px]">
-          <div
-            ref={(el) => {
-              menuAnchorRefs.current[`card-${item.id}`] = el;
-            }}
-            className="relative"
-          >
+          <div className="relative">
             <button
               type="button"
               aria-label={`Меню ${item.name}`}
-              onClick={() =>
-                setItemMenuId(itemMenuId === item.id ? null : item.id)
-              }
+              onClick={(event) => {
+                setItemMenuAnchor(event.currentTarget.parentElement);
+                setItemMenuId(itemMenuId === item.id ? null : item.id);
+              }}
               className="flex h-[36px] w-[36px] items-center justify-center rounded-full text-[var(--text-primary)] transition hover:bg-[var(--bg-surface-muted)]"
             >
               <DotsVerticalIcon />
             </button>
             {itemMenuId === item.id && (
               <BusinessCardMenu
-                anchorEl={menuAnchorRefs.current[`card-${item.id}`]}
+                anchorEl={itemMenuAnchor}
                 editLabel={t("businessDashboard.menuEdit")}
                 deleteLabel={t("common.delete")}
                 onEdit={() => openEditItem(item)}
                 onDelete={() => setDeleteTarget(item)}
-                onClose={() => setItemMenuId(null)}
+                onClose={() => {
+                  setItemMenuId(null);
+                  setItemMenuAnchor(null);
+                }}
               />
             )}
           </div>
@@ -1800,29 +2596,16 @@ export default function BusinessDashboard({
       <BookingCard
         key={booking.id}
         booking={booking}
-        dateLabel={bookingDateLabel}
-        onAccept={() => {
-          void updateBookingStatus(businessId, booking.id, "accepted").catch(
-            (error) => {
-              const message =
-                error instanceof Error && error.message.trim()
-                  ? error.message
-                  : t("businessErrors.itemSaveFailed");
-              showToast(t("business.acceptBooking"), message);
-            },
-          );
-        }}
-        onCancel={() => {
-          void updateBookingStatus(businessId, booking.id, "cancelled").catch(
-            (error) => {
-              const message =
-                error instanceof Error && error.message.trim()
-                  ? error.message
-                  : t("businessErrors.itemSaveFailed");
-              showToast(t("business.cancelBooking"), message);
-            },
-          );
-        }}
+        onStatusChange={(status) =>
+          updateBookingStatus(businessId, booking.id, status)
+        }
+        onAttendance={(attendanceStatus) =>
+          updateBookingAttendance(
+            businessId,
+            booking.id,
+            attendanceStatus,
+          )
+        }
       />
     );
   }
@@ -1837,29 +2620,47 @@ export default function BusinessDashboard({
   return (
     <>
       <div
-        className="mx-auto flex w-full max-w-[640px] flex-col pb-[24px]"
+        className={`${desktop.page} mx-auto flex w-full flex-col pb-[24px] ${
+          view === "addService" ||
+          view === "addProduct" ||
+          view === "editService" ||
+          view === "editProduct"
+            ? "max-w-none"
+            : "max-w-[640px]"
+        }`}
         data-testid="business-dashboard"
       >
         {view === "servicesStaff" && (
-          <div data-testid="business-dashboard-workspace">
+          <div
+            className={desktop.workspace}
+            data-testid="business-dashboard-workspace"
+          >
+            <div className={desktop.pageHeader}>
+              <h1>{t("businessDashboard.title")}</h1>
+            </div>
+
             <ScreenHeader
+              className={desktop.mobileHeader}
               title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
-                <div className="relative" ref={headerMenuAnchorRef}>
+                <div className="relative">
                   <button
                     type="button"
                     aria-label={t("business.menuAria")}
                     aria-expanded={headerMenuOpen}
                     data-testid="business-dashboard-menu"
-                    onClick={() => setHeaderMenuOpen((v) => !v)}
+                    onClick={(event) => {
+                      setHeaderMenuAnchor(event.currentTarget.parentElement);
+                      setHeaderMenuOpen((v) => !v);
+                    }}
                     className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
                   >
                     <DotsVerticalIcon />
                   </button>
                   {headerMenuOpen && (
                     <BusinessCardMenu
-                      anchorEl={headerMenuAnchorRef.current}
+                      anchorEl={headerMenuAnchor}
                       editLabel={t("businessDashboard.editProfile")}
                       onEdit={onEditProfile}
                       onDelete={() => {
@@ -1881,45 +2682,122 @@ export default function BusinessDashboard({
               onBookings={() => setView("bookings")}
             />
 
-            <div className="rounded-[24px] bg-[var(--bg-surface)] p-[16px]">
-              <h3 className="text-[18px] font-bold">
-                {t("businessDashboard.servicesTitle")}
-              </h3>
-              <p className="mt-[4px] text-[14px] text-[var(--text-secondary)]">
-                {t("businessDashboard.servicesSubtitle")}
-              </p>
+            <section
+              className={desktop.profileCard}
+              data-testid="business-dashboard-profile"
+            >
+              <div className={desktop.profileAvatar}>
+                {business.profilePhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={business.profilePhoto} alt="" />
+                ) : (
+                  <Image src={assets.map.photo1} alt="" fill sizes="100px" />
+                )}
+              </div>
+              <div className={desktop.profileDetails}>
+                <h2>{business.name || t("business.untitled")}</h2>
+                {business.category && (
+                  <p className={desktop.profileCategory}>{business.category}</p>
+                )}
+                {business.address && (
+                  <p className={desktop.profileAddress}>
+                    <DashboardPinIcon />
+                    <span>{business.address}</span>
+                  </p>
+                )}
+              </div>
+              <div className={desktop.profileActions}>
+                <button type="button" onClick={onClose}>
+                  {t("businessForms.back")}
+                </button>
+                <button type="button" onClick={onEditProfile}>
+                  {t("businessDashboard.editProfile")}
+                </button>
+                <div className={desktop.profileMenu}>
+                  <button
+                    type="button"
+                    aria-label={t("business.menuAria")}
+                    aria-expanded={desktopMenuOpen}
+                    data-testid="business-dashboard-menu-desktop"
+                    onClick={(event) => {
+                      setDesktopMenuAnchor(event.currentTarget.parentElement);
+                      setDesktopMenuOpen((value) => !value);
+                    }}
+                  >
+                    <DotsVerticalIcon />
+                  </button>
+                  {desktopMenuOpen && (
+                    <BusinessCardMenu
+                      anchorEl={desktopMenuAnchor}
+                      editLabel={t("businessDashboard.editProfile")}
+                      onEdit={onEditProfile}
+                      onDelete={() => {
+                        setDesktopMenuOpen(false);
+                        setShowDeleteBusiness(true);
+                      }}
+                      onClose={() => setDesktopMenuOpen(false)}
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
 
+            <section className={desktop.servicesCard}>
+              <div className={desktop.servicesHeading}>
+                <div>
+                  <h3>{t("businessDashboard.servicesTitle")}</h3>
+                  <p>{t("businessDashboard.servicesSubtitle")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView("addProduct")}
+                  data-testid="business-dashboard-add-product-desktop"
+                >
+                  {t("business.addProduct")}
+                </button>
+              </div>
               {categoryTags.length > 0 && (
                 <div
-                  className="mt-[12px] flex flex-wrap gap-[8px]"
+                  className={desktop.categoryTags}
                   data-testid="business-category-tags"
                 >
                   {categoryTags.map((tag, index) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[#f0f4ff] px-[12px] py-[6px] text-[12px] font-semibold text-[var(--accent-fg)]"
-                      data-testid={`business-category-tag-${index}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                      <span
+                        key={tag}
+                        data-testid={`business-category-tag-${index}`}
+                      >
+                        <BusinessCategoryIcon
+                          category={tag}
+                          size={14}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        {tag}
+                      </span>
+                    ))}
                 </div>
               )}
 
               <div
-                className="mt-[16px] overflow-hidden rounded-[16px] border border-[var(--border-default)]"
+                className={desktop.servicesTable}
                 data-testid="business-services-table"
               >
-                <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto_auto] gap-[10px] bg-[var(--bg-surface-muted)] px-[12px] py-[10px] text-[12px] font-semibold text-[var(--text-secondary)]">
+                <div className={desktop.tableHeader}>
                   <span>{t("businessDashboard.colName")}</span>
                   <span>{t("businessDashboard.colCategory")}</span>
                   <span>{t("businessDashboard.colPrice")}</span>
+                  <span className={desktop.desktopColumn}>
+                    {t("businessDashboard.colDescription")}
+                  </span>
+                  <span className={desktop.desktopColumn}>
+                    {t("businessDashboard.colPhoto")}
+                  </span>
                   <span>{t("businessDashboard.colStatus")}</span>
                   <span className="text-right">{t("businessDashboard.colAction")}</span>
                 </div>
 
                 {business.services.length === 0 ? (
-                  <p className="px-[12px] py-[28px] text-center text-[14px] text-[var(--text-muted)]">
+                  <p className={desktop.emptyServices}>
                     {t("businessDashboard.emptyServices")}
                   </p>
                 ) : (
@@ -1927,11 +2805,10 @@ export default function BusinessDashboard({
                 )}
               </div>
 
-              <div className="mt-[16px] grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+              <div className={desktop.serviceActions}>
                 <button
                   type="button"
                   onClick={() => setView("addService")}
-                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
                   data-testid="business-dashboard-add-service"
                 >
                   {t("business.addService")}
@@ -1939,19 +2816,30 @@ export default function BusinessDashboard({
                 <button
                   type="button"
                   onClick={() => setView("addProduct")}
-                  className="rounded-[14px] bg-[#0a6af7] py-4 text-[16px] font-semibold text-white transition hover:bg-[#0858ce]"
+                  className={desktop.mobileProductButton}
                   data-testid="business-dashboard-add-product"
                 >
                   {t("business.addProduct")}
                 </button>
+                <button
+                  type="button"
+                  onClick={onEditProfile}
+                  className={desktop.desktopEditProfileButton}
+                >
+                  {t("businessDashboard.editProfile")}
+                </button>
               </div>
-            </div>
+            </section>
           </div>
         )}
 
         {view === "bookings" && (
-          <div data-testid="business-dashboard-bookings">
+          <div className={desktop.workspace} data-testid="business-dashboard-bookings">
+            <div className={desktop.pageHeader}>
+              <h1>{t("businessDashboard.title")}</h1>
+            </div>
             <ScreenHeader
+              className={desktop.mobileHeader}
               title={business.name || t("business.untitled")}
               onBack={onClose}
             />
@@ -2003,15 +2891,27 @@ export default function BusinessDashboard({
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => setBookingTab("past")}
+                data-testid="business-bookings-tab-past"
+                className={bookingTabClass(bookingTab === "past")}
+              >
+                {t("businessDashboard.bookingsTabPast")}
+              </button>
             </div>
 
             <div
               className="mt-[16px] flex flex-col gap-[12px]"
               data-testid="business-bookings-list"
             >
-              {business.bookingRequests.length === 0 && (
+              {(bookingTab === "past"
+                ? pastBookings.length === 0
+                : visibleBookings.length === 0) && (
                 <p className="py-[32px] text-center text-[15px] text-[var(--text-muted)]">
-                  {t("businessDashboard.emptyBookings")}
+                  {bookingTab === "past"
+                    ? t("businessDashboard.emptyPastBookings")
+                    : t("businessDashboard.emptyBookings")}
                 </p>
               )}
 
@@ -2030,7 +2930,7 @@ export default function BusinessDashboard({
               {bookingTab === "pending" && (
                 <>
                   {pendingBookings.length === 0 &&
-                    business.bookingRequests.length > 0 && (
+                    visibleBookings.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
                         {t("businessDashboard.emptyPendingBookings")}
                       </p>
@@ -2041,7 +2941,7 @@ export default function BusinessDashboard({
               {bookingTab === "confirmed" && (
                 <>
                   {confirmedBookings.length === 0 &&
-                    business.bookingRequests.length > 0 && (
+                    visibleBookings.length > 0 && (
                       <p className="py-[24px] text-center text-[15px] text-[var(--text-muted)]">
                         {t("businessDashboard.emptyConfirmedBookings")}
                       </p>
@@ -2049,6 +2949,24 @@ export default function BusinessDashboard({
                   {confirmedBookings.map(renderBookingCard)}
                 </>
               )}
+              {bookingTab === "past" &&
+                pastBookings.map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    readOnly
+                    onStatusChange={(status) =>
+                      updateBookingStatus(businessId, booking.id, status)
+                    }
+                    onAttendance={(attendanceStatus) =>
+                      updateBookingAttendance(
+                        businessId,
+                        booking.id,
+                        attendanceStatus,
+                      )
+                    }
+                  />
+                ))}
             </div>
           </div>
         )}
@@ -2097,12 +3015,14 @@ export default function BusinessDashboard({
               await removeService(businessId, deleteTarget.id);
               setDeleteTarget(null);
               setItemMenuId(null);
-            } catch {
+            } catch (error) {
               showToast(
                 deleteTarget.type === "product"
                   ? t("businessDashboard.deleteProductTitle")
                   : t("businessDashboard.deleteTitle"),
-                t("businessErrors.saveFailed"),
+                error instanceof Error && error.message.trim()
+                  ? error.message
+                  : t("businessErrors.saveFailed"),
               );
             }
           }}
@@ -2120,6 +3040,7 @@ export default function BusinessDashboard({
           onClose();
         }}
       />
+
     </>
   );
 }

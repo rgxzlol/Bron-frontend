@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { assets } from "@/lib/assets";
 import { routes } from "@/config/routes";
 import { siteConfig } from "@/config/site";
-import { readImageFile } from "@/lib/readImageFile";
-import { looksLikePhoneUsername } from "@/lib/auth/validation";
+import {
+  looksLikePhoneUsername,
+  REGISTER_PASSWORD_RULES,
+} from "@/lib/auth/validation";
 import { ApiError } from "@/lib/api/client";
 import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth.store";
@@ -20,6 +22,7 @@ import {
 } from "@/lib/profile/validation";
 import { useToastStore } from "@/store/toast.store";
 import { useNotificationStore } from "@/store/notification.store";
+import PasswordInput from "@/components/shared/PasswordInput";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
@@ -78,6 +81,14 @@ export default function ProfilePageContent({
     fullName,
     phone,
     email,
+    rating,
+    ratedBookingsCount,
+    onTimeCount,
+    lateCount,
+    noShowCount,
+    ratingStatsAvailable,
+    ratingLoading,
+    ratingError,
     avatarUrl,
     language,
     theme,
@@ -102,6 +113,7 @@ export default function ProfilePageContent({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [saveCardForFuture, setSaveCardForFuture] = useState(true);
 
   const [nameDraft, setNameDraft] = useState(
@@ -118,6 +130,17 @@ export default function ProfilePageContent({
 
   const displayName = looksLikePhoneUsername(fullName) ? "" : fullName;
 
+  function handleNotificationToggle(
+    key: "push" | "email" | "bookingReminder" | "promotions",
+  ) {
+    void toggleNotification(key).catch((error: unknown) => {
+      showToast(
+        t("common.errorTitle"),
+        error instanceof Error ? error.message : t("businessErrors.saveFailed"),
+      );
+    });
+  }
+
   useEffect(() => {
     if (token) {
       void fetchProfile();
@@ -126,9 +149,14 @@ export default function ProfilePageContent({
 
   useEffect(() => {
     if (section === "notifications") {
-      void fetchNotificationSettings();
+      void fetchNotificationSettings().catch((error: unknown) => {
+        showToast(
+          t("common.errorTitle"),
+          error instanceof Error ? error.message : t("businessErrors.saveFailed"),
+        );
+      });
     }
-  }, [section, fetchNotificationSettings]);
+  }, [section, fetchNotificationSettings, showToast, t]);
 
   useEffect(() => {
     onSectionChange?.(section);
@@ -152,7 +180,7 @@ export default function ProfilePageContent({
 
   const canChangePassword =
     oldPassword.trim().length > 0 &&
-    newPassword.trim().length > 0 &&
+    REGISTER_PASSWORD_RULES.every((rule) => rule.test(newPassword)) &&
     confirmPassword.trim().length > 0;
 
   function goTo(next: ProfileSection) {
@@ -231,6 +259,10 @@ export default function ProfilePageContent({
     }
   }
 
+  function requestDeleteAccount() {
+    setDeleteConfirmOpen(true);
+  }
+
   async function handleSavePersonalInfo() {
     const validationErrors = validateProfilePersonalInfo(
       nameDraft,
@@ -288,8 +320,34 @@ export default function ProfilePageContent({
   }
 
   async function handleAvatarUpload(file: File) {
-    const url = await readImageFile(file);
-    if (url) setAvatarUrl(url);
+    try {
+      if (!token) throw new Error("Требуется авторизация");
+      const profile = await usersApi.uploadAvatar(file, token);
+      if (!profile.avatar?.trim()) {
+        throw new Error("Сервер не вернул адрес загруженной фотографии.");
+      }
+      setAvatarUrl(profile.avatar ?? null);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : t("businessApplication.submitError"),
+      );
+    }
+  }
+
+  async function handleAvatarDelete() {
+    try {
+      if (!token) throw new Error("Требуется авторизация");
+      const profile = await usersApi.deleteAvatar(token);
+      setAvatarUrl(profile.avatar ?? null);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : t("businessApplication.submitError"),
+      );
+    }
   }
 
   function getBackSection(current: ProfileSection): ProfileSection {
@@ -303,7 +361,6 @@ export default function ProfilePageContent({
     <div className={s.content}>
       <SectionHeader
         title={t(sectionTitleKeys[section])}
-        mobileOnly={section === "main"}
         onBack={
           section === "main"
             ? () => onClose?.()
@@ -315,18 +372,20 @@ export default function ProfilePageContent({
         <div className={s.mainSection}>
           <div className={s.profileHead}>
             <div className={s.avatarWrap}>
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className={s.avatarImage} />
-              ) : (
-                <Image
-                  src={assets.profile.avatar}
-                  alt=""
-                  width={104}
-                  height={104}
-                  className={s.avatarImage}
-                />
-              )}
+              <ProfileRatingFrame value={rating}>
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className={s.avatarImage} />
+                ) : (
+                  <Image
+                    src={assets.profile.avatar}
+                    alt=""
+                    width={104}
+                    height={104}
+                    className={s.avatarImage}
+                  />
+                )}
+              </ProfileRatingFrame>
               <button
                 type="button"
                 className={s.cameraBtn}
@@ -342,6 +401,18 @@ export default function ProfilePageContent({
               <button type="button" onClick={() => goTo("personal")} aria-label={t("profile.editAria")}>
                 <Image src={assets.profile.edit} alt="" width={16} height={15} />
               </button>
+            </div>
+            <div className={s.ratingNameBlock}>
+              <ProfileRatingBadge
+                value={rating}
+                ratedBookingsCount={ratedBookingsCount}
+                onTimeCount={onTimeCount}
+                lateCount={lateCount}
+                noShowCount={noShowCount}
+                available={ratingStatsAvailable}
+                loading={ratingLoading}
+                error={ratingError}
+              />
             </div>
             <p className={s.phoneText}>{phone}</p>
           </div>
@@ -387,14 +458,6 @@ export default function ProfilePageContent({
             </span>
             {t("profile.logout")}
           </button>
-          <button
-            type="button"
-            className={s.cancelBtn}
-            onClick={() => onClose?.()}
-            data-testid="profile-close"
-          >
-            {t("common.cancel")}
-          </button>
         </div>
       )}
 
@@ -431,6 +494,15 @@ export default function ProfilePageContent({
                 <Image src={assets.profile.camera} alt="" width={16} height={16} />
               </button>
             </div>
+            {avatarUrl ? (
+              <button
+                type="button"
+                className="mt-2 text-sm font-semibold text-[#e02424]"
+                onClick={() => void handleAvatarDelete()}
+              >
+                {t("profile.removePhoto")}
+              </button>
+            ) : null}
           </div>
 
           <label className={`${s.field} ${personalFieldErrors.fullName ? s.fieldError : ""}`}>
@@ -467,6 +539,9 @@ export default function ProfilePageContent({
           <label className={`${s.field} ${personalFieldErrors.email ? s.fieldError : ""}`}>
             <span>{t("profile.emailAddress")}</span>
             <input
+              type="email"
+              name="email"
+              autoComplete="email"
               value={emailDraft}
               onChange={(e) => {
                 setEmailDraft(e.target.value);
@@ -519,26 +594,49 @@ export default function ProfilePageContent({
             <h3 className={s.blockTitle}>{t("profile.changePassword")}</h3>
             <label className={s.field}>
               <span>{t("profile.currentPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
+                onChange={setOldPassword}
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
             <label className={s.field}>
               <span>{t("profile.newPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
+            <ul className={s.passwordRules}>
+              {REGISTER_PASSWORD_RULES.map((rule) => {
+                const isValid = rule.test(newPassword);
+
+                return (
+                  <li
+                    key={rule.id}
+                    className={`${s.passwordRule} ${isValid ? s.passwordRuleValid : ""}`}
+                  >
+                    <span aria-hidden="true">{isValid ? "✓" : "•"}</span>
+                    {t(`auth.passwordRules.${rule.id}`)}
+                  </li>
+                );
+              })}
+            </ul>
             <label className={s.field}>
               <span>{t("profile.confirmNewPassword")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
+                wrapClassName={s.passwordInputWrap}
+                inputClassName={s.passwordInput}
+                toggleClassName={s.passwordEyeBtn}
               />
             </label>
             {passwordError && <p className={s.errorText}>{passwordError}</p>}
@@ -559,7 +657,7 @@ export default function ProfilePageContent({
 
       {section === "payments" && (
         <div className={s.section}>
-          <h3 className={s.paymentsLabel}>Мои карты</h3>
+          <h3 className={s.paymentsLabel}>{t("profile.myCards")}</h3>
 
           <div className={s.cardsBox}>
             {staticCards.map((card) => (
@@ -582,16 +680,16 @@ export default function ProfilePageContent({
           </div>
 
           <button type="button" className={s.outlineBtn} onClick={() => goTo("addCard")}>
-            Добавить карту
+            {t("profile.addCard")}
           </button>
 
-          <h3 className={s.paymentsLabel}>История платежей</h3>
+          <h3 className={s.paymentsLabel}>{t("profile.paymentHistory")}</h3>
 
           <div className={s.historyList}>
             {staticHistory.map((item) => (
               <div className={s.historyItem} key={item.id}>
                 <div>
-                  <strong>{item.title}</strong>
+                  <strong>{t("profile.paymentBooking")}</strong>
                   <p>№{item.reference}</p>
                 </div>
                 <div className={s.historyPrice}>
@@ -604,7 +702,7 @@ export default function ProfilePageContent({
 
           <div className={s.viewAllWrap}>
             <button type="button" className={s.viewAllBtn}>
-              Смотреть все
+              {t("common.viewAll")}
             </button>
           </div>
         </div>
@@ -619,7 +717,7 @@ export default function ProfilePageContent({
             </div>
 
             <label className={s.field}>
-              <span>Номер карты</span>
+              <span>{t("profile.cardNumber")}</span>
               <input
                 inputMode="numeric"
                 placeholder="1234 5678 9012 3456"
@@ -629,7 +727,7 @@ export default function ProfilePageContent({
 
             <div className={s.addCardRow}>
               <label className={s.field}>
-                <span>Срок действия</span>
+                <span>{t("profile.cardExpiry")}</span>
                 <input
                   inputMode="numeric"
                   placeholder={t("profile.cardExpiryPlaceholder")}
@@ -652,13 +750,13 @@ export default function ProfilePageContent({
             </div>
 
             <label className={s.field}>
-              <span>Имя карты</span>
+              <span>{t("profile.cardName")}</span>
               <input placeholder={t("common.optional")} className={s.borderedInput} />
             </label>
           </div>
 
           <div className={s.saveCardRow}>
-            <span>Сохранить карту для будущих платежей</span>
+            <span>{t("profile.saveCardLabel")}</span>
             <button
               type="button"
               className={saveCardForFuture ? s.toggleOn : s.toggleOff}
@@ -673,7 +771,7 @@ export default function ProfilePageContent({
           <div className={s.spacer} aria-hidden />
 
           <button type="button" className={s.primaryBtn} onClick={() => goTo("payments")}>
-            Добавить карту
+            {t("profile.addCard")}
           </button>
         </div>
       )}
@@ -760,7 +858,7 @@ export default function ProfilePageContent({
               title={t("profile.pushTitle")}
               subtitle={t("profile.pushSubtitle")}
               value={notifications.push}
-              onToggle={() => toggleNotification("push")}
+              onToggle={() => handleNotificationToggle("push")}
               testId="profile-notification-push"
             />
             <SwitchRow
@@ -768,7 +866,7 @@ export default function ProfilePageContent({
               title={t("profile.emailTitle")}
               subtitle={t("profile.emailSubtitle")}
               value={notifications.email}
-              onToggle={() => toggleNotification("email")}
+              onToggle={() => handleNotificationToggle("email")}
               testId="profile-notification-email"
             />
             <SwitchRow
@@ -776,7 +874,7 @@ export default function ProfilePageContent({
               title={t("profile.bookingReminderTitle")}
               subtitle={t("profile.bookingReminderSubtitle")}
               value={notifications.bookingReminder}
-              onToggle={() => toggleNotification("bookingReminder")}
+              onToggle={() => handleNotificationToggle("bookingReminder")}
               testId="profile-notification-booking-reminder"
             />
             <SwitchRow
@@ -784,7 +882,7 @@ export default function ProfilePageContent({
               title={t("profile.promotionsTitle")}
               subtitle={t("profile.promotionsSubtitle")}
               value={notifications.promotions}
-              onToggle={() => toggleNotification("promotions")}
+              onToggle={() => handleNotificationToggle("promotions")}
               testId="profile-notification-promotions"
             />
           </div>
@@ -838,19 +936,11 @@ export default function ProfilePageContent({
             </span>
             {t("profile.logout")}
           </button>
-          <button
-            type="button"
-            className={s.cancelBtn}
-            onClick={() => goTo("main")}
-            data-testid="profile-logout-cancel"
-          >
-            {t("common.cancel")}
-          </button>
           {token && (
             <button
               type="button"
-              className={`${s.deleteAccountBtn} ${s.desktopOnly}`}
-              onClick={() => void handleDeleteAccount()}
+              className={s.deleteAccountBtn}
+              onClick={requestDeleteAccount}
               disabled={deleting}
             >
               {deleting ? t("common.deleting") : t("profile.deleteAccount")}
@@ -858,10 +948,46 @@ export default function ProfilePageContent({
           )}
         </div>
       )}
+      {deleteConfirmOpen && (
+        <div
+          className={s.deleteConfirmBackdrop}
+          role="presentation"
+          onClick={() => setDeleteConfirmOpen(false)}
+        >
+          <div
+            className={s.deleteConfirmModal}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="profile-delete-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="profile-delete-confirm-title">{t("profile.deleteAccount")}</h3>
+            <p>{t("profile.deleteAccountConfirm")}</p>
+            <div className={s.deleteConfirmActions}>
+              <button
+                type="button"
+                className={s.deleteCancelBtn}
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleting}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                className={s.deleteDangerBtn}
+                onClick={() => void handleDeleteAccount()}
+                disabled={deleting}
+              >
+                {deleting ? t("common.deleting") : t("profile.deleteAccount")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <input
         ref={avatarInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className={s.hiddenFileInput}
         onChange={async (event) => {
           const file = event.target.files?.[0];
@@ -1042,6 +1168,104 @@ function InfoIcon() {
       />
       <circle cx="10" cy="6.3" r="1" fill="#9db4e8" />
     </svg>
+  );
+}
+
+function ProfileRatingBadge({
+  value,
+  ratedBookingsCount,
+  onTimeCount,
+  lateCount,
+  noShowCount,
+  available,
+  loading,
+  error,
+}: {
+  value: number | null;
+  ratedBookingsCount: number;
+  onTimeCount: number;
+  lateCount: number;
+  noShowCount: number;
+  available: boolean;
+  loading: boolean;
+  error: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <span className={s.ratingBadge} data-testid="profile-rating-badge">
+        {value !== null ? (
+          <>
+            <span className={s.ratingBar}>
+              <Image src={assets.profile.leftBarg} alt="" width={11} height={19} />
+            </span>
+            <span className={s.ratingValue}>{value.toFixed(2)}</span>
+            <span className={s.ratingBar}>
+              <Image src={assets.profile.rightBarg} alt="" width={11} height={19} />
+            </span>
+          </>
+        ) : null}
+      </span>
+      <span className={s.ratingCaption}>
+        {loading
+          ? t("profile.ratingLoading")
+          : error || !available
+            ? t("profile.ratingUnavailable")
+            : ratedBookingsCount === 0
+              ? t("profile.noRating")
+              : t("profile.ratedBookingsCount", { count: ratedBookingsCount })}
+      </span>
+      {available && ratedBookingsCount > 0 ? (
+        <span className={s.ratingAttendanceStats}>
+          {t("profile.bookingAttendanceStats", {
+            onTime: onTimeCount,
+            late: lateCount,
+            noShow: noShowCount,
+          })}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function ProfileRatingFrame({
+  value,
+  children,
+}: {
+  value: number | null;
+  children: ReactNode;
+}) {
+  const normalizedRating = Math.min(
+    5,
+    Math.max(0, value != null && Number.isFinite(value) ? value : 0),
+  );
+  const progress = normalizedRating / 5;
+  const color =
+    normalizedRating < 2.5
+      ? "#e53935"
+      : normalizedRating < 4
+        ? "#f2b705"
+        : "#19b63b";
+  const radius = 56;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <div className={s.ratingFrame} data-rating={normalizedRating.toFixed(1)}>
+      <svg className={s.ratingFrameSvg} viewBox="0 0 128 128" aria-hidden>
+        <circle className={s.ratingFrameTrack} cx="64" cy="64" r={radius} />
+        <circle
+          className={s.ratingFrameProgress}
+          cx="64"
+          cy="64"
+          r={radius}
+          stroke={color}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+        />
+      </svg>
+      <div className={s.ratingFrameAvatar}>{children}</div>
+    </div>
   );
 }
 

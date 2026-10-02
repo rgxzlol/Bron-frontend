@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookingCard } from "@/components/features/booking/BookingCard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -13,8 +13,10 @@ export default function BookingsPageClient() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") === "past" ? "past" : "upcoming";
+  const selectedBookingId = searchParams.get("booking_id");
   const token = useAuthStore((state) => state.token);
   const { bookings, isLoading, error, fetchMyBookings } = useBookingStore();
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     if (!token) return;
@@ -24,17 +26,30 @@ export default function BookingsPageClient() {
     });
   }, [token, fetchMyBookings]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const isPastTab = currentTab === "past";
 
   const filtered = bookings
     .filter((booking) => {
-      const past = isPastBooking(booking);
+      const past = isPastBooking(booking, now);
       return isPastTab ? past : !past;
     })
     .sort((a, b) => {
       const order = compareBookingsByTime(a, b);
       return isPastTab ? -order : order;
     });
+
+  useEffect(() => {
+    if (!selectedBookingId) return;
+    const target = document.querySelector(
+      `[data-testid="booking-card-${CSS.escape(selectedBookingId)}"]`,
+    );
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectedBookingId, filtered.length]);
 
   if (!token) {
     return (
@@ -92,6 +107,10 @@ export default function BookingsPageClient() {
           bookingEndTime={booking.end_time}
           totalPrice={booking.total_price}
           businessId={booking.business_id}
+          businessName={booking.business_name}
+          businessAddress={booking.business_address}
+          businessCategory={booking.business_category}
+          businessLogo={booking.business_logo}
           bookingStatus={booking.status}
           guestsCount={booking.guest_count}
           orderItems={booking.items}

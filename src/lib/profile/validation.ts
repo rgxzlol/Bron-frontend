@@ -13,7 +13,6 @@ export type ProfilePersonalErrorCode =
   | "fullNameInvalid"
   | "phoneRequired"
   | "phoneInvalid"
-  | "emailRequired"
   | "emailInvalid";
 
 export type ProfilePersonalErrors = Partial<
@@ -25,7 +24,6 @@ export const PROFILE_ERROR_MESSAGE_KEYS = {
   fullNameInvalid: "profile.errorFullNameInvalid",
   phoneRequired: "profile.errorPhoneRequired",
   phoneInvalid: "profile.errorPhoneInvalid",
-  emailRequired: "profile.errorEmailRequired",
   emailInvalid: "profile.errorEmailInvalid",
 } as const satisfies Record<ProfilePersonalErrorCode, string>;
 
@@ -54,9 +52,7 @@ export function validateProfilePersonalInfo(
   }
 
   const trimmedEmail = email.trim();
-  if (!trimmedEmail) {
-    errors.email = "emailRequired";
-  } else if (!isValidEmailAddress(trimmedEmail)) {
+  if (trimmedEmail && !isValidEmailAddress(trimmedEmail)) {
     errors.email = "emailInvalid";
   }
 

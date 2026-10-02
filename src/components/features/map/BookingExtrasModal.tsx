@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { bookingExtras, type BookingExtra } from "@/data/bookingExtras";
+import type { BookingExtra } from "@/data/bookingExtras";
 import { formatPrice } from "@/lib/formatPrice";
-import { getBookingExtraLabels } from "@/lib/booking/extras";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import Button from "@/components/shared/Button";
 import s from "./bookingExtrasModal.module.css";
@@ -20,26 +18,28 @@ export type OrderLineItem = {
 
 type BookingExtrasModalProps = {
   baseItems: OrderLineItem[];
+  extras: BookingExtra[];
   extraQuantities: Record<string, number>;
   onAddExtra: (id: string) => void;
   onRemoveExtra: (id: string) => void;
   onClearExtra: (id: string) => void;
   onSkip: () => void;
   onContinue: () => void;
-  onClose: () => void;
   isSubmitting?: boolean;
+  apiProductImages?: (string | null)[];
 };
 
 export default function BookingExtrasModal({
   baseItems,
+  extras,
   extraQuantities,
   onAddExtra,
   onRemoveExtra,
   onClearExtra,
   onSkip,
   onContinue,
-  onClose,
   isSubmitting = false,
+  apiProductImages = [],
 }: BookingExtrasModalProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,19 +61,17 @@ export default function BookingExtrasModal({
   }, [mounted]);
 
   const orderItems = useMemo(() => {
-    const extras: OrderLineItem[] = Object.entries(extraQuantities).flatMap(
+    const extraItems: OrderLineItem[] = Object.entries(extraQuantities).flatMap(
       ([id, quantity]) => {
         if (quantity <= 0) return [];
-        const extra = bookingExtras.find((item) => item.id === id);
+        const extra = extras.find((item) => item.id === id);
         if (!extra) return [];
-
-        const labels = getBookingExtraLabels(id, t);
 
         return [
           {
             id: `extra-${id}`,
             sourceId: id,
-            name: quantity > 1 ? `${labels.name} × ${quantity}` : labels.name,
+            name: quantity > 1 ? `${extra.name} × ${quantity}` : extra.name,
             price: extra.price * quantity,
             removable: true,
           },
@@ -81,8 +79,8 @@ export default function BookingExtrasModal({
       },
     );
 
-    return [...baseItems, ...extras];
-  }, [baseItems, extraQuantities, t]);
+    return [...baseItems, ...extraItems];
+  }, [baseItems, extraQuantities, extras, t]);
 
   const total = orderItems.reduce((sum, item) => sum + item.price, 0);
 
@@ -115,15 +113,6 @@ export default function BookingExtrasModal({
             </h2>
             <p className={s.subtitle}>{t("booking.extrasSubtitle")}</p>
           </div>
-          <button
-            type="button"
-            className={s.close}
-            onClick={onClose}
-            disabled={isSubmitting}
-            aria-label={t("common.close")}
-          >
-            ×
-          </button>
         </div>
 
         <div className={s.body}>
@@ -138,9 +127,9 @@ export default function BookingExtrasModal({
           </button>
 
           <div className={s.carousel} ref={scrollRef}>
-            {bookingExtras.map((extra: BookingExtra) => {
+            {extras.map((extra: BookingExtra, index) => {
               const quantity = extraQuantities[extra.id] ?? 0;
-              const labels = getBookingExtraLabels(extra.id, t);
+              const apiImage = apiProductImages[index];
               return (
                 <article
                   key={extra.id}
@@ -148,17 +137,18 @@ export default function BookingExtrasModal({
                   data-testid={`booking-extra-product-${extra.id}`}
                 >
                   <div className={s.productImageWrap}>
-                    <Image
-                      src={extra.image}
-                      alt={labels.name}
-                      fill
-                      sizes="180px"
-                      className={s.productImage}
-                    />
+                    {apiImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={apiImage}
+                        alt={extra.name}
+                        className={s.productImage}
+                      />
+                    ) : null}
                   </div>
                   <div className={s.productBody}>
-                    <h3 className={s.productName}>{labels.name}</h3>
-                    <p className={s.productDesc}>{labels.description}</p>
+                    <h3 className={s.productName}>{extra.name}</h3>
+                    <p className={s.productDesc}>{extra.description}</p>
                     <p className={s.productPrice}>{formatPrice(extra.price)} сум</p>
                   </div>
                   {quantity > 0 ? (
@@ -167,7 +157,7 @@ export default function BookingExtrasModal({
                         type="button"
                         className={s.qtyBtn}
                         onClick={() => onRemoveExtra(extra.id)}
-                        aria-label={t("booking.decreaseAria", { name: labels.name })}
+                        aria-label={t("booking.decreaseAria", { name: extra.name })}
                         data-testid={`booking-extra-decrease-${extra.id}`}
                       >
                         −
@@ -182,7 +172,7 @@ export default function BookingExtrasModal({
                         type="button"
                         className={s.qtyBtn}
                         onClick={() => onAddExtra(extra.id)}
-                        aria-label={t("booking.addAria", { name: labels.name })}
+                        aria-label={t("booking.addAria", { name: extra.name })}
                         data-testid={`booking-extra-increase-${extra.id}`}
                       >
                         +
@@ -193,7 +183,7 @@ export default function BookingExtrasModal({
                       type="button"
                       className={s.addBtn}
                       onClick={() => onAddExtra(extra.id)}
-                      aria-label={t("booking.addAria", { name: labels.name })}
+                      aria-label={t("booking.addAria", { name: extra.name })}
                       data-testid={`booking-extra-add-${extra.id}`}
                     >
                       {t("booking.add")}

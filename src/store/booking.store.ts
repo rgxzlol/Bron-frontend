@@ -1,15 +1,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { bookingsApi } from "@/lib/api";
-import { getDemoMyBookings } from "@/lib/api/demo";
+import { bookingsApi, businessesApi } from "@/lib/api";
 import { normalizeBookingTime } from "@/lib/booking/classify";
 import type {
   Booking,
   BookingCreate,
   BookingListItem,
-  BookingUpdate,
+  BookingReschedule,
 } from "@/lib/api/types";
 import { useBusinessStore } from "@/store/business.store";
+import { useNotificationStore } from "@/store/notification.store";
+import { ApiError } from "@/lib/api/client";
+import { getAuthToken } from "@/lib/api/token";
 
 function toApiTime(value: string) {
   return normalizeBookingTime(value) ?? value.trim();
@@ -25,18 +27,8 @@ function toApiCreatePayload(payload: BookingCreate): BookingCreate {
     start_time: toApiTime(payload.start_time),
     end_time: toApiTime(payload.end_time),
     guest_count: payload.guest_count ?? 1,
-    product_ids: payload.product_ids ?? [],
+    items: payload.items,
   };
-}
-
-function slotKey(item: {
-  business_id?: number | null;
-  booking_date?: string | null;
-  start_time?: string | null;
-}) {
-  const time = normalizeBookingTime(item.start_time) ?? item.start_time ?? "";
-  const business = item.business_id != null ? String(item.business_id) : "*";
-  return `${business}|${item.booking_date ?? ""}|${time.slice(0, 5)}`;
 }
 
 function toListItem(
@@ -68,29 +60,11 @@ function toListItem(
     booking_date: booking.booking_date || extras?.booking_date || "",
     start_time: start,
     end_time: end,
-    status: booking.status || "confirmed",
-    total_price: extras?.total_price ?? booking.total_price,
+    status: booking.status || "pending",
+    total_price: booking.total_price ?? extras?.total_price ?? 0,
     business_id: booking.business_id ?? extras?.business_id,
     guest_count: extras?.guest_count ?? booking.guest_count,
-    items: extras?.items?.length ? extras.items : booking.items,
-  };
-}
-
-function buildLocalBooking(payload: BookingCreate): Booking {
-  return {
-    id: -Date.now(),
-    user_id: 0,
-    business_id: payload.business_id,
-    service_id: payload.service_id,
-    branch_id: payload.branch_id,
-    staff_id: payload.staff_id ?? null,
-    booking_date: payload.booking_date,
-    start_time: toApiTime(payload.start_time),
-    end_time: toApiTime(payload.end_time),
-    guest_count: payload.guest_count ?? 1,
-    total_price: payload.total_price ?? 0,
-    status: "confirmed",
-    items: payload.items,
+    items: booking.items ?? extras?.items,
   };
 }
 
@@ -98,7 +72,7 @@ function mergeListItem(prev: BookingListItem | undefined, item: BookingListItem)
   if (!prev) {
     return {
       ...item,
-      status: item.status || "confirmed",
+      status: item.status || "pending",
       start_time: normalizeBookingTime(item.start_time) ?? item.start_time,
       end_time: normalizeBookingTime(item.end_time) ?? item.end_time,
     };
@@ -107,7 +81,7 @@ function mergeListItem(prev: BookingListItem | undefined, item: BookingListItem)
   return {
     ...prev,
     ...item,
-    status: item.status || prev.status || "confirmed",
+    status: item.status || prev.status || "pending",
     booking_date: item.booking_date || prev.booking_date,
     start_time:
       normalizeBookingTime(item.start_time) ??
@@ -121,7 +95,7 @@ function mergeListItem(prev: BookingListItem | undefined, item: BookingListItem)
       prev.end_time,
     items: item.items?.length ? item.items : prev.items,
     guest_count: item.guest_count ?? prev.guest_count,
-    total_price: item.total_price || prev.total_price,
+    total_price: item.total_price ?? prev.total_price,
     business_id: item.business_id ?? prev.business_id,
   };
 }
@@ -130,39 +104,33 @@ function mergeBookings(
   remote: BookingListItem[],
   local: BookingListItem[],
 ): BookingListItem[] {
-  if (remote.length === 0) {
-    return local;
-  }
-
-  const remoteIds = new Set(remote.map((item) => item.id));
   const localById = new Map(local.map((item) => [item.id, item]));
-  const usedLocalIds = new Set<number>();
-
-  const mergedRemote = remote.map((item) => {
+  return remote.map((item) => {
     const byId = localById.get(item.id);
-    if (byId) {
-      usedLocalIds.add(byId.id);
-      return mergeListItem(byId, item);
-    }
-
-    // Local optimistic booking (negative id) with the same slot → fold extras in.
-    const remoteSlot = slotKey(item);
-    const bySlot = local.find(
-      (candidate) =>
-        candidate.id < 0 &&
-        !usedLocalIds.has(candidate.id) &&
-        slotKey(candidate) === remoteSlot,
-    );
-    if (bySlot) {
-      usedLocalIds.add(bySlot.id);
-      return mergeListItem(bySlot, item);
-    }
-
-    return mergeListItem(undefined, item);
+    return mergeListItem(byId, item);
   });
+}
 
-  const localOnly = local.filter((item) => !remoteIds.has(item.id) && !usedLocalIds.has(item.id));
-  return [...mergedRemote, ...localOnly];
+async function enrichBookingForDisplay(item: BookingListItem) {
+  try {
+    const detail = await bookingsApi.get(item.id);
+    const business = await businessesApi.get(detail.business_id);
+    return {
+      ...item,
+      ...detail,
+      business_id: detail.business_id,
+      business_name: business.name,
+      business_address: business.address,
+      business_category:
+        typeof business.category === "string"
+          ? business.category
+          : business.category.name,
+      business_logo: business.logo,
+    };
+  } catch (error) {
+    console.error(`Не удалось загрузить детали брони ${item.id}:`, error);
+    return item;
+  }
 }
 
 function upsertBooking(
@@ -175,32 +143,7 @@ function upsertBooking(
     return [normalized, ...bookings.filter((booking) => booking.id !== normalized.id)];
   }
 
-  const itemSlot = slotKey(item);
-
-  // Optimistic local booking: fold into an existing server row for the same slot.
-  if (item.id < 0) {
-    const bySlot = bookings.find(
-      (booking) => booking.id > 0 && slotKey(booking) === itemSlot,
-    );
-    if (bySlot) {
-      const normalized = mergeListItem(bySlot, { ...item, id: bySlot.id });
-      return [
-        normalized,
-        ...bookings.filter(
-          (booking) => booking.id !== bySlot.id && booking.id !== item.id,
-        ),
-      ];
-    }
-  }
-
-  const without = bookings.filter((booking) => {
-    if (booking.id === item.id) return false;
-    // Drop optimistic duplicate once we have a server id for the same slot.
-    if (item.id > 0 && booking.id < 0 && slotKey(booking) === itemSlot) {
-      return false;
-    }
-    return true;
-  });
+  const without = bookings.filter((booking) => booking.id !== item.id);
 
   return [mergeListItem(undefined, item), ...without];
 }
@@ -215,7 +158,7 @@ type BookingStore = {
     bookingId: number,
     payload: Parameters<typeof bookingsApi.update>[1],
   ) => Promise<Booking>;
-  rescheduleBooking: (bookingId: number, payload: BookingUpdate) => Promise<void>;
+  rescheduleBooking: (bookingId: number, payload: BookingReschedule) => Promise<void>;
   cancelBooking: (bookingId: number) => Promise<void>;
 };
 
@@ -227,6 +170,8 @@ export const useBookingStore = create<BookingStore>()(
       error: null,
 
       fetchMyBookings: async () => {
+        if (get().isLoading) return;
+
         const hasLocal = get().bookings.length > 0;
         if (!hasLocal) {
           set({ isLoading: true, error: null });
@@ -235,31 +180,43 @@ export const useBookingStore = create<BookingStore>()(
         }
 
         try {
-          const remote = await bookingsApi.my();
+          const remote = await Promise.all(
+            (await bookingsApi.my()).map(enrichBookingForDisplay),
+          );
+          const previousById = new Map(
+            get().bookings.map((booking) => [booking.id, booking]),
+          );
+          remote.forEach((booking) => {
+            const previous = previousById.get(booking.id);
+            if (previous && previous.status !== booking.status) {
+              useNotificationStore.getState().addBookingStatusNotification(
+                booking.id,
+                booking.status,
+                booking.booking_date,
+                booking.start_time,
+              );
+            }
+          }          );
           const merged = mergeBookings(remote, get().bookings);
           set({
-            bookings:
-              merged.length > 0
-                ? merged
-                : get().bookings.length > 0
-                  ? get().bookings
-                  : getDemoMyBookings(),
+            bookings: merged,
             isLoading: false,
           });
-        } catch {
+        } catch (error) {
           const local = get().bookings;
           set({
-            bookings: local.length > 0 ? local : getDemoMyBookings(),
+            bookings: local,
             isLoading: false,
-            error: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Не удалось загрузить бронирования",
           });
         }
       },
 
       createBooking: async (payload) => {
         const listExtras = {
-          items: payload.items,
-          total_price: payload.total_price,
           guest_count: payload.guest_count,
           booking_date: payload.booking_date,
           start_time: payload.start_time,
@@ -279,13 +236,13 @@ export const useBookingStore = create<BookingStore>()(
             start_time: booking.start_time || payload.start_time,
             end_time: booking.end_time || payload.end_time,
             guest_count: booking.guest_count || payload.guest_count || 1,
-            status: booking.status || "confirmed",
-            items: booking.items?.length ? booking.items : payload.items,
-            total_price: booking.total_price || payload.total_price || 0,
+            status: booking.status || "pending",
+            items: booking.items,
+            total_price: booking.total_price,
           };
         } catch (error) {
-          console.warn("Booking API create failed, saving locally:", error);
-          booking = buildLocalBooking(payload);
+          set({ error: error instanceof Error ? error.message : "Не удалось создать бронирование" });
+          throw error;
         }
 
         const listItem = toListItem(booking, listExtras);
@@ -293,8 +250,29 @@ export const useBookingStore = create<BookingStore>()(
           bookings: upsertBooking(state.bookings, listItem),
         }));
 
+        useNotificationStore.getState().addLocalNotification({
+          id: `local-booking-${booking.id}`,
+          type: "booking",
+          title:
+            booking.status === "approved" || booking.status === "accepted"
+              ? "Бронирование подтверждено"
+              : "Бронирование создано",
+          description: `Бронь на ${booking.booking_date} в ${booking.start_time}${
+            booking.status === "approved" || booking.status === "accepted"
+              ? " подтверждена"
+              : " отправлена бизнесу на подтверждение"
+          }`,
+        });
+        useNotificationStore.getState().addBookingReminder(
+          booking.id,
+          booking.booking_date,
+          booking.start_time,
+        );
+
         try {
-          const remote = await bookingsApi.my();
+          const remote = await Promise.all(
+            (await bookingsApi.my()).map(enrichBookingForDisplay),
+          );
           set({
             bookings: upsertBooking(
               mergeBookings(remote, get().bookings),
@@ -322,18 +300,25 @@ export const useBookingStore = create<BookingStore>()(
       },
 
       rescheduleBooking: async (bookingId, payload) => {
-        const { booking_date, start_time, end_time } = payload;
-
-        try {
-          await bookingsApi.update(bookingId, {
-            booking_date,
-            start_time: start_time ? toApiTime(start_time) : start_time,
-            end_time: end_time ? toApiTime(end_time) : end_time,
-          });
-        } catch {
-          // Keep local UI in sync even if the remote API ignores date/time fields.
+        if (bookingId > 0) {
+          const updated = await bookingsApi.reschedule(bookingId, {
+            booking_date: payload.booking_date,
+            start_time: toApiTime(payload.start_time),
+            end_time: toApiTime(payload.end_time),
+          }, getAuthToken() ?? undefined);
+          set((state) => ({
+            bookings: upsertBooking(state.bookings, toListItem(updated)),
+          }));
+          useNotificationStore.getState().removeBookingReminder(bookingId);
+          useNotificationStore.getState().addBookingReminder(
+            bookingId,
+            updated.booking_date,
+            updated.start_time,
+          );
+          return;
         }
 
+        const { booking_date, start_time, end_time } = payload;
         set((state) => ({
           bookings: state.bookings.map((booking) =>
             booking.id === bookingId
@@ -346,17 +331,29 @@ export const useBookingStore = create<BookingStore>()(
               : booking,
           ),
         }));
+
+        const updated = get().bookings.find((booking) => booking.id === bookingId);
+        if (updated) {
+          useNotificationStore.getState().removeBookingReminder(bookingId);
+          useNotificationStore.getState().addBookingReminder(
+            bookingId,
+            updated.booking_date,
+            updated.start_time,
+          );
+        }
       },
 
       cancelBooking: async (bookingId) => {
         try {
           await bookingsApi.cancel(bookingId);
-        } catch {
-          try {
-            await bookingsApi.remove(bookingId);
-          } catch {
-            // Still mark cancelled locally.
+        } catch (error) {
+          if (
+            !(error instanceof ApiError) ||
+            (error.status !== 404 && error.status !== 405)
+          ) {
+            throw error;
           }
+          await bookingsApi.remove(bookingId);
         }
 
         set((state) => ({
@@ -366,15 +363,23 @@ export const useBookingStore = create<BookingStore>()(
               : booking,
           ),
         }));
+
+        useNotificationStore.getState().addLocalNotification({
+          id: `local-booking-status-${bookingId}-cancelled-by-user`,
+          type: "booking",
+          title: "Бронирование отменено",
+          description: "Вы отменили бронирование",
+        });
       },
     }),
     {
       name: "booking-storage",
-      version: 3,
-      migrate: (persisted) => {
-        const state = persisted as { bookings?: BookingListItem[] } | null;
+      version: 4,
+      migrate: () => {
         return {
-          bookings: Array.isArray(state?.bookings) ? state.bookings : [],
+          // Clear records from the former demo-booking flow. Real bookings
+          // are reloaded from the API after authentication.
+          bookings: [],
         };
       },
       partialize: (state) => ({ bookings: state.bookings }),

@@ -312,6 +312,12 @@
   color: var(--accent-fg);
 }
 
+.categoryWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .listName {
   font-size: 24px;
   font-weight: 700;
@@ -613,6 +619,11 @@
   border-radius: 10px;
   color: var(--text-secondary);
   transition: background 0.15s;
+}
+
+:global([data-theme="dark"]) .deleteCloseButton {
+  background: #fff;
+  color: #000;
 }
 
 .deleteCloseButton:hover {

@@ -2,7 +2,6 @@
 
 import { routes } from "@/config/routes";
 import { useBusinessStore } from "@/store/business.store";
-import { useAuthStore } from "@/store/auth.store";
 import { shouldRedirectFromBusinessPage, useBusinessNavAccess } from "@/lib/business/applicationAccess";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,11 +34,10 @@ const Business = () => {
   const businesses = useBusinessStore((s) => s.businesses);
   const showMyBusiness = useBusinessStore((s) => s.showMyBusiness);
   const setShowMyBusiness = useBusinessStore((s) => s.setShowMyBusiness);
-  const fetchBusinessesFromApi = useBusinessStore((s) => s.fetchBusinessesFromApi);
   const resetDraft = useBusinessStore((s) => s.resetDraft);
   const loadForEdit = useBusinessStore((s) => s.loadForEdit);
-  const token = useAuthStore((s) => s.token);
-  const { status } = useBusinessNavAccess();
+  const { status, hasExistingBusiness, hasLoadedBusinesses } =
+    useBusinessNavAccess();
 
   const editId = searchParams.get("edit");
   const dashboardParam = searchParams.get("dashboard");
@@ -55,17 +53,15 @@ const Business = () => {
   const showList = hasBusinesses || showMyBusiness;
 
   useEffect(() => {
-    const redirectTo = shouldRedirectFromBusinessPage(status);
+    const redirectTo = shouldRedirectFromBusinessPage(
+      status,
+      hasExistingBusiness,
+      hasLoadedBusinesses,
+    );
     if (redirectTo) {
       router.replace(redirectTo);
     }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (token) {
-      void fetchBusinessesFromApi();
-    }
-  }, [token, fetchBusinessesFromApi]);
+  }, [status, hasExistingBusiness, hasLoadedBusinesses, router]);
 
   useEffect(() => {
     if (hasBusinesses) {
@@ -77,10 +73,9 @@ const Business = () => {
     if (createModalOpen) return;
 
     if (resolvedEditId) {
-      setEditBusinessId(resolvedEditId);
       loadForEdit(resolvedEditId);
     }
-  }, [resolvedEditId, loadForEdit, businesses, createModalOpen]);
+  }, [resolvedEditId, loadForEdit, createModalOpen]);
 
   function pushBusinessView(query: { edit?: string | null; dashboard?: string | null }) {
     const params = new URLSearchParams(searchParams.toString());

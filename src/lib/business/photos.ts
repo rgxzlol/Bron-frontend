@@ -19,74 +19,102 @@ export type ProfileImageValidationResult =
 export async function validateProfileImageFile(
   file: File,
 ): Promise<ProfileImageValidationResult> {
-  if (!isImageFile(file)) {
-    return { ok: false, errorKey: "imageType" };
-  }
-
-  if (file.size > MAX_PROFILE_IMAGE_SIZE) {
-    return { ok: false, errorKey: "imageSize" };
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const image = new window.Image();
-      image.onload = () => resolve({ width: image.width, height: image.height });
-      image.onerror = () => reject(new Error("image-load-failed"));
-      image.src = objectUrl;
-    });
-
-    if (
-      dimensions.width > MAX_PROFILE_IMAGE_DIMENSION ||
-      dimensions.height > MAX_PROFILE_IMAGE_DIMENSION
-    ) {
-      return { ok: false, errorKey: "imageDimensions" };
-    }
-  } catch {
-    return { ok: false, errorKey: "imageReadFailed" };
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-
-  const dataUrl = await new Promise<string | null>((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
-
-  if (!dataUrl) {
-    return { ok: false, errorKey: "imageReadFailed" };
-  }
-
-  return { ok: true, dataUrl };
+  return normalizeBusinessImageFile(file);
 }
 
 export async function validateGalleryImageFile(
   file: File,
 ): Promise<ProfileImageValidationResult> {
-  if (!isImageFile(file)) {
-    return { ok: false, errorKey: "imageType" };
-  }
+  return normalizeBusinessImageFile(file);
+}
 
-  if (file.size > MAX_PROFILE_IMAGE_SIZE) {
-    return { ok: false, errorKey: "imageSize" };
-  }
-
-  const dataUrl = await new Promise<string | null>((resolve) => {
+async function readFileAsDataUrl(file: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () =>
       resolve(typeof reader.result === "string" ? reader.result : null);
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
   });
+}
 
-  if (!dataUrl) {
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality?: number,
+): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+async function normalizeBusinessImageFile(
+  file: File,
+): Promise<ProfileImageValidationResult> {
+  if (!isImageFile(file)) {
+    return { ok: false, errorKey: "imageType" };
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  let image: HTMLImageElement;
+
+  try {
+    image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const loadedImage = new window.Image();
+      loadedImage.onload = () => resolve(loadedImage);
+      loadedImage.onerror = () => reject(new Error("image-load-failed"));
+      loadedImage.src = objectUrl;
+    });
+  } catch {
+    URL.revokeObjectURL(objectUrl);
     return { ok: false, errorKey: "imageReadFailed" };
   }
 
-  return { ok: true, dataUrl };
+  URL.revokeObjectURL(objectUrl);
+
+  const supportedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (
+    image.naturalWidth <= MAX_PROFILE_IMAGE_DIMENSION &&
+    image.naturalHeight <= MAX_PROFILE_IMAGE_DIMENSION &&
+    file.size <= MAX_PROFILE_IMAGE_SIZE &&
+    supportedTypes.has(file.type.toLowerCase())
+  ) {
+    const dataUrl = await readFileAsDataUrl(file);
+    return dataUrl
+      ? { ok: true, dataUrl }
+      : { ok: false, errorKey: "imageReadFailed" };
+  }
+
+  const scale = Math.min(
+    1,
+    MAX_PROFILE_IMAGE_DIMENSION / image.naturalWidth,
+    MAX_PROFILE_IMAGE_DIMENSION / image.naturalHeight,
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  if (!context) return { ok: false, errorKey: "imageReadFailed" };
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const preferredType = supportedTypes.has(file.type.toLowerCase())
+    ? file.type.toLowerCase()
+    : "image/jpeg";
+  let blob = await canvasToBlob(canvas, preferredType);
+
+  if (!blob || blob.size > MAX_PROFILE_IMAGE_SIZE) {
+    for (const quality of [0.82, 0.65, 0.5, 0.35]) {
+      blob = await canvasToBlob(canvas, "image/jpeg", quality);
+      if (blob && blob.size <= MAX_PROFILE_IMAGE_SIZE) break;
+    }
+  }
+
+  if (!blob || blob.size > MAX_PROFILE_IMAGE_SIZE) {
+    return { ok: false, errorKey: "imageSize" };
+  }
+
+  const dataUrl = await readFileAsDataUrl(blob);
+  return dataUrl
+    ? { ok: true, dataUrl }
+    : { ok: false, errorKey: "imageReadFailed" };
 }
 
 export function collectBusinessPhotoUrls(business: {
@@ -149,29 +177,23 @@ export function mergeBusinessFromApi(
       ? { lat: existing.lat, lng: existing.lng }
       : { lat: fromApi.lat, lng: fromApi.lng };
 
-  const apiPhotos = collectBusinessPhotoUrls({
-    ...fromApi,
-    profilePhoto: resolveMediaUrl(fromApi.profilePhoto),
-    services: fromApi.services,
-  });
-  const existingPhotos = collectBusinessPhotoUrls(existing);
-  const remoteApiPhotos = apiPhotos.filter((photo) => photo.startsWith("http"));
-  const photos =
-    remoteApiPhotos.length > 0
-      ? [
-          ...remoteApiPhotos,
-          ...existingPhotos.filter((photo) => photo.startsWith("data:")),
-        ]
-      : existingPhotos.length > 0
-        ? existingPhotos
-        : apiPhotos;
+  const galleryPhotos = [
+    ...fromApi.gallery.filter((photo): photo is string =>
+      Boolean(photo?.startsWith("http")),
+    ),
+    ...existing.gallery.filter((photo): photo is string =>
+      Boolean(photo?.startsWith("data:")),
+    ),
+  ];
 
   return {
     ...fromApi,
     lat: coords.lat,
     lng: coords.lng,
-    profilePhoto: photos[0] ?? resolveMediaUrl(fromApi.profilePhoto) ?? existing.profilePhoto,
-    gallery: photosToGallerySlots(photos),
+    profilePhoto:
+      resolveMediaUrl(fromApi.profilePhoto) ??
+      (existing.profilePhoto?.startsWith("data:") ? existing.profilePhoto : null),
+    gallery: photosToGallerySlots(galleryPhotos, true),
     website: existing.website || fromApi.website,
     description: fromApi.description || existing.description,
     services: mergeServiceLists(fromApi.services, existing.services),

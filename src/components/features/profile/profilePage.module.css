@@ -63,6 +63,16 @@
   flex-shrink: 0;
 }
 
+:global([data-theme="dark"]) .closeBtn,
+:global([data-theme="dark"]) .closeBtnFloating {
+  background: #fff;
+}
+
+:global([data-theme="dark"]) .closeBtn img,
+:global([data-theme="dark"]) .closeBtnFloating img {
+  filter: none !important;
+}
+
 .closeBtnFloating {
   position: absolute;
   top: 20px;
@@ -139,6 +149,45 @@
   flex-shrink: 0;
 }
 
+.ratingFrame {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+}
+
+.ratingFrameSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ratingFrameTrack,
+.ratingFrameProgress {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ratingFrameTrack {
+  stroke: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+}
+
+.ratingFrameProgress {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease, stroke 300ms ease;
+}
+
+.ratingFrameAvatar {
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  border-radius: 50%;
+  transform: scale(0.94);
+}
+
 .avatarImage,
 .avatarImageLarge {
   border-radius: 50%;
@@ -158,6 +207,16 @@
 
 /* Десктоп: крупнее аватар и модалка (QA pl003) */
 @media (min-width: 1024px) {
+  .ratingFrame {
+    width: 144px;
+    height: 144px;
+  }
+
+  .ratingFrameAvatar {
+    width: 128px;
+    height: 128px;
+  }
+
   .avatarImage {
     width: 128px;
     height: 128px;
@@ -201,6 +260,51 @@
   font-weight: 600;
 }
 
+.ratingNameBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ratingBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.ratingBar {
+  display: inline-flex;
+  align-items: center;
+}
+
+:global([data-theme="dark"]) .ratingBar img {
+  filter: brightness(0) invert(1);
+}
+
+.ratingValue {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ratingCaption {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 400;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.ratingAttendanceStats {
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .emailText {
   margin-top: 2px;
   color: var(--text-secondary);
@@ -239,7 +343,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #fde8e8;
+  background: #fff0f0;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -294,11 +398,44 @@
   margin-top: auto;
   border-radius: 16px;
   padding: 10px 14px;
+  border: 1px solid #f3b8b8;
   background: var(--bg-surface);
   color: #e02424;
   font-size: 16px;
   font-weight: 700;
   text-align: left;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.logoutRow:hover,
+.logoutConfirmBtn:hover {
+  background: #fff5f5;
+  border-color: #e02424;
+}
+
+.logoutRow:active,
+.logoutConfirmBtn:active {
+  transform: scale(0.99);
+}
+
+:global([data-theme="dark"]) .iconTileRed {
+  background: #5a3030;
+}
+
+:global([data-theme="dark"]) .logoutRow,
+:global([data-theme="dark"]) .logoutConfirmBtn {
+  border-color: #a94b4b;
+  background: var(--bg-surface);
+  color: #ffb4b4;
+}
+
+:global([data-theme="dark"]) .logoutRow:hover,
+:global([data-theme="dark"]) .logoutConfirmBtn:hover {
+  background: #472b2b;
+  border-color: #ff8080;
 }
 
 /* ---------- generic section ---------- */
@@ -319,8 +456,35 @@
 
 .avatarBlock {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 20px;
   margin: 10px 0 8px;
+}
+
+.removePhotoBtn {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, #e02424 35%, transparent);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: color-mix(in srgb, #e02424 8%, transparent);
+  color: #e02424;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.removePhotoBtn:hover {
+  border-color: #e02424;
+  background: color-mix(in srgb, #e02424 14%, transparent);
+}
+
+.removePhotoBtn:focus-visible {
+  outline: 2px solid #e02424;
+  outline-offset: 2px;
 }
 
 /* ---------- fields (Frame 257 / 262) ---------- */
@@ -347,6 +511,25 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.passwordInputWrap {
+  position: relative;
+}
+
+.field .passwordInput {
+  padding-right: 52px;
+}
+
+.passwordEyeBtn {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  transform: translateY(-50%);
 }
 
 .field input::placeholder {
@@ -422,16 +605,30 @@
   font-weight: 600;
 }
 
+:global([data-theme="dark"]) .validationSummary {
+  background: rgba(224, 36, 36, 0.14);
+  color: #ffb4b4;
+}
+
 .errorText {
   color: #e02424;
   font-size: 14px;
   font-weight: 600;
 }
 
+:global([data-theme="dark"]) .errorText,
+:global([data-theme="dark"]) .fieldErrorMessage {
+  color: #ff8080;
+}
+
 .successText {
   color: #16a34a;
   font-size: 14px;
   font-weight: 600;
+}
+
+:global([data-theme="dark"]) .successText {
+  color: #4ade80;
 }
 
 .blockTitle {
@@ -446,6 +643,45 @@
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--border-default);
+}
+
+.passwordRules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -4px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.passwordRule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.passwordRule > span {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-inactive);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.passwordRuleValid {
+  color: var(--accent-fg);
+}
+
+.passwordRuleValid > span {
+  background: var(--primary);
+  color: #fff;
 }
 
 .secondaryBtn {
@@ -921,11 +1157,16 @@
   padding: 10px 14px;
   min-height: 62px;
   border-radius: 16px;
+  border: 1px solid #f3b8b8;
   background: var(--bg-surface);
   color: #e02424;
   font-size: 16px;
   font-weight: 700;
   text-align: left;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .cancelBtn {
@@ -948,6 +1189,7 @@
   color: #e02424;
   font-size: 15px;
   font-weight: 600;
+  display: flex;
   align-items: center;
   justify-content: center;
 }
@@ -955,6 +1197,76 @@
 .deleteAccountBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.deleteConfirmBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--backdrop);
+  backdrop-filter: blur(6px);
+}
+
+.deleteConfirmModal {
+  width: min(520px, 100%);
+  border-radius: 20px;
+  background: var(--bg-surface-soft);
+  padding: 24px;
+  box-shadow: var(--shadow-modal);
+}
+
+.deleteConfirmModal h3 {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.deleteConfirmModal p {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.deleteConfirmActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.deleteCancelBtn,
+.deleteDangerBtn {
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.deleteCancelBtn {
+  background: var(--primary);
+  color: #fff;
+}
+
+.deleteDangerBtn {
+  background: #e02424;
+  color: #fff;
+}
+
+.deleteCancelBtn:disabled,
+.deleteDangerBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 480px) {
+  .deleteConfirmActions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .hiddenFileInput {
@@ -975,6 +1287,7 @@
 
   .modal {
     width: 100%;
+    height: 100vh;
     height: 100dvh;
     max-height: none;
     border-radius: 0;
@@ -990,6 +1303,29 @@
   .modalBody {
     flex: 1;
     padding: 16px 16px 28px;
+  }
+
+  .logoutSection {
+    gap: 12px;
+    padding: 8px 0 20px;
+  }
+
+  .logoutSection .spacer {
+    display: none;
+  }
+
+  .logoutImage {
+    width: min(188px, 52vw);
+    height: auto;
+    margin: 12px 0 8px;
+  }
+
+  .logoutConfirmBtn {
+    margin-top: 16px;
+  }
+
+  .deleteAccountBtn {
+    margin-top: 2px;
   }
 }
 

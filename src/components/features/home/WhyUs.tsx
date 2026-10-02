@@ -38,11 +38,11 @@ export default function WhyUs() {
     <section className={`${s.homeSection} my-[36px] mb-[100px]`}>
       <h2 className="mb-[16px] w-full text-[24px] font-semibold">{t("home.howItWorks")}</h2>
 
-      <div className="flex w-full flex-col items-center gap-[22px] sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start xl:flex-nowrap">
+      <div className="grid w-full grid-cols-1 items-stretch gap-[22px] sm:grid-cols-2 xl:grid-cols-4">
         {steps.map(({ step, titleKey, descriptionKey }) => (
           <div
             key={step}
-            className="flex flex-1 items-center justify-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5 lg:justify-start"
+            className="flex min-h-0 w-full items-center justify-center gap-[13px] rounded-[24px] bg-white py-4.5 pl-3 pr-5 pt-3.5 sm:min-h-[188px] lg:justify-start"
           >
             <p
               className={`${s.iconCircle} h-[74px] w-[74px] shrink-0 rounded-full bg-[#f9f9fd] text-[32px] font-semibold leading-none text-[var(--accent-fg)]`}
@@ -59,9 +59,9 @@ export default function WhyUs() {
         ))}
       </div>
 
-      <div className="relative mt-[70px] flex w-full flex-col items-center gap-4 overflow-hidden rounded-[24px] bg-white px-6 py-[27px] lg:items-start xl:flex-row xl:overflow-visible xl:px-[32px]">
-        <div className="flex w-full flex-col items-center lg:items-start xl:flex-1">
-          <div className="mb-8 flex flex-col items-center gap-[9px] lg:items-start xl:mb-[70px]">
+      <div className="relative mt-[70px] flex w-full flex-col items-center overflow-hidden rounded-[24px] bg-white px-6 py-[27px] lg:items-start xl:flex-row xl:items-start xl:overflow-visible xl:px-[32px]">
+        <div className="relative z-10 flex w-full flex-col items-center lg:items-start xl:flex-1">
+          <div className="mb-8 flex flex-col items-center gap-[9px] text-center lg:items-start lg:text-left xl:mb-[70px]">
             <p className="max-w-[400px] text-[24px] font-semibold xl:text-[32px]">
               {t("home.businessTitle")}
             </p>
@@ -78,7 +78,7 @@ export default function WhyUs() {
           </Link>
         </div>
         <Image
-          className="mx-auto h-auto w-[220px] xl:absolute xl:right-0 xl:top-[-155px] xl:mx-0 xl:w-[493px]"
+          className="relative mt-8 h-auto w-[min(70vw,300px)] shrink-0 self-center xl:absolute xl:right-0 xl:top-[-155px] xl:mt-0 xl:w-[493px] xl:self-auto"
           src={assets.marketing.homePng}
           alt={t("home.businessAlt")}
           width={493}

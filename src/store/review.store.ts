@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { reviewsApi } from "@/lib/api";
-import { getAuthToken } from "@/lib/api/token";
 
 export type ReviewTag =
   | "equipment"
@@ -61,6 +59,7 @@ type ReviewState = {
     shopId?: string;
     shopName?: string;
     bookingId?: number;
+    persistedRemotely?: boolean;
   }) => boolean;
 };
 
@@ -188,7 +187,7 @@ export const useReviewStore = create<ReviewState>()(
           const shopKey = meta?.shopId;
           const nextShopStats = { ...state.shopReviewStats };
 
-          if (shopKey) {
+          if (shopKey && !meta?.persistedRemotely) {
             const prev = nextShopStats[shopKey] ?? { ratingSum: 0, count: 0 };
             nextShopStats[shopKey] = {
               ratingSum: prev.ratingSum + draft.rating,

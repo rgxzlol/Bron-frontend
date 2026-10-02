@@ -1,39 +1,139 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { routes } from "@/config/routes";
+import { bookingsApi } from "@/lib/api/bookings";
 import Image from "next/image";
 import { assets } from "@/lib/assets";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getNotificationPresentation } from "@/lib/notifications/presentation";
+import { formatNotificationTime } from "@/lib/notifications/presentation";
 import { useNotificationStore } from "@/store/notification.store";
 import { useAuthStore } from "@/store/auth.store";
 import { NotificationCard } from "./NotificationCard";
 import { NotificationEmpty } from "./NotificationEmpty";
+import { useBookingStore } from "@/store/booking.store";
+import { useBusinessStore } from "@/store/business.store";
+import type { InAppNotificationType } from "@/lib/api/types";
 
 export default function NotificationDropdown() {
+  const router = useRouter();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeletingNotifications, setIsDeletingNotifications] = useState(false);
+  const [deleteNotificationsFailed, setDeleteNotificationsFailed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const items = useNotificationStore((state) => state.items);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   const isLoading = useNotificationStore((state) => state.isLoading);
+  const hydrateNotifications = useNotificationStore(
+    (state) => state.hydrateNotifications,
+  );
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
-  const deleteReadNotifications = useNotificationStore(
-    (state) => state.deleteReadNotifications,
+  const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
+  const markNotificationRead = useNotificationStore(
+    (state) => state.markNotificationRead,
+  );
+  const deleteNotification = useNotificationStore(
+    (state) => state.deleteNotification,
+  );
+  const deleteAllNotifications = useNotificationStore(
+    (state) => state.deleteAllNotifications,
   );
   const token = useAuthStore((state) => state.token);
+  const bookings = useBookingStore((state) => state.bookings);
+  const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
+  const businesses = useBusinessStore((state) => state.businesses);
+  const refreshBusinessBookings = useBusinessStore(
+    (state) => state.refreshBusinessBookings,
+  );
+  const addBookingReminder = useNotificationStore(
+    (state) => state.addBookingReminder,
+  );
+
+  async function openNotification(
+    notificationId: string,
+    bookingId: number | null | undefined,
+    notificationType: InAppNotificationType,
+  ) {
+    await markNotificationRead(notificationId);
+    if (bookingId == null) return;
+
+    try {
+      setIsOpen(false);
+      const booking = await bookingsApi.get(bookingId, token ?? undefined);
+      if (notificationType === "booking_created") {
+        await useBusinessStore.getState().fetchBusinessesFromApi();
+        await useBusinessStore
+          .getState()
+          .refreshBusinessBookings(String(booking.business_id));
+        router.push(`${routes.business}?dashboard=${booking.business_id}`);
+        return;
+      }
+      router.push(`${routes.bookings}?booking_id=${bookingId}`);
+    } catch (error) {
+      console.error("Не удалось открыть бронирование из уведомления:", error);
+    }
+  }
+
+  useEffect(() => {
+    hydrateNotifications();
+  }, [hydrateNotifications]);
 
   useEffect(() => {
     if (token) {
       void fetchNotifications();
+      void fetchUnreadCount();
+      void fetchMyBookings();
     }
-  }, [token, fetchNotifications]);
+  }, [token, fetchNotifications, fetchUnreadCount, fetchMyBookings]);
+
+  useEffect(() => {
+    if (!token) return;
+    const refresh = () => {
+      void fetchNotifications();
+      void fetchUnreadCount();
+      void fetchMyBookings();
+      businesses.forEach((business) => {
+        void refreshBusinessBookings(business.id);
+      });
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 30_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [
+    token,
+    fetchNotifications,
+    fetchUnreadCount,
+    fetchMyBookings,
+    businesses,
+    refreshBusinessBookings,
+  ]);
+
+  useEffect(() => {
+    bookings.forEach((booking) => {
+      if (booking.status !== "cancelled" && booking.status !== "rejected") {
+        addBookingReminder(booking.id, booking.booking_date, booking.start_time);
+      }
+    });
+  }, [bookings, addBookingReminder]);
 
   useEffect(() => {
     if (isOpen) {
       void fetchNotifications();
+      void fetchUnreadCount();
     }
-  }, [isOpen, fetchNotifications]);
+  }, [isOpen, fetchNotifications, fetchUnreadCount]);
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
@@ -98,6 +198,17 @@ export default function NotificationDropdown() {
 
   const hasNotifications = items.length > 0;
 
+  async function handleDeleteAllNotifications() {
+    setIsDeletingNotifications(true);
+    setDeleteNotificationsFailed(false);
+    try {
+      const succeeded = await deleteAllNotifications();
+      setDeleteNotificationsFailed(!succeeded);
+    } finally {
+      setIsDeletingNotifications(false);
+    }
+  }
+
   const list = (
     <>
       <span className="block text-[13px] font-medium text-[var(--text-secondary)]">
@@ -105,7 +216,7 @@ export default function NotificationDropdown() {
       </span>
       <ul className="mt-2.5 flex flex-col gap-3" data-testid="notifications-list">
         {items.map((item) => {
-          const presentation = getNotificationPresentation(item.type, t);
+          const presentation = getNotificationPresentation(item.type, t, item);
 
           return (
             <NotificationCard
@@ -113,7 +224,13 @@ export default function NotificationDropdown() {
               icon={presentation.icon}
               title={presentation.title}
               description={presentation.description}
-              time={item.time}
+              time={formatNotificationTime(item.time)}
+              isRead={item.read}
+              onClick={() =>
+                void openNotification(item.id, item.booking_id, item.type)
+              }
+              onDelete={() => void deleteNotification(item.id)}
+              deleteLabel={t("common.delete")}
               testId={presentation.testId}
             />
           );
@@ -123,17 +240,25 @@ export default function NotificationDropdown() {
   );
 
   const clearButton = (
-    <button
-      type="button"
-      onClick={() => void deleteReadNotifications()}
-      className="mx-auto flex items-center gap-2.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-7 py-[15px] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95"
-      data-testid="notifications-delete-read"
-    >
-      <Image src={assets.notification.trash} alt="" className="h-5 w-5 object-contain" />
-      <span className="text-[15px] font-semibold text-[var(--accent-fg)]">
-        {t("headerFilters.clearRead")}
-      </span>
-    </button>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void handleDeleteAllNotifications()}
+        disabled={isDeletingNotifications}
+        className="mx-auto flex items-center gap-2.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-7 py-[15px] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-60"
+        data-testid="notifications-delete-all"
+      >
+        <Image src={assets.notification.trash} alt="" className="h-5 w-5 object-contain" />
+        <span className="text-[15px] font-semibold text-[var(--accent-fg)]">
+          {t("headerFilters.deleteAllNotifications")}
+        </span>
+      </button>
+      {deleteNotificationsFailed && (
+        <p className="text-center text-[13px] text-[#e02424]" role="alert">
+          {t("headerFilters.deleteNotificationsFailed")}
+        </p>
+      )}
+    </div>
   );
 
   const panelBody = isLoading ? (
@@ -150,7 +275,7 @@ export default function NotificationDropdown() {
   );
 
   const closeButtonClassName =
-    "grid h-10 w-10 place-items-center rounded-full bg-[var(--bg-surface-muted)] p-0 transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
+    "theme-close-button grid h-10 w-10 place-items-center rounded-full bg-[var(--bg-surface-muted)] p-0 transition-all duration-200 hover:bg-[var(--bg-hover)] active:scale-95";
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -172,12 +297,12 @@ export default function NotificationDropdown() {
             data-header-icon
             className="opacity-60"
           />
-          {hasNotifications ? (
+          {unreadCount > 0 ? (
             <span
               className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e02424] px-1 text-[11px] font-bold text-white"
               data-testid="notifications-count"
             >
-              {items.length}
+              {unreadCount}
             </span>
           ) : null}
         </span>
@@ -225,7 +350,9 @@ export default function NotificationDropdown() {
                   aria-label={t("common.close")}
                   data-testid="notifications-close"
                 >
-                  <Image src={assets.header.close} alt="" data-header-icon />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -252,7 +379,9 @@ export default function NotificationDropdown() {
                 aria-label={t("common.close")}
                 data-testid="notifications-close"
               >
-                <Image src={assets.header.close} alt="" data-header-icon />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
             <div className="mt-4">{panelBody}</div>

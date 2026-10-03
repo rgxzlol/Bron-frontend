@@ -264,10 +264,7 @@ export const en: MessageTree = {
     redirectingToProfile: "Redirecting to profile...",
     cantLoginTitle: "Can't log in?",
     telegramLabel: "Telegram",
-    supportTelegramValue: "@Bron_Suport",
-    supportPhoneValue: "+998 99 999 99 99",
     emailLabel: "Email",
-    supportEmailValue: "Bron_Suport@gmail.com",
   },
   bookings: {
     navLabel: "Bookings navigation",

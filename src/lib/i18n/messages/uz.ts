@@ -267,10 +267,7 @@ export const uz: MessageTree = {
     redirectingToProfile: "Profilga yo‘naltirilmoqda...",
     cantLoginTitle: "Kira olmayapsizmi?",
     telegramLabel: "Telegram",
-    supportTelegramValue: "@Bron_Suport",
-    supportPhoneValue: "+998 99 999 99 99",
     emailLabel: "Email",
-    supportEmailValue: "Bron_Suport@gmail.com",
   },
   bookings: {
     navLabel: "Bronlar navigatsiyasi",

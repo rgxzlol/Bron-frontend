@@ -356,7 +356,7 @@ export const extraEn: MessageTree = {
     viewsCount: "Views: {count}",
     delete: "Delete",
     saving: "Saving...",
-    saveChanges: "Save changes",
+    saveChanges: "Add business",
     updatedToast: "Changes saved",
     updatedToastDesc: "Business information was updated successfully.",
     createdToast: "Business created successfully",

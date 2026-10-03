@@ -357,7 +357,7 @@ export const extraUz: MessageTree = {
     viewsCount: "Ko‘rishlar: {count}",
     delete: "O‘chirish",
     saving: "Saqlanmoqda...",
-    saveChanges: "O‘zgarishni saqlash",
+    saveChanges: "Biznes qo‘shish",
     updatedToast: "O‘zgarishlar saqlandi",
     updatedToastDesc: "Biznes haqidagi ma’lumot muvaffaqiyatli yangilandi.",
     createdToast: "Biznes muvaffaqiyatli yaratildi",

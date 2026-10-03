@@ -28,6 +28,7 @@ import {
 import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 import { useProfileStore } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { supportContacts } from "@/data/support";
 import { SupportModal } from "./SupportModal";
 
 export type AuthScreen =
@@ -1047,7 +1048,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </span>
               <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
                 <span className="text-[24px] font-semibold text-[var(--text-primary)]">
-                  {t("auth.supportTelegramValue")}
+                  {supportContacts.telegram}
                 </span>
               </div>
             </div>
@@ -1058,7 +1059,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </span>
               <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
                 <span className="text-[24px] font-semibold text-[var(--text-primary)]">
-                  {t("auth.supportPhoneValue")}
+                  {supportContacts.phone}
                 </span>
               </div>
             </div>
@@ -1069,7 +1070,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
               </span>
               <div className="flex items-center rounded-[25px] bg-[var(--auth-box)] px-6 py-8">
                 <span className="text-[24px] font-semibold text-[var(--text-primary)]">
-                  {t("auth.supportEmailValue")}
+                  {supportContacts.email}
                 </span>
               </div>
             </div>

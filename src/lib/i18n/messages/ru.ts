@@ -265,10 +265,7 @@ export const ru: MessageTree = {
     redirectingToProfile: "Перенаправление в профиль...",
     cantLoginTitle: "Не можете войти?",
     telegramLabel: "Телеграм",
-    supportTelegramValue: "@Bron_Suport",
-    supportPhoneValue: "+998 99 999 99 99",
     emailLabel: "Email",
-    supportEmailValue: "Bron_Suport@gmail.com",
   },
   bookings: {
     navLabel: "Навигация по бронированиям",

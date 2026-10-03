@@ -360,7 +360,7 @@ export const extraRu: MessageTree = {
     viewsCount: "Просмотров: {count}",
     delete: "Удалить",
     saving: "Сохранение...",
-    saveChanges: "Сохранить изменение",
+    saveChanges: "Добавить бизнес",
     updatedToast: "Изменения сохранены",
     updatedToastDesc: "Информация о бизнесе успешно обновлена.",
     createdToast: "Бизнес успешно создан",

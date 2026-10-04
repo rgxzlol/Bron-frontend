@@ -274,6 +274,8 @@ export const uz: MessageTree = {
     upcoming: "Kelgusi",
     past: "O‘tgan",
     loginRequired: "Bronlaringizni ko‘rish uchun hisobga kiring.",
+    sessionExpired: "Sessiya muddati tugadi. Bronlaringizni ko‘rish uchun qayta kiring.",
+    loginAgain: "Qayta kirish",
     loading: "Bronlar yuklanmoqda...",
     emptyFinished: "Yakunlangan bronlar yo‘q.",
     emptyUpcoming: "Kelgusi bronlar yo‘q.",

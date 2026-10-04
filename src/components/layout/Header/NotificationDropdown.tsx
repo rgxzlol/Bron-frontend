@@ -59,22 +59,41 @@ export default function NotificationDropdown() {
     notificationType: InAppNotificationType,
   ) {
     await markNotificationRead(notificationId);
-    if (bookingId == null) return;
+
+    const fallbackRoute =
+      notificationType === "promotion" ? routes.home : routes.bookings;
+
+    const cachedBooking =
+      bookingId == null ? undefined : bookings.find((current) => current.id === bookingId);
+
+    if (bookingId == null) {
+      setIsOpen(false);
+      router.push(fallbackRoute);
+      return;
+    }
 
     try {
       setIsOpen(false);
-      const booking = await bookingsApi.get(bookingId, token ?? undefined);
-      if (notificationType === "booking_created") {
+      const booking = cachedBooking ?? (await bookingsApi.get(bookingId, token ?? undefined));
+      const businessId = booking.business_id ?? cachedBooking?.business_id;
+
+      if (notificationType === "booking_created" && businessId != null) {
         await useBusinessStore.getState().fetchBusinessesFromApi();
-        await useBusinessStore
-          .getState()
-          .refreshBusinessBookings(String(booking.business_id));
-        router.push(`${routes.business}?dashboard=${booking.business_id}`);
+        await useBusinessStore.getState().refreshBusinessBookings(String(businessId));
+        router.push(`${routes.business}?dashboard=${businessId}`);
         return;
       }
+
+      if (businessId != null) {
+        router.push(`${routes.business}?dashboard=${businessId}`);
+        return;
+      }
+
       router.push(`${routes.bookings}?booking_id=${bookingId}`);
     } catch (error) {
       console.error("Не удалось открыть бронирование из уведомления:", error);
+      setIsOpen(false);
+      router.push(fallbackRoute);
     }
   }
 

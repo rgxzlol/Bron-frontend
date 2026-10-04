@@ -95,7 +95,7 @@ export const extraUz: MessageTree = {
     filterRestaurant: "Restoran",
     filterRestaurantPill: "Restoranlar",
     filterGymPill: "Sport zal",
-    filterCafePill: "Kafetriyalar",
+    filterCafePill: "Kafeteriyalar",
     filterHospitalPill: "Kasalxonalar",
     categoryFallback: "Boshqa",
     myBusinessFallback: "Mening biznesim",

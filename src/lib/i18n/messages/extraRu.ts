@@ -96,7 +96,7 @@ export const extraRu: MessageTree = {
     filterRestaurant: "Ресторан",
     filterRestaurantPill: "Рестораны",
     filterGymPill: "Спорт зал",
-    filterCafePill: "Кофетерии",
+    filterCafePill: "Кафетерии",
     filterHospitalPill: "Больницы",
     categoryFallback: "Другое",
     myBusinessFallback: "Мой бизнес",

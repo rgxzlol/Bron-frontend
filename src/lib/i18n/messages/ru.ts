@@ -272,6 +272,8 @@ export const ru: MessageTree = {
     upcoming: "Предстоящие",
     past: "Прошлые",
     loginRequired: "Войдите в аккаунт, чтобы увидеть свои брони.",
+    sessionExpired: "Сессия истекла. Войдите в аккаунт заново, чтобы увидеть брони.",
+    loginAgain: "Войти снова",
     loading: "Загрузка броней...",
     emptyFinished: "Завершённых броней пока нет.",
     emptyUpcoming: "Предстоящих броней пока нет.",

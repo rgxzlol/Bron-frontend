@@ -1,4 +1,5 @@
 import {
+  formatUzbekPhoneInput,
   hasExcessUzbekPhoneDigits,
   isUzbekPhoneEmpty,
   REGISTER_PHONE_PATTERN,
@@ -42,11 +43,13 @@ export function validateProfilePersonalInfo(
   }
 
   const trimmedPhone = phone.trim();
+  const formattedPhone = formatUzbekPhoneInput(trimmedPhone);
+
   if (!trimmedPhone || isUzbekPhoneEmpty(trimmedPhone)) {
     errors.phone = "phoneRequired";
   } else if (
     hasExcessUzbekPhoneDigits(trimmedPhone) ||
-    !REGISTER_PHONE_PATTERN.test(trimmedPhone)
+    !REGISTER_PHONE_PATTERN.test(formattedPhone)
   ) {
     errors.phone = "phoneInvalid";
   }

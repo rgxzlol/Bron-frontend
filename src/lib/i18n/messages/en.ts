@@ -271,6 +271,8 @@ export const en: MessageTree = {
     upcoming: "Upcoming",
     past: "Past",
     loginRequired: "Sign in to see your bookings.",
+    sessionExpired: "Your session has expired. Sign in again to see your bookings.",
+    loginAgain: "Sign in again",
     loading: "Loading bookings...",
     emptyFinished: "No completed bookings yet.",
     emptyUpcoming: "No upcoming bookings yet.",

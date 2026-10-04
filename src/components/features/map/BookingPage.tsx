@@ -1119,11 +1119,13 @@ export default function BookingPage({
             <input
               className={`${s.input} ${formErrors.phone ? s.inputError : ""}`}
               type="tel"
+              inputMode="numeric"
+              maxLength={17}
               value={form.phone}
               onChange={(e) => {
                 setForm((prev) => ({
                   ...prev,
-                  phone: formatUzbekPhoneInput(e.target.value, { preserveOverflow: true }),
+                  phone: formatUzbekPhoneInput(e.target.value),
                 }));
                 if (formErrors.phone) {
                   setFormErrors((prev) => ({ ...prev, phone: undefined }));

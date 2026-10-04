@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { routes } from "@/config/routes";
 import { BookingCard } from "@/components/features/booking/BookingCard";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { compareBookingsByTime, isPastBooking } from "@/lib/booking/classify";
 import { onStoreHydrated } from "@/lib/store/persist";
-import { useBookingStore } from "@/store/booking.store";
+import {
+  BOOKING_AUTH_REQUIRED_ERROR,
+  useBookingStore,
+} from "@/store/booking.store";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function BookingsPageClient() {
@@ -74,6 +78,27 @@ export default function BookingsPageClient() {
   }
 
   if (error) {
+    if (error === BOOKING_AUTH_REQUIRED_ERROR) {
+      return (
+        <div className="flex flex-col items-start gap-3 pt-[24px]" data-testid="bookings-auth-error">
+          <p className="font-semibold text-[#e02424]" role="alert">
+            {t("bookings.sessionExpired")}
+          </p>
+          <button
+            type="button"
+            className="rounded-[12px] bg-[#0a6af7] px-5 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+            onClick={() => {
+              useAuthStore.getState().clearToken();
+              window.location.assign(routes.login);
+            }}
+            data-testid="bookings-login-again"
+          >
+            {t("bookings.loginAgain")}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <p className="pt-[24px] font-semibold text-[#e02424]" data-testid="bookings-error">
         {error}

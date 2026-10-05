@@ -200,7 +200,7 @@ type BusinessStore = {
   addService: (
     businessId: string,
     service: Omit<BusinessService, "id" | "active">,
-  ) => Promise<string>;
+  ) => Promise<{ businessId: string; serviceId: string }>;
   addProduct: (
     businessId: string,
     product: Omit<BusinessService, "id" | "active" | "type">,
@@ -536,7 +536,7 @@ export const useBusinessStore = create<BusinessStore>()(
           };
         });
 
-        return targetId;
+        return { businessId: targetId, serviceId: nextItem.id };
       },
 
       addProduct: async (businessId, product) => {

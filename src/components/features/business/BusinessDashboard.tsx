@@ -15,6 +15,10 @@ import {
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { validateGalleryImageFile } from "@/lib/business/photos";
 import {
+  getServiceBookingRules,
+  saveServiceBookingRules,
+} from "@/lib/business/serviceBookingRulesStorage";
+import {
   compareBookingsByTime,
   isBusinessBookingVisible,
   isPastBooking,
@@ -370,6 +374,7 @@ type ServiceFormData = {
   guestCapacity: number | null;
   quantity: number | null;
   availability?: NonNullable<BusinessService["availability"]>;
+  rules: string;
 };
 
 const emptyServiceForm = (): ServiceFormData => ({
@@ -380,7 +385,7 @@ const emptyServiceForm = (): ServiceFormData => ({
   photo: null,
   guestCapacity: null,
   quantity: null,
-
+  rules: "",
 });
 
 function parseLocalDate(value: string): Date | null {
@@ -432,6 +437,7 @@ function serviceToFormData(item: BusinessService): ServiceFormData {
     duration: item.duration,
     guestCapacity: item.guestCapacity ?? null,
     quantity: item.quantity ?? null,
+    rules: "",
   };
 }
 
@@ -923,11 +929,13 @@ function PhotoUploadField({
 }
 
 function AddItemScreen({
+  businessId,
   kind,
   initialItem,
   onBack,
   onSave,
 }: {
+  businessId: string;
   kind: "service" | "product";
   initialItem?: BusinessService;
   onBack: () => void;
@@ -977,7 +985,11 @@ function AddItemScreen({
     () => initialItem?.duration ?? null,
   );
   const [showOnlyFree, setShowOnlyFree] = useState(true);
-  const [rules, setRules] = useState("");
+  const [rules, setRules] = useState(() =>
+    initialItem && isService
+      ? getServiceBookingRules(businessId, initialItem.id)
+      : "",
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const selectedDateTimes = activeAvailabilityDate
@@ -1505,6 +1517,7 @@ function AddItemScreen({
               try {
                 await onSave({
                   ...form,
+                  rules,
                   price: String(parsePrice(form.price)),
                   duration: isService ? durationMin ?? undefined : undefined,
                   guestCapacity: form.guestCapacity ?? 1,
@@ -2380,7 +2393,7 @@ export default function BusinessDashboard({
 
   async function handleAddService(data: ServiceFormData) {
     try {
-      const nextId = await addService(businessId, {
+      const result = await addService(businessId, {
         name: data.name,
         category: data.category,
         price: parsePrice(data.price),
@@ -2391,8 +2404,9 @@ export default function BusinessDashboard({
         type: "service",
         availability: data.availability ?? [],
       });
-      if (nextId !== businessId) {
-        onBusinessIdChange?.(nextId);
+      saveServiceBookingRules(result.businessId, result.serviceId, data.rules);
+      if (result.businessId !== businessId) {
+        onBusinessIdChange?.(result.businessId);
       }
       setView("servicesStaff");
     } catch (error) {
@@ -2464,6 +2478,9 @@ export default function BusinessDashboard({
             }
           : {}),
       });
+      if (editingItem.type === "service") {
+        saveServiceBookingRules(businessId, editingItem.id, data.rules);
+      }
       closeEditItem();
     } catch (error) {
       showToast(
@@ -2982,6 +2999,7 @@ export default function BusinessDashboard({
 
         {view === "addService" && (
           <AddItemScreen
+            businessId={businessId}
             kind="service"
             onBack={() => setView("servicesStaff")}
             onSave={handleAddService}
@@ -2990,6 +3008,7 @@ export default function BusinessDashboard({
 
         {view === "addProduct" && (
           <AddItemScreen
+            businessId={businessId}
             kind="product"
             onBack={() => setView("servicesStaff")}
             onSave={handleAddProduct}
@@ -2998,6 +3017,7 @@ export default function BusinessDashboard({
 
         {view === "editService" && editingItem && (
           <AddItemScreen
+            businessId={businessId}
             kind="service"
             initialItem={editingItem}
             onBack={closeEditItem}
@@ -3007,6 +3027,7 @@ export default function BusinessDashboard({
 
         {view === "editProduct" && editingItem && (
           <AddItemScreen
+            businessId={businessId}
             kind="product"
             initialItem={editingItem}
             onBack={closeEditItem}

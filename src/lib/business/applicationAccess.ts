@@ -38,12 +38,7 @@ export function useBusinessNavAccess() {
     hasPendingBusiness,
   );
 
-  const isBusinessVisible =
-    isLoggedIn &&
-    (isBusinessOwner ||
-      status === "pending" ||
-      status === "approved" ||
-      hasExistingBusiness);
+  const isBusinessVisible = isLoggedIn;
   const businessHref = routes.business;
 
   return {

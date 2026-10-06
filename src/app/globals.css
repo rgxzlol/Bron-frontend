@@ -540,7 +540,6 @@
 }
 
 .business-item-screen [data-testid="business-service-calendar"] > div:first-child > span {
-  color: #fff !important;
   font-size: 20px !important;
 }
 

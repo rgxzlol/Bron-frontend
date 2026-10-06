@@ -440,7 +440,7 @@ function SuccessView({
 /* ------------------------------ main flow ------------------------------ */
 
 export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?: AuthScreen }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const token = useAuthStore((s) => s.token);
@@ -717,6 +717,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         {
           first_name: apiFirstName,
           last_name: apiLastNameParts.join(" "),
+          language: locale,
         },
         session.access_token,
       );

@@ -44,7 +44,7 @@ const UI_TO_API_CATEGORY: Record<string, string[]> = {
   "Авто сервис": ["auto_service", "autoservice", "auto", "car_service"],
   Кинотеатры: ["cinema", "cinemas", "movie_theater"],
   "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
-  Клининг: ["cleaning", "cleaning_service"],
+  Клининг: ["cleaning", "cleaning_service", "cleaning_services", "cleaner", "cleaner_service"],
   Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
   Другое: ["other", "другое"],
 };
@@ -152,6 +152,9 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   club: "Комп клуб",
   cleaning: "Клининг",
   cleaning_service: "Клининг",
+  cleaning_services: "Клининг",
+  cleaner: "Клининг",
+  cleaner_service: "Клининг",
   sanatorium: "Санатории",
   sanatoriums: "Санатории",
   spa: "Санатории",

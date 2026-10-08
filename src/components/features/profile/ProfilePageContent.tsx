@@ -22,14 +22,17 @@ import {
 } from "@/lib/profile/validation";
 import { useToastStore } from "@/store/toast.store";
 import { useNotificationStore } from "@/store/notification.store";
+import { useBookingStore } from "@/store/booking.store";
+import { compareBookingsByTime, isPastBooking, normalizeBookingTime } from "@/lib/booking/classify";
+import { formatBookingDate } from "@/lib/formatDate";
+import { formatPrice } from "@/lib/formatPrice";
 import PasswordInput from "@/components/shared/PasswordInput";
 import s from "./profilePage.module.css";
 
 type ProfileSection =
   | "main"
   | "personal"
-  | "payments"
-  | "addCard"
+  | "bookingHistory"
   | "appSettings"
   | "notifications"
   | "theme"
@@ -49,24 +52,20 @@ const langOptions: { id: ProfileLanguage; label: string }[] = [
 const sectionTitleKeys: Record<ProfileSection, string> = {
   main: "profile.sectionMain",
   personal: "profile.sectionPersonal",
-  payments: "profile.sectionPayments",
-  addCard: "profile.addCard",
+  bookingHistory: "profile.bookingHistory",
   appSettings: "profile.sectionAppSettings",
   notifications: "profile.sectionNotifications",
   theme: "profile.sectionTheme",
   logout: "profile.sectionLogout",
 };
 
-const staticCards = [
-  { id: "visa", logo: assets.profile.visa, logoWidth: 52, logoHeight: 17, last4: "4242" },
-  { id: "mc", logo: assets.profile.masterCard, logoWidth: 42, logoHeight: 28, last4: "7878" },
-];
+function formatHistoryDate(value: string, language: ProfileLanguage) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
 
-const staticHistory = [
-  { id: "1", title: "Оплата бронирования", reference: "123123", amount: "80 000 сум", date: "12 мая 2026" },
-  { id: "2", title: "Оплата бронирования", reference: "123123", amount: "80 000 сум", date: "12 мая 2026" },
-  { id: "3", title: "Оплата бронирования", reference: "123123", amount: "80 000 сум", date: "12 мая 2026" },
-];
+  const locale = language === "uz" ? "uz-UZ" : language === "en" ? "en-US" : "ru-RU";
+  return formatBookingDate(date, locale);
+}
 
 export default function ProfilePageContent({
   onClose,
@@ -75,6 +74,10 @@ export default function ProfilePageContent({
   const router = useRouter();
   const { t } = useTranslation();
   const token = useAuthStore((state) => state.token);
+  const bookings = useBookingStore((state) => state.bookings);
+  const bookingsLoading = useBookingStore((state) => state.isLoading);
+  const bookingsError = useBookingStore((state) => state.error);
+  const fetchMyBookings = useBookingStore((state) => state.fetchMyBookings);
   const clearToken = useAuthStore((state) => state.clearToken);
   const showToast = useToastStore((state) => state.showToast);
   const {
@@ -114,7 +117,6 @@ export default function ProfilePageContent({
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [saveCardForFuture, setSaveCardForFuture] = useState(true);
 
   const [nameDraft, setNameDraft] = useState(
     looksLikePhoneUsername(fullName) ? "" : (fullName ?? ""),
@@ -157,6 +159,12 @@ export default function ProfilePageContent({
       });
     }
   }, [section, fetchNotificationSettings, showToast, t]);
+
+  useEffect(() => {
+    if (section === "bookingHistory" && token) {
+      void fetchMyBookings();
+    }
+  }, [section, token, fetchMyBookings]);
 
   useEffect(() => {
     onSectionChange?.(section);
@@ -312,6 +320,14 @@ export default function ProfilePageContent({
     window.location.assign(routes.bookings);
   }
 
+  function handleViewAllBookings() {
+    router.push(`${routes.bookings}?tab=past`);
+  }
+
+  const pastBookings = bookings
+    .filter((booking) => isPastBooking(booking))
+    .sort((a, b) => -compareBookingsByTime(a, b));
+
   function handleLogout() {
     clearToken();
     resetProfile();
@@ -353,7 +369,6 @@ export default function ProfilePageContent({
   function getBackSection(current: ProfileSection): ProfileSection {
     if (current === "logout") return "main";
     if (current === "theme" || current === "notifications") return "appSettings";
-    if (current === "addCard") return "payments";
     return "main";
   }
 
@@ -433,10 +448,10 @@ export default function ProfilePageContent({
               testId="profile-menu-bookings"
             />
             <MenuItem
-              icon={assets.profile.card}
-              title={t("profile.payments")}
-              subtitle={t("profile.paymentsSubtitle")}
-              onClick={() => goTo("payments")}
+              icon={assets.profile.myBookings}
+              title={t("profile.bookingHistory")}
+              subtitle={t("profile.bookingHistorySubtitle")}
+              onClick={() => goTo("bookingHistory")}
             />
             <MenuItem
               icon={assets.profile.settings}
@@ -655,124 +670,48 @@ export default function ProfilePageContent({
         </form>
       )}
 
-      {section === "payments" && (
+      {section === "bookingHistory" && (
         <div className={s.section}>
-          <h3 className={s.paymentsLabel}>{t("profile.myCards")}</h3>
-
-          <div className={s.cardsBox}>
-            {staticCards.map((card) => (
-              <div className={s.cardRow} key={card.id}>
-                <span className={s.cardLogo}>
-                  <Image
-                    src={card.logo}
-                    alt=""
-                    width={card.logoWidth}
-                    height={card.logoHeight}
-                  />
-                </span>
-                <span className={s.cardNumber}>
-                  <span className={s.cardDots}>&middot; &middot; &middot; &middot;</span>
-                  {card.last4}
-                </span>
-                <span className={s.cardExpiry}>{"09\\12"}</span>
-              </div>
-            ))}
-          </div>
-
-          <button type="button" className={s.outlineBtn} onClick={() => goTo("addCard")}>
-            {t("profile.addCard")}
-          </button>
-
-          <h3 className={s.paymentsLabel}>{t("profile.paymentHistory")}</h3>
+          <h3 className={s.historyLabel}>{t("profile.bookingHistory")}</h3>
 
           <div className={s.historyList}>
-            {staticHistory.map((item) => (
-              <div className={s.historyItem} key={item.id}>
+            {pastBookings.map((booking) => (
+              <div className={s.historyItem} key={booking.id}>
                 <div>
-                  <strong>{t("profile.paymentBooking")}</strong>
-                  <p>№{item.reference}</p>
+                  <strong>
+                    {booking.business_name || t("profile.bookingHistoryItem")}
+                  </strong>
+                  <p>
+                    №{booking.id} ·{" "}
+                    {formatHistoryDate(booking.booking_date, language)}{" "}
+                    {normalizeBookingTime(booking.start_time)?.slice(0, 5) ??
+                      booking.start_time}
+                  </p>
                 </div>
                 <div className={s.historyPrice}>
-                  <strong>{item.amount}</strong>
-                  <p>{item.date}</p>
+                  <strong>{formatPrice(booking.total_price)} сум</strong>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className={s.viewAllWrap}>
-            <button type="button" className={s.viewAllBtn}>
-              {t("common.viewAll")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {section === "addCard" && (
-        <div className={`${s.section} ${s.sectionGrow}`}>
-          <div className={s.addCardBox}>
-            <div className={s.addCardLogos}>
-              <Image src={assets.profile.visa} alt="VISA" width={48} height={16} />
-              <Image src={assets.profile.masterCard} alt="Mastercard" width={38} height={25} />
+          {bookingsLoading && pastBookings.length === 0 ? (
+            <p className={s.historyMessage}>{t("bookings.loading")}</p>
+          ) : bookingsError && pastBookings.length === 0 ? (
+            <p className={s.historyError} role="alert">{bookingsError}</p>
+          ) : pastBookings.length === 0 ? (
+            <p className={s.historyMessage}>{t("bookings.emptyFinished")}</p>
+          ) : (
+            <div className={s.viewAllWrap}>
+              <button
+                type="button"
+                className={s.viewAllBtn}
+                onClick={handleViewAllBookings}
+              >
+                {t("common.viewAll")}
+              </button>
             </div>
-
-            <label className={s.field}>
-              <span>{t("profile.cardNumber")}</span>
-              <input
-                inputMode="numeric"
-                placeholder="1234 5678 9012 3456"
-                className={s.borderedInput}
-              />
-            </label>
-
-            <div className={s.addCardRow}>
-              <label className={s.field}>
-                <span>{t("profile.cardExpiry")}</span>
-                <input
-                  inputMode="numeric"
-                  placeholder={t("profile.cardExpiryPlaceholder")}
-                  className={s.borderedInput}
-                />
-              </label>
-              <label className={s.field}>
-                <span>CVV</span>
-                <span className={s.cvvWrap}>
-                  <input
-                    inputMode="numeric"
-                    placeholder="•••"
-                    className={s.borderedInput}
-                  />
-                  <span className={s.cvvInfo} aria-hidden>
-                    <InfoIcon />
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <label className={s.field}>
-              <span>{t("profile.cardName")}</span>
-              <input placeholder={t("common.optional")} className={s.borderedInput} />
-            </label>
-          </div>
-
-          <div className={s.saveCardRow}>
-            <span>{t("profile.saveCardLabel")}</span>
-            <button
-              type="button"
-              className={saveCardForFuture ? s.toggleOn : s.toggleOff}
-              onClick={() => setSaveCardForFuture((v) => !v)}
-              aria-pressed={saveCardForFuture}
-              aria-label={t("profile.saveCardAria")}
-            >
-              <span />
-            </button>
-          </div>
-
-          <div className={s.spacer} aria-hidden />
-
-          <button type="button" className={s.primaryBtn} onClick={() => goTo("payments")}>
-            {t("profile.addCard")}
-          </button>
+          )}
         </div>
       )}
 
@@ -1152,21 +1091,6 @@ function MailEditIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <circle cx="10" cy="10" r="8.2" stroke="#9db4e8" strokeWidth="1.6" />
-      <path
-        d="M10 9v4.5"
-        stroke="#9db4e8"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <circle cx="10" cy="6.3" r="1" fill="#9db4e8" />
     </svg>
   );
 }

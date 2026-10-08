@@ -66,6 +66,9 @@ export default function ShopDetailPanel({
   const [apiRating, setApiRating] = useState<{ rating: number; reviews: number } | null>(null);
   const currentImage = gallery[imageIndex] ?? shop.img;
   const activeServices = shop.services ?? [];
+  const hasBookableServices = activeServices.some(
+    (service) => service.kind !== "product",
+  );
   const businessId = shop.apiBusinessId;
   const localizedAddress = translateLocation(shop.address, language);
   const localizedDistrict = translateLocation(shop.district, language);
@@ -236,9 +239,10 @@ export default function ShopDetailPanel({
 
         <Button
           text={t("map.bookPlace")}
-          className={s.sheetBookBtn}
+          className={`${s.sheetBookBtn} disabled:cursor-not-allowed disabled:opacity-50`}
           data-testid="map-vendor-book-btn"
           onClick={onBook}
+          disabled={!hasBookableServices}
         />
 
         {expanded && (
@@ -373,9 +377,10 @@ export default function ShopDetailPanel({
 
             <Button
               text={t("map.bookPlace")}
-              className={s.sheetBookBtn}
+              className={`${s.sheetBookBtn} disabled:cursor-not-allowed disabled:opacity-50`}
               data-testid="map-vendor-book-btn"
               onClick={onBook}
+              disabled={!hasBookableServices}
             />
           </>
         )}
@@ -569,9 +574,10 @@ export default function ShopDetailPanel({
 
             <Button
               text={t("map.bookPlace")}
-              className={s.bookBtn}
+              className={`${s.bookBtn} disabled:cursor-not-allowed disabled:opacity-50`}
               data-testid="map-vendor-book-btn"
               onClick={onBook}
+              disabled={!hasBookableServices}
             />
           </div>
         </div>

@@ -57,19 +57,15 @@ import bagIcon from "@/assets/images/bagIcon.svg";
 import arrowDown from "@/assets/images/arrowDown.svg";
 import editIcon from "@/assets/images/editIcon.svg";
 import deleteIcon from "@/assets/images/deleteIcon.svg";
-import visaMaster from "@/assets/images/visa icon.svg";
 import pushNotification from "@/assets/images/pushNotification.svg";
 import emailIcon from "@/assets/images/emailIcon.svg";
 import myBookingIcon from "@/assets/images/myBookingIcon.svg";
 import salesIcon from "@/assets/images/sales.svg";
 import cameraIcon from "@/assets/images/cameraIcon.svg";
 import profileData from "@/assets/images/profileData.svg";
-import cardIcon from "@/assets/images/cardIcon.svg";
 import settings from "@/assets/images/settings.svg";
 import quitAcc from "@/assets/images/quitAcc.svg";
 import quitProfilePng from "@/assets/images/quitProfile.png";
-import visa from "@/assets/images/visa.svg";
-import masterCard from "@/assets/images/masterCard.svg";
 import lightTheme from "@/assets/images/lightTheme.svg";
 import nightTheme from "@/assets/images/nightTheme.svg";
 import nightThemeJpeg from "@/assets/images/nightThemeJpeg.jpg";
@@ -207,7 +203,6 @@ export const assets = {
   profile: {
     profileData,
     myBookings: myBookingIcon,
-    card: cardIcon,
     settings,
     quit: quitAcc,
     quitIllustration: quitProfilePng,
@@ -216,9 +211,6 @@ export const assets = {
     email: emailIcon,
     booking: myBookingIcon,
     sales: salesIcon,
-    visa,
-    masterCard,
-    visaMaster,
     lightTheme,
     nightTheme,
     lightThemePreview: lightThemeJpeg,

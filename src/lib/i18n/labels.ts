@@ -14,6 +14,8 @@ export const BUSINESS_CATEGORY_KEYS: Record<string, string> = {
   "Комп клуб": "categories.pcClub",
   Клининг: "categories.cleaning",
   Санатории: "categories.sanatoriums",
+  Спа: "categories.spa",
+  Клиника: "categories.clinic",
   "Кафе и рестораны": "categories.restaurants",
   "Спорт и фитнес": "categories.gym",
   "Красота и уход": "categories.beautySalon",

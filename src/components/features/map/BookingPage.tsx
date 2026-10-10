@@ -158,7 +158,7 @@ export default function BookingPage({
       : null;
   const availabilityKey =
     shop.apiBusinessId != null && serviceId != null
-      ? `${shop.apiBusinessId}:${serviceId}:${selectedBranchId ?? ""}:${formatBookingDate(selectedDate)}:${selectedStaffId ?? ""}:${availabilityRefreshKey}`
+      ? `${shop.apiBusinessId}:${serviceId}:${formatBookingDate(selectedDate)}:${selectedStaffId ?? ""}:${availabilityRefreshKey}`
       : null;
   const currentAvailabilityState =
     availabilityKey != null && apiAvailabilityState?.key === availabilityKey
@@ -235,7 +235,6 @@ export default function BookingPage({
     if (
       shop.apiBusinessId == null ||
       serviceId == null ||
-      selectedBranchId == null ||
       availabilityKey == null
     ) {
       return;
@@ -243,9 +242,7 @@ export default function BookingPage({
 
     let cancelled = false;
     void fetchAvailableSlots({
-      businessId: shop.apiBusinessId,
       serviceId,
-      branchId: selectedBranchId,
       date: formatBookingDate(selectedDate),
       staffId: selectedStaffId,
     })
@@ -284,7 +281,6 @@ export default function BookingPage({
     availabilityKey,
     selectedDate,
     selectedStaffId,
-    selectedBranchId,
     shop.apiBusinessId,
     t,
   ]);
@@ -476,6 +472,16 @@ export default function BookingPage({
   const localizedDistrict = translateLocation(shop.district, language);
 
   function handleContinueFromStep1() {
+    if (shop.apiBusinessId && currentApiContext && !selectedBranchId) {
+      alert(t("booking.errorNoBranch"));
+      return;
+    }
+
+    if (allTimeSlots.length === 0) {
+      setSlotConflictMessage(t("booking.noAvailableTimes"));
+      return;
+    }
+
     if (
       shop.apiBusinessId &&
       (!selectedAvailabilitySlot?.is_available ||
@@ -831,6 +837,11 @@ export default function BookingPage({
             <span>{t("booking.errorSlotUnavailableHint")}</span>
           </div>
         )}
+        {shop.apiBusinessId && currentApiContext && !selectedBranchId && (
+          <div className={s.slotConflictAlert} role="alert" data-testid="booking-no-branch-error">
+            <strong>{t("booking.errorNoBranch")}</strong>
+          </div>
+        )}
 
         <section className={s.timeCard} data-testid="booking-step-1-panel">
           <div className={s.desktopPickers}>
@@ -905,6 +916,12 @@ export default function BookingPage({
             )}
 
             <h2 className={s.pickTitle}>{t("booking.pickTime")}</h2>
+            {allTimeSlots.length === 0 &&
+              (!shop.apiBusinessId || availabilityStatus === "ready") && (
+                <p role="status" data-testid="booking-no-available-times">
+                  {t("booking.noAvailableTimes")}
+                </p>
+              )}
             <div className={s.timeGrid}>
               {hourlyTimeSlots.map((slot) => {
                 const disabled = disabledTimeSlots.has(slot);

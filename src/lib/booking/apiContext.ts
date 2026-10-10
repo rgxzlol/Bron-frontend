@@ -1,16 +1,15 @@
 import {
   branchesApi,
-  bookingsApi,
+  servicesApi,
   staffApi,
   workingHoursApi,
 } from "@/lib/api";
 import type {
-  BookingAvailableSlotsResponse,
   BranchListItem,
+  ServiceAvailability,
   StaffListItem,
   WorkingHours,
 } from "@/lib/api/types";
-import { workingHoursToRangeString } from "@/lib/booking/timeSlots";
 
 export type BookingApiContext = {
   branches: BranchListItem[];
@@ -40,29 +39,25 @@ export function getShopHoursForDate(
   date: Date,
 ) {
   if (!context?.workingHours.length) return fallbackHours;
-  return workingHoursToRangeString(context.workingHours, date) ?? "Закрыто";
+  const dayOfWeek = (date.getDay() + 6) % 7;
+  const day = context.workingHours.find(
+    (item) => item.day_of_week === dayOfWeek,
+  );
+  if (!day) return "";
+  if (day.is_closed) return "closed";
+  return `${day.open_time.slice(0, 5)} - ${day.close_time.slice(0, 5)}`;
 }
 
 type AvailableSlotsParams = {
-  businessId: number;
   serviceId: number;
-  branchId: number;
   date: string;
   staffId?: number | null;
 };
 
 export async function fetchAvailableSlots({
-  businessId,
   serviceId,
-  branchId,
   date,
   staffId,
-}: AvailableSlotsParams): Promise<BookingAvailableSlotsResponse> {
-  return bookingsApi.availableSlots({
-    business_id: businessId,
-    service_id: serviceId,
-    branch_id: branchId,
-    date,
-    staff_id: staffId ?? undefined,
-  });
+}: AvailableSlotsParams): Promise<ServiceAvailability> {
+  return servicesApi.availability(serviceId, date, staffId ?? undefined);
 }

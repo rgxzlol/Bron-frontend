@@ -298,15 +298,69 @@ export async function fetchPublicBusinessesFromApi() {
 
 async function syncWorkingHours(businessId: number, draft: BusinessDraft) {
   const token = getAuthToken();
-  if (!token) return;
+  if (!token) {
+    throw new Error("Войдите в аккаунт, чтобы сохранить график работы.");
+  }
 
-  const existing = await workingHoursApi.getByBusiness(businessId).catch(() => []);
-  await Promise.all(
-    existing.map((item) => workingHoursApi.remove(item.id, token).catch(() => undefined)),
-  );
-
+  const existing = await workingHoursApi.getByBusiness(businessId);
   const payload = scheduleToWorkingHoursPayload(businessId, draft.schedule);
-  await Promise.all(payload.map((item) => workingHoursApi.create(item, token)));
+  const updates = payload.flatMap((item) => {
+    const matchingDays = existing.filter(
+      (current) => current.day_of_week === item.day_of_week,
+    );
+
+    if (matchingDays.length === 0) {
+      return [workingHoursApi.create(item, token)];
+    }
+
+    return matchingDays.map((current) =>
+      workingHoursApi.update(
+        current.id,
+        {
+          open_time: item.open_time,
+          close_time: item.close_time,
+          is_closed: item.is_closed,
+        },
+        token,
+      ),
+    );
+  });
+  const results = await Promise.allSettled(updates);
+  const failures = results.flatMap((result) =>
+    result.status === "rejected" ? [result.reason] : [],
+  );
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `Не удалось сохранить все дни графика работы: ${failures
+        .map((failure) =>
+          failure instanceof Error ? failure.message : String(failure),
+        )
+        .join("; ")}`,
+    );
+  }
+
+  const saved = await workingHoursApi.getByBusiness(businessId);
+  const missingDay = payload.find((item) => {
+    const savedDays = saved.filter(
+      (current) => current.day_of_week === item.day_of_week,
+    );
+    return (
+      savedDays.length === 0 ||
+      savedDays.some(
+        (savedDay) =>
+          savedDay.business_id !== businessId ||
+          savedDay.open_time.slice(0, 5) !== item.open_time ||
+          savedDay.close_time.slice(0, 5) !== item.close_time ||
+          savedDay.is_closed !== item.is_closed,
+      )
+    );
+  });
+  if (missingDay) {
+    throw new Error(
+      `API не подтвердил сохранение графика для дня ${missingDay.day_of_week}.`,
+    );
+  }
 }
 
 async function ensureDefaultBranch(
@@ -315,11 +369,14 @@ async function ensureDefaultBranch(
   coords: { lat: number; lng: number },
 ) {
   const token = getAuthToken();
-  if (!token) return undefined;
+  if (!token) {
+    throw new Error("Войдите в аккаунт, чтобы сохранить филиал.");
+  }
 
   const branches = await branchesApi.listByBusiness(businessId);
+  let branchId: number;
   if (branches.length > 0) {
-    await branchesApi.update(
+    const updated = await branchesApi.update(
       branches[0].id,
       {
         address: draft.address,
@@ -329,22 +386,34 @@ async function ensureDefaultBranch(
       },
       token,
     );
-    return branches[0].id;
+    branchId = updated.id;
+  } else {
+    const created = await branchesApi.create(
+      {
+        business_id: businessId,
+        name: draft.name || "Главный филиал",
+        address: draft.address,
+        phone: normalizePhoneForApi(draft.phone),
+        latitude: coords.lat,
+        longitude: coords.lng,
+      },
+      token,
+    );
+    branchId = created.id;
   }
 
-  const branch = await branchesApi.create(
-    {
-      business_id: businessId,
-      name: draft.name || "Главный филиал",
-      address: draft.address,
-      phone: normalizePhoneForApi(draft.phone),
-      latitude: coords.lat,
-      longitude: coords.lng,
-    },
-    token,
-  );
+  const [savedBranches, savedBranch] = await Promise.all([
+    branchesApi.listByBusiness(businessId),
+    branchesApi.get(branchId),
+  ]);
+  if (
+    savedBranch.business_id !== businessId ||
+    !savedBranches.some((branch) => branch.id === branchId)
+  ) {
+    throw new Error("API не подтвердил сохранение филиала бизнеса.");
+  }
 
-  return branch.id;
+  return branchId;
 }
 
 async function resolveCreatedBusinessId(draft: BusinessDraft): Promise<number> {
@@ -404,17 +473,8 @@ async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
     token,
   );
 
-  try {
-    await syncWorkingHours(businessId, draft);
-  } catch (error) {
-    console.warn("Working hours sync failed:", error);
-  }
-
-  try {
-    await ensureDefaultBranch(businessId, draft, coords);
-  } catch (error) {
-    console.warn("Default branch sync failed:", error);
-  }
+  await syncWorkingHours(businessId, draft);
+  await ensureDefaultBranch(businessId, draft, coords);
 
   await syncBusinessMediaFromDraft(businessId, draft);
 

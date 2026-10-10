@@ -10,6 +10,7 @@ import {
   validateGalleryImageFile,
   validateProfileImageFile,
 } from "@/lib/business/photos";
+import { BUSINESS_PROFILE_CATEGORIES } from "@/lib/business/profileCategories";
 import {
   BUSINESS_ERROR_MESSAGE_KEYS,
   BUSINESS_DESCRIPTION_MAX_LENGTH,
@@ -20,7 +21,6 @@ import {
 } from "@/lib/business/validation";
 import { formatUzbekPhoneInput } from "@/lib/auth/validation";
 import {
-  BUSINESS_CATEGORIES,
   useBusinessStore,
 } from "@/store/business.store";
 import { ApiError } from "@/lib/api/client";
@@ -902,9 +902,9 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   }}
                 >
                   <option value="">{t("businessModal.required")}</option>
-                  {BUSINESS_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {translateBusinessCategory(t, cat)}
+                  {BUSINESS_PROFILE_CATEGORIES.map((category) => (
+                    <option key={category.slug} value={category.label}>
+                      {translateBusinessCategory(t, category.label)}
                     </option>
                   ))}
                 </select>

@@ -226,7 +226,9 @@ export default function ShopDetailPanel({
               {priceLabel}
             </span>
             <p className={s.sheetHours} data-testid="map-vendor-hours">
-              {shop.hours}
+              {shop.hours === "closed"
+                ? t("booking.closedToday")
+                : shop.hours || t("booking.scheduleUnavailable")}
             </p>
             <p className={s.sheetAddress} data-testid="map-vendor-address">
               {localizedAddress}
@@ -247,7 +249,11 @@ export default function ShopDetailPanel({
               <div className={s.sheetStatBox}>
                 <span className={s.sheetStatLabel}>Открыто</span>
                 <span className={s.sheetStatValue}>
-                  {shop.hours.replace("-", "—")}
+                  {shop.hours === "closed"
+                    ? t("booking.closedToday")
+                    : shop.hours
+                      ? shop.hours.replace("-", "—")
+                      : t("booking.scheduleUnavailable")}
                 </span>
               </div>
               <div className={s.sheetStatBox}>
@@ -483,7 +489,9 @@ export default function ShopDetailPanel({
               <div className={s.statBox}>
                 <span className={s.statLabel}>Открыто</span>
                 <span className={s.statValue} data-testid="map-vendor-hours">
-                  {shop.hours}
+                  {shop.hours === "closed"
+                    ? t("booking.closedToday")
+                    : shop.hours || t("booking.scheduleUnavailable")}
                 </span>
               </div>
               <div className={s.statBox}>

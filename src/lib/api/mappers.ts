@@ -3,6 +3,10 @@ import {
   normalizePhoneForApi,
 } from "@/lib/auth/validation";
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
+import {
+  apiBusinessCategoryToUi as profileCategoryToUi,
+  findBusinessApiCategoryForUi,
+} from "@/lib/business/profileCategories";
 import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
   BusinessDraft,
@@ -211,21 +215,7 @@ export function findApiCategoryForUi(
   categories: ApiBusinessCategory[],
   uiCategory: string,
 ): ApiBusinessCategory | undefined {
-  const expectedSlugs = new Set(
-    (UI_TO_API_CATEGORY[uiCategory] ?? [uiCategory]).map((slug) =>
-      slug.toLowerCase().replace(/[\s-]+/g, "_"),
-    ),
-  );
-
-  return (
-    categories.find((category) =>
-      expectedSlugs.has(category.slug.toLowerCase().replace(/[\s-]+/g, "_")),
-    ) ??
-    categories.find(
-      (category) => category.name.trim().toLowerCase() === uiCategory.toLowerCase(),
-    ) ??
-    categories.find((category) => apiCategoryToUi(category) === uiCategory)
-  );
+  return findBusinessApiCategoryForUi(categories, uiCategory);
 }
 
 export function apiCategoryToUi(category: unknown): string {
@@ -299,18 +289,20 @@ export function scheduleToWorkingHoursPayload(
 }
 
 export function workingHoursToSchedule(hours: WorkingHours[]): DaySchedule[] {
+  if (hours.length === 0) return [];
+
   const byDay = new Map(hours.map((item) => [item.day_of_week, item]));
 
-  return DEFAULT_SCHEDULE.map((day) => {
+  return DEFAULT_SCHEDULE.flatMap((day) => {
     const apiDay = byDay.get(DAY_KEY_TO_INDEX[day.key]);
-    if (!apiDay) return { ...day };
+    if (!apiDay) return [];
 
-    return {
+    return [{
       ...day,
       isOpen: !apiDay.is_closed,
       openTime: normalizeTime(apiDay.open_time),
       closeTime: normalizeTime(apiDay.close_time),
-    };
+    }];
   });
 }
 
@@ -326,7 +318,7 @@ export function draftToBusinessCreate(
 
   return {
     name: draft.name.trim(),
-    description: draft.description?.trim() || null,
+    description: draft.description?.trim() ?? "",
     category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
@@ -334,7 +326,7 @@ export function draftToBusinessCreate(
     owner_name: owner.name.trim(),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
-    website: draft.website?.trim() || null,
+    website: draft.website?.trim() ?? "",
     comments: "",
   };
 }
@@ -350,13 +342,13 @@ export function draftToBusinessUpdate(
 
   return {
     name: draft.name.trim(),
-    description: draft.description?.trim() || null,
+    description: draft.description?.trim() ?? "",
     category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
-    website: draft.website?.trim() || null,
+    website: draft.website?.trim() ?? "",
   };
 }
 
@@ -470,12 +462,14 @@ export function apiBusinessToSavedBusiness(
     profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",
-    category: apiCategoryToUi(business.category),
+    category:
+      profileCategoryToUi(business.category) ||
+      apiCategoryToUi(business.category),
     website: business.website ?? "",
     phone: business.phone,
     address: business.address,
     gallery: photosToGallerySlots(galleryUrls, true),
-    schedule: extras?.schedule ?? DEFAULT_SCHEDULE.map((day) => ({ ...day })),
+    schedule: extras?.schedule ?? [],
     lat: coords.lat,
     lng: coords.lng,
     services: mappedServices,
@@ -582,20 +576,25 @@ export function apiBusinessToShop(
     title: business.name,
     lat: coords.lat,
     lng: coords.lng,
-    type: businessCategoryToMapFilter(apiCategoryToUi(business.category)),
+    type: businessCategoryToMapFilter(
+      profileCategoryToUi(business.category) ||
+        apiCategoryToUi(business.category),
+    ),
     img: photoUrls[0] ?? assets.map.photo1,
     profilePhoto: resolveMediaUrl(business.logo),
     gallery: photoUrls,
     desc: business.description ?? "",
     rating: 0,
     reviews: 0,
-    hours: "09:00 - 20:00",
+    hours: "",
     freeSeats: 10,
     price: minPrice,
     address: business.address,
     district: "Ташкент",
     phone: business.phone,
-    category: apiCategoryToUi(business.category),
+    category:
+      profileCategoryToUi(business.category) ||
+      apiCategoryToUi(business.category),
     distance: "—",
     time: 60,
     services: activeServices.map((service) => ({

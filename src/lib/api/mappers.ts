@@ -39,16 +39,16 @@ import type {
 } from "./types";
 
 const UI_TO_API_CATEGORY: Record<string, string[]> = {
-  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty"],
+  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty", "salon"],
   Здоровье: ["health", "healthcare", "medical", "medicine", "clinic"],
   "Фитнес зал": ["gym", "fitness", "sport"],
-  "Учебные заведения": ["education", "school"],
+  "Учебные заведения": ["education", "school", "learning_center"],
   Рестораны: ["restaurants", "restaurant", "food"],
   Кафейни: ["cafes", "cafe", "coffee"],
   "Авто сервис": ["auto_service", "autoservice", "auto", "car_service"],
   Кинотеатры: ["cinema", "cinemas", "movie_theater"],
   "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
-  Клининг: ["cleaning", "cleaning_service"],
+  Клининг: ["cleaning", "cleaning_service", "cleaning_services", "cleaner", "cleaner_service"],
   Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
   Другое: ["other", "другое"],
 };
@@ -123,6 +123,7 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   beauty_salon: "Салон красоты",
   salon_beauty: "Салон красоты",
   beauty: "Салон красоты",
+  salon: "Салон красоты",
   "салон красоты": "Салон красоты",
   салон_красоты: "Салон красоты",
   health: "Здоровье",
@@ -135,6 +136,7 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   sport: "Фитнес зал",
   education: "Учебные заведения",
   school: "Учебные заведения",
+  learning_center: "Учебные заведения",
   restaurant: "Рестораны",
   restaurants: "Рестораны",
   food: "Рестораны",
@@ -154,6 +156,9 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   club: "Комп клуб",
   cleaning: "Клининг",
   cleaning_service: "Клининг",
+  cleaning_services: "Клининг",
+  cleaner: "Клининг",
+  cleaner_service: "Клининг",
   sanatorium: "Санатории",
   sanatoriums: "Санатории",
   spa: "Санатории",
@@ -215,7 +220,30 @@ export function findApiCategoryForUi(
   categories: ApiBusinessCategory[],
   uiCategory: string,
 ): ApiBusinessCategory | undefined {
-  return findBusinessApiCategoryForUi(categories, uiCategory);
+  const normalizedCategory = uiCategory
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const expectedSlugs = new Set(
+    (UI_TO_API_CATEGORY[uiCategory] ?? [uiCategory]).map((slug) =>
+      slug.toLowerCase().replace(/[\s-]+/g, "_"),
+    ),
+  );
+
+  return (
+    categories.find(
+      (category) =>
+        category.slug.trim().toLowerCase().replace(/[\s-]+/g, "_") ===
+        normalizedCategory,
+    ) ??
+    categories.find((category) =>
+      expectedSlugs.has(category.slug.toLowerCase().replace(/[\s-]+/g, "_")),
+    ) ??
+    categories.find(
+      (category) => category.name.trim().toLowerCase() === uiCategory.toLowerCase(),
+    ) ??
+    categories.find((category) => apiCategoryToUi(category) === uiCategory)
+  );
 }
 
 export function apiCategoryToUi(category: unknown): string {

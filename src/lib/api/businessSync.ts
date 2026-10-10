@@ -26,6 +26,7 @@ import {
   apiProductToBusinessService,
   apiServiceListItemToBusinessService,
   apiServiceToBusinessService,
+  apiCategoryToUi,
   draftToBusinessCreate,
   draftToBusinessUpdate,
   findApiCategoryForUi,
@@ -41,6 +42,7 @@ import type {
   BookingAttendanceStatus,
   Branch,
   Business as ApiBusiness,
+  BusinessCategory,
 } from "@/lib/api/types";
 
 async function resolveCoordsForBusiness(
@@ -416,6 +418,23 @@ async function ensureDefaultBranch(
   return branchId;
 }
 
+async function runBusinessSaveStep<T>(
+  label: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(error.status, `${label}: ${error.message}`, error.data);
+    }
+    if (error instanceof Error) {
+      throw new Error(`${label}: ${error.message}`, { cause: error });
+    }
+    throw error;
+  }
+}
+
 async function resolveCreatedBusinessId(draft: BusinessDraft): Promise<number> {
   const mine = await businessesApi.my();
   const byName = mine.find((item) => item.name === draft.name.trim());
@@ -454,31 +473,51 @@ async function getOwnedApiBusinessId(businessId: string): Promise<number | null>
   return null;
 }
 
-async function persistBusinessToApi(draft: BusinessDraft, businessId: number) {
+async function persistBusinessToApi(
+  draft: BusinessDraft,
+  businessId: number,
+  knownCategory?: BusinessCategory,
+) {
   const token = getAuthToken();
   if (!token) {
     throw new Error("Войдите в аккаунт, чтобы сохранить бизнес");
   }
 
   const coords = await resolveDraftCoords(draft);
-  const categories = await categoriesApi.list();
-  const category = findApiCategoryForUi(categories, draft.category);
+  const category =
+    knownCategory ??
+    findApiCategoryForUi(await categoriesApi.list(), draft.category);
   if (!category) {
-    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+    throw new Error(
+      `Категория бизнеса «${apiCategoryToUi(draft.category)}» больше недоступна.`,
+    );
   }
 
-  await businessesApi.update(
-    businessId,
-    draftToBusinessUpdate(draft, coords, category.id),
-    token,
+  await runBusinessSaveStep(
+    "Не удалось сохранить данные бизнеса",
+    () =>
+      businessesApi.update(
+        businessId,
+        draftToBusinessUpdate(draft, coords, category.id),
+        token,
+      ),
   );
 
-  await syncWorkingHours(businessId, draft);
-  await ensureDefaultBranch(businessId, draft, coords);
+  await runBusinessSaveStep("Не удалось сохранить график работы", () =>
+    syncWorkingHours(businessId, draft),
+  );
 
-  await syncBusinessMediaFromDraft(businessId, draft);
+  await runBusinessSaveStep("Не удалось сохранить филиал", () =>
+    ensureDefaultBranch(businessId, draft, coords),
+  );
 
-  return loadBusinessDetails(businessId);
+  await runBusinessSaveStep("Не удалось сохранить фотографии бизнеса", () =>
+    syncBusinessMediaFromDraft(businessId, draft),
+  );
+
+  return runBusinessSaveStep("Не удалось обновить данные бизнеса", () =>
+    loadBusinessDetails(businessId),
+  );
 }
 
 async function createBusinessFromDraft(draft: BusinessDraft) {
@@ -494,7 +533,9 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
   ]);
   const category = findApiCategoryForUi(categories, draft.category);
   if (!category) {
-    throw new Error(`Категория бизнеса «${draft.category}» больше недоступна.`);
+    throw new Error(
+      `Категория бизнеса «${apiCategoryToUi(draft.category)}» больше недоступна.`,
+    );
   }
 
   const ownerName =
@@ -505,17 +546,21 @@ async function createBusinessFromDraft(draft: BusinessDraft) {
     throw new Error("Заполните email и имя в профиле перед созданием бизнеса.");
   }
 
-  const created = await businessesApi.create(
-    draftToBusinessCreate(draft, coords, category.id, {
-      email: profile.email,
-      name: ownerName,
-    }),
-    token,
+  const created = await runBusinessSaveStep(
+    "Не удалось создать бизнес",
+    () =>
+      businessesApi.create(
+        draftToBusinessCreate(draft, coords, category.id, {
+          email: profile.email,
+          name: ownerName,
+        }),
+        token,
+      ),
   );
 
   const businessId =
     created.business_id ?? (await resolveCreatedBusinessId(draft));
-  return persistBusinessToApi(draft, businessId);
+  return persistBusinessToApi(draft, businessId, category);
 }
 
 export async function saveBusinessDraftToApi(

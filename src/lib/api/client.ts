@@ -123,7 +123,12 @@ function extractErrorMessage(data: unknown, fallback: string) {
     }
 
     if (candidate && typeof candidate === "object" && "msg" in candidate) {
-      const msg = String((candidate as { msg: unknown }).msg);
+      const issue = candidate as { msg: unknown; loc?: unknown };
+      const location = Array.isArray(issue.loc)
+        ? issue.loc.filter((part) => part !== "body" && part !== "query" && part !== "path")
+        : [];
+      const fieldPath = location.length > 0 ? `${location.join(".")}: ` : "";
+      const msg = `${fieldPath}${String(issue.msg)}`;
       if (/^Upstream API returned HTML instead of JSON/i.test(msg)) {
         return "Сервер временно недоступен. Попробуйте позже.";
       }
@@ -178,9 +183,20 @@ async function executeRequest<T>(
     const data = parseResponseBody(text, response.status, response.headers.get("content-type"));
 
     if (!response.ok) {
+      const errorMessage = extractErrorMessage(
+        data,
+        response.statusText || "Ошибка запроса",
+      );
+      const details = data && typeof data === "object"
+        ? (data as { detail?: unknown }).detail
+        : undefined;
+      const isValidationError =
+        response.status === 422 && Array.isArray(details);
       throw new ApiError(
         response.status,
-        extractErrorMessage(data, response.statusText || "Ошибка запроса"),
+        isValidationError
+          ? `${init.method ?? "GET"} ${normalizeApiPath(path)}: ${errorMessage}`
+          : errorMessage,
         data,
       );
     }

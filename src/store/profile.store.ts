@@ -18,14 +18,6 @@ export type ProfileLanguage = "ru" | "uz" | "en";
 export type ProfileTheme = "light" | "dark";
 export type NotificationSettings = UserNotificationSettings;
 
-export type PaymentHistoryItem = {
-  id: string;
-  title: string;
-  reference: string;
-  amount: number;
-  date: string;
-};
-
 const REGISTERED_NAMES_STORAGE_KEY = "bron-registered-profile-names";
 let notificationUpdateQueue: Promise<void> = Promise.resolve();
 
@@ -96,7 +88,6 @@ type ProfileState = {
   language: ProfileLanguage;
   theme: ProfileTheme;
   notifications: NotificationSettings;
-  paymentHistory: PaymentHistoryItem[];
   isProfileLoading: boolean;
   profileError: string | null;
   fetchProfile: () => Promise<void>;
@@ -129,23 +120,6 @@ type ProfileState = {
 
 const DEFAULT_NOTIFICATIONS: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS;
 
-const DEFAULT_PAYMENT_HISTORY: PaymentHistoryItem[] = [
-  {
-    id: "1",
-    title: "Оплата бронирования",
-    reference: "123123",
-    amount: 80000,
-    date: "12 мая 2026",
-  },
-  {
-    id: "2",
-    title: "Оплата бронирования",
-    reference: "123124",
-    amount: 80000,
-    date: "10 мая 2026",
-  },
-];
-
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -165,7 +139,6 @@ export const useProfileStore = create<ProfileState>()(
       language: "ru",
       theme: "light",
       notifications: DEFAULT_NOTIFICATIONS,
-      paymentHistory: DEFAULT_PAYMENT_HISTORY,
       isProfileLoading: false,
       profileError: null,
 
@@ -392,7 +365,7 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: "profile-storage",
-      version: 9,
+      version: 10,
       partialize: (state) => ({
         fullName: state.fullName,
         phone: state.phone,
@@ -401,12 +374,10 @@ export const useProfileStore = create<ProfileState>()(
         role: state.role,
         language: state.language,
         theme: state.theme,
-        paymentHistory: state.paymentHistory,
       }),
       migrate: (persisted) => {
         const rest = { ...(persisted as Record<string, unknown>) };
         [
-          "cards",
           "rating",
           "reviewCount",
           "ratedBookingsCount",
@@ -431,13 +402,6 @@ export const useProfileStore = create<ProfileState>()(
           role: typeof rest.role === "string" ? rest.role : null,
           language: mapApiLanguage(String(rest.language ?? "ru")),
           theme: rest.theme === "dark" ? "dark" : "light",
-          paymentHistory: (
-            (rest.paymentHistory as PaymentHistoryItem[] | undefined) ??
-            DEFAULT_PAYMENT_HISTORY
-          ).map((item, index) => ({
-            ...item,
-            reference: item.reference ?? `12312${index + 3}`,
-          })),
         };
       },
     },

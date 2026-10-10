@@ -20,16 +20,21 @@ import {
   type BusinessFormErrors,
 } from "@/lib/business/validation";
 import { formatUzbekPhoneInput } from "@/lib/auth/validation";
-import {
-  useBusinessStore,
-} from "@/store/business.store";
+import { useBusinessStore } from "@/store/business.store";
 import { ApiError } from "@/lib/api/client";
+import { categoriesApi } from "@/lib/api/categories";
+import {
+  apiCategoryToUi,
+  findApiCategoryForUi,
+} from "@/lib/api/mappers";
+import type { BusinessCategory } from "@/lib/api/types";
 import { GeocodingError } from "@/lib/geocoding";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { translateBusinessCategory } from "@/lib/i18n/labels";
 import AddressAutocomplete from "./AddressAutocomplete";
 import DeleteBusinessModal from "./DeleteBusinessModal";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -279,6 +284,37 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
   const [reviews, setReviews] = useState<
     Awaited<ReturnType<typeof reviewsApi.listByBusiness>>
   >([]);
+  const [businessCategories, setBusinessCategories] = useState<
+    BusinessCategory[] | null
+  >(null);
+  const [categoryLoadFailed, setCategoryLoadFailed] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+
+  const loadBusinessCategories = useCallback(() => {
+    void categoriesApi
+      .list()
+      .then((categories) => {
+        setBusinessCategories(categories);
+      })
+      .catch((error: unknown) => {
+        console.error("Не удалось загрузить категории бизнеса:", error);
+        setBusinessCategories(null);
+        setCategoryLoadFailed(true);
+      })
+      .finally(() => {
+        setCategoryLoading(false);
+      });
+  }, []);
+
+  function retryBusinessCategories() {
+    setCategoryLoading(true);
+    setCategoryLoadFailed(false);
+    void loadBusinessCategories();
+  }
+
+  useEffect(() => {
+    void loadBusinessCategories();
+  }, [loadBusinessCategories]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +373,17 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
     () => Math.round(calcWeeklyHours(draft.schedule) * 10) / 10,
     [draft.schedule],
   );
+  const selectedApiCategory = businessCategories
+    ? findApiCategoryForUi(businessCategories, draft.category)
+    : undefined;
+  const orderedBusinessCategories = businessCategories
+    ?.map((category, index) => ({ category, index }))
+    .sort(
+      (left, right) =>
+        (left.category.order ?? left.index) -
+        (right.category.order ?? right.index),
+    )
+    .map(({ category }) => category);
 
   function getDayLabel(key: DayKey) {
     return t(DAY_I18N_KEYS[key]);
@@ -443,9 +490,23 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
 
     const codes = validateBusinessForm(draft);
     const errors = mapValidationCodesToMessages(codes);
+    if (
+      !categoryLoading &&
+      businessCategories &&
+      draft.category.trim() &&
+      !findApiCategoryForUi(businessCategories, draft.category)
+    ) {
+      errors.category = t("businessErrors.categoryUnavailable");
+    }
     setFormErrors(errors);
 
-    if (Object.keys(codes).length > 0) {
+    if (
+      Object.keys(codes).length > 0 ||
+      categoryLoading ||
+      categoryLoadFailed ||
+      !businessCategories?.length ||
+      errors.category
+    ) {
       return;
     }
 
@@ -806,6 +867,28 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                 {formErrors.name}
               </span>
             ) : null}
+            {!categoryLoading &&
+            !categoryLoadFailed &&
+            businessCategories?.length === 0 ? (
+              <span
+                className="text-[12px] font-semibold text-[#e02424]"
+                role="alert"
+              >
+                {t("businessErrors.noCategoriesAvailable")}
+              </span>
+            ) : null}
+            {categoryLoadFailed ? (
+              <span className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-[#e02424]" role="alert">
+                {t("businessErrors.categoryLoadFailed")}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={retryBusinessCategories}
+                >
+                  {t("businessErrors.retryCategoryLoad")}
+                </button>
+              </span>
+            ) : null}
           </label>
 
           <label className="flex flex-col gap-[8px]">
@@ -892,7 +975,12 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                           draft.category ? "" : "text-[var(--text-secondary)]"
                         }`
                   }
-                  value={draft.category}
+                  value={selectedApiCategory?.slug ?? draft.category}
+                  disabled={
+                    categoryLoading ||
+                    categoryLoadFailed ||
+                    !businessCategories?.length
+                  }
                   data-testid="business-category-select"
                   aria-invalid={!!formErrors.category}
                   aria-describedby={formErrors.category ? "business-category-error" : undefined}
@@ -902,11 +990,21 @@ export default function BusinessModal({ onClose, onSaved }: Props) {
                   }}
                 >
                   <option value="">{t("businessModal.required")}</option>
-                  {BUSINESS_PROFILE_CATEGORIES.map((category) => (
-                    <option key={category.slug} value={category.label}>
-                      {translateBusinessCategory(t, category.label)}
+                  {businessCategories &&
+                  draft.category &&
+                  !selectedApiCategory ? (
+                    <option value={draft.category} disabled>
+                      {translateBusinessCategory(t, draft.category)}
                     </option>
-                  ))}
+                  ) : null}
+                  {orderedBusinessCategories?.map((category) => {
+                    const label = apiCategoryToUi(category);
+                    return (
+                      <option key={category.id} value={category.slug}>
+                        {translateBusinessCategory(t, label)}
+                      </option>
+                    );
+                  })}
                 </select>
                 <SelectChevron className="pointer-events-none absolute right-[18px] top-1/2 -translate-y-1/2" />
               </span>

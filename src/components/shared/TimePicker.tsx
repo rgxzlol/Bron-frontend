@@ -1,11 +1,6 @@
 "use client";
 
-import { TIME_OPTIONS } from "@/lib/business/schedule";
-import {
-  buildTimeGroupsFromHours,
-  groupTimeSlots,
-  type TimeGroup,
-} from "@/lib/booking/timeSlots";
+import type { TimeGroup } from "@/lib/booking/timeSlots";
 import { toBookingTimeTestId } from "@/lib/formatDate";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -17,13 +12,11 @@ interface TimePickerProps {
   disabledSlots?: Set<string>;
 }
 
-const DEFAULT_TIME_GROUPS = buildTimeGroupsFromHours("09:00 - 20:00");
-
 export default function TimePicker({
   selectedTime,
   onSelectedTimeChange,
   busySlots = new Set(),
-  timeGroups = DEFAULT_TIME_GROUPS,
+  timeGroups = [],
   disabledSlots = new Set(),
 }: TimePickerProps) {
   const { t } = useTranslation();
@@ -75,11 +68,4 @@ export default function TimePicker({
       )}
     </div>
   );
-}
-
-export function buildDefaultTimeGroups() {
-  return groupTimeSlots(TIME_OPTIONS.filter((slot) => {
-    const [hours] = slot.split(":").map(Number);
-    return hours >= 9 && hours < 20;
-  }));
 }

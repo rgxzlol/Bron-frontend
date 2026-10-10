@@ -10,6 +10,7 @@ import {
   validateGalleryImageFile,
   validateProfileImageFile,
 } from "@/lib/business/photos";
+import { BUSINESS_PROFILE_CATEGORIES } from "@/lib/business/profileCategories";
 import {
   BUSINESS_ERROR_MESSAGE_KEYS,
   BUSINESS_DESCRIPTION_MAX_LENGTH,

@@ -243,6 +243,10 @@ type BusinessStore = {
 };
 
 function draftFromBusiness(business: SavedBusiness): BusinessDraft {
+  const savedSchedule = new Map(
+    business.schedule.map((day) => [day.key, day]),
+  );
+
   return {
     profilePhoto: business.profilePhoto,
     name: business.name,
@@ -254,7 +258,9 @@ function draftFromBusiness(business: SavedBusiness): BusinessDraft {
     lat: hasValidCoords(business) ? business.lat : null,
     lng: hasValidCoords(business) ? business.lng : null,
     gallery: [...business.gallery],
-    schedule: business.schedule.map((d) => ({ ...d })),
+    schedule: DEFAULT_SCHEDULE.map((day) => ({
+      ...(savedSchedule.get(day.key) ?? day),
+    })),
   };
 }
 

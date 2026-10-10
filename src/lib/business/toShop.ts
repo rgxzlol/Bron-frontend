@@ -15,9 +15,13 @@ function hashId(uuid: string): number {
 }
 
 function formatHours(business: SavedBusiness): string {
-  const openDay = business.schedule.find((d) => d.isOpen);
-  if (!openDay) return "Закрыто";
-  return `${openDay.openTime} - ${openDay.closeTime}`;
+  const dayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const today = business.schedule.find(
+    (day) => day.key === dayKeys[new Date().getDay()],
+  );
+  if (!today) return "";
+  if (!today.isOpen) return "closed";
+  return `${today.openTime} - ${today.closeTime}`;
 }
 
 export function businessToShop(

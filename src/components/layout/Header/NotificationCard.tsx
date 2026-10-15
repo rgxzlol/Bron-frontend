@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { ImageProps } from "next/image";
+import { assets } from "@/lib/assets";
 
 export type NotificationCardProps = {
   icon: ImageProps["src"];
@@ -24,6 +25,8 @@ export function NotificationCard({
   isRead = true,
   testId,
 }: NotificationCardProps) {
+  const isCalendarIcon = icon === assets.notification.calendar;
+
   return (
     <li className="group flex items-center gap-2 rounded-[16px] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-3 shadow-[0_2px_10px_rgba(17,24,39,0.03)] transition-all duration-200 hover:bg-[var(--bg-hover)]" data-testid={testId}>
       <button
@@ -33,7 +36,12 @@ export function NotificationCard({
       >
         <span className="flex min-w-0 items-center gap-3">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[12px] bg-[var(--bg-active-soft)] transition-transform duration-200 group-hover:scale-105">
-            <Image src={icon} alt="" className="h-5 w-5 object-contain" />
+            <Image
+              src={icon}
+              alt=""
+              className="h-5 w-5 object-contain"
+              data-notification-calendar={isCalendarIcon ? "" : undefined}
+            />
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1.5">

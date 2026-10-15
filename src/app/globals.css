@@ -205,6 +205,10 @@
   opacity: 1 !important;
 }
 
+[data-theme="dark"] img[data-notification-calendar] {
+  filter: brightness(0) invert(1);
+}
+
 [data-theme="dark"] .category-search-modal-close {
   background: #111827 !important;
   color: #ffffff !important;

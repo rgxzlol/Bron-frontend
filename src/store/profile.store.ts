@@ -151,6 +151,13 @@ export const useProfileStore = create<ProfileState>()(
         try {
           const profile = await usersApi.getProfile(token);
 
+          if (
+            useAuthStore.getState().token === token &&
+            typeof profile.role === "string"
+          ) {
+            useAuthStore.getState().setRole(profile.role);
+          }
+
           set((state) => ({
             ...applyProfileToState(profile, state.fullName),
             avatarUrl: resolveMediaUrl(profile.avatar),

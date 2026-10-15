@@ -523,7 +523,12 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   }
 
   async function completeAuthSession(
-    session: { access_token: string; user_id: number; username: string },
+    session: {
+      access_token: string;
+      user_id: number;
+      username: string;
+      role?: string;
+    },
     profile?: {
       fullName?: string;
       email?: string;
@@ -538,6 +543,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       token: session.access_token,
       userId: session.user_id,
       username: session.username,
+      role: session.role ?? null,
     });
 
     applyAuthProfile({

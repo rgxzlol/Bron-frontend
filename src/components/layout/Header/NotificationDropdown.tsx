@@ -233,28 +233,30 @@ export default function NotificationDropdown() {
       <span className="block text-[13px] font-medium text-[var(--text-secondary)]">
         {t("headerFilters.today")}
       </span>
-      <ul className="mt-2.5 flex flex-col gap-3" data-testid="notifications-list">
-        {items.map((item) => {
-          const presentation = getNotificationPresentation(item.type, t, item);
+      <div className="mt-2.5 max-h-[min(26.25rem,calc(100dvh-15rem))] overflow-y-auto overscroll-contain">
+        <ul className="flex flex-col gap-3" data-testid="notifications-list">
+          {items.map((item) => {
+            const presentation = getNotificationPresentation(item.type, t, item);
 
-          return (
-            <NotificationCard
-              key={item.id}
-              icon={presentation.icon}
-              title={presentation.title}
-              description={presentation.description}
-              time={formatNotificationTime(item.time)}
-              isRead={item.read}
-              onClick={() =>
-                void openNotification(item.id, item.booking_id, item.type)
-              }
-              onDelete={() => void deleteNotification(item.id)}
-              deleteLabel={t("common.delete")}
-              testId={presentation.testId}
-            />
-          );
-        })}
-      </ul>
+            return (
+              <NotificationCard
+                key={item.id}
+                icon={presentation.icon}
+                title={presentation.title}
+                description={presentation.description}
+                time={formatNotificationTime(item.time)}
+                isRead={item.read}
+                onClick={() =>
+                  void openNotification(item.id, item.booking_id, item.type)
+                }
+                onDelete={() => void deleteNotification(item.id)}
+                deleteLabel={t("common.delete")}
+                testId={presentation.testId}
+              />
+            );
+          })}
+        </ul>
+      </div>
     </>
   );
 

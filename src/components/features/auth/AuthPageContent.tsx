@@ -82,6 +82,7 @@ export default function AuthPageContent() {
         token: session.access_token,
         userId: session.user_id,
         username: session.username,
+        role: session.role ?? null,
       });
 
       router.push(routes.profile);

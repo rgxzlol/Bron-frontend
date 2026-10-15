@@ -28,6 +28,7 @@ export async function restoreSessionFromCookie(): Promise<boolean> {
           token: cookieToken,
           userId: user.id,
           username: user.username,
+          role: user.role ?? null,
         });
         return true;
       } catch {

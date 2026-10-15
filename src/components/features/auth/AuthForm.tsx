@@ -88,6 +88,7 @@ export default function AuthForm({ mode }: Props) {
         token: session.access_token,
         userId: session.user_id,
         username: session.username,
+        role: session.role ?? null,
       });
 
       router.push(routes.profile);

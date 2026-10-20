@@ -59,7 +59,8 @@ export default function BookingRouteClient({
     if (!authReady || isShopLoading) return;
 
     if (!token) {
-      router.replace(routes.login);
+      const bookingPath = `${routes.book}?shopId=${shopId}`;
+      router.replace(`${routes.login}?next=${encodeURIComponent(bookingPath)}`);
       return;
     }
 

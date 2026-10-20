@@ -473,7 +473,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (hydrated && token) router.replace(routes.home);
+    if (hydrated && token) {
+      router.replace(getPostAuthRedirect(window.location.search));
+    }
   }, [hydrated, token, router]);
 
   function go(next: AuthScreen) {
@@ -555,7 +557,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       avatarUrl: profile?.avatarUrl,
     });
 
-    router.replace(routes.home);
+    router.replace(getPostAuthRedirect(window.location.search));
   }
 
   async function handleGoogleOAuth() {

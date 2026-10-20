@@ -98,7 +98,6 @@
 
 .inventoryDescription,
 .inventoryPhoto,
-.desktopEditProfileButton,
 .desktopColumn {
   display: none;
 }
@@ -462,13 +461,6 @@
     background: var(--bg-surface-muted);
   }
 
-  .mobileProductButton {
-    display: none !important;
-  }
-
-  .desktopEditProfileButton {
-    display: block;
-  }
 }
 
 @media (min-width: 1024px) and (max-width: 1199px) {

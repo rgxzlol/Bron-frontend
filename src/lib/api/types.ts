@@ -21,6 +21,7 @@ export type LoginResponse = {
   access_token: string;
   user_id: number;
   username: string;
+  role?: string;
   tg_token?: string | null;
 };
 
@@ -167,20 +168,34 @@ export type Business = {
 export type BusinessCreate = {
   name: string;
   category_id: number;
-  description?: string | null;
+  description?: string;
   address: string;
   phone: string;
   email: string;
   owner_name: string;
   latitude?: number | null;
   longitude?: number | null;
-  tin?: string | null;
-  website?: string | null;
+  tin?: string;
+  website?: string;
   social_links?: BusinessSocialLinks;
-  comments?: string | null;
+  comments?: string;
 };
 
-export type BusinessUpdate = Partial<BusinessCreate>;
+export type BusinessUpdate = {
+  name?: string | null;
+  category_id?: number | null;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  owner_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  tin?: string | null;
+  website?: string | null;
+  social_links?: BusinessSocialLinks | null;
+  comments?: string | null;
+};
 
 export type BusinessCreateResponse = {
   message: string;
@@ -586,21 +601,7 @@ export type BusinessApplication = {
   created_at: string;
 };
 
-export type BusinessApplicationCreate = {
-  name: string;
-  category_id: number;
-  address: string;
-  phone: string;
-  email: string;
-  owner_name: string;
-  tin?: string | null;
-  description?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  website?: string | null;
-  social_links?: BusinessSocialLinks;
-  comments?: string | null;
-};
+export type BusinessApplicationCreate = BusinessCreate;
 
 export type BusinessContactApplicationCreate = {
   full_name: string;

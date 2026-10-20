@@ -19,8 +19,8 @@ export function middleware(request: NextRequest) {
 
   const isProtectedPage =
     pathname.startsWith("/profile") ||
-    pathname.startsWith("/book") ||
-    pathname.startsWith("/bookings") ||
+    pathname === "/book" ||
+    pathname.startsWith("/book/") ||
     pathname.startsWith("/business");
 
   if (!token && isProtectedPage) {
@@ -32,5 +32,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/book/:path*", "/bookings/:path*", "/business/:path*"],
+  matcher: ["/profile/:path*", "/book/:path*", "/business/:path*"],
 };

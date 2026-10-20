@@ -10,11 +10,5 @@ export function canShowBusinessOnMap(business: SavedBusiness): boolean {
 }
 
 export function canShowShopOnMap(shop: ShopsType): boolean {
-  if (!hasValidCoords(shop)) return false;
-
-  if (shop.apiBusinessId != null) {
-    return shop.services?.some((service) => service.kind === "service") ?? false;
-  }
-
-  return true;
+  return hasValidCoords(shop);
 }

@@ -29,7 +29,6 @@ import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 import { useProfileStore } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { supportContacts } from "@/data/support";
-import { getPostAuthRedirect } from "@/lib/auth/postAuthRedirect";
 import { SupportModal } from "./SupportModal";
 
 export type AuthScreen =
@@ -291,16 +290,19 @@ function SecondaryButton({
   children,
   onClick,
   icon,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-4 text-[17px] font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-[0.99]"
+      disabled={disabled}
+      className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--border-default)] bg-[var(--bg-surface)] py-4 text-[17px] font-semibold text-[var(--text-primary)] transition-all duration-200 hover:bg-[var(--bg-surface-muted)] active:scale-[0.99] disabled:opacity-60"
     >
       {icon}
       {children}
@@ -438,7 +440,7 @@ function SuccessView({
 /* ------------------------------ main flow ------------------------------ */
 
 export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?: AuthScreen }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const token = useAuthStore((s) => s.token);
@@ -523,7 +525,12 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   }
 
   async function completeAuthSession(
-    session: { access_token: string; user_id: number; username: string },
+    session: {
+      access_token: string;
+      user_id: number;
+      username: string;
+      role?: string;
+    },
     profile?: {
       fullName?: string;
       email?: string;
@@ -538,6 +545,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       token: session.access_token,
       userId: session.user_id,
       username: session.username,
+      role: session.role ?? null,
     });
 
     applyAuthProfile({
@@ -717,6 +725,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
         {
           first_name: apiFirstName,
           last_name: apiLastNameParts.join(" "),
+          language: locale,
         },
         session.access_token,
       );
@@ -782,6 +791,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
             <SecondaryButton
               onClick={handleGoogleOAuth}
+              disabled={submitting}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
               {submitting ? t("common.loading") : t("auth.loginWithGoogle")}
@@ -981,6 +991,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
 
             <SecondaryButton
               onClick={handleGoogleOAuth}
+              disabled={submitting}
               icon={<Image src={assets.auth.googleIcon} alt="" width={22} height={22} />}
             >
               {submitting ? t("common.loading") : "Google"}

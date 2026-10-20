@@ -13,6 +13,8 @@ import { useNotificationStore } from "@/store/notification.store";
 import { ApiError } from "@/lib/api/client";
 import { getAuthToken } from "@/lib/api/token";
 
+export const BOOKING_AUTH_REQUIRED_ERROR = "booking-auth-required";
+
 function toApiTime(value: string) {
   return normalizeBookingTime(value) ?? value.trim();
 }
@@ -208,9 +210,11 @@ export const useBookingStore = create<BookingStore>()(
             bookings: local,
             isLoading: false,
             error:
-              error instanceof Error
-                ? error.message
-                : "Не удалось загрузить бронирования",
+              error instanceof ApiError && error.status === 401
+                ? BOOKING_AUTH_REQUIRED_ERROR
+                : error instanceof Error
+                  ? error.message
+                  : "Не удалось загрузить бронирования",
           });
         }
       },

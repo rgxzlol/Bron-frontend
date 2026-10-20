@@ -62,12 +62,10 @@ export function groupTimeSlots(slots: string[]): TimeGroup[] {
 
 export function buildTimeGroupsFromHours(hours: string) {
   const range = parseHoursRange(hours);
-  if (!range) {
-    return groupTimeSlots(buildTimeSlots("09:00", "20:00"));
-  }
+  if (!range) return groupTimeSlots([]);
 
   const slots = buildTimeSlots(range.open, range.close);
-  return groupTimeSlots(slots.length > 0 ? slots : buildTimeSlots("09:00", "20:00"));
+  return groupTimeSlots(slots);
 }
 
 export function getAvailableSlotsForDate(
@@ -100,7 +98,7 @@ export function getDefaultBookingTime(
   const available = getAvailableSlotsForDate(slots, date, now);
   if (available.length > 0) return available[0];
   if (slots.length > 0) return slots[0];
-  return "09:00";
+  return "";
 }
 
 export function isDateBeforeDay(date: Date, minDate: Date) {

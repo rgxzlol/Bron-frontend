@@ -448,11 +448,15 @@ type FormFieldErrors = {
 
 function getFormFieldErrors(
   form: ServiceFormData,
-  options?: { requireGuestCapacity?: boolean; requireProductQuantity?: boolean },
+  options?: {
+    requirePrice?: boolean;
+    requireGuestCapacity?: boolean;
+    requireProductQuantity?: boolean;
+  },
 ): FormFieldErrors {
   return {
     name: !form.name.trim(),
-    price: parsePrice(form.price) <= 0,
+    price: options?.requirePrice ? parsePrice(form.price) <= 0 : undefined,
     category: !form.category.trim(),
     guestCapacity: options?.requireGuestCapacity
       ? form.guestCapacity == null || form.guestCapacity <= 0
@@ -486,7 +490,11 @@ function FieldError({
 
 function useRequiredFormSubmit(
   form: ServiceFormData,
-  options?: { requireGuestCapacity?: boolean; requireProductQuantity?: boolean },
+  options?: {
+    requirePrice?: boolean;
+    requireGuestCapacity?: boolean;
+    requireProductQuantity?: boolean;
+  },
 ) {
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -752,7 +760,7 @@ function CalendarField({
           <ChevronLeftIcon />
         </button>
 
-        <span className="text-center text-[30px] font-bold tracking-[-0.03em] text-white">
+        <span className="text-center text-[30px] font-bold text-black">
           {RU_MONTHS[monthIndex]}
         </span>
 
@@ -806,7 +814,7 @@ function CalendarField({
                   ? "bg-[#0a6af7] text-white shadow-sm"
                   : isPast
                     ? "text-[#7a7a7a]"
-                    : "text-white hover:bg-[var(--bg-hover)]"
+                    : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
               {date.getDate()}
@@ -940,6 +948,7 @@ function AddItemScreen({
   );
   const { fieldErrors, submitAttempted, validate, clearFieldError } =
     useRequiredFormSubmit(form, {
+      requirePrice: !isService,
       requireGuestCapacity: isService,
       requireProductQuantity: !isService,
     });

@@ -27,7 +27,6 @@ export function useBusinessNavAccess() {
 
   const hasExistingBusiness = businesses.length > 0;
   const isLoggedIn = Boolean(token);
-  // Business owners get the page even before their first business exists
   const isBusinessOwner = role === "business_owner";
   const hasPendingBusiness = businesses.some(
     (business) => business.approvalStatus === "pending",
@@ -38,12 +37,7 @@ export function useBusinessNavAccess() {
     hasPendingBusiness,
   );
 
-  const isBusinessVisible =
-    isLoggedIn &&
-    (isBusinessOwner ||
-      status === "pending" ||
-      status === "approved" ||
-      hasExistingBusiness);
+  const isBusinessVisible = isLoggedIn && isBusinessOwner;
   const businessHref = routes.business;
 
   return {

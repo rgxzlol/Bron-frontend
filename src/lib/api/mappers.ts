@@ -3,6 +3,10 @@ import {
   normalizePhoneForApi,
 } from "@/lib/auth/validation";
 import { DEFAULT_SCHEDULE, type DaySchedule } from "@/lib/business/schedule";
+import {
+  apiBusinessCategoryToUi as profileCategoryToUi,
+  findBusinessApiCategoryForUi,
+} from "@/lib/business/profileCategories";
 import { businessCategoryToMapFilter } from "@/lib/business/coordinates";
 import type {
   BusinessDraft,
@@ -35,16 +39,16 @@ import type {
 } from "./types";
 
 const UI_TO_API_CATEGORY: Record<string, string[]> = {
-  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty"],
+  "Салон красоты": ["beauty_salon", "salon_beauty", "beauty", "salon"],
   Здоровье: ["health", "healthcare", "medical", "medicine", "clinic"],
   "Фитнес зал": ["gym", "fitness", "sport"],
-  "Учебные заведения": ["education", "school"],
+  "Учебные заведения": ["education", "school", "learning_center"],
   Рестораны: ["restaurants", "restaurant", "food"],
   Кафейни: ["cafes", "cafe", "coffee"],
   "Авто сервис": ["auto_service", "autoservice", "auto", "car_service"],
   Кинотеатры: ["cinema", "cinemas", "movie_theater"],
   "Комп клуб": ["pc_club", "computer_club", "gaming_club"],
-  Клининг: ["cleaning", "cleaning_service"],
+  Клининг: ["cleaning", "cleaning_service", "cleaning_services", "cleaner", "cleaner_service"],
   Санатории: ["sanatoriums", "sanatorium", "spa", "wellness"],
   Другое: ["other", "другое"],
 };
@@ -119,6 +123,7 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   beauty_salon: "Салон красоты",
   salon_beauty: "Салон красоты",
   beauty: "Салон красоты",
+  salon: "Салон красоты",
   "салон красоты": "Салон красоты",
   салон_красоты: "Салон красоты",
   health: "Здоровье",
@@ -131,6 +136,7 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   sport: "Фитнес зал",
   education: "Учебные заведения",
   school: "Учебные заведения",
+  learning_center: "Учебные заведения",
   restaurant: "Рестораны",
   restaurants: "Рестораны",
   food: "Рестораны",
@@ -150,6 +156,9 @@ const API_TO_UI_CATEGORY: Record<string, string> = {
   club: "Комп клуб",
   cleaning: "Клининг",
   cleaning_service: "Клининг",
+  cleaning_services: "Клининг",
+  cleaner: "Клининг",
+  cleaner_service: "Клининг",
   sanatorium: "Санатории",
   sanatoriums: "Санатории",
   spa: "Санатории",
@@ -211,6 +220,10 @@ export function findApiCategoryForUi(
   categories: ApiBusinessCategory[],
   uiCategory: string,
 ): ApiBusinessCategory | undefined {
+  const normalizedCategory = uiCategory
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
   const expectedSlugs = new Set(
     (UI_TO_API_CATEGORY[uiCategory] ?? [uiCategory]).map((slug) =>
       slug.toLowerCase().replace(/[\s-]+/g, "_"),
@@ -218,6 +231,11 @@ export function findApiCategoryForUi(
   );
 
   return (
+    categories.find(
+      (category) =>
+        category.slug.trim().toLowerCase().replace(/[\s-]+/g, "_") ===
+        normalizedCategory,
+    ) ??
     categories.find((category) =>
       expectedSlugs.has(category.slug.toLowerCase().replace(/[\s-]+/g, "_")),
     ) ??
@@ -299,18 +317,20 @@ export function scheduleToWorkingHoursPayload(
 }
 
 export function workingHoursToSchedule(hours: WorkingHours[]): DaySchedule[] {
+  if (hours.length === 0) return [];
+
   const byDay = new Map(hours.map((item) => [item.day_of_week, item]));
 
-  return DEFAULT_SCHEDULE.map((day) => {
+  return DEFAULT_SCHEDULE.flatMap((day) => {
     const apiDay = byDay.get(DAY_KEY_TO_INDEX[day.key]);
-    if (!apiDay) return { ...day };
+    if (!apiDay) return [];
 
-    return {
+    return [{
       ...day,
       isOpen: !apiDay.is_closed,
       openTime: normalizeTime(apiDay.open_time),
       closeTime: normalizeTime(apiDay.close_time),
-    };
+    }];
   });
 }
 
@@ -326,7 +346,7 @@ export function draftToBusinessCreate(
 
   return {
     name: draft.name.trim(),
-    description: draft.description?.trim() || null,
+    description: draft.description?.trim() ?? "",
     category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
@@ -334,7 +354,7 @@ export function draftToBusinessCreate(
     owner_name: owner.name.trim(),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
-    website: draft.website?.trim() || null,
+    website: draft.website?.trim() ?? "",
     comments: "",
   };
 }
@@ -350,13 +370,13 @@ export function draftToBusinessUpdate(
 
   return {
     name: draft.name.trim(),
-    description: draft.description?.trim() || null,
+    description: draft.description?.trim() ?? "",
     category_id: categoryId,
     address: draft.address.trim(),
     phone: normalizePhoneForApi(draft.phone),
     latitude: coords?.lat ?? null,
     longitude: coords?.lng ?? null,
-    website: draft.website?.trim() || null,
+    website: draft.website?.trim() ?? "",
   };
 }
 
@@ -470,12 +490,14 @@ export function apiBusinessToSavedBusiness(
     profilePhoto: resolveMediaUrl(business.logo),
     name: business.name,
     description: business.description ?? "",
-    category: apiCategoryToUi(business.category),
+    category:
+      profileCategoryToUi(business.category) ||
+      apiCategoryToUi(business.category),
     website: business.website ?? "",
     phone: business.phone,
     address: business.address,
     gallery: photosToGallerySlots(galleryUrls, true),
-    schedule: extras?.schedule ?? DEFAULT_SCHEDULE.map((day) => ({ ...day })),
+    schedule: extras?.schedule ?? [],
     lat: coords.lat,
     lng: coords.lng,
     services: mappedServices,
@@ -582,20 +604,25 @@ export function apiBusinessToShop(
     title: business.name,
     lat: coords.lat,
     lng: coords.lng,
-    type: businessCategoryToMapFilter(apiCategoryToUi(business.category)),
+    type: businessCategoryToMapFilter(
+      profileCategoryToUi(business.category) ||
+        apiCategoryToUi(business.category),
+    ),
     img: photoUrls[0] ?? assets.map.photo1,
     profilePhoto: resolveMediaUrl(business.logo),
     gallery: photoUrls,
     desc: business.description ?? "",
     rating: 0,
     reviews: 0,
-    hours: "09:00 - 20:00",
+    hours: "",
     freeSeats: 10,
     price: minPrice,
     address: business.address,
     district: "Ташкент",
     phone: business.phone,
-    category: apiCategoryToUi(business.category),
+    category:
+      profileCategoryToUi(business.category) ||
+      apiCategoryToUi(business.category),
     distance: "—",
     time: 60,
     services: activeServices.map((service) => ({

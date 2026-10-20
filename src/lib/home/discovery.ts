@@ -128,33 +128,42 @@ export async function resolveShopById(shopId: number): Promise<ShopsType | null>
   try {
     const [business, services, branches] = await Promise.all([
       businessesApi.get(shopId),
-      servicesApi.listByBusiness(shopId).catch(() => []),
-      branchesApi.listByBusiness(shopId).catch(() => []),
+      servicesApi.listByBusiness(shopId),
+      branchesApi.listByBusiness(shopId),
     ]);
 
     const branchId = branches[0]?.id;
     const branch = branchId
-      ? await branchesApi.get(branchId).catch(() => null)
+      ? await branchesApi.get(branchId)
       : null;
 
     const mappedServices = services.map(apiServiceListItemToBusinessService);
     const shop = apiBusinessToShop(business, mappedServices, branchId, branch);
     const [workingHours, galleryUrls] = await Promise.all([
-      workingHoursApi.getByBusiness(shopId).catch(() => []),
+      workingHoursApi.getByBusiness(shopId),
       fetchBusinessGalleryUrls(shopId),
     ]);
-    const todayHours = workingHoursToRangeString(workingHours, new Date());
+    const todayDayOfWeek = (new Date().getDay() + 6) % 7;
+    const todaySchedule = workingHours.find(
+      (item) => item.day_of_week === todayDayOfWeek,
+    );
+    const todayHours = todaySchedule
+      ? todaySchedule.is_closed
+        ? "closed"
+        : workingHoursToRangeString(workingHours, new Date()) ?? ""
+      : "";
     const remoteGallery = galleryUrls
       .map((url) => resolveMediaUrl(url))
       .filter((url): url is string => Boolean(url));
 
     return {
       ...shop,
-      hours: todayHours ?? shop.hours,
+      hours: todayHours,
       gallery: remoteGallery.length > 0 ? remoteGallery : shop.gallery,
       img: remoteGallery[0] ?? shop.img,
     };
-  } catch {
+  } catch (error) {
+    console.error(`Не удалось загрузить бизнес ${shopId} для карты:`, error);
     return null;
   }
 }

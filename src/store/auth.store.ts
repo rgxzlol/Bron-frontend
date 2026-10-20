@@ -6,11 +6,14 @@ type AuthStore = {
   token: string | null;
   userId: number | null;
   username: string | null;
+  role: string | null;
   setSession: (payload: {
     token: string;
     userId: number;
     username: string;
+    role?: string | null;
   }) => void;
+  setRole: (role: string | null) => void;
   clearToken: () => void;
 };
 
@@ -20,13 +23,15 @@ export const useAuthStore = create<AuthStore>()(
       token: null,
       userId: null,
       username: null,
-      setSession: ({ token, userId, username }) => {
+      role: null,
+      setSession: ({ token, userId, username, role }) => {
         setAuthCookie(token);
-        set({ token, userId, username });
+        set({ token, userId, username, role: role ?? null });
       },
+      setRole: (role) => set({ role }),
       clearToken: () => {
         clearAuthCookie();
-        set({ token: null, userId: null, username: null });
+        set({ token: null, userId: null, username: null, role: null });
       },
     }),
     {

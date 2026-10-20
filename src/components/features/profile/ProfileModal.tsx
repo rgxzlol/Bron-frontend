@@ -9,8 +9,7 @@ import s from "./profilePage.module.css";
 type ProfileSection =
   | "main"
   | "personal"
-  | "payments"
-  | "addCard"
+  | "bookingHistory"
   | "appSettings"
   | "notifications"
   | "theme"
@@ -24,8 +23,7 @@ type ProfileModalProps = {
 const sectionTitleKeys = {
   main: "profile.sectionMain",
   personal: "profile.personalData",
-  payments: "profile.payments",
-  addCard: "profile.addCard",
+  bookingHistory: "profile.bookingHistory",
   appSettings: "profile.settings",
   notifications: "profile.notifications",
   theme: "profile.theme",

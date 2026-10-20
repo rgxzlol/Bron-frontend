@@ -29,7 +29,9 @@ export default function UserBusinessPanel({
   const images = gallery.length > 0 ? gallery : [assets.map.photo1];
   const previewImage = images[imageIndex] ?? images[0];
   const isRemoteImage = typeof previewImage === "string";
-  const activeServices = business.services.filter((s) => s.active);
+  const activeServices = business.services.filter(
+    (service) => service.active && service.type === "service",
+  );
   const minPrice =
     activeServices.length > 0
       ? Math.min(...activeServices.map((svc) => svc.price))
@@ -157,6 +159,7 @@ export default function UserBusinessPanel({
             text={t("home.book")}
             onClick={onBook}
             className="mt-[20px] w-full !px-[20px] text-center"
+            disabled={activeServices.length === 0}
           />
         </div>
       </div>

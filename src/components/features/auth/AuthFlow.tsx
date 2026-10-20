@@ -29,6 +29,7 @@ import type { TelegramUserProfile } from "@/lib/auth/telegramSignIn";
 import { useProfileStore } from "@/store/profile.store";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { supportContacts } from "@/data/support";
+import { getPostAuthRedirect } from "@/lib/auth/postAuthRedirect";
 import { SupportModal } from "./SupportModal";
 
 export type AuthScreen =
@@ -470,7 +471,9 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
   const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (hydrated && token) router.replace(routes.home);
+    if (hydrated && token) {
+      router.replace(getPostAuthRedirect(window.location.search));
+    }
   }, [hydrated, token, router]);
 
   function go(next: AuthScreen) {
@@ -546,7 +549,7 @@ export default function AuthFlow({ initialScreen = "welcome" }: { initialScreen?
       avatarUrl: profile?.avatarUrl,
     });
 
-    router.replace(routes.home);
+    router.replace(getPostAuthRedirect(window.location.search));
   }
 
   async function handleGoogleOAuth() {

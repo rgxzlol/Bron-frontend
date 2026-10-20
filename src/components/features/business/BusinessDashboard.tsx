@@ -21,10 +21,13 @@ import {
 } from "@/lib/booking/classify";
 import { useToastStore } from "@/store/toast.store";
 import { businessesApi } from "@/lib/api";
+import { routes } from "@/config/routes";
 import Image from "next/image";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { QrCode } from "lucide-react";
 import BusinessCardMenu from "./BusinessCardMenu";
 import DeleteBusinessModal from "./DeleteBusinessModal";
+import BusinessQRCodeModal from "./BusinessQRCodeModal";
 import desktop from "./businessDashboardDesktop.module.css";
 import BusinessCategoryIcon from "@/components/shared/BusinessCategoryIcon";
 
@@ -2274,6 +2277,8 @@ export default function BusinessDashboard({
   const [itemMenuAnchor, setItemMenuAnchor] = useState<HTMLElement | null>(null);
   const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(null);
   const [desktopMenuAnchor, setDesktopMenuAnchor] = useState<HTMLElement | null>(null);
+  const [qrBookingUrl, setQrBookingUrl] = useState<string | null>(null);
+  const closeQrModal = useCallback(() => setQrBookingUrl(null), []);
 
   useEffect(() => {
     if (view !== "bookings") return;
@@ -2300,6 +2305,18 @@ export default function BusinessDashboard({
     const interval = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(interval);
   }, [view]);
+
+  const numericBusinessId = /^\d+$/.test(businessId) ? Number(businessId) : NaN;
+  const canGenerateBusinessQr =
+    Number.isSafeInteger(numericBusinessId) && numericBusinessId > 0;
+
+  function openBusinessQr() {
+    if (!canGenerateBusinessQr) return;
+
+    const bookingUrl = new URL(routes.book, window.location.origin);
+    bookingUrl.searchParams.set("shopId", String(numericBusinessId));
+    setQrBookingUrl(bookingUrl.toString());
+  }
 
   const categoryTags = useMemo(() => {
     if (!business) return [];
@@ -2644,32 +2661,45 @@ export default function BusinessDashboard({
               title={business.name || t("business.untitled")}
               onBack={onClose}
               action={
-                <div className="relative">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    aria-label={t("business.menuAria")}
-                    aria-expanded={headerMenuOpen}
-                    data-testid="business-dashboard-menu"
-                    onClick={(event) => {
-                      setHeaderMenuAnchor(event.currentTarget.parentElement);
-                      setHeaderMenuOpen((v) => !v);
-                    }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
+                    aria-label={t("businessDashboard.qrCode")}
+                    title={t("businessDashboard.qrCode")}
+                    data-testid="business-dashboard-qr-code-mobile"
+                    onClick={openBusinessQr}
+                    disabled={!canGenerateBusinessQr}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)] disabled:opacity-50"
                   >
-                    <DotsVerticalIcon />
+                    <QrCode size={20} aria-hidden="true" />
                   </button>
-                  {headerMenuOpen && (
-                    <BusinessCardMenu
-                      anchorEl={headerMenuAnchor}
-                      editLabel={t("businessDashboard.editProfile")}
-                      onEdit={onEditProfile}
-                      onDelete={() => {
-                        setHeaderMenuOpen(false);
-                        setShowDeleteBusiness(true);
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label={t("business.menuAria")}
+                      aria-expanded={headerMenuOpen}
+                      data-testid="business-dashboard-menu"
+                      onClick={(event) => {
+                        setHeaderMenuAnchor(event.currentTarget.parentElement);
+                        setHeaderMenuOpen((v) => !v);
                       }}
-                      onClose={() => setHeaderMenuOpen(false)}
-                    />
-                  )}
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-surface-muted)] text-[var(--text-primary)]"
+                    >
+                      <DotsVerticalIcon />
+                    </button>
+                    {headerMenuOpen && (
+                      <BusinessCardMenu
+                        anchorEl={headerMenuAnchor}
+                        editLabel={t("businessDashboard.editProfile")}
+                        onEdit={onEditProfile}
+                        onDelete={() => {
+                          setHeaderMenuOpen(false);
+                          setShowDeleteBusiness(true);
+                        }}
+                        onClose={() => setHeaderMenuOpen(false)}
+                      />
+                    )}
+                  </div>
                 </div>
               }
             />
@@ -2710,8 +2740,13 @@ export default function BusinessDashboard({
                 <button type="button" onClick={onClose}>
                   {t("businessForms.back")}
                 </button>
-                <button type="button" onClick={onEditProfile}>
-                  {t("businessDashboard.editProfile")}
+                <button
+                  type="button"
+                  onClick={openBusinessQr}
+                  disabled={!canGenerateBusinessQr}
+                  data-testid="business-dashboard-qr-code"
+                >
+                  {t("businessDashboard.qrCode")}
                 </button>
                 <div className={desktop.profileMenu}>
                   <button
@@ -2748,13 +2783,6 @@ export default function BusinessDashboard({
                   <h3>{t("businessDashboard.servicesTitle")}</h3>
                   <p>{t("businessDashboard.servicesSubtitle")}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setView("addProduct")}
-                  data-testid="business-dashboard-add-product-desktop"
-                >
-                  {t("business.addProduct")}
-                </button>
               </div>
               {categoryTags.length > 0 && (
                 <div
@@ -2816,17 +2844,9 @@ export default function BusinessDashboard({
                 <button
                   type="button"
                   onClick={() => setView("addProduct")}
-                  className={desktop.mobileProductButton}
                   data-testid="business-dashboard-add-product"
                 >
                   {t("business.addProduct")}
-                </button>
-                <button
-                  type="button"
-                  onClick={onEditProfile}
-                  className={desktop.desktopEditProfileButton}
-                >
-                  {t("businessDashboard.editProfile")}
                 </button>
               </div>
             </section>
@@ -3040,6 +3060,14 @@ export default function BusinessDashboard({
           onClose();
         }}
       />
+      {qrBookingUrl && canGenerateBusinessQr && (
+        <BusinessQRCodeModal
+          businessName={business.name || t("business.untitled")}
+          businessId={numericBusinessId}
+          bookingUrl={qrBookingUrl}
+          onClose={closeQrModal}
+        />
+      )}
 
     </>
   );
